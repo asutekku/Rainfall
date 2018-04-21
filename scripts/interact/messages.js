@@ -2,16 +2,16 @@ define(['list_weapons', 'utils', 'color', 'stats'], function (weapons, utils, co
     return {
         combat: function (Case, actor, enemy) {
 
-            var str_enemyName = utils.span("&#91;" + enemy.name + "&#93;", enemy.color);
-            var str_actorName = utils.span("&#91;" + actor.name + "&#93;", actor.color);
+            var enemyName = utils.span("&#91;" + enemy.name + "&#93;", enemy.color);
+            var playerName = utils.span("&#91;" + actor.name + "&#93;", actor.color);
 
             var str_actorDamage = utils.span(actor.damage, color.hitRed);
             var str_actorDamageCrit = utils.span(actor.damage * 2, color.hitRed);
 
             var str_enemyHealth = enemy.health;
-            var str_enemyPronPossesive = (enemy.gender == "Female" ? 'her' : 'his');
-            var str_enemyPronSubject = (enemy.gender == "Female" ? 'she' : 'he');
-            var str_enemyPronObject = (enemy.gender == "Female" ? 'her' : 'him');
+            var pronounP = (enemy.gender == "Female" ? 'her' : 'his');
+            var pronounS = (enemy.gender == "Female" ? 'she' : 'he');
+            var pronounO = (enemy.gender == "Female" ? 'her' : 'him');
 
             var str_damageIndicator = utils.span('(' + (enemy.health + actor.damage) + "=>" + enemy.health + ')', color.damageGreen);
             var str_damageIndicatorCrit = utils.span('(' + (enemy.health + actor.damage * 2) + "=>" + enemy.health + ')', color.damageGreen);
@@ -22,8 +22,15 @@ define(['list_weapons', 'utils', 'color', 'stats'], function (weapons, utils, co
 
             var str_Critical = utils.span("CRITICAL! ", color.hitRed);
             var str_Miss = utils.span("MISS! ", color.hitRed);
+            var deathCharge = utils.span("[" + Math.floor(stats.player.money*.45) + "]", color.itemYellow);
+
+            var droppedItem = str_actorItem(enemy);
+            var droppedWeapon = utils.span("&#91;" + enemy.weapon.name + "&#93;", color.itemYellow);
             
-            var yens = utils.span("&#91;" + enemy.currency + "&#93;", color.itemYellow);
+            var currencyAmount = utils.span("&#91;" + enemy.currency + "&#93;", color.itemYellow);
+
+            var playerLVL = utils.span((actor.level), color.damageGreen);
+            var playerLVLprev = utils.span((actor.level - 1), color.damageGreen);
 
             function str_weaponName(ownerActor) {
                 return utils.span("&#91;" + ownerActor.weapon.name + "&#93;", color.weaponBlue);
@@ -37,97 +44,100 @@ define(['list_weapons', 'utils', 'color', 'stats'], function (weapons, utils, co
                 return utils.span("&#91;" + ownerActor.items.name + "&#93;", color.itemYellow);
             }
             var damageType = actor.weapon.weaponType == "Melee" ? "hit" : "shot";
+            var playerWeapon = str_weaponName(actor);
+            var enemyHealth = enemy.health <= 0 ? str_damageIndicator0 : str_damageIndicator;
+            var enemyHealthCrit = enemy.health <= 0 ? str_damageIndicatorCrit0 : str_damageIndicatorCrit
 
             switch (Case) {
                 ///ACTOR MESSAGES///
                 case 'hitNormal':
-                    utils.printLine(str_actorName + " " + damageType + " " + str_enemyName + " with " + str_weaponName(actor) + " and caused " + str_actorDamage + " damage. " + (enemy.health <= 0 ? str_damageIndicator0 : str_damageIndicator));
+                    utils.printLine(`${playerName} ${damageType} ${enemyName} with${playerWeapon} and caused ${str_actorDamage} damage. ${enemyHealth}`);
                     break;
                 case 'hitCritical':
-                    utils.printLine(str_Critical + str_actorName + " " + damageType + " " + str_enemyName + " with " + str_weaponName(actor) + " and caused " + str_actorDamage + " damage. " + (enemy.health <= 0 ? str_damageIndicatorCrit0 : str_damageIndicatorCrit));
+                    utils.printLine(`${str_Critical} ${playerName} ${damageType} ${enemyName} with ${playerWeapon} and caused ${str_actorDamage} damage. ${enemyHealthCrit}`);
                     break;
                 case 'hitCriticalKill':
-                    utils.printLine(str_Critical + str_actorName + " " + damageType + " " + str_enemyName + " with " + str_weaponName(actor) + " and caused " + str_actorDamageCrit + " damage. " + str_damageIndicatorCrit0);
+                    utils.printLine(`${str_Critical} ${playerName} ${damageType} ${enemyName} with ${playerWeapon} and caused ${str_actorDamageCrit} damage. ${str_damageIndicatorCrit0}`);
                     break;
                 case 'kill':
-                    utils.printLine(str_actorName + " killed " + str_enemyName + " !");
+                    utils.printLine(`playerName + " killed ${enemyName} !`);
                     break;
                 case 'hitMiss':
                     var random = Math.floor(Math.random() * 3);
                     switch (random) {
                         case 0:
-                            utils.printLine(str_Miss + str_actorName + " tried to attack " + str_enemyName + " but " + str_enemyPronSubject + " was able to dodge the " + damageType + "!");
+                            utils.printLine(`${hitMiss} ${playerName} tried to attack ${enemyName} but ${pronounS} was able to dodge the ${damageType}!`);
                             break;
                         case 1:
-                            utils.printLine(str_Miss + str_actorName + " tried to attack " + str_enemyName + " but missed!");
+                            utils.printLine(`${hitMiss} ${playerName} tried to attack ${enemyName} but missed!`);
                             break;
                         case 2:
-                            utils.printLine(str_Miss + str_enemyName + " was able to jump away from " + str_actorName + "'s " + damageType + "!");
+                            utils.printLine(`${hitMiss} ${enemyName} + " was able to jump away from ${playerName}'s ${damageType}!`);
                             break;
                     }
                     break;
                 case 'encounter':
-                    utils.printLine("You encountered " + str_enemyName + ". Just by looking at " + str_enemyPronPossesive + " attire you can see " + str_enemyPronSubject + " is a " + str_actorRole(enemy) + ".");
+                    utils.printLine(`You encountered ${enemyName}. Just by looking at ${pronounP} attire you can see ${pronounS} is a ${str_actorRole(enemy)}.`);
                     break;
                 case 'encounterSame':
-                    utils.printLine("You encountered " + str_enemyName + ". You see " + str_enemyPronSubject + " is also " + str_actorRole(enemy) + " so you just greet " + str_enemyPronObject + " and keep going.");
+                    utils.printLine(`You encountered ${enemyName}. You see ${pronounP} is also ${str_actorRole(enemy)} so you just greet ${pronounO} and venture forward.`);
                     break;
                     ///Level up message
                 case 'levelUp':
-                    utils.printLine("You leveled up from " + utils.span((actor.level - 1), color.damageGreen) + " to " + utils.span(actor.level, color.damageGreen) + " !");
+                    utils.printLine(`You leveled up from ${utils.span((actor.level - 1), color.damageGreen)} to ${playerLVL}!`);
                     break;
                     ///Death message
                 case 'death':
-                    utils.printLine("You have been killed by " + str_enemyName);
+                    utils.printLine(`You have been killed by ${enemyName}`);
                     break;
                 case 'youredead':
                     utils.printLine("You are dead, try respawning!");
                     break;
                     ///Respawn message
                 case 'respawn':
-                    utils.printLine(utils.span("[Nanobots]", color.weaponBlue) + " from TraumaTeam revitalize you. You have been charged " + utils.span("[" + Math.floor(stats.player.money*.45) + "]", color.itemYellow) + " yens.");
+                    utils.printLine(utils.span("[Nanobots]", color.weaponBlue) + ` from TraumaTeam revitalize you. You have been charged ${deathCharge} yens.`);
                     break;
                     ///Looking for loot message
                 case 'loot':
                     var random = Math.floor(Math.random() * 3);
                     switch (random) {
                         case 0:
-                            utils.printLine("As the blood still flows from " + str_enemyName + "'s liquidated carcass, you search through " + str_enemyPronPossesive + " belongings.");
+                            utils.printLine(`As the blood still flows from ${enemyName}'s liquidated carcass, you search through ${pronounP} belongings.`);
                             break;
                         case 1:
-                            utils.printLine("You search through " + str_enemyName + "'s belongings.");
+                            utils.printLine(`You search through ${enemyName}'s belongings.`);
                             break;
                         case 2:
-                            utils.printLine("As you advance towards " + str_enemyName + "'s dead body you look around if " + str_enemyPronSubject + " has anything valuable with " + str_enemyPronObject + ".");
+                            utils.printLine(`As you advance towards ${enemyName}'s dead body you look around if ${pronounS} has anything valuable with ${pronounO}.`);
                             break;
                     }
                     break;
                 case 'lootFind':
-                    utils.printLine("You found " + str_actorItem(enemy) + ".");
+                    utils.printLine(`You found ${droppedItem}.`);
                     break;
                 case 'lootFindSame':
-                    utils.printLine("You found " + str_actorItem(enemy) + " but as you already have it, you let it be.");
+                    utils.printLine(`You found ${droppedItem} but as you already have it, you let it be.`);
                     break;
                 case 'lootFindNew':
-                    utils.printLine("You found " + str_actorItem(enemy) + ". It looks much better than your current equipment so you swap them.");
+                    utils.printLine(`You found ${droppedItem}. It looks much better than your current equipment so you swap them.`);
                     break;
                 case 'lootFindOld':
-                    utils.printLine("You found " + str_actorItem(enemy) + " but it looks worse than your current equipment so you let it be.");
+                    utils.printLine(`You found ${droppedItem} but it looks worse than your current equipment so you let it be.`);
                     break;
                 case 'lootWeaponBetter':
-                    utils.printLine("The hostile dropped " + utils.span("&#91;" + enemy.weapon.name + "&#93;", color.itemYellow) + ". It appears to be much more powerful than your " + str_weaponName(actor) + " so you take it.");
+                    utils.printLine(`The enemy dropped ${droppedWeapon}. It appears to be much more powerful than your ${playerWeapon} so you take it.`);
                     break;
                 case 'lootWeaponWorse':
-                    utils.printLine("The hostile dropped " + str_enemyPronPossesive + " " + utils.span("&#91;" + enemy.weapon.name + "&#93;", color.itemYellow) + ". It's worse than your current weapon so you let it be.");
+                    utils.printLine(`The enemy dropped ${pronounO} ${droppedWeapon}. It's worse than your current weapon so you let it be.`);
                     break;
                 case 'noMoney':
                     utils.printLine("Your funds are insufficient.");
                     break;
                 case 'getMoney':
-                    utils.printLine("You found " + yens + " yens.");
+                    utils.printLine(`You found ${currencyAmount} yens.`);
                     break;
                 case 'lostMoney':
-                    utils.printLine("You lost " + yens + " yens.");
+                    utils.printLine(`You lost ${currencyAmount} yens.`);
                     break;
             }
         }
