@@ -1,5 +1,7 @@
 define(['utils', 'list_roles', 'nameGen', 'getItem', 'math'], function (utils, stat, nameGen, getItem, math) {
 
+    var type, role, skill, name, level, experience, health, weapon, color, gender, items, currency;
+
     function Actor(type, role, skill, name, level, experience, health, weapon, damage, color, gender, items, currency) {
         this.type = type;
         this.role = utils.choose(stat.role);
