@@ -2,7 +2,7 @@ define(['list_weapons', 'utils', 'color', 'stats'], function (weapons, utils, co
     return {
         combat: function (Case, actor, enemy) {
 
-            var enemyName = utils.span("&#91;" + enemy.name + "&#93;", enemy.color);
+            let enemyName = utils.span("&#91;" + enemy.name + "&#93;", enemy.color);
             var playerName = utils.span("&#91;" + actor.name + "&#93;", actor.color);
 
             var str_actorDamage = utils.span(actor.damage, color.hitRed);
@@ -60,7 +60,7 @@ define(['list_weapons', 'utils', 'color', 'stats'], function (weapons, utils, co
                     utils.printLine(`${str_Critical} ${playerName} ${damageType} ${enemyName} with ${playerWeapon} and caused ${str_actorDamageCrit} damage. ${str_damageIndicatorCrit0}`);
                     break;
                 case 'kill':
-                    utils.printLine(`playerName + " killed ${enemyName} !`);
+                    utils.printLine(`${playerName} killed ${enemyName} !`);
                     break;
                 case 'hitMiss':
                     var random = Math.floor(Math.random() * 3);

@@ -1,6 +1,6 @@
-define('Actor', function () {
-    function Actor(type) {
-        this.type = type;
+define(function () {
+    function Actor() {
+        this.type = null;
         this.name = null;
         this.role = null;
         this.skill = null;
@@ -10,9 +10,9 @@ define('Actor', function () {
         this.weapon = null;
         this.armor = null;
         this.weapons = [];
-        this.color = stat.color;
+        this.color = null;
         this.gender = null;
-        this.gear = [];
+        this.items = [];
         this.currency = null;
         this.criticalChange = null;
         this.stats = {

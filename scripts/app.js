@@ -7,9 +7,10 @@ define(['nameGen',
         'list_items',
         'actors',
         'UI',
-        'stats'
+        'stats',
+        'enemy'
     ],
-    function (nameGen, stat, utils, combat, color, message, items, actor, UI,stats) {
+    function (nameGen, stat, utils, combat, color, message, items, actor, UI,stats,enemy) {
 
         var player = actor.player;
 
@@ -34,21 +35,21 @@ define(['nameGen',
             stats.currency = isNaN(stats.currency) ? 0 : parseInt(stats.kills, 10);
             utils.l("currency").textContent = stats.currency;
         }
-    
-        
+
+
         loadGame();
 
-        var enemy = actor.enemy;
-        var currentEnemy = enemy;
+        var grunt = enemy.enemy;
+        var currentEnemy = grunt;
         var deadMessageSent = false;
-        actor.updateEnemy();
+        enemy.updateEnemy();
         actor.updatePlayer();
         UI.updateUI(player);
 
         //Attacks!
         utils.l("hitButton").onclick = function () {
             if (combat.isAlive(player)) {
-                combat.basicAction(player, enemy);
+                combat.basicAction(player, grunt);
             } else if (deadMessageSent == false){
                 message.combat('youredead',player,currentEnemy);
                 deadMessageSent = true;
@@ -80,7 +81,7 @@ define(['nameGen',
                 running = true;
                 myvar = setInterval(function () {
                     if (combat.isAlive(player)) {
-                        combat.basicAction(player, enemy);
+                        combat.basicAction(player, grunt);
                     } else {
                         clearInterval(myvar);
                         running = false;

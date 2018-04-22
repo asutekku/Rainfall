@@ -14,7 +14,9 @@ require.config({
         getItem: 'interact/getItem',
         UI: 'utils/UI',
         color: 'utils/colors',
-        math: 'utils/math'
+        math: 'utils/math',
+        actor: 'actors/actor',
+        enemy: 'actors/enemy'
     }
 });
 

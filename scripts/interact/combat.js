@@ -1,6 +1,6 @@
-define(['utils', 'list_weapons', 'list_items', 'list_armor', 'messages', 'actors', 'getItem', 'nameGen', 'UI', 'stats'], function (utils, weapons, itemList, armor, message, actors, getItem, nameGen, UI, stats) {
+define(['enemy','utils', 'list_weapons', 'list_items', 'list_armor', 'messages', 'actors', 'getItem', 'nameGen', 'UI', 'stats'], function (enemy,utils, weapons, itemList, armor, message, actors, getItem, nameGen, UI, stats) {
 
-    var currentEnemy = actors.enemy;
+    var currentEnemy = enemy.enemy;
 
     //Formula: rateOfFire*diceThrows(1-6)+damage
     //It's possible for every shot to miss
@@ -133,10 +133,10 @@ define(['utils', 'list_weapons', 'list_items', 'list_armor', 'messages', 'actors
         },
 
         replaceEnemy: function (actor, target) {
-            actors.updateEnemy();
+            enemy.updateEnemy();
             if (actor.role == target.role) {
                 message.combat('encounterSame', actor, currentEnemy);
-                actors.updateEnemy();
+                enemy.updateEnemy();
                 this.replaceEnemy(actor, target);
             } else {
                 message.combat('encounter', actor, currentEnemy);
