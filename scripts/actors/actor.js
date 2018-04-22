@@ -1,6 +1,6 @@
-define(['math', 'nameGen', 'getItem', 'utils', 'list_roles'], function (math, nameGen, getItem, utils, stat) {
+define(['math', 'nameGen', 'getItem', 'utils', 'list_roles', "stats"], function (math, nameGen, getItem, utils, stat, stats) {
     function Actor() {
-        this.name = null;
+        this.name = nameGen.name;
         this.role = null;
         this.skill = null;
         this.level = null;
@@ -184,7 +184,7 @@ define(['math', 'nameGen', 'getItem', 'utils', 'list_roles'], function (math, na
             previousPos[1] + Math.floor(math.range(50, -50))]
     };
 
-    Actor.prototype.update = function (reference) {
+    Actor.prototype.update = function () {
         this.name = nameGen.name();
         this.weapon = getItem.weapon();
         this.gender = nameGen.gender();
@@ -193,7 +193,7 @@ define(['math', 'nameGen', 'getItem', 'utils', 'list_roles'], function (math, na
         this.skill = stat.ability(this.role);
         this.color = stat.color;
         this.currency = Math.floor(math.range(50, 20));
-        this.level = Math.floor((reference.getLvl) + math.range(1, 3));
+        this.level = Math.floor((stats.player.level) + math.range(1, 3));
         this.experience = this.level * Math.floor(math.range(1, 10));
     };
     return Actor;

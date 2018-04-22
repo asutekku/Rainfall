@@ -15,19 +15,6 @@ define(['actor', 'utils', 'list_roles', 'nameGen', 'getItem', 'math'], function 
     playerActor.mana = localStorage.getItem("pMP");
     playerActor.stamina = localStorage.getItem("pSTM");
     playerActor.weapon = getItem.weapon();
-    playerActor.helmet = {
-        name: 0,
-        stoppingPower: 0
-    };
-    playerActor.upperArmor = {
-        name: 0,
-        stoppingPower: 0
-    };
-    playerActor.lowerArmor = {
-        name: 0,
-        stoppingPower: 0
-    };
-    playerActor.armor = 0;
 
     return {
         player: playerActor,

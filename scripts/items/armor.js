@@ -60,6 +60,6 @@ define(['items/def'], function (def) {
             new def.armour("lower", "Heavy Armor Pants", "heavySet", 5, 16, 130, "Heavy duty protection for the lower body, standard for most military."),
             //Police lower body
             new def.armour("lower", "Riot Pads", "heavySet", 6, 18, 250, "Tested to 155 PSI, these pads are sure to keep your knees safe."),
-    ]
+        ]
     }
 });

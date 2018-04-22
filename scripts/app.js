@@ -10,26 +10,26 @@ define(['nameGen',
         'stats',
         'enemy'
     ],
-    function (nameGen, stat, utils, combat, color, message, items, actor, UI,stats,enemy) {
+    function (nameGen, stat, utils, combat, color, message, items, actor, UI, stats, enemy) {
 
-        var player = actor.player;
+        let playerActor = actor.player;
 
         /*==========================================================================================
         LOAD GAME
         ============================================================================================*/
         function loadGame() {
-            player.level = isNaN(player.level) ? 1 : parseInt(player.level, 10);
-            utils.l("charLvl").textContent = (player.level).toString(10);
-            player.experience = isNaN(player.experience) ? 0 : player.experience;
-            player.maxExperience = isNaN(player.maxExperience) ? 40 : parseInt(player.maxExperience, 10);
-            utils.l("charExp").textContent = (player.experience).toString(10) + "/" + (player.maxExperience).toString(10);
-            player.health = isNaN(player.health) ? 100 : parseInt(player.health, 10);
-            player.maxHealth = isNaN(player.maxHealth) ? 100 : parseInt(player.maxHealth, 10);
-            utils.l("charHP").textContent = player.health + "/" + (player.maxHealth).toString(10);
-            player.crit = isNaN(player.crit) ? 10 : parseInt(player.crit, 10);
-            utils.l("charCRIT").textContent = player.weapon.crit + "%";
-            player.critM = isNaN(player.critM) ? 2 : parseInt(player.critM, 10);
-            utils.l("charCRITM").textContent = player.critM;
+            playerActor.level = isNaN(playerActor.level) ? 1 : parseInt(playerActor.level, 10);
+            utils.l("charLvl").textContent = (playerActor.level).toString(10);
+            playerActor.experience = isNaN(playerActor.experience) ? 0 : playerActor.experience;
+            playerActor.maxExperience = isNaN(playerActor.maxExperience) ? 40 : parseInt(playerActor.maxExperience, 10);
+            utils.l("charExp").textContent = (playerActor.experience).toString(10) + "/" + (playerActor.maxExperience).toString(10);
+            playerActor.health = isNaN(playerActor.health) ? 100 : parseInt(playerActor.health, 10);
+            playerActor.maxHealth = isNaN(playerActor.maxHealth) ? 100 : parseInt(playerActor.maxHealth, 10);
+            utils.l("charHP").textContent = playerActor.health + "/" + (playerActor.maxHealth).toString(10);
+            playerActor.crit = isNaN(playerActor.crit) ? 10 : parseInt(playerActor.crit, 10);
+            utils.l("charCRIT").textContent = playerActor.weapon.crit + "%";
+            playerActor.critM = isNaN(playerActor.critM) ? 2 : parseInt(playerActor.critM, 10);
+            utils.l("charCRITM").textContent = playerActor.critM;
             stats.kills = isNaN(stats.kills) ? 0 : parseInt(stats.kills, 10);
             utils.l("kills").textContent = stats.kills;
             stats.currency = isNaN(stats.currency) ? 0 : parseInt(stats.kills, 10);
@@ -39,19 +39,19 @@ define(['nameGen',
 
         loadGame();
 
-        var grunt = enemy.enemy;
-        var currentEnemy = grunt;
-        var deadMessageSent = false;
-        grunt.update(player);
+        let grunt = enemy.enemy;
+        let currentEnemy = grunt;
+        let deadMessageSent = false;
+        enemy.updateEnemy();
         actor.updatePlayer();
-        UI.updateUI(player);
+        UI.updateUI(playerActor);
 
         //Attacks!
         utils.l("hitButton").onclick = function () {
-            if (combat.isAlive(player)) {
-                combat.basicAction(player, grunt);
-            } else if (deadMessageSent == false){
-                message.combat('youredead',player,currentEnemy);
+            if (combat.isAlive(playerActor)) {
+                combat.basicAction(playerActor, grunt);
+            } else if (deadMessageSent === false) {
+                message.combat('youredead', playerActor, grunt);
                 deadMessageSent = true;
             }
         };
@@ -62,26 +62,26 @@ define(['nameGen',
             location.reload();
         };
 
-        //Because respawning is so much more enjoybale than restarting
+        //Because respawning is so much more enjoyable than restarting
         utils.l("respawnButton").onclick = function () {
-            if (!combat.isAlive(player)) {
-                player.health = player.maxHealth;
+            if (!combat.isAlive(playerActor)) {
+                playerActor.health = playerActor.maxHealth;
                 clearInterval();
-                message.combat('respawn', player, currentEnemy);
+                message.combat('respawn', playerActor, currentEnemy);
                 deadMessageSent = false;
-                stats.player.money -= Math.floor(stats.player.money*.45);
-                UI.updateUI(player);
+                stats.player.money -= Math.floor(stats.player.money * .45);
+                UI.updateUI(playerActor);
             }
         }
 
         //Functionality for the autoplay (because no one likes to click away)
-        var running = false;
+        let running = false;
         utils.l("autoButton").onclick = function () {
             if (!running) {
                 running = true;
                 myvar = setInterval(function () {
-                    if (combat.isAlive(player)) {
-                        combat.basicAction(player, grunt);
+                    if (combat.isAlive(playerActor)) {
+                        combat.basicAction(playerActor, grunt);
                     } else {
                         clearInterval(myvar);
                         running = false;
@@ -94,12 +94,11 @@ define(['nameGen',
         };
 
         function saveStats() {
-            utils.save("pHP", (player.health).toString(10));
-            utils.save("pMHP", (player.maxHealth).toString(10));
+            utils.save("pHP", (playerActor.health).toString(10));
+            utils.save("pMHP", (playerActor.maxHealth).toString(10));
             utils.save("kills", stats.kills.toString(10));
-            utils.save("pEXP", player.experience);
-            utils.save("pLVL", player.level);
-            utils.save("pMEXP", (player.maxExperience).toString(10));
-
+            utils.save("pEXP", playerActor.experience);
+            utils.save("pLVL", playerActor.level);
+            utils.save("pMEXP", (playerActor.maxExperience).toString(10));
         }
     });

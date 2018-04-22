@@ -16,8 +16,6 @@ define(['utils'], function (utils) {
             utils.l('charRole').textContent = actor.role;
             utils.l('charSkill').textContent = actor.ability;
             utils.l('skillDesc').textContent = actor.skillDesc;
-            utils.l('charWeapon').textContent = actor.weapon.name;
-            utils.l('weaponDesc').textContent = actor.weapon.description;
             utils.l('charWeaponDamage').textContent = (actor.weapon.damage + actor.weapon.diceThrows) + " - " + ((actor.weapon.diceThrows * 6) + actor.weapon.damage) + " * " + actor.weapon.rateOfFire;
             utils.l('charWeaponAccuracy').textContent = actor.weapon.accuracy + '%';
             utils.l('charWeaponType').textContent = actor.weapon.weaponType;

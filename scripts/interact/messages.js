@@ -1,4 +1,4 @@
-define(['list_weapons', 'utils', 'color', 'stats'], function (weapons, utils, color, stats) {
+define(['list_weapons', 'utils', 'color', 'stats', "math"], function (weapons, utils, color, stats, math) {
     return {
         combat: function (Case, actor, enemy) {
 
@@ -137,6 +137,15 @@ define(['list_weapons', 'utils', 'color', 'stats'], function (weapons, utils, co
                     break;
                 case 'lostMoney':
                     utils.printLine(`You lost ${currencyAmount} yens.`);
+                    break;
+            }
+        },
+        encounter: function (Case, actor, enemy) {
+            let enemyName = utils.span("&#91;" + enemy.name + "&#93;", enemy.color);
+            var playerName = utils.span("&#91;" + actor.name + "&#93;", actor.color);
+            switch (Case) {
+                case 'distance':
+                    utils.printLine(`The distance between you and ${enemyName} is ${Math.floor(math.distance(actor.position, enemy.position))}m.`);
                     break;
             }
         }
