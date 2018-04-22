@@ -3,33 +3,33 @@ define(['list_weapons', 'utils', 'color', 'stats', "math"], function (weapons, u
         combat: function (Case, actor, enemy) {
 
             let enemyName = utils.span("&#91;" + enemy.name + "&#93;", enemy.color);
-            var playerName = utils.span("&#91;" + actor.name + "&#93;", actor.color);
+            let playerName = utils.span("&#91;" + actor.name + "&#93;", actor.color);
 
-            var str_actorDamage = utils.span(actor.damage, color.hitRed);
-            var str_actorDamageCrit = utils.span(actor.damage * 2, color.hitRed);
+            let str_actorDamage = utils.span(actor.damage, color.hitRed);
+            let str_actorDamageCrit = utils.span(actor.damage * 2, color.hitRed);
 
-            var str_enemyHealth = enemy.health;
-            var pronounP = (enemy.gender === "Female" ? 'her' : 'his');
-            var pronounS = (enemy.gender === "Female" ? 'she' : 'he');
-            var pronounO = (enemy.gender === "Female" ? 'her' : 'him');
+            let str_enemyHealth = enemy.health;
+            let pronounP = (enemy.gender === "Female" ? 'her' : 'his');
+            let pronounS = (enemy.gender === "Female" ? 'she' : 'he');
+            let pronounO = (enemy.gender === "Female" ? 'her' : 'him');
 
-            var str_damageIndicator = utils.span('(' + (enemy.health + actor.damage) + "=>" + enemy.health + ')', color.damageGreen);
-            var str_damageIndicatorCrit = utils.span('(' + (enemy.health + actor.damage * 2) + "=>" + enemy.health + ')', color.damageGreen);
-            var str_damageIndicatorCrit0 = utils.span('(' + (enemy.health + actor.damage * 2) + "=>0)", color.damageGreen);
-            var str_damageIndicator0 = utils.span('(' + (enemy.health + actor.damage) + "=>0)", color.damageGreen);
+            let str_damageIndicator = utils.span('(' + (enemy.health + actor.damage) + "=>" + enemy.health + ')', color.damageGreen);
+            let str_damageIndicatorCrit = utils.span('(' + (enemy.health + actor.damage * 2) + "=>" + enemy.health + ')', color.damageGreen);
+            let str_damageIndicatorCrit0 = utils.span('(' + (enemy.health + actor.damage * 2) + "=>0)", color.damageGreen);
+            let str_damageIndicator0 = utils.span('(' + (enemy.health + actor.damage) + "=>0)", color.damageGreen);
 
-            var str_enemyDamageIndicator = utils.span('(' + (actor.health + enemy.damage) + "=>" + actor.health + ')', color.damageGreen);
+            let str_enemyDamageIndicator = utils.span('(' + (actor.health + enemy.damage) + "=>" + actor.health + ')', color.damageGreen);
 
-            var str_Critical = utils.span("CRITICAL! ", color.hitRed);
-            var hitMiss = utils.span("MISS! ", color.hitRed);
+            let str_Critical = utils.span("CRITICAL! ", color.hitRed);
+            let hitMiss = utils.span("MISS! ", color.hitRed);
 
-            var droppedItem = str_actorItem(enemy);
-            var droppedWeapon = utils.span("&#91;" + enemy.weapon.name + "&#93;", color.itemYellow);
+            let droppedItem = str_actorItem(enemy);
+            let droppedWeapon = utils.span("&#91;" + enemy.weapon.name + "&#93;", color.itemYellow);
             
-            var currencyAmount = utils.span("&#91;" + enemy.currency + "&#93;", color.itemYellow);
+            let currencyAmount = utils.span("&#91;" + enemy.currency + "&#93;", color.itemYellow);
 
-            var playerLVL = utils.span((actor.level), color.damageGreen);
-            var playerLVLprev = utils.span((actor.level - 1), color.damageGreen);
+            let playerLVL = utils.span((actor.level), color.damageGreen);
+            let playerLVLprev = utils.span((actor.level - 1), color.damageGreen);
 
             function str_weaponName(ownerActor) {
                 return utils.span("&#91;" + ownerActor.weapon.name + "&#93;", color.weaponBlue);
@@ -42,10 +42,10 @@ define(['list_weapons', 'utils', 'color', 'stats', "math"], function (weapons, u
             function str_actorItem(ownerActor) {
                 return utils.span("&#91;" + ownerActor.items.name + "&#93;", color.itemYellow);
             }
-            var damageType = actor.weapon.weaponType == "Melee" ? "hit" : "shot";
-            var playerWeapon = str_weaponName(actor);
-            var enemyHealth = enemy.health <= 0 ? str_damageIndicator0 : str_damageIndicator;
-            var enemyHealthCrit = enemy.health <= 0 ? str_damageIndicatorCrit0 : str_damageIndicatorCrit
+            let damageType = actor.weapon.weaponType == "Melee" ? "hit" : "shot";
+            let playerWeapon = str_weaponName(actor);
+            let enemyHealth = enemy.health <= 0 ? str_damageIndicator0 : str_damageIndicator;
+            let enemyHealthCrit = enemy.health <= 0 ? str_damageIndicatorCrit0 : str_damageIndicatorCrit
 
             switch (Case) {
                 ///ACTOR MESSAGES///
@@ -62,7 +62,7 @@ define(['list_weapons', 'utils', 'color', 'stats', "math"], function (weapons, u
                     utils.printLine(`${playerName} killed ${enemyName} !`);
                     break;
                 case 'hitMiss':
-                    var random = Math.floor(Math.random() * 3);
+                    random = Math.floor(Math.random() * 3);
                     switch (random) {
                         case 0:
                             utils.printLine(`${hitMiss} ${playerName} tried to attack ${enemyName} but ${pronounS} was able to dodge the ${damageType}!`);
@@ -98,7 +98,7 @@ define(['list_weapons', 'utils', 'color', 'stats', "math"], function (weapons, u
                     break;
                     ///Looking for loot message
                 case 'loot':
-                    var random = Math.floor(Math.random() * 3);
+                    random = Math.floor(Math.random() * 3);
                     switch (random) {
                         case 0:
                             utils.printLine(`As the blood still flows from ${enemyName}'s liquidated carcass, you search through ${pronounP} belongings.`);
@@ -142,7 +142,7 @@ define(['list_weapons', 'utils', 'color', 'stats', "math"], function (weapons, u
         },
         encounter: function (Case, actor, enemy) {
             let enemyName = utils.span("&#91;" + enemy.name + "&#93;", enemy.color);
-            var playerName = utils.span("&#91;" + actor.name + "&#93;", actor.color);
+            let playerName = utils.span("&#91;" + actor.name + "&#93;", actor.color);
             switch (Case) {
                 case 'distance':
                     utils.printLine(`The distance between you and ${enemyName} is ${Math.floor(math.distance(actor.position, enemy.position))}m.`);

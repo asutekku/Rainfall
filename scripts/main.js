@@ -16,7 +16,8 @@ require.config({
         color: 'utils/colors',
         math: 'utils/math',
         actor: 'actors/actor',
-        enemy: 'actors/enemy'
+        enemy: 'actors/enemy',
+        role: 'actors/role'
     }
 });
 

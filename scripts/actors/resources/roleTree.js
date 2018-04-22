@@ -1,17 +1,23 @@
-define(['utils'], function (utils) {
+define(['utils', 'role'], function (utils, Role) {
     return {
-        role: ['Rockerboy', 'Solo', 'Netrunner', 'Corporate', 'Techie', 'Cop', 'Fixer', 'Media', 'Nomad'],
-        ability: function (role) {
+        role: ['Rockerboy', 'Solo'/*, 'Netrunner', 'Corporate', 'Techie', 'Cop', 'Fixer', 'Media', 'Nomad'*/],
+        roleSelection: function (role) {
             switch (role) {
                 case 'Rockerboy':
-                    this.skillDesc = "This skill allows Rocker to sway crowds equal to their ability level squared, times 200.";
-                    this.color = "#A93226";
-                    return 'Charismatic Leadership';
+                    var actorRole = new Role();
+                    actorRole.name = 'Rockerboy';
+                    actorRole.skill = 'Charismatic Leadership';
+                    actorRole.skillDescription = "This skill allows Rocker to sway crowds equal to their ability level squared, times 200.";
+                    actorRole.color = "#A93226";
+                    return actorRole;
                 case 'Solo':
-                    this.skillDesc = "Added to all awareness checks, this makes the Solo the fastest reacting person in a situation.";
-                    this.color = "#27AE60"
-                    return 'Combat Sense';
-                case 'Netrunner':
+                    var actorRole = new Role();
+                    actorRole.name = 'Solo';
+                    actorRole.skill = 'Combat Sense';
+                    actorRole.skillDescription = "Added to all awareness checks, this makes the Solo the fastest reacting person in a situation.";
+                    actorRole.color = "#27AE60"
+                    return actorRole;
+                /*case 'Netrunner':
                     this.skillDesc = "Prevents access to the web from other persons.";
                     this.color = "#2E86C1"
                     return 'Interface';
@@ -38,8 +44,8 @@ define(['utils'], function (utils) {
                 case 'Nomad':
                     this.skillDesc = "This allows nomad to call in as many Family members to aid him as his current Family Ability level x 2.";
                     this.color = "#2ECC71"
-                    return 'Family';
-            };
+                    return 'Family';*/
+            }
         },
         skillDesc: "##UNDEFINED##"
     };

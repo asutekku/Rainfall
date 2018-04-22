@@ -2,8 +2,7 @@ define(['actor', 'utils', 'list_roles', 'nameGen', 'getItem', 'math'], function 
 
     let playerActor = new Actor();
     playerActor.name = nameGen.name();
-    playerActor.role = utils.choose(stat.role);
-    playerActor.ability = stat.ability(this.role);
+    playerActor.role = stat.roleSelection(utils.choose(stat.role));
     playerActor.skillDesc = stat.skillDesc;
     playerActor.color = stat.color;
     playerActor.gender = nameGen.gender();
@@ -21,8 +20,7 @@ define(['actor', 'utils', 'list_roles', 'nameGen', 'getItem', 'math'], function 
         updatePlayer: function () {
             currentPlayer = this.player;
             currentPlayer.name = nameGen.name();
-            currentPlayer.role = utils.choose(stat.role);
-            currentPlayer.ability = stat.ability(currentPlayer.role);
+            currentPlayer.role = stat.roleSelection(utils.choose(stat.role));
             currentPlayer.skillDesc = stat.skillDesc;
             currentPlayer.color = stat.color;
             currentPlayer.gender = nameGen.gender();

@@ -186,10 +186,10 @@ define(['math', 'nameGen', 'getItem', 'utils', 'list_roles', "stats"], function 
 
     Actor.prototype.update = function () {
         this.name = nameGen.name();
+        this.role = utils.choose(stat.role);
         this.weapon = getItem.weapon();
         this.gender = nameGen.gender();
         this.items = getItem.item();
-        this.role = utils.choose(stat.role);
         this.skill = stat.ability(this.role);
         this.color = stat.color;
         this.currency = Math.floor(math.range(50, 20));

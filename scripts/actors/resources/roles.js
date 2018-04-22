@@ -9,15 +9,15 @@ define(['utils'], function (utils) {
                     return 'Charismatic Leadership';
                 case 'Solo':
                     this.skillDesc = "Added to all awareness checks, this makes the Solo the fastest reacting person in a situation.";
-                    this.color = "#27AE60"
+                    this.color = "#27AE60";
                     return 'Combat Sense';
                 case 'Netrunner':
                     this.skillDesc = "Prevents access to the web from other persons.";
-                    this.color = "#2E86C1"
+                    this.color = "#2E86C1";
                     return 'Interface';
                 case 'Techie':
                     this.skillDesc = "This general repair skill allows the Techie to temporarily repair or alter anything for x turns per level of skill";
-                    this.color = "#A2D9CE"
+                    this.color = "#A2D9CE";
                     return 'Jury Rig';
                 case 'Media':
                     this.skillDesc = "The ability to have people believe what you're saying while in your on-air persona.";
@@ -25,7 +25,7 @@ define(['utils'], function (utils) {
                     return 'Credibility';
                 case 'Cop':
                     this.skillDesc = "The ability to intimidate or control others through your position as a lawman.";
-                    this.color = "#2980B9"
+                    this.color = "#2980B9";
                     return 'Authority';
                 case 'Corporate':
                     this.skillDesc = "This represents the corporates ability to command corporation resources. It is used as a persuasion skill, based on the scale of resources requested.";
@@ -33,11 +33,11 @@ define(['utils'], function (utils) {
                     return 'Resources';
                 case 'Fixer':
                     this.skillDesc = "The ability to locate people, information etc.";
-                    this.color = "#ed9b51"
+                    this.color = "#ed9b51";
                     return 'Streetdeal';
                 case 'Nomad':
                     this.skillDesc = "This allows nomad to call in as many Family members to aid him as his current Family Ability level x 2.";
-                    this.color = "#2ECC71"
+                    this.color = "#2ECC71";
                     return 'Family';
             };
         },

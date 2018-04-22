@@ -13,9 +13,9 @@ define(['utils'], function (utils) {
             utils.l('currency').textContent = actor.currency + "¥";
             utils.l('playerName').textContent = actor.name;
             utils.l('charGender').textContent = actor.gender;
-            utils.l('charRole').textContent = actor.role;
-            utils.l('charSkill').textContent = actor.ability;
-            utils.l('skillDesc').textContent = actor.skillDesc;
+            utils.l('charRole').textContent = actor.role.name;
+            utils.l('charSkill').textContent = actor.role.skill;
+            utils.l('skillDesc').textContent = actor.role.skillDescription;
             utils.l('charWeaponDamage').textContent = (actor.weapon.damage + actor.weapon.diceThrows) + " - " + ((actor.weapon.diceThrows * 6) + actor.weapon.damage) + " * " + actor.weapon.rateOfFire;
             utils.l('charWeaponAccuracy').textContent = actor.weapon.accuracy + '%';
             utils.l('charWeaponType').textContent = actor.weapon.weaponType;

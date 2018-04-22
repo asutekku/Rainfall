@@ -8,8 +8,7 @@ define(['actor', 'utils', 'list_roles', 'nameGen', 'getItem', 'math', "stats"], 
             currentEnemy.name = nameGen.name();
             currentEnemy.gender = nameGen.gender();
             currentEnemy.items = getItem.item();
-            currentEnemy.role = utils.choose(stat.role);
-            currentEnemy.skill = stat.ability(currentEnemy.role);
+            currentEnemy.role = stat.roleSelection(utils.choose(stat.role));
             currentEnemy.color = stat.color;
             currentEnemy.level = Math.floor((stats.player.level) + math.range(1, 3));
             currentEnemy.currency = Math.floor(math.range(50, 20));
