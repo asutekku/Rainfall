@@ -1,8 +1,4 @@
 .vscode/settings.json
-scripts/utils/session.js
-scripts/actors/resources/roles.js
-scripts/actors/enemy.js
-scripts/actors/actor.js
 .idea/workspace.xml
 .idea/vcs.xml
 .idea/modules.xml
