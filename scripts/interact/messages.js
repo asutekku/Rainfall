@@ -9,9 +9,9 @@ define(['list_weapons', 'utils', 'color', 'stats'], function (weapons, utils, co
             var str_actorDamageCrit = utils.span(actor.damage * 2, color.hitRed);
 
             var str_enemyHealth = enemy.health;
-            var pronounP = (enemy.gender == "Female" ? 'her' : 'his');
-            var pronounS = (enemy.gender == "Female" ? 'she' : 'he');
-            var pronounO = (enemy.gender == "Female" ? 'her' : 'him');
+            var pronounP = (enemy.gender === "Female" ? 'her' : 'his');
+            var pronounS = (enemy.gender === "Female" ? 'she' : 'he');
+            var pronounO = (enemy.gender === "Female" ? 'her' : 'him');
 
             var str_damageIndicator = utils.span('(' + (enemy.health + actor.damage) + "=>" + enemy.health + ')', color.damageGreen);
             var str_damageIndicatorCrit = utils.span('(' + (enemy.health + actor.damage * 2) + "=>" + enemy.health + ')', color.damageGreen);
@@ -21,8 +21,7 @@ define(['list_weapons', 'utils', 'color', 'stats'], function (weapons, utils, co
             var str_enemyDamageIndicator = utils.span('(' + (actor.health + enemy.damage) + "=>" + actor.health + ')', color.damageGreen);
 
             var str_Critical = utils.span("CRITICAL! ", color.hitRed);
-            var str_Miss = utils.span("MISS! ", color.hitRed);
-            var deathCharge = utils.span("[" + Math.floor(stats.player.money*.45) + "]", color.itemYellow);
+            var hitMiss = utils.span("MISS! ", color.hitRed);
 
             var droppedItem = str_actorItem(enemy);
             var droppedWeapon = utils.span("&#91;" + enemy.weapon.name + "&#93;", color.itemYellow);
@@ -80,7 +79,7 @@ define(['list_weapons', 'utils', 'color', 'stats'], function (weapons, utils, co
                     utils.printLine(`You encountered ${enemyName}. Just by looking at ${pronounP} attire you can see ${pronounS} is a ${str_actorRole(enemy)}.`);
                     break;
                 case 'encounterSame':
-                    utils.printLine(`You encountered ${enemyName}. You see ${pronounP} is also ${str_actorRole(enemy)} so you just greet ${pronounO} and venture forward.`);
+                    utils.printLine(`You encountered ${enemyName}. However you see ${pronounP} is also ${str_actorRole(enemy)} so you just greet ${pronounO} and venture forward.`);
                     break;
                     ///Level up message
                 case 'levelUp':

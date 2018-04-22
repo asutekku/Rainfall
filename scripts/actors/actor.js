@@ -1,6 +1,5 @@
-define(function () {
+define(['math', 'nameGen', 'getItem', 'utils', 'list_roles'], function (math, nameGen, getItem, utils, stat) {
     function Actor() {
-        this.type = null;
         this.name = null;
         this.role = null;
         this.skill = null;
@@ -15,19 +14,23 @@ define(function () {
         this.items = [];
         this.currency = null;
         this.criticalChange = null;
+        this.position = [0, 0];
+        this.kills = 0;
         this.stats = {
-            int: 0,
-            ref: 0,
-            tech: 12,
-            cool: 0,
-            attr: 0,
-            luck: 0,
-            ma: 0,
-            body: 0,
-            emp: 0,
-            run: 0,
-            leap: 0,
-            lift: 0
+            intelligence: 1,
+            reflexes: 1,
+            techAbility: 1,
+            determination: 1,
+            attractiveness: 1,
+            luck: 1,
+            movementAllowance: {
+                stamina: 1,
+                run: 1,//this.stats.movementAllowance.stamina * 3,
+                leap: 1,//this.stats.movementAllowance.stamina / 4
+            },
+            bodyType: 2, //2-10
+            empathy: 1,
+            lift: 1
         };
         this.skills = {
             special: {
@@ -40,7 +43,7 @@ define(function () {
                 juryRig: 0,
                 medicalTech: 0,
                 resources: 0,
-                streetdeal: 0,
+                streetDeal: 0,
             },
             attr: {
                 personalGrooming: 0,
@@ -175,5 +178,23 @@ define(function () {
             lifeEvents: []
         };
     }
+    Actor.prototype.reposition = function () {
+        let previousPos = this.position;
+        this.position = [previousPos[0] + Math.floor(math.range(50, -50)),
+            previousPos[1] + Math.floor(math.range(50, -50))]
+    };
+
+    Actor.prototype.update = function (reference) {
+        this.name = nameGen.name();
+        this.weapon = getItem.weapon();
+        this.gender = nameGen.gender();
+        this.items = getItem.item();
+        this.role = utils.choose(stat.role);
+        this.skill = stat.ability(this.role);
+        this.color = stat.color;
+        this.currency = Math.floor(math.range(50, 20));
+        this.level = Math.floor((reference.getLvl) + math.range(1, 3));
+        this.experience = this.level * Math.floor(math.range(1, 10));
+    };
     return Actor;
 });

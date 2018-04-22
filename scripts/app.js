@@ -42,7 +42,7 @@ define(['nameGen',
         var grunt = enemy.enemy;
         var currentEnemy = grunt;
         var deadMessageSent = false;
-        enemy.updateEnemy();
+        grunt.update(player);
         actor.updatePlayer();
         UI.updateUI(player);
 
