@@ -8,10 +8,11 @@ define(['actor', 'utils', 'list_roles', 'nameGen', 'getItem', 'math', "stats"], 
             currentEnemy.name = nameGen.name();
             currentEnemy.gender = nameGen.gender();
             currentEnemy.items = getItem.item();
-            currentEnemy.role = stat.roleSelection(utils.choose(stat.role));
+            currentEnemy.role = stat.role();
             currentEnemy.color = stat.color;
             currentEnemy.level = Math.floor((stats.player.level) + math.range(1, 3));
             currentEnemy.currency = Math.floor(math.range(50, 20));
+            currentEnemy.experience = Math.floor(math.range(50, 20));
         }
     }
 });

@@ -9,7 +9,7 @@ require.config({
         list_roles: 'actors/resources/roleTree',
         combat: 'interact/combat',
         messages: 'interact/messages',
-        actors: 'actors/player',
+        player: 'actors/player',
         nameGen: 'actors/tools/nameGen',
         getItem: 'interact/getItem',
         UI: 'utils/UI',
@@ -17,7 +17,7 @@ require.config({
         math: 'utils/math',
         actor: 'actors/actor',
         enemy: 'actors/enemy',
-        role: 'actors/role'
+        role: 'actors/role',
     }
 });
 

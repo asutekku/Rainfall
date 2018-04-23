@@ -9,7 +9,7 @@ define(['nameGen',
         'list_weapons',
         'list_items',
         'list_armor'
-       ],
+    ],
     function (nameGen, stat, utils, combat, color, message, UI, stats, weapons, items, armor) {
 
         var itemID = 0;
@@ -42,11 +42,11 @@ define(['nameGen',
             updateCurrency: function (money, actor, target) {
                 if (money >= 0) {
                     message.combat('getMoney', actor, target);
-                    stats.player.money += money;
+                    actor.currency += money;
                 } else {
-                    if (stats.player.money < -(money)) {
+                    if (actor.currency < -(money)) {
                         message.combat('noMoney', actor, target);
-                    } else if (stats.player.money < money) {
+                    } else if (actor.currency < money) {
                         stats.player.money += money;
                         console.log("Does it work 2?")
                     }
@@ -64,7 +64,7 @@ define(['nameGen',
                         this.parentNode.removeChild(this);
                         if (inventoryItem.data.type == "medical") {
                             actor.health += inventoryItem.data.restorePoints;
-                            if (actor.health >= actor.maxHealth){
+                            if (actor.health >= actor.maxHealth) {
                                 actor.health = actor.maxHealth;
                             }
                         } else {

@@ -1,4 +1,4 @@
-define(['enemy', 'utils', 'list_weapons', 'list_items', 'list_armor', 'messages', 'actors', 'getItem', 'nameGen', 'UI', 'stats'], function (enemy, utils, weapons, itemList, armor, message, actors, getItem, nameGen, UI, stats) {
+define(['enemy', 'utils', 'list_weapons', 'list_items', 'list_armor', 'messages', 'player', 'getItem', 'nameGen', 'UI', 'stats'], function (enemy, utils, weapons, itemList, armor, message, actors, getItem, nameGen, UI, stats) {
 
     let currentEnemy = enemy.enemy;
 
@@ -137,7 +137,7 @@ define(['enemy', 'utils', 'list_weapons', 'list_items', 'list_armor', 'messages'
         replaceEnemy: function (actor, target) {
             enemy.updateEnemy();
             currentEnemy.reposition();
-            if (actor.role === target.role) {
+            if (actor.role.name === target.role.name) {
                 message.combat('encounterSame', actor, currentEnemy);
                 enemy.updateEnemy();
                 this.replaceEnemy(actor, target);
@@ -216,7 +216,6 @@ define(['enemy', 'utils', 'list_weapons', 'list_items', 'list_armor', 'messages'
             }
             getItem.updateCurrency(target.currency, actor, target);
             actor.armor = (actor.lifepath.style.clothes.headgear == null ? 0 : actor.lifepath.style.clothes.headgear.stoppingPower) + (actor.lifepath.style.clothes.upper == null ? 0 : actor.lifepath.style.clothes.upper.stoppingPower) + (actor.lifepath.style.clothes.bottom == null ? 0 : actor.lifepath.style.clothes.bottom.stoppingPower);
-            console.log(actor);
             utils.l('armorStoppingPower').textContent = actor.armor + '%';
         }
     };

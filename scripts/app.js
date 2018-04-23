@@ -5,7 +5,7 @@ define(['nameGen',
         'color',
         'messages',
         'list_items',
-        'actors',
+        'player',
         'UI',
         'stats',
         'enemy'

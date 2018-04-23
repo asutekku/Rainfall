@@ -1,51 +1,17 @@
-define(['utils', 'role'], function (utils, Role) {
+define(['utils', 'role', 'actors/resources/roles'], function (utils, Role, roles) {
+    var randomProperty = function (obj) {
+        var keys = Object.keys(obj)
+        return obj[keys[keys.length * Math.random() << 0]];
+    };
     return {
-        role: ['Rockerboy', 'Solo'/*, 'Netrunner', 'Corporate', 'Techie', 'Cop', 'Fixer', 'Media', 'Nomad'*/],
-        roleSelection: function (role) {
-            switch (role) {
-                case 'Rockerboy':
-                    var actorRole = new Role();
-                    actorRole.name = 'Rockerboy';
-                    actorRole.skill = 'Charismatic Leadership';
-                    actorRole.skillDescription = "This skill allows Rocker to sway crowds equal to their ability level squared, times 200.";
-                    actorRole.color = "#A93226";
-                    return actorRole;
-                case 'Solo':
-                    var actorRole = new Role();
-                    actorRole.name = 'Solo';
-                    actorRole.skill = 'Combat Sense';
-                    actorRole.skillDescription = "Added to all awareness checks, this makes the Solo the fastest reacting person in a situation.";
-                    actorRole.color = "#27AE60"
-                    return actorRole;
-                /*case 'Netrunner':
-                    this.skillDesc = "Prevents access to the web from other persons.";
-                    this.color = "#2E86C1"
-                    return 'Interface';
-                case 'Techie':
-                    this.skillDesc = "This general repair skill allows the Techie to temporarily repair or alter anything for x turns per level of skill";
-                    this.color = "#A2D9CE"
-                    return 'Jury Rig';
-                case 'Media':
-                    this.skillDesc = "The ability to have people believe what you're saying while in your on-air persona.";
-                    this.color = "#f8a912";
-                    return 'Credibility';
-                case 'Cop':
-                    this.skillDesc = "The ability to intimidate or control others through your position as a lawman.";
-                    this.color = "#2980B9"
-                    return 'Authority';
-                case 'Corporate':
-                    this.skillDesc = "This represents the corporates ability to command corporation resources. It is used as a persuasion skill, based on the scale of resources requested.";
-                    this.color = "#fff145";
-                    return 'Resources';
-                case 'Fixer':
-                    this.skillDesc = "The ability to locate people, information etc.";
-                    this.color = "#ed9b51"
-                    return 'Streetdeal';
-                case 'Nomad':
-                    this.skillDesc = "This allows nomad to call in as many Family members to aid him as his current Family Ability level x 2.";
-                    this.color = "#2ECC71"
-                    return 'Family';*/
-            }
+        role: function () {
+            var theRole = randomProperty(roles);
+            let actorRole = new Role();
+            actorRole.name = theRole.name;
+            actorRole.skill = theRole.skill;
+            actorRole.skillDescription = theRole.skillDescription;
+            actorRole.color = theRole.color;
+            return actorRole;
         },
         skillDesc: "##UNDEFINED##"
     };

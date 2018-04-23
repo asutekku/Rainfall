@@ -2,8 +2,8 @@ define(['list_weapons', 'utils', 'color', 'stats', "math"], function (weapons, u
     return {
         combat: function (Case, actor, enemy) {
 
-            let enemyName = utils.span("&#91;" + enemy.name + "&#93;", enemy.color);
-            let playerName = utils.span("&#91;" + actor.name + "&#93;", actor.color);
+            let enemyName = utils.span("&#91;" + enemy.name + "&#93;", enemy.role.color);
+            let playerName = utils.span("&#91;" + actor.name + "&#93;", actor.role.color);
 
             let str_actorDamage = utils.span(actor.damage, color.hitRed);
             let str_actorDamageCrit = utils.span(actor.damage * 2, color.hitRed);
@@ -36,7 +36,7 @@ define(['list_weapons', 'utils', 'color', 'stats', "math"], function (weapons, u
             }
 
             function str_actorRole(ownerActor) {
-                return utils.span("&#91;" + ownerActor.role + "&#93;", ownerActor.color);
+                return utils.span("&#91;" + ownerActor.role.name + "&#93;", ownerActor.role.color);
             }
 
             function str_actorItem(ownerActor) {
