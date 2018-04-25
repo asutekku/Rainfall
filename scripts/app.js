@@ -7,10 +7,9 @@ define(['nameGen',
         'list_items',
         'player',
         'UI',
-        'stats',
         'enemy'
     ],
-    function (nameGen, stat, utils, combat, color, message, items, actor, UI, stats, enemy) {
+    function (nameGen, stat, utils, combat, color, message, items, actor, UI, enemy) {
 
         let playerActor = actor.player;
 
@@ -30,10 +29,10 @@ define(['nameGen',
             utils.l("charCRIT").textContent = playerActor.weapon.crit + "%";
             playerActor.critM = isNaN(playerActor.critM) ? 2 : parseInt(playerActor.critM, 10);
             utils.l("charCRITM").textContent = playerActor.critM;
-            stats.kills = isNaN(stats.kills) ? 0 : parseInt(stats.kills, 10);
-            utils.l("kills").textContent = stats.kills;
-            stats.currency = isNaN(stats.currency) ? 0 : parseInt(stats.kills, 10);
-            utils.l("currency").textContent = stats.currency;
+            playerActor.kills = isNaN(playerActor.kills) ? 0 : parseInt(playerActor.kills, 10);
+            utils.l("kills").textContent = playerActor.kills;
+            playerActor.currency = isNaN(playerActor.currency) ? 0 : parseInt(playerActor.kills, 10);
+            utils.l("currency").textContent = playerActor.currency;
         }
 
 
