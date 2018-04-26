@@ -25,17 +25,13 @@ define(['nameGen',
                 var randomItem = Math.floor(Math.random() * 4);
                 switch (randomItem) {
                     case 0:
-                        item = utils.choose(armor.armor);
-                        return item;
+                        return utils.choose(armor.armor);
                     case 1:
-                        item = utils.choose(weapons.weapons);
-                        return item;
+                        return utils.choose(weapons.weapons);
                     case 2:
-                        item = utils.choose(items.tools);
-                        return item;
+                        return utils.choose(items.tools);
                     case 3:
-                        item = utils.choose(items.medical);
-                        return item;
+                        return utils.choose(items.medical);
                 }
             },
 

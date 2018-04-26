@@ -7,11 +7,12 @@ define(['nameGen',
         'list_items',
         'player',
         'UI',
-        'enemy'
+        'enemy',
+        'actor'
     ],
-    function (nameGen, stat, utils, combat, color, message, items, actor, UI, enemy) {
+    function (nameGen, stat, utils, combat, color, message, items, player, UI,enemy, Actor) {
 
-        let playerActor = actor.player;
+        let playerActor = player.player;
 
         /*==========================================================================================
         LOAD GAME
@@ -35,14 +36,13 @@ define(['nameGen',
             utils.l("currency").textContent = playerActor.currency;
         }
 
-
         loadGame();
 
         let grunt = enemy.enemy;
         let currentEnemy = grunt;
         let deadMessageSent = false;
         enemy.updateEnemy();
-        actor.updatePlayer();
+        player.updatePlayer();
         UI.updateUI(playerActor);
 
         //Attacks!

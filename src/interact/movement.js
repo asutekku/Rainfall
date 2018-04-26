@@ -1,15 +1,17 @@
-define(['enemy', 'utils', 'list_weapons', 'list_items', 'list_armor', 'messages', 'player', 'getItem', 'nameGen', 'UI', 'stats', "utils/math"], function (enemy, utils, weapons, itemList, armor, message, actors, getItem, nameGen, UI, stats, math) {
+define(["math"], function (math) {
 
     //let currentEnemy = enemy.enemy;
 
     return {
-        moveRandomly: function (actor, range) {
-            let previousPos = actor.position;
-            actor.position = [previousPos[0] + Math.floor(math.range(range, -range)),
-                previousPos[1] + Math.floor(math.range(range, -range))]
+        moveRandomly(actor, range) {
+            console.log(actor);
+            let previousPos = Object.keys(actor).position;
+            console.log(actor.enemy.position);
+            actor.position = [previousPos[0] + Math.floor(math.range(range, range * -1)),
+                previousPos[1] + Math.floor(math.range(range, range * -1))]
         },
         move: function (actor, direction, distance) {
-            let previousPos = actor.position;
+            let previousPos = Object.keys(actor).position;
             switch (direction) {
                 case "N":
                     actor.position = [previousPos[0], previousPos[1] + distance];
@@ -25,7 +27,12 @@ define(['enemy', 'utils', 'list_weapons', 'list_items', 'list_armor', 'messages'
                     break;
             }
         },
-        enterVehicle: function(actor, vehicle){
+        getDescendantProp(obj, desc) {
+            var arr = desc.split(".");
+            while (arr.length && (obj = obj[arr.shift()])) ;
+            return obj;
+        },
+        enterVehicle(actor, vehicle) {
             //
         }
 

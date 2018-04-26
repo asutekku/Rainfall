@@ -10,7 +10,6 @@ define(['actor', 'utils', 'list_roles', 'nameGen', 'getItem', 'math'], function 
     playerActor.maxExperience = parseInt(localStorage.getItem("pMEXP"), 10);
     playerActor.health = parseInt(localStorage.getItem("pHP"), 10);
     playerActor.maxHealth = parseInt(localStorage.getItem("pMHP"), 10);
-    playerActor.mana = localStorage.getItem("pMP");
     playerActor.stamina = localStorage.getItem("pSTM");
     playerActor.weapon = getItem.weapon();
 

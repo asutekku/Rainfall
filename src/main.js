@@ -4,7 +4,7 @@ require.config({
         utils: 'utils/utils',
         list_weapons: 'items/weapons',
         list_items: 'items/items',
-        list_armor: 'items/armor',
+        list_armor: 'items/armors',
         list_names: 'actors/resources/nameList',
         list_roles: 'actors/resources/roleTree',
         combat: 'interact/combat',
@@ -18,6 +18,7 @@ require.config({
         actor: 'actors/actor',
         enemy: 'actors/enemy',
         role: 'actors/role',
+        movement: 'interact/movement'
     }
 });
 

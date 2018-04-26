@@ -1,4 +1,4 @@
-define(['enemy', 'utils', 'list_weapons', 'list_items', 'list_armor', 'messages', 'player', 'getItem', 'nameGen', 'UI', 'stats'], function (enemy, utils, weapons, itemList, armor, message, actors, getItem, nameGen, UI, stats) {
+define(['enemy', 'utils', 'list_weapons', 'list_items', 'list_armor', 'messages', 'player', 'getItem', 'nameGen', 'UI', 'stats', "movement"], function (enemy, utils, weapons, itemList, armor, message, actors, getItem, nameGen, UI, stats, movement) {
 
     let currentEnemy = enemy.enemy;
 
@@ -106,7 +106,8 @@ define(['enemy', 'utils', 'list_weapons', 'list_items', 'list_armor', 'messages'
             this.lootEnemy(actor, target);
             this.gainLevel(actor, target);
             this.replaceEnemy(actor, target);
-            actor.reposition();
+            movement.moveRandomly(actor,50);
+            //actor.reposition();
             UI.updateUI(actor);
         },
 
@@ -136,7 +137,8 @@ define(['enemy', 'utils', 'list_weapons', 'list_items', 'list_armor', 'messages'
 
         replaceEnemy: function (actor, target) {
             enemy.updateEnemy();
-            currentEnemy.reposition();
+            movement.moveRandomly(enemy,50);
+            //currentEnemy.reposition();
             if (actor.role.name === target.role.name) {
                 message.combat('encounterSame', actor, currentEnemy);
                 enemy.updateEnemy();
