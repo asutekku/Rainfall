@@ -48,7 +48,7 @@ export class Utils {
         let value = Math.ceil(Math.random() * 100);
         return value <= what;
     }
-    static range(max: number, min: number): number {
+    static range(min: number, max: number): number {
         return Math.random() * (max - min) + min;
     }
 
