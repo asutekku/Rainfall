@@ -1,13 +1,14 @@
 import {Utils} from "../utils/utils";
 import {Role} from "./resources/Role";
-import {name} from "./tools/nameBuilder";
-import {gender} from "./tools/nameBuilder";
 import {Weapon} from "../items/Weapon";
 import {Item} from "../items/Item";
 import {getItem} from "../interact/getItem";
 import {Stats} from "./resources/stats";
+import {Movement} from "../interact/Movement";
+import {Name} from "./resources/Name";
 
 export class Actor {
+
 
     get weapon(): Weapon {
         if (this._weapon != null) return this._weapon;
@@ -17,7 +18,8 @@ export class Actor {
     set weapon(value: Weapon) {
         this._weapon = value;
     }
-    maxExperience: number;
+
+    item: any;
     public name: string;
     public role: Role;
     public skill: any;
@@ -31,7 +33,6 @@ export class Actor {
     public gender: string;
     public items: Item[];
     public currency: number;
-    private criticalChange: number;
     public position: number[];
     public kills: number;
     private stats: { intelligence: number; reflexes: number; techAbility: number; determination: number; attractiveness: number; luck: number; movementAllowance: { stamina: number; run: number; leap: number }; bodyType: number; empathy: number; lift: number };
@@ -39,9 +40,11 @@ export class Actor {
     private cybernetics: any[];
     lifepath: { style: { clothes: { headgear: any; upper: any; jacket: any; bottom: any; shoes: any; accessories: any }; hair: any; affectations: any; ethnicity: any; language: any }; familyBackground: any; motivations: { traits: any; valuedPerson: any; valueMost: any; feelAboutPeople: any; valuedPossession: any }; lifeEvents: any[] };
     public maxHealth: number;
+    maxExperience: number = 100;
 
     constructor() {
-        this.name = name.toString();
+        this.gender = Name.getGender();
+        this.name = `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
         this.role = null;
         this.skill = null;
         this.level = 1;
@@ -51,10 +54,8 @@ export class Actor {
         this.armor = null;
         this.weapons = [];
         this.color = null;
-        this.gender = gender.toString();
         this.items = [];
         this.currency = 0;
-        this.criticalChange = null;
         this.position = [0, 0];
         this.kills = 0;
         this.stats = {
@@ -220,21 +221,214 @@ export class Actor {
         };
     }
 
-    reposition() {
-        let previousPos = this.position;
-        this.position = [previousPos[0] + Math.floor(Utils.range(50, -50)),
-            previousPos[1] + Math.floor(Utils.range(50, -50))]
+    update() {
+        this.gender = Name.getGender();
+        this.name = `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
+        this.role = new Role();
+        this.skill = this.role.skill;
+        this.level = Stats.level;
+        this.experience = Math.floor(Stats.level ^ 2 / 0.4);
+        this.health = Math.floor(Utils.range((Stats.level ^ 2 / 0.09) * 0.9, (Stats.level ^ 2 / 0.09) * 1.1));
+        this._weapon = getItem.weapon();
+        this.armor = 0;
+        this.weapons = [];
+        this.color = this.role.color;
+        this.items = [getItem.item()];
+        this.item = getItem.item();
+        this.currency = Math.floor(Utils.range(20, 100));
+        this.position = Movement.randomPosition(50);
+        this.kills = 0;
+        this.stats = {
+            intelligence: Utils.dice(1, 10),
+            reflexes: Utils.dice(1, 10),
+            techAbility: Utils.dice(1, 10),
+            determination: Utils.dice(1, 10),
+            attractiveness: Utils.dice(1, 10),
+            luck: Utils.dice(1, 10),
+            movementAllowance: {
+                stamina: Utils.dice(1, 10),
+                run: this.stats.movementAllowance.stamina * 3,
+                leap: this.stats.movementAllowance.stamina / 4
+            },
+            bodyType: Utils.dice(1, 11) - 1, //2-10
+            empathy: Utils.dice(1, 10),
+            lift: Utils.dice(1, 10)
+        };
+        this.skills = {
+            special: {
+                authority: Utils.dice(1, 5),
+                charismaticLeadership: Utils.dice(1, 5),
+                combatSense: Utils.dice(1, 5),
+                credibility: Utils.dice(1, 5),
+                family: Utils.dice(1, 5),
+                interface: Utils.dice(1, 5),
+                juryRig: Utils.dice(1, 5),
+                medicalTech: Utils.dice(1, 5),
+                resources: Utils.dice(1, 5),
+                streetDeal: Utils.dice(1, 5),
+            },
+            attr: {
+                personalGrooming: Utils.dice(1, 5),
+                wardrobeAndStyle: Utils.dice(1, 5)
+            },
+            body: {
+                endurance: Utils.dice(1, 5),
+                strength: Utils.dice(1, 5),
+                swimming: Utils.dice(1, 5)
+            },
+            will: {
+                interrogation: Utils.dice(1, 5),
+                intimidate: Utils.dice(1, 5),
+                oratory: Utils.dice(1, 5),
+                resistTorture: Utils.dice(1, 5),
+                streetwise: Utils.dice(1, 5)
+            },
+            empathy: {
+                humanPerception: Utils.dice(1, 5),
+                interview: Utils.dice(1, 5),
+                leadership: Utils.dice(1, 5),
+                seduction: Utils.dice(1, 5),
+                social: Utils.dice(1, 5),
+                persuasion: Utils.dice(1, 5),
+                perform: Utils.dice(1, 5)
+            },
+            int: {
+                accounting: Utils.dice(1, 5),
+                anthropology: Utils.dice(1, 5),
+                awareness: Utils.dice(1, 5),
+                biology: Utils.dice(1, 5),
+                botany: Utils.dice(1, 5),
+                chemistry: Utils.dice(1, 5),
+                composition: Utils.dice(1, 5),
+                diagnosis: Utils.dice(1, 5),
+                education: Utils.dice(1, 5),
+                expert: Utils.dice(1, 5),
+                gamble: Utils.dice(1, 5),
+                geology: Utils.dice(1, 5),
+                evade: Utils.dice(1, 5),
+                history: Utils.dice(1, 5),
+                librarySearch: Utils.dice(1, 5),
+                math: Utils.dice(1, 5),
+                physics: Utils.dice(1, 5),
+                programming: Utils.dice(1, 5),
+                tracking: Utils.dice(1, 5),
+                stockMarket: Utils.dice(1, 5),
+                systemKnowledge: Utils.dice(1, 5),
+                teaching: Utils.dice(1, 5),
+                wilderness: Utils.dice(1, 5),
+                zoology: Utils.dice(1, 5)
+            },
+            language: {
+                english: Utils.dice(1, 5),
+                japanese: Utils.dice(1, 5),
+                chinese: Utils.dice(1, 5),
+                german: Utils.dice(1, 5),
+                korean: Utils.dice(1, 5),
+                french: Utils.dice(1, 5)
+            },
+            ref: {
+                archery: Utils.dice(1, 5),
+                athletics: Utils.dice(1, 5),
+                brawling: Utils.dice(1, 5),
+                dance: Utils.dice(1, 5),
+                dodge: Utils.dice(1, 5),
+                driving: Utils.dice(1, 5),
+                fencing: Utils.dice(1, 5),
+                handgun: Utils.dice(1, 5),
+                heavyWeapons: Utils.dice(1, 5),
+                martialJudo: Utils.dice(1, 5),
+                martialKungfu: Utils.dice(1, 5),
+                martialKarate: Utils.dice(1, 5),
+                melee: Utils.dice(1, 5),
+                motorcycle: Utils.dice(1, 5),
+                heavyMachinery: Utils.dice(1, 5),
+                pilotGyro: Utils.dice(1, 5),
+                pilotFixedwing: Utils.dice(1, 5),
+                pilotDirigible: Utils.dice(1, 5),
+                pilotVect: Utils.dice(1, 5),
+                rifle: Utils.dice(1, 5),
+                stealth: Utils.dice(1, 5),
+                submachinegun: Utils.dice(1, 5)
+            },
+            tech: {
+                aero: Utils.dice(1, 5),
+                AV: Utils.dice(1, 5),
+                basic: Utils.dice(1, 5),
+                cryotankOperation: Utils.dice(1, 5),
+                cyberdeckDesign: Utils.dice(1, 5),
+                cyberTech: Utils.dice(1, 5),
+                demolitions: Utils.dice(1, 5),
+                disguise: Utils.dice(1, 5),
+                electronics: Utils.dice(1, 5),
+                electronicSecurity: Utils.dice(1, 5),
+                firstAid: Utils.dice(1, 5),
+                forgery: Utils.dice(1, 5),
+                gyroTech: Utils.dice(1, 5),
+                painting: Utils.dice(1, 5),
+                photography: Utils.dice(1, 5),
+                pharmatics: Utils.dice(1, 5),
+                lockPick: Utils.dice(1, 5),
+                pickPocket: Utils.dice(1, 5),
+                instrument: Utils.dice(1, 5),
+                weaponSmith: Utils.dice(1, 5)
+            }
+        };
+        this.cybernetics = [];
+        this.lifepath = {
+            style: {
+                clothes: {
+                    headgear: null,
+                    upper: null,
+                    jacket: null,
+                    bottom: null,
+                    shoes: null,
+                    accessories: null
+                },
+                hair: null,
+                affectations: null,
+                ethnicity: null,
+                language: null
+            },
+            familyBackground: null,
+            motivations: {
+                traits: null,
+                valuedPerson: null,
+                valueMost: null,
+                feelAboutPeople: null,
+                valuedPossession: null
+            },
+            lifeEvents: []
+        };
     }
 
-    update(){
+    reposition() {
+        let previousPos = this.position;
+        this.position = [previousPos[0] + Math.floor(Utils.range(-50, 50)),
+            previousPos[1] + Math.floor(Utils.range(-50, 50))]
+    }
+
+    gainLevel() {
+        this.level += 1;
+        Stats.level += 1;
+        this.experience = 0;
+        this.maxExperience = this.level ^ 2 / 0.04;
+        this.maxHealth = this.level ^ 2 / 0.1;
+        this.health = this.maxHealth;
+    }
+
+    isAlive(): boolean {
+        return this.health > 0;
+    }
+
+    /*update(){
         this.weapon = getItem.weapon();
         this.name = name();
         this.gender = gender();
         this.items = [getItem.item()];
         this.role = new Role();
         this.color = this.role.color;
-        this.level = Math.floor((Stats.level) + Utils.range(1, 3));
-        this.currency = Math.floor(Utils.range(50, 20));
-        this.experience = Math.floor(Utils.range(50, 20));
-    }
+        this.level = Math.floor((Stats.level) + Utils.range(3,1));
+        this.currency = Math.floor(Utils.range(20, 50));
+        this.experience = Math.floor(Utils.range(20, 50));
+    }*/
 }

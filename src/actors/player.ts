@@ -1,14 +1,15 @@
 import {Actor} from "./Actor";
-import{name} from "./tools/nameBuilder";
-import{gender} from "./tools/nameBuilder";
 import {Role} from "./resources/Role";
+import {Name} from "./resources/Name";
+import {getItem} from "../interact/getItem";
 
 export class Player extends Actor {
     constructor() {
         super();
-        this.name = name();
+        this.gender = Name.getGender();
+        this.name = `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
         this.role = new Role();
         this.color = this.role.color;
-        this.gender = gender();
+        this.item = getItem.item();
     }
 }

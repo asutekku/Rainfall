@@ -1,38 +1,19 @@
 import {Utils} from "../utils/utils";
-import {Enemy} from "../actors/Enemy";
 import {updateUI} from "../utils/UI";
 import {Messages} from "./messages";
 import {Movement} from "./Movement";
 import {Actor} from "../actors/Actor";
-import {Stats} from "../actors/resources/stats";
 import {getItem} from "./getItem";
 
 export class Combat {
-    //Formula: rateOfFire*diceThrows(1-6)+damage
-    //It's possible for every shot to miss
-    static weaponDamage(actor: Actor, target: Actor) {
-        let damage = 0;
-
-        function defence() {
-            let armor = isNaN(target.armor) ? 0 : target.armor;
-            return 1 - (armor / 100);
-        }
-
-        for (let i = 0; i <= actor.weapon.rateOfFire; i++) {
-            if (Utils.chance(actor.weapon.accuracy)) {
-                damage += (Utils.dice(actor.weapon.diceThrows, 6) + actor.weapon.damage)
-            }
-        }
-        return Math.floor(damage * defence());
-    }
 
     static basicAction(actor: Actor, target: Actor) {
         Combat.hitActor(actor, target);
-        if (target.health <= 0) {
+        if (!target.isAlive()) {
             Combat.killEnemy(actor, target);
-        } else if (target.health > 0) {
-            Combat.hitActor(target, actor);
-            if (actor.health <= 0) {
+        } else {
+            this.hitActor(target, actor);
+            if (!actor.isAlive()) {
                 actor.health = 0;
                 Messages.combat('death', actor, target);
                 updateUI(actor);
@@ -48,9 +29,7 @@ export class Combat {
             Combat.attack(actor, target, 2);
             if (beforeHealth === target.health) {
                 Combat.dodgeAttack(actor, target);
-            } else {
-                Messages.combat('hitCritical', actor, target);
-            }
+            } else Messages.combat('hitCritical', actor, target);
         } else {
             //NORMAL HIT
             Combat.attack(actor, target, 1);
@@ -63,8 +42,13 @@ export class Combat {
     }
 
     static attack(actor, target, multiplier): void {
-        actor.damage = Combat.weaponDamage(actor, target);
-        target.health -= actor.damage * multiplier;
+        if (target.armor != 0) {
+            let def = 1 - target.armor / 100;
+            target.health -= actor.weapon.weaponDamage() * def * multiplier;
+        } else {
+            target.health -= actor.weapon.weaponDamage() * multiplier;
+        }
+
     }
 
     static dodgeAttack(actor: Actor, target: Actor): void {
@@ -112,50 +96,32 @@ export class Combat {
         Combat.gainLevel(actor, target);
         Combat.replaceEnemy(actor, target);
         Movement.moveRandomly(actor, 50);
-        //actor.reposition();
         updateUI(actor);
     }
 
     static gainLevel(actor: Actor, target: Actor) {
         if (actor.experience >= actor.maxExperience) {
-            actor.level += 1;
-            Stats.level += 1;
-            actor.experience = 0;
-            actor.maxExperience = Math.floor(actor.maxExperience * 1.5 + 6);
-            actor.maxHealth = Math.floor((actor.level * 0.6) * 80);
-            actor.health = actor.maxHealth;
+            actor.gainLevel();
             Messages.combat('levelUp', actor, target);
-            //saveStats();
             updateUI(actor);
         }
     }
 
-    static isAlive(actor) {
-        return actor.health > 0;
-    }
-
     static replaceEnemy(actor: Actor, target: Actor) {
         target.update();
+        console.log(target);
         Movement.moveRandomly(target, 50);
-        //currentEnemy.reposition();
         if (actor.role.name === target.role.name) {
             Messages.combat('encounterSame', actor, target);
             Combat.replaceEnemy(actor, target);
         } else {
-            Messages.combat('encounter', actor, target);
             Messages.encounter('distance', actor, target);
-            target.health = Math.floor((50 * actor.level) / 1.5);
         }
     }
 
     static lootEnemy(actor: Actor, target: Actor) {
-        let averageDamage = function (actor) {
-            let low = actor.weapon.diceThrows * actor.weapon.rateOfFire + actor.weapon.damage;
-            let high = (actor.weapon.diceThrows * 6) * actor.weapon.rateOfFire + actor.weapon.damage;
-            return (low + high) / 2;
-        };
         Messages.combat('loot', actor, target);
-        let item = target.items[0];
+        let item = target.item;
         switch (item.type) {
             case "upper":
                 if (actor.lifepath.style.clothes.upper == null || actor.lifepath.style.clothes.upper.level < item.level) {
@@ -195,7 +161,7 @@ export class Combat {
                 }
                 break;
             case "weapon":
-                if (averageDamage(target) > averageDamage(actor)) {
+                if (target.weapon.averageDamage() > actor.weapon.averageDamage()) {
                     Messages.combat('lootWeaponBetter', actor, target);
                     actor.weapon = target.weapon;
                     updateUI(actor);

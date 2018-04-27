@@ -5,6 +5,7 @@ import {updateUI} from "./utils/UI";
 import {Combat} from "./interact/combat";
 import {Messages} from "./interact/messages";
 import {Stats} from "./actors/resources/stats";
+import {State} from "./utils/State";
 
 
 /*==========================================================================================
@@ -31,15 +32,13 @@ LOAD GAME
 
 //loadGame();
 let playerActor = new Player();
-console.log(playerActor);
 let grunt = new Enemy();
-let currentEnemy = grunt;
 let deadMessageSent = false;
 updateUI(playerActor);
 
 //Attacks!
 Utils.l("hitButton").onclick = function () {
-    if (Combat.isAlive(playerActor)) {
+    if (playerActor.isAlive()) {
         Combat.basicAction(playerActor, grunt);
     } else if (deadMessageSent === false) {
         Messages.combat('youredead', playerActor, grunt);
@@ -55,10 +54,10 @@ Utils.l("restartButton").onclick = function () {
 
 //Because respawning is so much more enjoyable than restarting
 Utils.l("respawnButton").onclick = function () {
-    if (!Combat.isAlive(playerActor)) {
+    if (!playerActor.isAlive()) {
         playerActor.health = playerActor.maxHealth;
         clearInterval();
-        Messages.combat('respawn', playerActor, currentEnemy);
+        Messages.combat('respawn', playerActor, grunt);
         deadMessageSent = false;
         Stats.money -= Math.floor(Stats.money * .45);
         updateUI(playerActor);
@@ -72,7 +71,7 @@ Utils.l("autoButton").onclick = function () {
     if (!running) {
         running = true;
         myvar = setInterval(function () {
-            if (Combat.isAlive(playerActor)) {
+            if (playerActor.isAlive()) {
                 Combat.basicAction(playerActor, grunt);
             } else {
                 clearInterval(myvar);
@@ -85,11 +84,11 @@ Utils.l("autoButton").onclick = function () {
     }
 };
 
-function saveStats() {
+/*function saveStats() {
     Utils.save("pHP", (playerActor.health).toString(10));
     Utils.save("pMHP", (playerActor.maxHealth).toString(10));
     Utils.save("kills", Stats.kills.toString(10));
     Utils.save("pEXP", playerActor.experience.toString());
     Utils.save("pLVL", playerActor.level.toString());
     Utils.save("pMEXP", (playerActor.maxExperience).toString(10));
-}
+}*/

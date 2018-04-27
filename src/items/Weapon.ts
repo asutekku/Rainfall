@@ -1,5 +1,6 @@
 import {Utils} from "../utils/utils";
 import {Item} from "./Item";
+import {Actor} from "../actors/Actor";
 
 export class Weapon implements Item {
     weaponType: string;
@@ -34,5 +35,21 @@ export class Weapon implements Item {
         this.cost = cost;
         this.description = description;
         this.level = 0;
+    }
+
+    averageDamage(): number {
+        let low = this.diceThrows * this.rateOfFire + this.damage;
+        let high = (this.diceThrows * 6) * this.rateOfFire + this.damage;
+        return (low + high) / 2;
+    };
+
+    weaponDamage(): number {
+        let damage = 0;
+        for (let i = 0; i <= this.rateOfFire; i++) {
+            if (Utils.chance(this.accuracy)) {
+                damage += (Utils.dice(this.diceThrows, 6) + this.damage)
+            }
+        }
+        return Math.floor(damage);
     }
 }
