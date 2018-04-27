@@ -5,6 +5,7 @@ import {gender} from "./tools/nameBuilder";
 import {Weapon} from "../items/Weapon";
 import {Item} from "../items/Item";
 import {getItem} from "../interact/getItem";
+import {Stats} from "./resources/stats";
 
 export class Actor {
 
@@ -223,5 +224,17 @@ export class Actor {
         let previousPos = this.position;
         this.position = [previousPos[0] + Math.floor(Utils.range(50, -50)),
             previousPos[1] + Math.floor(Utils.range(50, -50))]
+    }
+
+    update(){
+        this.weapon = getItem.weapon();
+        this.name = name();
+        this.gender = gender();
+        this.items = [getItem.item()];
+        this.role = new Role();
+        this.color = this.role.color;
+        this.level = Math.floor((Stats.level) + Utils.range(1, 3));
+        this.currency = Math.floor(Utils.range(50, 20));
+        this.experience = Math.floor(Utils.range(50, 20));
     }
 }

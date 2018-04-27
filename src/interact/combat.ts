@@ -135,7 +135,7 @@ export class Combat {
     }
 
     static replaceEnemy(actor: Actor, target: Actor) {
-        target = new Enemy();
+        target.update();
         Movement.moveRandomly(target, 50);
         //currentEnemy.reposition();
         if (actor.role.name === target.role.name) {

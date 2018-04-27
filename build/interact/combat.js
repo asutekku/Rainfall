@@ -1,4 +1,4 @@
-define(["require", "exports", "../utils/utils", "../actors/Enemy", "../utils/UI", "./messages", "./Movement", "../actors/resources/stats", "./getItem"], function (require, exports, utils_1, Enemy_1, UI_1, messages_1, Movement_1, stats_1, getItem_1) {
+define(["require", "exports", "../utils/utils", "../utils/UI", "./messages", "./Movement", "../actors/resources/stats", "./getItem"], function (require, exports, utils_1, UI_1, messages_1, Movement_1, stats_1, getItem_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var Combat = /** @class */ (function () {
@@ -116,7 +116,7 @@ define(["require", "exports", "../utils/utils", "../actors/Enemy", "../utils/UI"
             return actor.health > 0;
         };
         Combat.replaceEnemy = function (actor, target) {
-            target = new Enemy_1.Enemy();
+            target.update();
             Movement_1.Movement.moveRandomly(target, 50);
             //currentEnemy.reposition();
             if (actor.role.name === target.role.name) {

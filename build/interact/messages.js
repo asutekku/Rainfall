@@ -33,7 +33,7 @@ define(["require", "exports", "../Utils/Utils", "../utils/colors"], function (re
                 return Utils_1.Utils.span("&#91;" + ownerActor.role.name + "&#93;", ownerActor.role.color);
             }
             function str_actorItem(ownerActor) {
-                return Utils_1.Utils.span("&#91;" + ownerActor.items.name + "&#93;", colors_1.default.itemYellow);
+                return Utils_1.Utils.span("&#91;" + ownerActor.items[0].name + "&#93;", colors_1.default.itemYellow);
             }
             var damageType = actor.weapon.weaponType == "Melee" ? "hit" : "shot";
             var playerWeapon = str_weaponName(actor);

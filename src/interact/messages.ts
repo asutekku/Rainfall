@@ -45,7 +45,7 @@ export class Messages {
         }
 
         function str_actorItem(ownerActor) {
-            return Utils.span(`&#91;${ownerActor.items.name}&#93;`, colors.itemYellow);
+            return Utils.span(`&#91;${ownerActor.items[0].name}&#93;`, colors.itemYellow);
         }
 
         let damageType = actor.weapon.weaponType == "Melee" ? "hit" : "shot";

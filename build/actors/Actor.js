@@ -1,4 +1,4 @@
-define(["require", "exports", "../utils/utils", "./tools/nameBuilder", "./tools/nameBuilder", "../interact/getItem"], function (require, exports, utils_1, nameBuilder_1, nameBuilder_2, getItem_1) {
+define(["require", "exports", "../utils/utils", "./resources/Role", "./tools/nameBuilder", "./tools/nameBuilder", "../interact/getItem", "./resources/stats"], function (require, exports, utils_1, Role_1, nameBuilder_1, nameBuilder_2, getItem_1, stats_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
     var Actor = /** @class */ (function () {
@@ -197,6 +197,17 @@ define(["require", "exports", "../utils/utils", "./tools/nameBuilder", "./tools/
             var previousPos = this.position;
             this.position = [previousPos[0] + Math.floor(utils_1.Utils.range(50, -50)),
                 previousPos[1] + Math.floor(utils_1.Utils.range(50, -50))];
+        };
+        Actor.prototype.update = function () {
+            this.weapon = getItem_1.getItem.weapon();
+            this.name = nameBuilder_1.name();
+            this.gender = nameBuilder_2.gender();
+            this.items = [getItem_1.getItem.item()];
+            this.role = new Role_1.Role();
+            this.color = this.role.color;
+            this.level = Math.floor((stats_1.Stats.level) + utils_1.Utils.range(1, 3));
+            this.currency = Math.floor(utils_1.Utils.range(50, 20));
+            this.experience = Math.floor(utils_1.Utils.range(50, 20));
         };
         return Actor;
     }());
