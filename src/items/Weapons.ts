@@ -1,3 +1,6 @@
+import {weapons_en_US} from '../lang/en_US';
+
+let _ = weapons_en_US;
 import {Weapon} from "./Weapon";
 
 let weapons = [
@@ -6,25 +9,25 @@ let weapons = [
     =====================*/
 
     //BudgetArms C-13
-    new Weapon("Pistol", "BudgetArms C-13", 40, 1, 0, 1.1, 1, 8, 2, 1, 50, 75, `A light duty autopistol used as a hold-out and lady's gun`),
+    new Weapon("Pistol", _.budgetArms, 40, 1, 0, 1.1, 1, 8, 2, 1, 50, 75, _.budgetArmsDesc),
     //Dai Lung Cybermag 15
-    new Weapon("Pistol", "Dai Lung Cybermag 15", 40, 2, 1, 3.1, 1, 8, 2, 1, 50, 75, "Cheap Hong Kong knockoff, often used by boosters and other street trash."),
+    new Weapon("Pistol", _.daiLungCybermag, 40, 2, 1, 3.1, 1, 8, 2, 1, 50, 75, _.daiLungCybermagDesc),
     //Federated Arms x-22
-    new Weapon("Pistol", "Federated Arms x-22", 50, 1, 1, 3.7, 1, 8, 2, 1, 50, 150, 'The ubiquitous "Polymer-one-shot" cheap plastic pistol. Available in designer colors.'),
+    new Weapon("Pistol", _.federatedArms, 50, 1, 1, 3.7, 1, 8, 2, 1, 50, 150, _.federatedArmsDesc),
     //Militech Arms Avenger
-    new Weapon("Pistol", "Militech Arms Avenger", 50, 1, 1, 22, 2, 10, 2, 1, 50, 250, "A well-made autopistol with good range and accuracy. A professional's gun."),
+    new Weapon("Pistol", _.militechScavenger, 50, 1, 1, 22, 2, 10, 2, 1, 50, 250, _.militechScavengerDesc),
     //Dai Lung Streetmaster
-    new Weapon("Pistol", "Dai Lung Streetmaster", 50, 1, 3, 24, 2, 12, 2, 1, 50, 250, "Another Dai Lung cheapie, built for the Street."),
+    new Weapon("Pistol", _.daiLungStreetmaster, 50, 1, 3, 24, 2, 12, 2, 1, 50, 250, _.daiLungStreetmasterDesc),
     //Federated Arms X-9m
-    new Weapon("Pistol", "Federated Arms X-9m", 50, 1, 1, 4, 2, 12, 2, 1, 50, 300, "A sturdy Solo's gun, used as a standard military sidearm in the U.S. and E.C.C."),
+    new Weapon("Pistol", _.x9m, 50, 1, 1, 4, 2, 12, 2, 1, 50, 300, _.x9mDesc),
     //BudgetArms Auto 3
-    new Weapon("Pistol", "BudgetArms Auto 3", 40, 1, 0, 6.5, 3, 8, 2, 1, 50, 350, "It's cheap. It's powerful. It blows up sometimes. What else do you want?"),
+    new Weapon("Pistol", _.auto3, 40, 1, 0, 6.5, 3, 8, 2, 1, 50, 350, _.auto3Desc),
     //Sternmeyer Type 35
-    new Weapon("Pistol", "Sternmeyer Type 35", 50, 1, 0, 7, 3, 8, 2, 1, 50, 400, "Rugged, reliable, with excellent stopping power. Another fine E.C.C. product from the United Germanies."),
+    new Weapon("Pistol", _.sternmeyer35, 50, 1, 0, 7, 3, 8, 2, 1, 50, 400, _.sternmeyer35Desc),
     //Armalite 44
-    new Weapon("Pistol", "Armalite 44", 50, 1, 1, 34, 4, 8, 1, 1, 50, 450, "Designed as an alternate to the 1998 U.S. Army sidearm trials. A solid contender."),
+    new Weapon("Pistol", _.armalite, 50, 1, 1, 34, 4, 8, 1, 1, 50, 450, _.armaliteDesc),
     //Colt AMT Model 2000
-    new Weapon("Pistol", "Colt AMT Model 2000", 50, 1, 1, 6.1, 4, 8, 1, 1, 50, 500, "Now the standard officer's sidearm for the U.S. Army, the M-2000 served well in the Central American Wars."),
+    new Weapon("Pistol", _.colt, 50, 1, 1, 6.1, 4, 8, 1, 1, 50, 500, _.coltDesc),
 
     /*====================
     ----SUBMACHINE GUNS---
@@ -33,7 +36,7 @@ let weapons = [
     //Uzi Miniauto 9
     new Weapon("Submachine Gun", "Uzi Miniauto 9", 60, 1, 1, 1.2, 2, 30, 35, 1, 150, 475, "Uzi's entry into the 21st century, all plastic, with rotary electric clip and adjustable trigger. The choice for many security solos."),
     //H&K MP-2013
-    new Weapon("Submachine Gun", "H&K MP-2013", 60, 1, 3, 12, 2, 35, 32, 1, 150, 450, "Heckler & Koch's updating of the MP-5K classic, with compud plastics and built in silencing."),
+    new Weapon("Submachine Gun", "H&K MP-2013", 60, 1, 3, 12, 2, 35, 32, 1, 150, 450, "Heckler & Koch's updating of the MP-5K classic, with compud plastics and build in silencing."),
     //Fed. Arms Tech Assault II
     new Weapon("Submachine Gun", "Fed. Arms Tech Assault II", 60, 1, 1, 5, 1, 50, 25, 1, 150, 400, "An updated version of the venerable Tech Assault I, features larger clip, better autofire, no melting. Honest."),
     //Arasaka Minami 10

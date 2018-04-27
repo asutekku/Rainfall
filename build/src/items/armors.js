@@ -1,17 +1,16 @@
-define(["require", "exports", "../lang/en_US", "./Armor"], function (require, exports, en_US_1, Armor_1) {
+define(["require", "exports", "text!./../lang/en_US", "./Armor"], function (require, exports, en_US_1, Armor_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var _ = en_US_1.armors_en_US;
     var armors = [
         /*====================
         -------HEADGEAR-------
         =====================*/
         //Baseball
-        new Armor_1.Armor("helmet", _.headwearCap, "none", 1, 0, 20, "A baseball cap from 21st century. It has some scribbles on it."),
+        new Armor_1.Armor("helmet", en_US_1.en_US.baseballCap, "none", 1, 0, 20, "A baseball cap from 21st century. It has some scribbles on it."),
         //Beanie
-        new Armor_1.Armor("helmet", _.headwearBeanie, "none", 1, 0, 20, "It's red and slightly small."),
+        new Armor_1.Armor("helmet", "Beanie", "none", 1, 0, 20, "It's red and slightly small."),
         //Bicycle
-        new Armor_1.Armor("helmet", _.headwearCycling, "none", 1.5, 2, 25, "This bicycling helmet has some nails hammered on it."),
+        new Armor_1.Armor("helmet", "Bicycling Helmet", "none", 1.5, 2, 25, "This bicycling halmet has some nails hammered on it."),
         //Hockey Mask
         new Armor_1.Armor("helmet", "Hockey Mask", "none", 2, 4, 40, "It makes you look like a serial killer but who cares! At least ricocheting scraps won't damage your beautiful face."),
         //Motorcycle

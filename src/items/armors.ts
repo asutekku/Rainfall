@@ -1,3 +1,5 @@
+import {armors_en_US} from '../lang/en_US';
+let _ = armors_en_US;
 import {Armor} from "./Armor";
 
 let armors = [
@@ -5,11 +7,11 @@ let armors = [
             -------HEADGEAR-------
             =====================*/
             //Baseball
-            new Armor("helmet", "Baseball Cap", "none", 1, 0, 20, "A baseball cap from 21st century. It has some scribbles on it."),
+            new Armor("helmet", _.headwearCap, "none", 1, 0, 20, "A baseball cap from 21st century. It has some scribbles on it."),
             //Beanie
-            new Armor("helmet", "Beanie", "none", 1, 0, 20, "It's red and slightly small."),
+            new Armor("helmet", _.headwearBeanie, "none", 1, 0, 20, "It's red and slightly small."),
             //Bicycle
-            new Armor("helmet", "Bicycling Helmet", "none", 1.5, 2, 25, "This bicycling halmet has some nails hammered on it."),
+            new Armor("helmet", _.headwearCycling, "none", 1.5, 2, 25, "This bicycling helmet has some nails hammered on it."),
             //Hockey Mask
             new Armor("helmet", "Hockey Mask", "none", 2, 4, 40, "It makes you look like a serial killer but who cares! At least ricocheting scraps won't damage your beautiful face."),
             //Motorcycle

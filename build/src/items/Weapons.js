@@ -1,31 +1,30 @@
-define(["require", "exports", "../lang/en_US", "./Weapon"], function (require, exports, en_US_1, Weapon_1) {
+define(["require", "exports", "./Weapon"], function (require, exports, Weapon_1) {
     "use strict";
     Object.defineProperty(exports, "__esModule", { value: true });
-    var _ = en_US_1.weapons_en_US;
     var weapons = [
         /*====================
         --------PISTOLS-------
         =====================*/
         //BudgetArms C-13
-        new Weapon_1.Weapon("Pistol", _.budgetArms, 40, 1, 0, 1.1, 1, 8, 2, 1, 50, 75, _.budgetArmsDesc),
+        new Weapon_1.Weapon("Pistol", "BudgetArms C-13", 40, 1, 0, 1.1, 1, 8, 2, 1, 50, 75, "A light duty autopistol used as a hold-out and lady's gun"),
         //Dai Lung Cybermag 15
-        new Weapon_1.Weapon("Pistol", _.daiLungCybermag, 40, 2, 1, 3.1, 1, 8, 2, 1, 50, 75, _.daiLungCybermagDesc),
+        new Weapon_1.Weapon("Pistol", "Dai Lung Cybermag 15", 40, 2, 1, 3.1, 1, 8, 2, 1, 50, 75, "Cheap Hong Kong knockoff, often used by boosters and other street trash."),
         //Federated Arms x-22
-        new Weapon_1.Weapon("Pistol", _.federatedArms, 50, 1, 1, 3.7, 1, 8, 2, 1, 50, 150, _.federatedArmsDesc),
+        new Weapon_1.Weapon("Pistol", "Federated Arms x-22", 50, 1, 1, 3.7, 1, 8, 2, 1, 50, 150, 'The ubiquitous "Polymer-one-shot" cheap plastic pistol. Available in designer colors.'),
         //Militech Arms Avenger
-        new Weapon_1.Weapon("Pistol", _.militechScavenger, 50, 1, 1, 22, 2, 10, 2, 1, 50, 250, _.militechScavengerDesc),
+        new Weapon_1.Weapon("Pistol", "Militech Arms Avenger", 50, 1, 1, 22, 2, 10, 2, 1, 50, 250, "A well-made autopistol with good range and accuracy. A professional's gun."),
         //Dai Lung Streetmaster
-        new Weapon_1.Weapon("Pistol", _.daiLungStreetmaster, 50, 1, 3, 24, 2, 12, 2, 1, 50, 250, _.daiLungStreetmasterDesc),
+        new Weapon_1.Weapon("Pistol", "Dai Lung Streetmaster", 50, 1, 3, 24, 2, 12, 2, 1, 50, 250, "Another Dai Lung cheapie, build for the Street."),
         //Federated Arms X-9m
-        new Weapon_1.Weapon("Pistol", _.x9m, 50, 1, 1, 4, 2, 12, 2, 1, 50, 300, _.x9mDesc),
+        new Weapon_1.Weapon("Pistol", "Federated Arms X-9m", 50, 1, 1, 4, 2, 12, 2, 1, 50, 300, "A sturdy Solo's gun, used as a standard military sidearm in the U.S. and E.C.C."),
         //BudgetArms Auto 3
-        new Weapon_1.Weapon("Pistol", _.auto3, 40, 1, 0, 6.5, 3, 8, 2, 1, 50, 350, _.auto3Desc),
+        new Weapon_1.Weapon("Pistol", "BudgetArms Auto 3", 40, 1, 0, 6.5, 3, 8, 2, 1, 50, 350, "It's cheap. It's powerful. It blows up sometimes. What else do you want?"),
         //Sternmeyer Type 35
-        new Weapon_1.Weapon("Pistol", _.sternmeyer35, 50, 1, 0, 7, 3, 8, 2, 1, 50, 400, _.sternmeyer35Desc),
+        new Weapon_1.Weapon("Pistol", "Sternmeyer Type 35", 50, 1, 0, 7, 3, 8, 2, 1, 50, 400, "Rugged, reliable, with excellent stopping power. Another fine E.C.C. product from the United Germanies."),
         //Armalite 44
-        new Weapon_1.Weapon("Pistol", _.armalite, 50, 1, 1, 34, 4, 8, 1, 1, 50, 450, _.armaliteDesc),
+        new Weapon_1.Weapon("Pistol", "Armalite 44", 50, 1, 1, 34, 4, 8, 1, 1, 50, 450, "Designed as an alternate to the 1998 U.S. Army sidearm trials. A solid contender."),
         //Colt AMT Model 2000
-        new Weapon_1.Weapon("Pistol", _.colt, 50, 1, 1, 6.1, 4, 8, 1, 1, 50, 500, _.coltDesc),
+        new Weapon_1.Weapon("Pistol", "Colt AMT Model 2000", 50, 1, 1, 6.1, 4, 8, 1, 1, 50, 500, "Now the standard officer's sidearm for the U.S. Army, the M-2000 served well in the Central American Wars."),
         /*====================
         ----SUBMACHINE GUNS---
         =====================*/
