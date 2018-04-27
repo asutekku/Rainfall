@@ -1,0 +1,12 @@
+{
+  "compilerOptions": {
+    "outDir": "./built",
+    "module": "amd",
+    "allowJs": true,
+    "target": "es5"
+  },
+  "include": [
+    "./src/**/*",
+    "typings/**/*"
+  ]
+}
