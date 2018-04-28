@@ -419,16 +419,4 @@ export class Actor {
     isAlive(): boolean {
         return this.health > 0;
     }
-
-    /*update(){
-        this.weapon = getItem.weapon();
-        this.name = name();
-        this.gender = gender();
-        this.items = [getItem.item()];
-        this.role = new Role();
-        this.color = this.role.color;
-        this.level = Math.floor((Stats.level) + Utils.range(3,1));
-        this.currency = Math.floor(Utils.range(20, 50));
-        this.experience = Math.floor(Utils.range(20, 50));
-    }*/
 }

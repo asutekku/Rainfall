@@ -34,12 +34,7 @@ export class getItem {
             Messages.combat('getMoney', actor, target);
             actor.currency += money;
         } else {
-            if (actor.currency < -(money)) {
-                Messages.combat('noMoney', actor, target);
-            } else if (actor.currency < money) {
-                Stats.money += money;
-                console.log("Does it work 2?")
-            }
+            Messages.combat('noMoney', actor, target);
         }
     }
 
