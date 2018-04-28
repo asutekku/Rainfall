@@ -5,6 +5,11 @@ export const armors_en_US = {
 };
 
 export const weapons_en_US = {
+    pistol: "Pistol",
+    submachine: "Submachine Gun",
+    assaultRifle: "Assault Rifle",
+    shotgun: "Shotgun",
+    melee: "Melee",
     budgetArms: "BudgetArms C-13",
     budgetArmsDesc: `A light duty autopistol used as a hold-out and lady's gun`,
     daiLungCybermag: "Dai Lung Cybermag 15",
