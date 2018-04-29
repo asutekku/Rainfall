@@ -22,6 +22,10 @@ export class Combat {
         updateUI(actor);
     }
 
+    static shoot(actor: Actor, target: Actor): void {
+        let distance = Utils.distance(actor.position,target.position);
+    }
+
     static hitActor(actor: Actor, target: Actor): void {
         let beforeHealth = target.health;
         if (Utils.chance(actor.weapon.crit)) {

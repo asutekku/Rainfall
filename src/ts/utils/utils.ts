@@ -6,6 +6,9 @@ export class Utils {
     static l(what): HTMLElement | null {
         return document.getElementById(what);
     }
+    static create(what): HTMLElement | null {
+        return document.createElement(what);
+    }
 
     static pickRandom(arr: any[]): any {
         return arr[Math.floor(Math.random() * arr.length)];

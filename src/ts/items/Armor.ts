@@ -6,10 +6,10 @@ export class Armor implements Item {
     name: string;
     set: string;
     level: number;
-    stoppingPower: string;
+    stoppingPower: number;
     rarity: number;
     cost: number;
-    constructor(type, name, set, level, stoppingPower, cost, description) {
+    constructor(type, name, set, level, stoppingPower: number, cost, description) {
         this.type = type;
         this.name = name;
         this.set = set;

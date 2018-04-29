@@ -1,4 +1,4 @@
-export class Stats {
+export class Statistics {
     static get inventory(): any[] {
         return this._inventory;
     }

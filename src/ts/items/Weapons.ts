@@ -1,4 +1,4 @@
-import {weapons_en_US} from '../lang/en_US';
+import {weapons_en_US} from '../../lang/en_US';
 
 let _ = weapons_en_US;
 import {Weapon} from "./Weapon";

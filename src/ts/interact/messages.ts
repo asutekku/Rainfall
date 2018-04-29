@@ -1,4 +1,4 @@
-import {Utils} from "../Utils/Utils";
+import {Utils} from "../utils/utils";
 import {Actor} from "../actors/Actor";
 import colors from "../utils/colors";
 import {State} from "../utils/State";

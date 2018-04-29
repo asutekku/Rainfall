@@ -2,159 +2,165 @@
 <html>
 
 <head>
-    <title>Cyberpunk 2040</title>
+    <title>Rainfall</title>
     <meta charset="UTF-8">
     <!--<meta name="viewport" content="width=device-width, initial-scale=1.0">-->
-    <link rel="stylesheet" type="text/css" href="css/style.css">
+    <link rel="stylesheet" type="text/css" href="src/css/style.css">
     <script> var exports = {}; </script>
-    <script data-main="build/main.js" type="text/javascript" src="lib/require.js"></script>
+    <script data-main="build/ts/main.js" type="text/javascript" src="lib/require.js"></script>
     <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
 </head>
 
 <body>
-    <div id="canvas">
-        <div class="UIelement" id="navbar">
-            <h1 id="title">Rainfall</h1>
-        </div>
-        <div id="mainpane">
-            <div class="UIelement" id="charpane">
-                <button class="button" type="button" id="hitButton">Attack!</button>
-                <button class="button" type="button" id="evadeButton">Evade!</button>
-                <button class="button" type="button" id="autoButton">Auto!</button>
-                <button class="button" type="button" id="restartButton">Restart!</button>
-                <button class="button" type="button" id="respawnButton">Respawn</button>
-                <!--<div class="dropdown">
-                    <select>
-                        <option value="style1">Style 1</option>
-                        <option value="style2">Style 2</option>
-                        <option value="style3">Style 3</option>
-                        <option value="style4">Style 4</option>
-                    </select>
-                </div>-->
-                <div>
-                    <div class="statCard">
-                        <span class="statTitle">Position:</span>
-                        <span class="stat" id="playerPosition">##NOT LOADED##</span>
-                    </div>
+<div id="canvas">
+    <div class="UIelement" id="navbar">
+        <h1 id="title">Rainfall</h1>
+    </div>
+    <div id="mainpane">
+        <div class="UIelement" id="charpane">
+            <button class="button" type="button" id="hitButton">Attack!</button>
+            <button class="button" type="button" id="evadeButton">Evade!</button>
+            <button class="button" type="button" id="autoButton">Auto!</button>
+            <button class="button" type="button" id="restartButton">Restart!</button>
+            <button class="button" type="button" id="respawnButton">Respawn</button>
+            <button class="button" type="button" id="statButton">Stats</button>
+            <!--<div class="dropdown">
+                <select>
+                    <option value="style1">Style 1</option>
+                    <option value="style2">Style 2</option>
+                    <option value="style3">Style 3</option>
+                    <option value="style4">Style 4</option>
+                </select>
+            </div>-->
+            <div>
+                <div class="statCard">
+                    <span class="statTitle">Position:</span>
+                    <span class="stat" id="playerPosition">##NOT LOADED##</span>
                 </div>
             </div>
-            <div id="playpane">
-                <div id="initLine"><span id="initChar">></span></div>
+        </div>
+        <div id="playpane">
+            <div id="gamearea">
+                <div id="initLine">
+                    <span id="initChar">></span>
+                </div>
                 <span id="actions"></span>
             </div>
-            <div id="statpane">
-                <div class="UIelement" id="attributes">
-                    <h2 class="statTitle vital">Attributes</h2>
-                    <div class="statCard">
-                        <span class="statTitle">Name:</span>
-                        <span class="stat" id="playerName">##NOT LOADED##</span>
-                    </div>
-                    <div class="statCard">
-                        <span class="statTitle">Gender:</span>
-                        <span class="stat" id="charGender">##NOT LOADED##</span>
-                    </div>
-                    <div class="statCard">
-                        <span class="statTitle">Role:</span>
-                        <span class="stat" id="charRole">##NOT LOADED##</span>
-                    </div>
+        </div>
+        <div id="statpane">
+            <div class="UIelement" id="attributes">
+                <h2 class="statTitle vital">Attributes</h2>
+                <div class="statCard">
+                    <span class="statTitle">Name:</span>
+                    <span class="stat" id="playerName">##NOT LOADED##</span>
+                </div>
+                <div class="statCard">
+                    <span class="statTitle">Gender:</span>
+                    <span class="stat" id="charGender">##NOT LOADED##</span>
+                </div>
+                <div class="statCard">
+                    <span class="statTitle">Role:</span>
+                    <span class="stat" id="charRole">##NOT LOADED##</span>
+                </div>
+                <div class="statCard tooltip">
+                    <span class="tooltiptext" id="skillDesc">##NOT DEFINED##</span>
+                    <span class="statTitle">Skill:</span>
+                    <span class="stat" id="charSkill">##NOT LOADED##</span>
+                </div>
+                <div class="statCard">
+                    <span class="statTitle">Level:</span>
+                    <span class="stat" id="charLvl">##NOT LOADED##</span>
+                </div>
+                <div class="statCard">
+                    <span class="statTitle">Experience:</span>
+                    <span class="stat" id="charExp">##NOT LOADED##</span>
+                </div>
+                <div class="statCard">
+                    <span class="statTitle">Health points:</span>
+                    <span class="stat" id="charHP">##NOT LOADED##</span>
+                </div>
+                <div class="statCard">
+                    <span class="statTitle">Currency:</span>
+                    <span class="stat" id="currency">##NOT LOADED##</span>
+                </div>
+            </div>
+            <div class="UIelement" id="equipment">
+                <h2 class="statTitle vital">Equipment</h2><br>
+                <div class="statCard tooltip">
+                    <span class="statTitle vital" id="weapon">Weapon:</span>
+                </div>
+                <div class="inset">
                     <div class="statCard tooltip">
-                        <span class="tooltiptext" id="skillDesc">##NOT DEFINED##</span>
-                        <span class="statTitle">Skill:</span>
-                        <span class="stat" id="charSkill">##NOT LOADED##</span>
+                        <span class="tooltiptext" id="weaponDesc">##NOT DEFINED##</span>
+                        <span class="statTitle" id="weapon">Name:</span>
+                        <span class="stat" id="charWeapon">##NOT LOADED##</span>
                     </div>
                     <div class="statCard">
-                        <span class="statTitle">Level:</span>
-                        <span class="stat" id="charLvl">##NOT LOADED##</span>
+                        <span class="statTitle" id="weaponType">Type:</span>
+                        <span class="stat" id="charWeaponType">##NOT LOADED##</span>
                     </div>
                     <div class="statCard">
-                        <span class="statTitle">Experience:</span>
-                        <span class="stat" id="charExp">##NOT LOADED##</span>
+                        <span class="statTitle" id="weaponDamage">Damage:</span>
+                        <span class="stat" id="charWeaponDamage">##NOT LOADED##</span>
                     </div>
                     <div class="statCard">
-                        <span class="statTitle">Health points:</span>
-                        <span class="stat" id="charHP">##NOT LOADED##</span>
+                        <span class="statTitle" id="weaponAccuracy">Accuracy:</span>
+                        <span class="stat" id="charWeaponAccuracy">##NOT LOADED##</span>
                     </div>
                     <div class="statCard">
-                        <span class="statTitle">Currency:</span>
-                        <span class="stat" id="currency">##NOT LOADED##</span>
+                        <span class="statTitle">Critical chance:</span>
+                        <span class="stat" id="charCRIT">##NOT LOADED##</span>
+                    </div>
+                    <div class="statCard">
+                        <span class="statTitle">Critical multiplier:</span>
+                        <span class="stat" id="charCRITM">##NOT LOADED##</span>
                     </div>
                 </div>
-                <div class="UIelement" id="equipment">
-                    <h2 class="statTitle vital">Equipment</h2><br>
+                <div class="statCard tooltip">
+                    <span class="statTitle vital" id="armor">Armor:</span>
+                </div>
+                <div class="inset">
                     <div class="statCard tooltip">
-                        <span class="statTitle vital" id="weapon">Weapon:</span>
-                    </div>
-                    <div class="inset">
-                        <div class="statCard tooltip">
-                            <span class="tooltiptext" id="weaponDesc">##NOT DEFINED##</span>
-                            <span class="statTitle" id="weapon">Name:</span>
-                            <span class="stat" id="charWeapon">##NOT LOADED##</span>
-                        </div>
-                        <div class="statCard">
-                            <span class="statTitle" id="weaponType">Type:</span>
-                            <span class="stat" id="charWeaponType">##NOT LOADED##</span>
-                        </div>
-                        <div class="statCard">
-                            <span class="statTitle" id="weaponDamage">Damage:</span>
-                            <span class="stat" id="charWeaponDamage">##NOT LOADED##</span>
-                        </div>
-                        <div class="statCard">
-                            <span class="statTitle" id="weaponAccuracy">Accuracy:</span>
-                            <span class="stat" id="charWeaponAccuracy">##NOT LOADED##</span>
-                        </div>
-                        <div class="statCard">
-                            <span class="statTitle">Critical chance:</span>
-                            <span class="stat" id="charCRIT">##NOT LOADED##</span>
-                        </div>
-                        <div class="statCard">
-                            <span class="statTitle">Critical multiplier:</span>
-                            <span class="stat" id="charCRITM">##NOT LOADED##</span>
-                        </div>
+                        <span class="tooltiptext"
+                              id="equippedHeadArmorDesc">You are wearing nothing on your head.</span>
+                        <span class="statTitle" id="headArmor">Head:</span>
+                        <span class="stat" id="equippedHeadArmor">Nothing</span>
                     </div>
                     <div class="statCard tooltip">
-                        <span class="statTitle vital" id="armor">Armor:</span>
+                        <span class="tooltiptext" id="equippedUpperArmorDesc">You are wearing nothing on your upper body.</span>
+                        <span class="statTitle" id="upperArmor">Upper body:</span>
+                        <span class="stat" id="equippedUpperArmor">Nothing</span>
                     </div>
-                    <div class="inset">
-                        <div class="statCard tooltip">
-                            <span class="tooltiptext" id="equippedHeadArmorDesc">You are wearing nothing on your head.</span>
-                            <span class="statTitle" id="headArmor">Head:</span>
-                            <span class="stat" id="equippedHeadArmor">Nothing</span>
-                        </div>
-                        <div class="statCard tooltip">
-                            <span class="tooltiptext" id="equippedUpperArmorDesc">You are wearing nothing on your upper body.</span>
-                            <span class="statTitle" id="upperArmor">Upper body:</span>
-                            <span class="stat" id="equippedUpperArmor">Nothing</span>
-                        </div>
-                        <div class="statCard tooltip">
-                            <span class="tooltiptext" id="equippedLowerArmorDesc">You are wearing nothing on your lower body.</span>
-                            <span class="statTitle" id="lowerArmor">Lower body:</span>
-                            <span class="stat" id="equippedLowerArmor">Nothing</span>
-                        </div>
-                        <div class="statCard tooltip">
-                            <span class="tooltiptext" id="stoppingPowerDesc">The total stopping power of your equipment: enemyDamage - x%</span>
-                            <span class="statTitle" id="stoppingPower">Stopping power:</span>
-                            <span class="stat" id="armorStoppingPower">0</span>
-                        </div>
+                    <div class="statCard tooltip">
+                        <span class="tooltiptext" id="equippedLowerArmorDesc">You are wearing nothing on your lower body.</span>
+                        <span class="statTitle" id="lowerArmor">Lower body:</span>
+                        <span class="stat" id="equippedLowerArmor">Nothing</span>
                     </div>
-                </div>
-                <div class="UIelement" id="inventory">
-                    <h2 class="statTitle vital">Inventory</h2>
-                    <ul id="inventoryItems">
-                    </ul>
-                </div>
-                <div class="UIelement" id="stats">
-                    <h2 class="statTitle vital">Stats</h2>
-                    <div class="statCard">
-                        <span class="statTitle">Kills:</span>
-                        <span class="stat" id="kills">##NOT LOADED##</span>
+                    <div class="statCard tooltip">
+                        <span class="tooltiptext" id="stoppingPowerDesc">The total stopping power of your equipment: enemyDamage - x%</span>
+                        <span class="statTitle" id="stoppingPower">Stopping power:</span>
+                        <span class="stat" id="armorStoppingPower">0</span>
                     </div>
                 </div>
             </div>
-            <!--<div class="UIelement" id='statpane2'>
-                <img src="media/placeHolder.png" id="placeholderImage">
-            </div>-->
+            <div class="UIelement" id="inventory">
+                <h2 class="statTitle vital">Inventory</h2>
+                <ul id="inventoryItems">
+                </ul>
+            </div>
+            <div class="UIelement" id="stats">
+                <h2 class="statTitle vital">Statistics</h2>
+                <div class="statCard">
+                    <span class="statTitle">Kills:</span>
+                    <span class="stat" id="kills">##NOT LOADED##</span>
+                </div>
+            </div>
         </div>
+        <!--<div class="UIelement" id='statpane2'>
+            <img src="media/placeHolder.png" id="placeholderImage">
+        </div>-->
     </div>
+</div>
 </body>
 
 </html>

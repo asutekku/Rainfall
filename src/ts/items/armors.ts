@@ -1,4 +1,4 @@
-import {armors_en_US} from '../lang/en_US';
+import {armors_en_US} from '../../lang/en_US';
 let _ = armors_en_US;
 import {Armor} from "./Armor";
 
@@ -20,7 +20,7 @@ let armors = [
             new Armor("helmet", "Kevlar Helmet", "kevlarSet", 3, 8, 60, '/"Borrowed/" from the local Private Security Company, these helmets are proven to keep your head safe from blunt attacks. Best worn with ski-goggles.'),
             //Steel helmet
             new Armor("helmet", "Steel Helmet", "lightSet", 4, 10, 70, '/"Sir Jonathan III/" has been engraved to the inside of this Armet helmet. The eye opening is really small so the field of view is extremely limited.'),
-            //NYlon helmet
+            //Nylon helmet
             new Armor("helmet", "Nylon Helmet", "heavySet", 5, 12, 80, "Heavy duty protection for the head, standard for most military."),
             //Police head
             new Armor("helmet", "Info Helm", "policeSet", 6, 20, 250, "Standard police helmet with lowlight infared vision."),

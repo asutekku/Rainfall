@@ -1,9 +1,9 @@
 import weapons from "../items/Weapons";
 import items from "../items/items";
-import {Utils} from "../Utils/Utils";
+import {Utils} from "../utils/utils";
 import armors from "../items/armors";
 import {Messages} from "./messages";
-import {Stats} from "../actors/resources/stats";
+import {Statistics} from "../actors/resources/Statistics";
 import {updateUI} from "../utils/UI";
 
 let itemID = 0;
@@ -52,7 +52,7 @@ export class getItem {
                         actor.health = actor.maxHealth;
                     }
                 } else {
-                    Stats.money += item.price;
+                    Statistics.money += item.price;
                 }
                 updateUI(actor);
             }

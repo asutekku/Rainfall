@@ -19,7 +19,9 @@ export class Weapon implements Item {
     range: number;
     level: number;
 
-    constructor(weaponType, name: string, accuracy, rarity, damage, criticalChance, diceThrows, shots, rateOfFire, reliability, range, cost, description) {
+    constructor(weaponType:string, name: string, accuracy:number, rarity:number, damage:number,
+                criticalChance:number, diceThrows:number, shots:number, rateOfFire:number,
+                reliability:number, range:number, cost:number, description: string,) {
         this.type = "weapon";
         this.weaponType = weaponType;
         this.name = name;

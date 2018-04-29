@@ -1,12 +1,10 @@
 import {Utils} from "./utils/utils";
 import {Player} from "./actors/player";
 import {Enemy} from "./actors/Enemy";
-import {updateUI} from "./utils/UI";
+import {updateUI, updateStats, initStats} from "./utils/UI";
 import {Combat} from "./interact/combat";
 import {Messages} from "./interact/messages";
-import {Stats} from "./actors/resources/stats";
-import {State} from "./utils/State";
-
+import {Statistics} from "./actors/resources/Statistics";
 
 /*==========================================================================================
 LOAD GAME
@@ -32,6 +30,8 @@ LOAD GAME
 
 //loadGame();
 let playerActor = new Player();
+playerActor.update();
+playerActor.updateAfter();
 let grunt = new Enemy();
 let deadMessageSent = false;
 updateUI(playerActor);
@@ -59,7 +59,7 @@ Utils.l("respawnButton").onclick = function () {
         clearInterval();
         Messages.combat('respawn', playerActor, grunt);
         deadMessageSent = false;
-        Stats.money -= Math.floor(Stats.money * .45);
+        Statistics.money -= Math.floor(Statistics.money * .45);
         updateUI(playerActor);
     }
 }
@@ -83,12 +83,20 @@ Utils.l("autoButton").onclick = function () {
         clearInterval(myvar);
     }
 };
+let statsVisible = false;
+Utils.l("statButton").onclick = function () {
+    if (statsVisible) {
+        Utils.l("playareaStats").style.display = "none";
+        statsVisible = false;
+    }
+    else {
+        Utils.l("playareaStats").style.display = "block";
+        updateStats(playerActor);
+        statsVisible = true;
+    }
+};
 
-/*function saveStats() {
-    Utils.save("pHP", (playerActor.health).toString(10));
-    Utils.save("pMHP", (playerActor.maxHealth).toString(10));
-    Utils.save("kills", Stats.kills.toString(10));
-    Utils.save("pEXP", playerActor.experience.toString());
-    Utils.save("pLVL", playerActor.level.toString());
-    Utils.save("pMEXP", (playerActor.maxExperience).toString(10));
-}*/
+function init(){
+    initStats();
+}
+init();

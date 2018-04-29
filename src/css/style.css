@@ -28,7 +28,24 @@ body {
     width: 100%;
     background: var(--background);
     height: 60px;
-    margin: 0px;
+    margin: 0;
+}
+
+#statFrame{
+    width: 100%;
+    height: 100%;
+    border: none;
+    margin: 0;
+    background: var(--background);
+}
+
+#playareaStats{
+    width: 100%;
+    height: 35%;
+    background: var(--background);
+    float: left;
+    font-family: monospace;
+    display:none;
 }
 
 #title {
@@ -65,7 +82,6 @@ body {
     opacity: .99;
     font-family: monospace;
     font-size: 15px;
-    padding-left: 18px;
 }
 
 #statpane {
@@ -101,7 +117,12 @@ body {
 .statCard {
     width: 100%;
     height: 20px;
-    float: left
+    float: left;
+    font-size: 13px;
+}
+
+.statColumn {
+    width: 200px;
 }
 
 .vital {
@@ -178,6 +199,11 @@ button.kill {
     -o-transition: all .2s ease-in;
     -webkit-transition: all .2s ease-in;
     transition: all .1s ease-in;
+}
+
+#gamearea{
+    padding-left: 18px;
+    float:left;
 }
 
 .button:active {
