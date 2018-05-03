@@ -437,4 +437,10 @@ export class Actor {
         boolean {
         return this.health > 0;
     }
+
+    draw(context){
+        context.clearRect(this.position[0],this.position[1],3,3);
+        context.fillStyle = this.color;
+        context.fillRect(this.position[0],this.position[1],3,3);
+    }
 }

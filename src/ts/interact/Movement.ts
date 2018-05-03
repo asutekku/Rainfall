@@ -38,6 +38,15 @@ export class Movement {
         }
     };
 
+    static moveTo(actor: Actor, target: number[], distance) {
+
+        let Angle = Math.atan2(target[1] - actor.position[1], target[0] - actor.position[0]);
+        let Sin = Math.sin(Angle) * distance;
+        let Cos = Math.cos(Angle) * distance;
+        actor.position[0] += Math.floor(Cos);
+        actor.position[1] += Math.floor(Sin);
+    }
+
     mountVehicle(actor, vehicle) {
         //
     };

@@ -9,11 +9,11 @@ import {State} from "../utils/State";
 export class Combat {
 
     static basicAction(actor: Actor, target: Actor) {
-        Combat.hitActor(actor, target);
+        this.shoot(actor, target);
         if (!target.isAlive()) {
             Combat.killEnemy(actor, target);
         } else {
-            this.hitActor(target, actor);
+            this.shoot(target, actor);
             if (!actor.isAlive()) {
                 actor.health = 0;
                 Messages.combat('death', actor, target);
@@ -25,6 +25,46 @@ export class Combat {
 
     static shoot(actor: Actor, target: Actor): void {
         let distance = Utils.distance(actor.position, target.position);
+        console.log(distance);
+        if (distance < 1) { // POINT BLANK
+            if (actor.stats.ref + Utils.dice(3, 10) > 10) {
+                target.health -= actor.weapon.weaponDamage();
+                Messages.combat('hitNormal', actor, target);
+            } else {
+                this.dodgeAttack(actor, target);
+            }
+        } else if (distance < (actor.weapon.range / 4)) {
+            if (actor.stats.ref + Utils.dice(3, 10) > 15) {
+                target.health -= actor.weapon.weaponDamage();
+                Messages.combat('hitNormal', actor, target);
+            } else {
+                this.dodgeAttack(actor, target);
+            }
+        } else if (distance < (actor.weapon.range / 2)) {
+            if (actor.stats.ref + Utils.dice(3, 10) > 20) {
+                target.health -= actor.weapon.weaponDamage();
+                Messages.combat('hitNormal', actor, target);
+            } else {
+                this.dodgeAttack(actor, target);
+            }
+        } else if (distance < (actor.weapon.range)) {
+            if (actor.stats.ref + Utils.dice(3, 10) > 25) {
+                target.health -= actor.weapon.weaponDamage();
+                Messages.combat('hitNormal', actor, target);
+            } else {
+                this.dodgeAttack(actor, target);
+            }
+        } else if (distance < (actor.weapon.range * 2)) {
+            if (actor.stats.ref + Utils.dice(3, 10) > 30) {
+                target.health -= actor.weapon.weaponDamage();
+                Messages.combat('hitNormal', actor, target);
+            } else {
+                this.dodgeAttack(actor, target);
+            }
+        } else {
+            Movement.moveTo(actor,target.position,actor.stats.ma.ma);
+            actor.draw(State.playArea.context);
+        }
     }
 
     static hitActor(actor: Actor, target: Actor): void {
@@ -58,6 +98,8 @@ export class Combat {
 
     static dodgeAttack(actor: Actor, target: Actor): void {
         Messages.combat('hitMiss', actor, target);
+        Movement.moveTo(actor,target.position,actor.stats.ma.ma);
+        actor.draw(State.playArea.context);
     }
 
     //Melee only!
@@ -102,7 +144,8 @@ export class Combat {
         Combat.replaceEnemy(actor, target);
         Movement.moveRandomly(State.playArea, actor, 3);
         updateUI(actor);
-        State.playArea.context.fillRect(actor.position[0],actor.position[1],3,3);
+        actor.draw(State.playArea.context);
+        //State.playArea.context.fillRect(actor.position[0],actor.position[1],3,3);
     }
 
     static gainLevel(actor: Actor, target: Actor) {
@@ -115,7 +158,8 @@ export class Combat {
 
     static replaceEnemy(actor: Actor, target: Actor) {
         target.update();
-        Movement.moveRandomly(State.playArea, target, 50);
+        Movement.moveRandomly(State.playArea, target, State.playArea.width/3);
+        target.draw(State.playArea.context);
         if (actor.role.name === target.role.name) {
             Messages.combat('encounterSame', actor, target);
             Combat.replaceEnemy(actor, target);
