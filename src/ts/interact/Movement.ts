@@ -1,18 +1,26 @@
 import {Utils} from "../utils/utils";
 import {Actor} from "../actors/Actor";
+import {Map} from "../environment/Map";
 
 export class Movement {
-    static moveRandomly(actor: Actor, range: number) {
-        let previousPos = actor.position;
-        actor.position = [previousPos[0] + Math.floor(Utils.range(range * -1, range)),
-            previousPos[1] + Math.floor(Utils.range(range * -1, range))]
+    static moveRandomly(area: Map, actor: Actor, distance: number) {
+        let prevPos: number[] = actor.position;
+        let posX: number = prevPos[0] + Math.floor(Utils.range(distance * -1, distance));
+        let posY: number = prevPos[1] + Math.floor(Utils.range(distance * -1, distance));
+        actor.position = [posX, posY];
+        if (actor.position[0] > area.width / 2 || actor.position[0] < (area.width * -1) / 2) {
+            this.moveRandomly(area, actor, distance);
+        }
+        if (actor.position[1] > area.height / 2 || actor.position[1] < (area.height * -1) / 2) {
+            this.moveRandomly(area, actor, distance);
+        }
     };
 
-    static randomPosition(range: number) {
+    static randomPosition(area: Map, range: number) {
         return [Math.floor(Utils.range(range * -1, range)), Math.floor(Utils.range(range * -1, range))]
     }
 
-    move(actor: Actor, direction: string, distance: number) {
+    static move(area: Map, actor: Actor, direction: string, distance: number) {
         let previousPos = actor.position;
         switch (direction) {
             case "N":

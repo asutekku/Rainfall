@@ -4,6 +4,7 @@ import {Messages} from "./messages";
 import {Movement} from "./Movement";
 import {Actor} from "../actors/Actor";
 import {getItem} from "./getItem";
+import {State} from "../utils/State";
 
 export class Combat {
 
@@ -23,7 +24,7 @@ export class Combat {
     }
 
     static shoot(actor: Actor, target: Actor): void {
-        let distance = Utils.distance(actor.position,target.position);
+        let distance = Utils.distance(actor.position, target.position);
     }
 
     static hitActor(actor: Actor, target: Actor): void {
@@ -99,8 +100,9 @@ export class Combat {
         Combat.lootEnemy(actor, target);
         Combat.gainLevel(actor, target);
         Combat.replaceEnemy(actor, target);
-        Movement.moveRandomly(actor, 50);
+        Movement.moveRandomly(State.playArea, actor, 3);
         updateUI(actor);
+        State.playArea.context.fillRect(actor.position[0],actor.position[1],3,3);
     }
 
     static gainLevel(actor: Actor, target: Actor) {
@@ -113,8 +115,7 @@ export class Combat {
 
     static replaceEnemy(actor: Actor, target: Actor) {
         target.update();
-        console.log(target);
-        Movement.moveRandomly(target, 50);
+        Movement.moveRandomly(State.playArea, target, 50);
         if (actor.role.name === target.role.name) {
             Messages.combat('encounterSame', actor, target);
             Combat.replaceEnemy(actor, target);

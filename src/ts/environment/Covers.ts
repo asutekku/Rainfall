@@ -1,7 +1,8 @@
 import {Movement} from "../interact/Movement";
 import {Cover} from "./Cover";
+import {State} from "../utils/State";
 
-let rpos = Movement.randomPosition(500);
+let rpos = Movement.randomPosition(State.playArea,100);
 let Covers = [
     new Cover("Sheetrock wall", rpos, 5),
     new Cover("Stone Wall", rpos, 30),

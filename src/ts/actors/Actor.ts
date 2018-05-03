@@ -6,6 +6,7 @@ import {getItem} from "../interact/getItem";
 import {Statistics} from "./resources/Statistics";
 import {Movement} from "../interact/Movement";
 import {Name} from "./resources/Name";
+import {State} from "../utils/State";
 
 export class Actor {
 
@@ -239,7 +240,7 @@ export class Actor {
         this.items = [getItem.item()];
         this.item = getItem.item();
         this.currency = Math.floor(Utils.range(20, 100));
-        this.position = Movement.randomPosition(50);
+        this.position = Movement.randomPosition(State.playArea,50);
         this.kills = 0;
         this.stats = {
             int: Utils.dice(1, 10),

@@ -1,7 +1,7 @@
-import {Actor} from "../actors/Actor";
-import {Enemy} from "../actors/Enemy";
-import {Player} from "../actors/player";
+import {Settings} from "../environment/Settings";
+import {Map} from "../environment/Map";
+import {mapGenerator} from "../environment/MapGenerator";
 
-export class State {
-
-}
+export const State = {
+    playArea: new mapGenerator("Thrive",50,400,400,"#29241D").map,
+};

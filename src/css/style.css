@@ -125,6 +125,12 @@ body {
     width: 200px;
 }
 
+#map{
+    background: #29241D;
+    height: 100%;
+    width: auto;
+}
+
 .vital {
     color: var(--baseColor);
 }

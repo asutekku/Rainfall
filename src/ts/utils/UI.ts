@@ -2,6 +2,8 @@ import {Utils} from "./utils";
 import {Actor} from "../actors/Actor";
 import Stats from "../actors/resources/Stats";
 import {stat_en_US} from "../../lang/en_US";
+import {State} from "./State";
+
 let _ = Utils;
 let lang = stat_en_US;
 
@@ -50,9 +52,10 @@ export function initStats() {
     let statHeader = document.createElement("h2");
     let statColumn = Utils.create("div");
     statColumn.classList.add("statColumn");
+    statColumn.id = "statColumn1";
     statPane.appendChild(statColumn);
     statHeader.textContent = stat_en_US.stats;
-    statHeader.classList.add("statTitle","vital");
+    statHeader.classList.add("statTitle", "vital");
     statPane.id = "playareaStats";
     statPane.classList.add("UIelement");
     _.l("playpane").insertAdjacentElement('afterbegin', statPane);
@@ -62,7 +65,7 @@ export function initStats() {
         let tooltiptext = _.create("span");
         let statTitle = _.create("span");
         let statValue = _.create("span");
-        statCard.classList.add("statCard","tooltip");
+        statCard.classList.add("statCard", "tooltip");
         tooltiptext.classList.add("tooltiptext");
         tooltiptext.id = `${Stats[i].short}desc`;
         tooltiptext.textContent = Stats[i].description;
@@ -75,4 +78,26 @@ export function initStats() {
         statCard.appendChild(statTitle);
         statCard.appendChild(statValue);
     }
+}
+
+export function initMap() {
+    let map = State.playArea.canvas;
+    let height = -(State.playArea.height / 2);
+    let width = -(State.playArea.width / 2);
+    let linesY = State.playArea.height / 20;
+    let linesX = State.playArea.width / 20;
+    for (let i = 0; i < linesY; i++) {
+        let ctx = State.playArea.context;
+        ctx.strokeStyle = "#13120e";
+        ctx.beginPath();
+        ctx.moveTo(-(State.playArea.width / 2), height);
+        ctx.lineTo(State.playArea.width, height);
+        ctx.stroke();
+        ctx.moveTo(width, -(State.playArea.height / 2));
+        ctx.lineTo(width, State.playArea.height);
+        ctx.stroke();
+        height += linesY;
+        width += linesX;
+    }
+    _.l("playareaStats").appendChild(map);
 }
