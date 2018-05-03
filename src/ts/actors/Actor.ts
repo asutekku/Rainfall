@@ -233,6 +233,7 @@ export class Actor {
         this.level = Statistics.level;
         this.experience = Math.floor(Statistics.level ^ 2 / 0.4);
         this.health = Math.floor(Utils.range((Statistics.level ^ 2 / 0.09) * 0.9, (Statistics.level ^ 2 / 0.09) * 1.1));
+        this.maxHealth = this.health;
         this._weapon = getItem.weapon();
         this.armor = 0;
         this.weapons = [];
