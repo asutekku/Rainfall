@@ -16,6 +16,7 @@ export function updateUI(actor: Actor) {
     _.l('weaponDesc').textContent = actor.weapon.description;
     _.l('charWeaponDamage').textContent = `${actor.weapon.damage + actor.weapon.diceThrows} - ${(actor.weapon.diceThrows * 6) + actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
     _.l('charWeaponAccuracy').textContent = actor.weapon.accuracy + '%';
+    _.l('charWeaponRange').textContent = actor.weapon.range + 'm';
     _.l("charCRIT").textContent = `${actor.weapon.crit}%`;
     _.l('currency').textContent = actor.currency + "¥";
     _.l('playerName').textContent = actor.name;
