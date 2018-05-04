@@ -10,14 +10,16 @@ export class Map {
     buildings: any[];
     canvas: HTMLCanvasElement | null;
     context: CanvasRenderingContext2D | null;
+    actors: any[];
 
-    constructor(name, height, width, depth, setting, background) {
+    constructor(name, height, width, depth, setting) {
         this.name = name;
         this.height = height;
         this.width = width;
         this.depth = depth;
         this.setting = setting;
         this.buildings = [];
+        this.actors = [];
         this.canvas = document.createElement('canvas');
         this.canvas.id = "map";
         this.canvas.height = height;

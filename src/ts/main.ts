@@ -12,7 +12,9 @@ let playerActor = new Player();
 let playArea = State.playArea;
 playerActor.update();
 playerActor.updateAfter();
+State.playArea.actors.push(playerActor);
 let grunt = new Enemy();
+State.playArea.actors.push(grunt);
 let deadMessageSent = false;
 updateUI(playerActor);
 

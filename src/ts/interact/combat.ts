@@ -5,6 +5,7 @@ import {Movement} from "./Movement";
 import {Actor} from "../actors/Actor";
 import {getItem} from "./getItem";
 import {State} from "../utils/State";
+import {Draw} from "../utils/Draw";
 
 export class Combat {
 
@@ -27,36 +28,40 @@ export class Combat {
         let distance = Utils.distance(actor.position, target.position);
         console.log(distance);
         if (distance < 1) { // POINT BLANK
-            if (actor.stats.ref + Utils.dice(3, 10) > 10) {
+            if (actor.stats.ref + Utils.dice(3, 10) >= 10) {
                 target.health -= actor.weapon.weaponDamage();
                 Messages.combat('hitNormal', actor, target);
             } else {
                 this.dodgeAttack(actor, target);
             }
         } else if (distance < (actor.weapon.range / 4)) {
-            if (actor.stats.ref + Utils.dice(3, 10) > 15) {
+            if (actor.stats.ref + Utils.dice(3, 10) >= 15) {
                 target.health -= actor.weapon.weaponDamage();
+                Draw.drawLine(State.playArea.context, actor.position,target.position,actor.color);
                 Messages.combat('hitNormal', actor, target);
             } else {
                 this.dodgeAttack(actor, target);
             }
         } else if (distance < (actor.weapon.range / 2)) {
-            if (actor.stats.ref + Utils.dice(3, 10) > 20) {
+            if (actor.stats.ref + Utils.dice(3, 10) >= 20) {
                 target.health -= actor.weapon.weaponDamage();
+                Draw.drawLine(State.playArea.context, actor.position,target.position,actor.color);
                 Messages.combat('hitNormal', actor, target);
             } else {
                 this.dodgeAttack(actor, target);
             }
         } else if (distance < (actor.weapon.range)) {
-            if (actor.stats.ref + Utils.dice(3, 10) > 25) {
+            if (actor.stats.ref + Utils.dice(3, 10) >= 25) {
                 target.health -= actor.weapon.weaponDamage();
+                Draw.drawLine(State.playArea.context, actor.position,target.position,actor.color);
                 Messages.combat('hitNormal', actor, target);
             } else {
                 this.dodgeAttack(actor, target);
             }
         } else if (distance < (actor.weapon.range * 2)) {
-            if (actor.stats.ref + Utils.dice(3, 10) > 30) {
+            if (actor.stats.ref + Utils.dice(3, 10) >= 30) {
                 target.health -= actor.weapon.weaponDamage();
+                Draw.drawLine(State.playArea.context, actor.position,target.position,actor.color);
                 Messages.combat('hitNormal', actor, target);
             } else {
                 this.dodgeAttack(actor, target);

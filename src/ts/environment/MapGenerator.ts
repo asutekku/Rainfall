@@ -7,24 +7,21 @@ import {State} from "../utils/State";
 export class mapGenerator {
     public map: Map;
 
-    constructor(mapName: string, numberOfBuildings: number, height: number, width: number, background: string) {
-        this.map = new Map(mapName, height, width, 1, Settings.city, background);
+    constructor(mapName: string, numberOfBuildings: number, height: number, width: number) {
+        this.map = new Map(mapName, height, width, 1, Settings.city);
         let bArr = this.map.buildings;
         for (let i = 0; i < numberOfBuildings; i++) {
             let building = new Building("Building", width / 20, height / 20, Utils.range(1, 40));
-            let xpos = (Math.round(Utils.range(0, 20)) - 10) * width / 20;
-            let ypos = (Math.round(Utils.range(0, 20)) - 10) * height / 20;
+            building.x = (Math.round(Utils.range(0, 20)) - 10) * width / 20;
+            building.y = (Math.round(Utils.range(0, 20)) - 10) * height / 20;
             let placeable = true;
             for (let j = 0; j < bArr.length; j++) {
-                if (xpos == bArr[j].xpos || ypos == bArr[j].xpos) {
-                    xpos = (Math.round(Utils.range(0, 20)) - 10) * width / 20;
-                    ypos = (Math.round(Utils.range(0, 20)) - 10) * height / 20;
+                if (building.x == bArr[j].x || building.y == bArr[j].x) {
+                    placeable = false;
                 }
             }
             if (placeable) {
-                building.xpos = xpos;
-                building.ypos = ypos;
-                this.map.context.fillRect(xpos, ypos, building.width, building.height);
+                building.draw(this.map.context);
                 bArr.push(building);
             }
         }
