@@ -20,12 +20,11 @@ export class Map {
         this.setting = setting;
         this.buildings = [];
         this.actors = [];
-        this.canvas = document.createElement('canvas');
+        this.canvas = document.createElement("canvas");
         this.canvas.id = "map";
         this.canvas.height = height;
         this.canvas.width = width;
-        this.context = this.canvas.getContext('2d');
+        this.context = this.canvas.getContext("2d");
         this.context.translate(width * 0.5, height * 0.5);
     }
-
 }

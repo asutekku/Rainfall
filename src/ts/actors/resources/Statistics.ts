@@ -36,4 +36,3 @@ export class Statistics {
     private static _level: number = 0;
     private static _inventory: any[] = [];
 }
-

@@ -7,7 +7,6 @@ import {Messages} from "./interact/messages";
 import {Statistics} from "./actors/resources/Statistics";
 import {State} from "./utils/State";
 
-
 let playerActor = new Player();
 let playArea = State.playArea;
 playerActor.update();
@@ -23,7 +22,7 @@ Utils.l("hitButton").onclick = function () {
     if (playerActor.isAlive()) {
         Combat.basicAction(playerActor, grunt);
     } else if (deadMessageSent === false) {
-        Messages.combat('youredead', playerActor, grunt);
+        Messages.combat("youredead", playerActor, grunt);
         deadMessageSent = true;
     }
 };
@@ -39,12 +38,12 @@ Utils.l("respawnButton").onclick = function () {
     if (!playerActor.isAlive()) {
         playerActor.health = playerActor.maxHealth;
         clearInterval();
-        Messages.combat('respawn', playerActor, grunt);
+        Messages.combat("respawn", playerActor, grunt);
         deadMessageSent = false;
-        Statistics.money -= Math.floor(Statistics.money * .45);
+        Statistics.money -= Math.floor(Statistics.money * 0.45);
         updateUI(playerActor);
     }
-}
+};
 
 //Functionality for the autoplay (because no one likes to click away)
 let running = false;
@@ -59,7 +58,7 @@ Utils.l("autoButton").onclick = function () {
                 clearInterval(myvar);
                 running = false;
             }
-        }, 500)
+        }, 500);
     } else if (running) {
         running = false;
         clearInterval(myvar);
@@ -70,8 +69,7 @@ Utils.l("statButton").onclick = function () {
     if (statsVisible) {
         Utils.l("playareaStats").style.display = "none";
         statsVisible = false;
-    }
-    else {
+    } else {
         Utils.l("playareaStats").style.display = "block";
         updateStats(playerActor);
         initMap();

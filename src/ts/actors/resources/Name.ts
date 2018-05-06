@@ -18,6 +18,7 @@ export class Name {
     set surname(value: string) {
         this._surname = value;
     }
+
     private _firstName: string;
     private _surname: string;
     gender: string;
@@ -45,5 +46,4 @@ export class Name {
     static getSurname() {
         return Utils.pickRandom(names.surname);
     }
-
 }

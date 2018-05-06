@@ -7,16 +7,15 @@ import {Statistics} from "../actors/resources/Statistics";
 import {updateUI} from "../utils/UI";
 
 let itemID = 0;
-let element = document.getElementById(':hover');
+let element = document.getElementById(":hover");
 
 export class getItem {
-
     static weapon() {
         return Utils.pickRandom(weapons);
     }
 
     static item() {
-        var randomItem = Math.floor(Math.random() * 4);
+        let randomItem = Math.floor(Math.random() * 4);
         switch (randomItem) {
             case 0:
                 return Utils.pickRandom(armors);
@@ -31,10 +30,10 @@ export class getItem {
 
     static updateCurrency(money, actor, target) {
         if (money >= 0) {
-            Messages.combat('getMoney', actor, target);
+            Messages.combat("getMoney", actor, target);
             actor.currency += money;
         } else {
-            Messages.combat('noMoney', actor, target);
+            Messages.combat("noMoney", actor, target);
         }
     }
 
@@ -60,7 +59,7 @@ export class getItem {
         if (ul.childElementCount == 0) {
             ul.appendChild(inventoryItem);
         } else {
-            ul.insertBefore(inventoryItem, ul.firstChild)
+            ul.insertBefore(inventoryItem, ul.firstChild);
         }
     }
 }

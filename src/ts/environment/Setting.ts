@@ -1,6 +1,7 @@
-export class Setting{
+export class Setting {
     private name: string;
-    constructor(name){
+
+    constructor(name) {
         this.name = name;
     }
 }

@@ -9,8 +9,6 @@ import {Name} from "./resources/Name";
 import {State} from "../utils/State";
 
 export class Actor {
-
-
     get weapon(): Weapon {
         if (this._weapon != null) return this._weapon;
         return null;
@@ -36,10 +34,159 @@ export class Actor {
     public currency: number;
     public position: number[];
     public kills: number;
-    stats: { int: number; ref: number; tech: number; cl: number; att: number; lk: number; ma: { ma: number; run: number; leap: number }; bt: number; btm: number; sn: number; hm: number; emp: number; lift: number };
-    private skills: { special: { authority: number; charismaticLeadership: number; combatSense: number; credibility: number; family: number; interface: number; juryRig: number; medicalTech: number; resources: number; streetDeal: number }; att: { personalGrooming: number; wardrobeAndStyle: number }; body: { endurance: number; strength: number; swimming: number }; cool: { interrogation: number; intimidate: number; oratory: number; resistTorture: number; streetwise: number }; emp: { humanPerception: number; interview: number; leadership: number; seduction: number; social: number; persuasion: number; perform: number }; int: { accounting: number; anthropology: number; awareness: number; biology: number; botany: number; chemistry: number; composition: number; diagnosis: number; education: number; expert: number; gamble: number; geology: number; evade: number; history: number; librarySearch: number; math: number; physics: number; programming: number; tracking: number; stockMarket: number; systemKnowledge: number; teaching: number; wilderness: number; zoology: number }; language: { english: number; japanese: number; chinese: number; german: number; korean: number; french: number }; ref: { archery: number; athletics: number; brawling: number; dance: number; dodge: number; driving: number; fencing: number; handgun: number; heavyWeapons: number; martialJudo: number; martialKungfu: number; martialKarate: number; melee: number; motorcycle: number; heavyMachinery: number; pilotGyro: number; pilotFixedwing: number; pilotDirigible: number; pilotVect: number; rifle: number; stealth: number; submachinegun: number }; tech: { aero: number; AV: number; basic: number; cryotankOperation: number; cyberdeckDesign: number; cyberTech: number; demolitions: number; disguise: number; electronics: number; electronicSecurity: number; firstAid: number; forgery: number; gyroTech: number; painting: number; photography: number; pharmatics: number; lockPick: number; pickPocket: number; instrument: number; weaponSmith: number } };
+    stats: {
+        int: number;
+        ref: number;
+        tech: number;
+        cl: number;
+        att: number;
+        lk: number;
+        ma: { ma: number; run: number; leap: number };
+        bt: number;
+        btm: number;
+        sn: number;
+        hm: number;
+        emp: number;
+        lift: number;
+    };
+    private skills: {
+        special: {
+            authority: number;
+            charismaticLeadership: number;
+            combatSense: number;
+            credibility: number;
+            family: number;
+            interface: number;
+            juryRig: number;
+            medicalTech: number;
+            resources: number;
+            streetDeal: number;
+        };
+        att: { personalGrooming: number; wardrobeAndStyle: number };
+        body: { endurance: number; strength: number; swimming: number };
+        cool: {
+            interrogation: number;
+            intimidate: number;
+            oratory: number;
+            resistTorture: number;
+            streetwise: number;
+        };
+        emp: {
+            humanPerception: number;
+            interview: number;
+            leadership: number;
+            seduction: number;
+            social: number;
+            persuasion: number;
+            perform: number;
+        };
+        int: {
+            accounting: number;
+            anthropology: number;
+            awareness: number;
+            biology: number;
+            botany: number;
+            chemistry: number;
+            composition: number;
+            diagnosis: number;
+            education: number;
+            expert: number;
+            gamble: number;
+            geology: number;
+            evade: number;
+            history: number;
+            librarySearch: number;
+            math: number;
+            physics: number;
+            programming: number;
+            tracking: number;
+            stockMarket: number;
+            systemKnowledge: number;
+            teaching: number;
+            wilderness: number;
+            zoology: number;
+        };
+        language: {
+            english: number;
+            japanese: number;
+            chinese: number;
+            german: number;
+            korean: number;
+            french: number;
+        };
+        ref: {
+            archery: number;
+            athletics: number;
+            brawling: number;
+            dance: number;
+            dodge: number;
+            driving: number;
+            fencing: number;
+            handgun: number;
+            heavyWeapons: number;
+            martialJudo: number;
+            martialKungfu: number;
+            martialKarate: number;
+            melee: number;
+            motorcycle: number;
+            heavyMachinery: number;
+            pilotGyro: number;
+            pilotFixedwing: number;
+            pilotDirigible: number;
+            pilotVect: number;
+            rifle: number;
+            stealth: number;
+            submachinegun: number;
+        };
+        tech: {
+            aero: number;
+            AV: number;
+            basic: number;
+            cryotankOperation: number;
+            cyberdeckDesign: number;
+            cyberTech: number;
+            demolitions: number;
+            disguise: number;
+            electronics: number;
+            electronicSecurity: number;
+            firstAid: number;
+            forgery: number;
+            gyroTech: number;
+            painting: number;
+            photography: number;
+            pharmatics: number;
+            lockPick: number;
+            pickPocket: number;
+            instrument: number;
+            weaponSmith: number;
+        };
+    };
     private cybernetics: any[];
-    lifepath: { style: { clothes: { headgear: any; upper: any; jacket: any; bottom: any; shoes: any; accessories: any }; hair: any; affectations: any; ethnicity: any; language: any }; familyBackground: any; motivations: { traits: any; valuedPerson: any; valueMost: any; feelAboutPeople: any; valuedPossession: any }; lifeEvents: any[] };
+    lifepath: {
+        style: {
+            clothes: {
+                headgear: any;
+                upper: any;
+                jacket: any;
+                bottom: any;
+                shoes: any;
+                accessories: any;
+            };
+            hair: any;
+            affectations: any;
+            ethnicity: any;
+            language: any;
+        };
+        familyBackground: any;
+        motivations: {
+            traits: any;
+            valuedPerson: any;
+            valueMost: any;
+            feelAboutPeople: any;
+            valuedPossession: any;
+        };
+        lifeEvents: any[];
+    };
     public maxHealth: number;
     maxExperience: number = 100;
 
@@ -68,8 +215,8 @@ export class Actor {
             lk: 1,
             ma: {
                 ma: 1,
-                run: 1,//this.stats.movementAllowance.stamina * 3,
-                leap: 1,//this.stats.movementAllowance.stamina / 4
+                run: 1, //this.stats.movementAllowance.stamina * 3,
+                leap: 1 //this.stats.movementAllowance.stamina / 4
             },
             bt: 2, //2-10
             btm: 0,
@@ -89,7 +236,7 @@ export class Actor {
                 juryRig: 0,
                 medicalTech: 0,
                 resources: 0,
-                streetDeal: 0,
+                streetDeal: 0
             },
             att: {
                 personalGrooming: 0,
@@ -195,7 +342,7 @@ export class Actor {
                 pickPocket: 0,
                 instrument: 0,
                 weaponSmith: 0
-            },
+            }
         };
         this.cybernetics = [];
         this.lifepath = {
@@ -231,8 +378,13 @@ export class Actor {
         this.role = new Role();
         this.skill = this.role.skill;
         this.level = Statistics.level;
-        this.experience = Math.floor(Statistics.level ^ 2 / 0.4);
-        this.health = Math.floor(Utils.range((Statistics.level ^ 2 / 0.09) * 0.9, (Statistics.level ^ 2 / 0.09) * 1.1));
+        this.experience = Math.floor(Statistics.level ^ (2 / 0.4));
+        this.health = Math.floor(
+            Utils.range(
+                (Statistics.level ^ (2 / 0.09)) * 0.9,
+                (Statistics.level ^ (2 / 0.09)) * 1.1
+            )
+        );
         this.maxHealth = this.health;
         this._weapon = getItem.weapon();
         this.armor = 0;
@@ -241,7 +393,7 @@ export class Actor {
         this.items = [getItem.item()];
         this.item = getItem.item();
         this.currency = Math.floor(Utils.range(20, 100));
-        this.position = Movement.randomPosition(State.playArea,50);
+        this.position = Movement.randomPosition(State.playArea, 50);
         this.kills = 0;
         this.stats = {
             int: Utils.dice(1, 10),
@@ -260,7 +412,7 @@ export class Actor {
             emp: Utils.dice(1, 10),
             lift: Utils.dice(1, 10),
             hm: this.stats.emp * 10,
-            sn: this.stats.bt,
+            sn: this.stats.bt
         };
         this.skills = {
             special: {
@@ -273,7 +425,7 @@ export class Actor {
                 juryRig: Utils.dice(1, 5),
                 medicalTech: Utils.dice(1, 5),
                 resources: Utils.dice(1, 5),
-                streetDeal: Utils.dice(1, 5),
+                streetDeal: Utils.dice(1, 5)
             },
             att: {
                 personalGrooming: Utils.dice(1, 5),
@@ -411,8 +563,10 @@ export class Actor {
 
     reposition() {
         let previousPos = this.position;
-        this.position = [previousPos[0] + Math.floor(Utils.range(-50, 50)),
-            previousPos[1] + Math.floor(Utils.range(-50, 50))]
+        this.position = [
+            previousPos[0] + Math.floor(Utils.range(-50, 50)),
+            previousPos[1] + Math.floor(Utils.range(-50, 50))
+        ];
     }
 
     updateAfter() {
@@ -427,20 +581,18 @@ export class Actor {
         this.level += 1;
         Statistics.level += 1;
         this.experience = 0;
-        this.maxExperience = this.level ^ 2 / 0.04;
-        this.maxHealth = this.level ^ 2 / 0.1;
+        this.maxExperience = this.level ^ (2 / 0.04);
+        this.maxHealth = this.level ^ (2 / 0.1);
         this.health = this.maxHealth;
     }
 
-    isAlive()
-        :
-        boolean {
+    isAlive(): boolean {
         return this.health > 0;
     }
 
-    draw(context){
-        context.clearRect(this.position[0],this.position[1],3,3);
+    draw(context) {
+        context.clearRect(this.position[0], this.position[1], 3, 3);
         context.fillStyle = this.color;
-        context.fillRect(this.position[0],this.position[1],3,3);
+        context.fillRect(this.position[0], this.position[1], 3, 3);
     }
 }

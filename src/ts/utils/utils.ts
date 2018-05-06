@@ -2,10 +2,10 @@ let spanId: number = 0;
 let spanIdToRemove: number = 1;
 
 export class Utils {
-
     static l(what): HTMLElement | null {
         return document.getElementById(what);
     }
+
     static create(what): HTMLElement | null {
         return document.createElement(what);
     }
@@ -19,7 +19,11 @@ export class Utils {
     }
 
     static colorize(what): string {
-        let randomColor = '#' + Math.random().toString(16).substr(-3);
+        let randomColor =
+            "#" +
+            Math.random()
+                .toString(16)
+                .substr(-3);
         return `<span style="color:${randomColor}">${what}</span>`;
     }
 
@@ -40,7 +44,7 @@ export class Utils {
     }
 
     static span(line, color): string {
-        return `<span style=color:${color}>${line}</span>`
+        return `<span style=color:${color}>${line}</span>`;
     }
 
     static dice(times: number, sides: number): number {
@@ -51,11 +55,12 @@ export class Utils {
         let value = Math.ceil(Math.random() * 100);
         return value <= what;
     }
+
     static range(min: number, max: number): number {
         return Math.random() * (max - min) + min;
     }
 
     static distance(p1: number[], p2: number[]): any {
-        return Math.sqrt(Math.pow((p1[1] - p1[0]), 2) + Math.pow((p2[1] - p2[0]), 2));
+        return Math.sqrt(Math.pow(p1[1] - p1[0], 2) + Math.pow(p2[1] - p2[0], 2));
     }
 }

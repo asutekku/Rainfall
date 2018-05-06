@@ -13,7 +13,7 @@ html {
     height: 100%;
     width: 100%;
     margin: 0;
-    font-family: /*Futura, "Trebuchet MS", Arial,*/ monospace
+    font-family: /*Futura, "Trebuchet MS", Arial,*/ monospace;
 }
 
 body {
@@ -21,7 +21,7 @@ body {
     background: #2d2d2d;
     color: #e8e8e8;
     margin: 0;
-    padding: 0
+    padding: 0;
 }
 
 #navbar {
@@ -31,7 +31,7 @@ body {
     margin: 0;
 }
 
-#statFrame{
+#statFrame {
     width: 100%;
     height: 100%;
     border: none;
@@ -39,13 +39,13 @@ body {
     background: var(--background);
 }
 
-#playareaStats{
+#playareaStats {
     width: 100%;
     height: 35%;
     background: var(--background);
     float: left;
     font-family: monospace;
-    display:none;
+    display: none;
 }
 
 #title {
@@ -67,7 +67,7 @@ body {
     width: 200px;
     height: 100%;
     background: var(--background);
-    float: left
+    float: left;
 }
 
 #playpane {
@@ -79,7 +79,7 @@ body {
     overflow: hidden;
     /*position: relative;*/
     z-index: 0;
-    opacity: .99;
+    opacity: 0.99;
     font-family: monospace;
     font-size: 15px;
 }
@@ -104,7 +104,7 @@ body {
     padding: 0;
     /*width:240px;*/
     margin: 5px;
-    float: left
+    float: left;
 }
 
 #attributes,
@@ -125,8 +125,8 @@ body {
     width: 200px;
 }
 
-#map{
-    background: #29241D;
+#map {
+    background: #29241d;
     height: 100%;
     width: auto;
 }
@@ -179,7 +179,7 @@ h2.statTitle {
 
 button.kill {
     z-index: 100;
-    position: relative
+    position: relative;
 }
 
 .button {
@@ -201,15 +201,15 @@ button.kill {
     font-style: bold;
     color: #d1d1d1;
     background: #29241d;
-    -moz-transition: all .2s ease-in;
-    -o-transition: all .2s ease-in;
-    -webkit-transition: all .2s ease-in;
-    transition: all .1s ease-in;
+    -moz-transition: all 0.2s ease-in;
+    -o-transition: all 0.2s ease-in;
+    -webkit-transition: all 0.2s ease-in;
+    transition: all 0.1s ease-in;
 }
 
-#gamearea{
+#gamearea {
     padding-left: 18px;
-    float:left;
+    float: left;
 }
 
 .button:active {
@@ -241,12 +241,12 @@ button.kill {
 
 .tooltip:hover .tooltiptext {
     visibility: visible;
-    z-index: 40
+    z-index: 40;
 }
 
 h3.statTitle {
-    color: #AED581;
-    font-size: 16px
+    color: #aed581;
+    font-size: 16px;
 }
 
 .inset {
@@ -256,7 +256,7 @@ h3.statTitle {
 }
 
 .dropbtn {
-    background-color: #4CAF50;
+    background-color: #4caf50;
     color: white;
     padding: 16px;
     font-size: 16px;
@@ -296,7 +296,7 @@ h3.statTitle {
 }
 
 .dropdown a:hover {
-    background-color: #f1f1f1
+    background-color: #f1f1f1;
 }
 
 .show {
@@ -323,7 +323,7 @@ h3.statTitle {
 }
 
 #placeholderImage {
-    width: 260px
+    width: 260px;
 }
 
 #initChar {

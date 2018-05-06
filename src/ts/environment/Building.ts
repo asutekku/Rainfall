@@ -1,11 +1,12 @@
-export class Building{
+export class Building {
     private name: string;
     width: number;
     height: number;
     private floors: number;
     x: number;
     y: number;
-    constructor(name,width,height,floors){
+
+    constructor(name, width, height, floors) {
         this.name = name;
         this.x = 0;
         this.y = 0;
@@ -14,7 +15,7 @@ export class Building{
         this.floors = floors;
     }
 
-    draw(ctx){
+    draw(ctx) {
         ctx.fillStyle = "#000";
         ctx.fillRect(this.x, this.y, this.width, this.height);
     }

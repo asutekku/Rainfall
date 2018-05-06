@@ -19,9 +19,21 @@ export class Weapon implements Item {
     range: number;
     level: number;
 
-    constructor(weaponType:string, name: string, accuracy:number, rarity:number, damage:number,
-                criticalChance:number, diceThrows:number, shots:number, rateOfFire:number,
-                reliability:number, range:number, cost:number, description: string,) {
+    constructor(
+        weaponType: string,
+        name: string,
+        accuracy: number,
+        rarity: number,
+        damage: number,
+        criticalChance: number,
+        diceThrows: number,
+        shots: number,
+        rateOfFire: number,
+        reliability: number,
+        range: number,
+        cost: number,
+        description: string
+    ) {
         this.type = "weapon";
         this.weaponType = weaponType;
         this.name = name;
@@ -41,15 +53,15 @@ export class Weapon implements Item {
 
     averageDamage(): number {
         let low = this.diceThrows * this.rateOfFire + this.damage;
-        let high = (this.diceThrows * 6) * this.rateOfFire + this.damage;
+        let high = this.diceThrows * 6 * this.rateOfFire + this.damage;
         return (low + high) / 2;
-    };
+    }
 
     weaponDamage(): number {
         let damage = 0;
         for (let i = 0; i <= this.rateOfFire; i++) {
             if (Utils.chance(this.accuracy)) {
-                damage += (Utils.dice(this.diceThrows, 6) + this.damage)
+                damage += Utils.dice(this.diceThrows, 6) + this.damage;
             }
         }
         return Math.floor(damage);

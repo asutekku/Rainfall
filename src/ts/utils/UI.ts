@@ -11,24 +11,32 @@ export function updateUI(actor: Actor) {
     _.l("charHP").textContent = `${actor.health}/${actor.maxHealth}`;
     _.l("charLvl").textContent = actor.level.toString();
     _.l("kills").textContent = actor.kills.toString();
-    _.l('charExp').textContent = actor.experience + "/" + actor.maxExperience;
-    _.l('charWeapon').textContent = actor.weapon.name;
-    _.l('weaponDesc').textContent = actor.weapon.description;
-    _.l('charWeaponDamage').textContent = `${actor.weapon.damage + actor.weapon.diceThrows} - ${(actor.weapon.diceThrows * 6) + actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
-    _.l('charWeaponAccuracy').textContent = actor.weapon.accuracy + '%';
-    _.l('charWeaponRange').textContent = actor.weapon.range + 'm';
+    _.l("charExp").textContent = actor.experience + "/" + actor.maxExperience;
+    _.l("charWeapon").textContent = actor.weapon.name;
+    _.l("weaponDesc").textContent = actor.weapon.description;
+    _.l("charWeaponDamage").textContent = `${actor.weapon.damage +
+    actor.weapon.diceThrows} - ${actor.weapon.diceThrows * 6 +
+    actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
+    _.l("charWeaponAccuracy").textContent = actor.weapon.accuracy + "%";
+    _.l("charWeaponRange").textContent = actor.weapon.range + "m";
     _.l("charCRIT").textContent = `${actor.weapon.crit}%`;
-    _.l('currency').textContent = actor.currency + "¥";
-    _.l('playerName').textContent = actor.name;
-    _.l('charGender').textContent = actor.gender;
-    _.l('charRole').textContent = actor.role.name;
-    _.l('charSkill').textContent = actor.role.skill;
-    _.l('skillDesc').textContent = actor.role.skillDescription;
-    _.l('charWeaponDamage').textContent = (actor.weapon.damage + actor.weapon.diceThrows) + " - " + ((actor.weapon.diceThrows * 6) + actor.weapon.damage) + " * " + actor.weapon.rateOfFire;
-    _.l('charWeaponAccuracy').textContent = actor.weapon.accuracy + '%';
-    _.l('charWeaponType').textContent = actor.weapon.weaponType;
-    _.l('armorStoppingPower').textContent = actor.armor + '%';
-    _.l('playerPosition').textContent = actor.position.toString();
+    _.l("currency").textContent = actor.currency + "¥";
+    _.l("playerName").textContent = actor.name;
+    _.l("charGender").textContent = actor.gender;
+    _.l("charRole").textContent = actor.role.name;
+    _.l("charSkill").textContent = actor.role.skill;
+    _.l("skillDesc").textContent = actor.role.skillDescription;
+    _.l("charWeaponDamage").textContent =
+        actor.weapon.damage +
+        actor.weapon.diceThrows +
+        " - " +
+        (actor.weapon.diceThrows * 6 + actor.weapon.damage) +
+        " * " +
+        actor.weapon.rateOfFire;
+    _.l("charWeaponAccuracy").textContent = actor.weapon.accuracy + "%";
+    _.l("charWeaponType").textContent = actor.weapon.weaponType;
+    _.l("armorStoppingPower").textContent = actor.armor + "%";
+    _.l("playerPosition").textContent = actor.position.toString();
 }
 
 export function updateStats(actor: Actor) {
@@ -59,7 +67,7 @@ export function initStats() {
     statHeader.classList.add("statTitle", "vital");
     statPane.id = "playareaStats";
     statPane.classList.add("UIelement");
-    _.l("playpane").insertAdjacentElement('afterbegin', statPane);
+    _.l("playpane").insertAdjacentElement("afterbegin", statPane);
     statColumn.appendChild(statHeader);
     for (let i = 0; i < Stats.length; i++) {
         let statCard = _.create("div");

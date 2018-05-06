@@ -8,7 +8,6 @@ import {State} from "../utils/State";
 import {Draw} from "../utils/Draw";
 
 export class Combat {
-
     static basicAction(actor: Actor, target: Actor) {
         this.shoot(actor, target);
         if (!target.isAlive()) {
@@ -17,7 +16,7 @@ export class Combat {
             this.shoot(target, actor);
             if (!actor.isAlive()) {
                 actor.health = 0;
-                Messages.combat('death', actor, target);
+                Messages.combat("death", actor, target);
                 updateUI(actor);
             }
         }
@@ -27,47 +26,68 @@ export class Combat {
     static shoot(actor: Actor, target: Actor): void {
         let distance = Utils.distance(actor.position, target.position);
         console.log(distance);
-        if (distance < 1) { // POINT BLANK
+        if (distance < 1) {
+            // POINT BLANK
             if (actor.stats.ref + Utils.dice(3, 10) >= 10) {
                 target.health -= actor.weapon.weaponDamage();
-                Messages.combat('hitNormal', actor, target);
+                Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
             }
-        } else if (distance < (actor.weapon.range / 4)) {
+        } else if (distance < actor.weapon.range / 4) {
             if (actor.stats.ref + Utils.dice(3, 10) >= 15) {
                 target.health -= actor.weapon.weaponDamage();
-                Draw.drawLine(State.playArea.context, actor.position,target.position,actor.color);
-                Messages.combat('hitNormal', actor, target);
+                Draw.drawLine(
+                    State.playArea.context,
+                    actor.position,
+                    target.position,
+                    actor.color
+                );
+                Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
             }
-        } else if (distance < (actor.weapon.range / 2)) {
+        } else if (distance < actor.weapon.range / 2) {
             if (actor.stats.ref + Utils.dice(3, 10) >= 20) {
                 target.health -= actor.weapon.weaponDamage();
-                Draw.drawLine(State.playArea.context, actor.position,target.position,actor.color);
-                Messages.combat('hitNormal', actor, target);
+                Draw.drawLine(
+                    State.playArea.context,
+                    actor.position,
+                    target.position,
+                    actor.color
+                );
+                Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
             }
-        } else if (distance < (actor.weapon.range)) {
+        } else if (distance < actor.weapon.range) {
             if (actor.stats.ref + Utils.dice(3, 10) >= 25) {
                 target.health -= actor.weapon.weaponDamage();
-                Draw.drawLine(State.playArea.context, actor.position,target.position,actor.color);
-                Messages.combat('hitNormal', actor, target);
+                Draw.drawLine(
+                    State.playArea.context,
+                    actor.position,
+                    target.position,
+                    actor.color
+                );
+                Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
             }
-        } else if (distance < (actor.weapon.range * 2)) {
+        } else if (distance < actor.weapon.range * 2) {
             if (actor.stats.ref + Utils.dice(3, 10) >= 30) {
                 target.health -= actor.weapon.weaponDamage();
-                Draw.drawLine(State.playArea.context, actor.position,target.position,actor.color);
-                Messages.combat('hitNormal', actor, target);
+                Draw.drawLine(
+                    State.playArea.context,
+                    actor.position,
+                    target.position,
+                    actor.color
+                );
+                Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
             }
         } else {
-            Movement.moveTo(actor,target.position,actor.stats.ma.ma);
+            Movement.moveTo(actor, target.position, actor.stats.ma.ma);
             actor.draw(State.playArea.context);
         }
     }
@@ -79,14 +99,14 @@ export class Combat {
             Combat.attack(actor, target, 2);
             if (beforeHealth === target.health) {
                 Combat.dodgeAttack(actor, target);
-            } else Messages.combat('hitCritical', actor, target);
+            } else Messages.combat("hitCritical", actor, target);
         } else {
             //NORMAL HIT
             Combat.attack(actor, target, 1);
             if (beforeHealth === target.health) {
                 Combat.dodgeAttack(actor, target);
             } else {
-                Messages.combat('hitNormal', actor, target);
+                Messages.combat("hitNormal", actor, target);
             }
         }
     }
@@ -98,23 +118,20 @@ export class Combat {
         } else {
             target.health -= actor.weapon.weaponDamage() * multiplier;
         }
-
     }
 
     static dodgeAttack(actor: Actor, target: Actor): void {
-        Messages.combat('hitMiss', actor, target);
-        Movement.moveTo(actor,target.position,actor.stats.ma.ma);
+        Messages.combat("hitMiss", actor, target);
+        Movement.moveTo(actor, target.position, actor.stats.ma.ma);
         actor.draw(State.playArea.context);
     }
 
     //Melee only!
     static parryAttack(actor: Actor, target: Actor) {
-
     }
 
     //Melee only!
     static escapeFight(actor: Actor, target: Actor) {
-
     }
 
     //Increases accuracy
@@ -126,7 +143,6 @@ export class Combat {
     }
 
     static mountVehicle(actor: Actor, target: Actor) {
-
     }
 
     static reloadWeapon(actor: Actor, target: Actor) {
@@ -143,7 +159,7 @@ export class Combat {
     static killEnemy(actor: Actor, target: Actor) {
         actor.kills += 1;
         actor.experience += target.experience;
-        Messages.combat('kill', actor, target);
+        Messages.combat("kill", actor, target);
         Combat.lootEnemy(actor, target);
         Combat.gainLevel(actor, target);
         Combat.replaceEnemy(actor, target);
@@ -156,88 +172,123 @@ export class Combat {
     static gainLevel(actor: Actor, target: Actor) {
         if (actor.experience >= actor.maxExperience) {
             actor.gainLevel();
-            Messages.combat('levelUp', actor, target);
+            Messages.combat("levelUp", actor, target);
             updateUI(actor);
         }
     }
 
     static replaceEnemy(actor: Actor, target: Actor) {
         target.update();
-        Movement.moveRandomly(State.playArea, target, State.playArea.width/3);
+        Movement.moveRandomly(State.playArea, target, State.playArea.width / 3);
         target.draw(State.playArea.context);
         if (actor.role.name === target.role.name) {
-            Messages.combat('encounterSame', actor, target);
+            Messages.combat("encounterSame", actor, target);
             Combat.replaceEnemy(actor, target);
         } else {
-            Messages.encounter('distance', actor, target);
+            Messages.encounter("distance", actor, target);
         }
     }
 
     static lootEnemy(actor: Actor, target: Actor) {
-        Messages.combat('loot', actor, target);
+        Messages.combat("loot", actor, target);
         let item = target.item;
         switch (item.type) {
             case "upper":
-                if (actor.lifepath.style.clothes.upper == null || actor.lifepath.style.clothes.upper.level < item.level) {
-                    Messages.combat('lootFind', actor, target);
+                if (
+                    actor.lifepath.style.clothes.upper == null ||
+                    actor.lifepath.style.clothes.upper.level < item.level
+                ) {
+                    Messages.combat("lootFind", actor, target);
                     actor.lifepath.style.clothes.upper = item;
-                    Utils.l('equippedUpperArmor').textContent = actor.lifepath.style.clothes.upper.name;
-                    Utils.l('equippedUpperArmorDesc').textContent = actor.lifepath.style.clothes.upper.description;
-                } else if (actor.lifepath.style.clothes.upper.level === item.level && actor.lifepath.style.clothes.upper.level != null) {
-                    Messages.combat('lootFindSame', actor, target);
+                    Utils.l("equippedUpperArmor").textContent =
+                        actor.lifepath.style.clothes.upper.name;
+                    Utils.l("equippedUpperArmorDesc").textContent =
+                        actor.lifepath.style.clothes.upper.description;
+                } else if (
+                    actor.lifepath.style.clothes.upper.level === item.level &&
+                    actor.lifepath.style.clothes.upper.level != null
+                ) {
+                    Messages.combat("lootFindSame", actor, target);
                 } else {
-                    Messages.combat('lootFindOld', actor, target);
+                    Messages.combat("lootFindOld", actor, target);
                 }
                 break;
 
             case "lower":
-                if (actor.lifepath.style.clothes.bottom == null || actor.lifepath.style.clothes.bottom.level < item.level) {
-                    Messages.combat('lootFind', actor, target);
+                if (
+                    actor.lifepath.style.clothes.bottom == null ||
+                    actor.lifepath.style.clothes.bottom.level < item.level
+                ) {
+                    Messages.combat("lootFind", actor, target);
                     actor.lifepath.style.clothes.bottom = item;
-                    Utils.l('equippedLowerArmor').textContent = actor.lifepath.style.clothes.bottom.name;
-                    Utils.l('equippedLowerArmorDesc').textContent = actor.lifepath.style.clothes.bottom.description + " " + actor.lifepath.style.clothes.bottom.stoppingPower;
-                } else if (actor.lifepath.style.clothes.bottom.level === item.level && actor.lifepath.style.clothes.bottom.level != null) {
-                    Messages.combat('lootFindSame', actor, target);
+                    Utils.l("equippedLowerArmor").textContent =
+                        actor.lifepath.style.clothes.bottom.name;
+                    Utils.l("equippedLowerArmorDesc").textContent =
+                        actor.lifepath.style.clothes.bottom.description +
+                        " " +
+                        actor.lifepath.style.clothes.bottom.stoppingPower;
+                } else if (
+                    actor.lifepath.style.clothes.bottom.level === item.level &&
+                    actor.lifepath.style.clothes.bottom.level != null
+                ) {
+                    Messages.combat("lootFindSame", actor, target);
                 } else {
-                    Messages.combat('lootFindOld', actor, target);
+                    Messages.combat("lootFindOld", actor, target);
                 }
                 break;
             case "helmet":
-                if (actor.lifepath.style.clothes.headgear === null || actor.lifepath.style.clothes.headgear.level < item.level) {
-                    Messages.combat('lootFind', actor, target);
+                if (
+                    actor.lifepath.style.clothes.headgear === null ||
+                    actor.lifepath.style.clothes.headgear.level < item.level
+                ) {
+                    Messages.combat("lootFind", actor, target);
                     actor.lifepath.style.clothes.headgear = item;
-                    Utils.l('equippedHeadArmor').textContent = actor.lifepath.style.clothes.headgear.name;
-                    Utils.l('equippedHeadArmorDesc').textContent = actor.lifepath.style.clothes.headgear.description + actor.lifepath.style.clothes.headgear.stoppingPower;
-                } else if (actor.lifepath.style.clothes.headgear.level === item.level && actor.lifepath.style.clothes.headgear != null) {
-                    Messages.combat('lootFindSame', actor, target);
+                    Utils.l("equippedHeadArmor").textContent =
+                        actor.lifepath.style.clothes.headgear.name;
+                    Utils.l("equippedHeadArmorDesc").textContent =
+                        actor.lifepath.style.clothes.headgear.description +
+                        actor.lifepath.style.clothes.headgear.stoppingPower;
+                } else if (
+                    actor.lifepath.style.clothes.headgear.level === item.level &&
+                    actor.lifepath.style.clothes.headgear != null
+                ) {
+                    Messages.combat("lootFindSame", actor, target);
                 } else {
-                    Messages.combat('lootFindOld', actor, target);
+                    Messages.combat("lootFindOld", actor, target);
                 }
                 break;
             case "weapon":
                 if (target.weapon.averageDamage() > actor.weapon.averageDamage()) {
-                    Messages.combat('lootWeaponBetter', actor, target);
+                    Messages.combat("lootWeaponBetter", actor, target);
                     actor.weapon = target.weapon;
                     updateUI(actor);
                 } else {
-                    Messages.combat('lootWeaponWorse', actor, target);
+                    Messages.combat("lootWeaponWorse", actor, target);
                 }
                 break;
             case "medical":
                 break;
             case "tool":
-                Messages.combat('lootFind', actor, target);
+                Messages.combat("lootFind", actor, target);
                 getItem.addItemToInventory(item, actor);
                 actor.items.push(item);
                 updateUI(actor);
                 break;
             default:
-                Messages.combat('lootFind', actor, target);
+                Messages.combat("lootFind", actor, target);
                 break;
         }
         getItem.updateCurrency(target.currency, actor, target);
-        actor.armor = (actor.lifepath.style.clothes.headgear == null ? 0 : actor.lifepath.style.clothes.headgear.stoppingPower) + (actor.lifepath.style.clothes.upper == null ? 0 : actor.lifepath.style.clothes.upper.stoppingPower) + (actor.lifepath.style.clothes.bottom == null ? 0 : actor.lifepath.style.clothes.bottom.stoppingPower);
-        Utils.l('armorStoppingPower').textContent = actor.armor + '%';
+        actor.armor =
+            (actor.lifepath.style.clothes.headgear == null
+                ? 0
+                : actor.lifepath.style.clothes.headgear.stoppingPower) +
+            (actor.lifepath.style.clothes.upper == null
+                ? 0
+                : actor.lifepath.style.clothes.upper.stoppingPower) +
+            (actor.lifepath.style.clothes.bottom == null
+                ? 0
+                : actor.lifepath.style.clothes.bottom.stoppingPower);
+        Utils.l("armorStoppingPower").textContent = actor.armor + "%";
     }
-
 }

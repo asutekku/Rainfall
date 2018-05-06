@@ -7,6 +7,7 @@ export class Vehicle {
     private maxSpeed: number;
     private driver: Actor;
     private passengers: Actor[];
+
     constructor() {
         this.name = null;
         this.price = null;

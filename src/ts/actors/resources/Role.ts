@@ -2,7 +2,7 @@ import {default as roles} from "./roles";
 
 let randomProperty = function (obj) {
     let keys = Object.keys(obj);
-    return obj[keys[keys.length * Math.random() << 0]];
+    return obj[keys[(keys.length * Math.random()) << 0]];
 };
 
 export class Role {
