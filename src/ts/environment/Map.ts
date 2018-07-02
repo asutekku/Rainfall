@@ -27,4 +27,9 @@ export class Map {
         this.context = this.canvas.getContext("2d");
         this.context.translate(width * 0.5, height * 0.5);
     }
+
+    static clear(): void {
+        this.prototype.canvas.getContext("2d").clearRect(0, 0,
+            this.prototype.canvas.width, this.prototype.canvas.height)
+    }
 }

@@ -18,20 +18,18 @@
     </div>
     <div id="mainpane">
         <div class="UIelement" id="charpane">
-            <button class="button" type="button" id="hitButton">Attack!</button>
-            <button class="button" type="button" id="evadeButton">Evade!</button>
+            <button class="button" type="button" id="playerButton">Player</button>
+            <button class="button" type="button" id="questButton">Quest</button>
+            <button class="button" type="button" id="storeButton">Store</button>
+            <button class="button" type="button" id="allianceButton">Alliance</button>
+            <button class="button" type="button" id="inventoryButton">Inventory</button>
+            <button class="button" type="button" id="raidButton">Raid</button>
+            <button class="button" type="button" id="hitButton">Attack</button>
+            <button class="button" type="button" id="evadeButton">Evade</button>
             <button class="button" type="button" id="autoButton">Auto!</button>
             <button class="button" type="button" id="restartButton">Restart!</button>
             <button class="button" type="button" id="respawnButton">Respawn</button>
             <button class="button" type="button" id="statButton">Stats</button>
-            <!--<div class="dropdown">
-                <select>
-                    <option value="style1">Style 1</option>
-                    <option value="style2">Style 2</option>
-                    <option value="style3">Style 3</option>
-                    <option value="style4">Style 4</option>
-                </select>
-            </div>-->
             <div>
                 <div class="statCard">
                     <span class="statTitle">Position:</span>
@@ -40,6 +38,7 @@
             </div>
         </div>
         <div id="playpane">
+            <div id="playareaStats" class="UIelement"></div>
             <div id="gamearea">
                 <div id="initLine">
                     <span id="initChar">></span>
@@ -160,9 +159,6 @@
                 </div>
             </div>
         </div>
-        <!--<div class="UIelement" id='statpane2'>
-            <img src="media/placeHolder.png" id="placeholderImage">
-        </div>-->
     </div>
 </div>
 </body>

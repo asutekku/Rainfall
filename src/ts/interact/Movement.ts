@@ -5,21 +5,13 @@ import {Map} from "../environment/Map";
 export class Movement {
     static moveRandomly(area: Map, actor: Actor, distance: number) {
         let prevPos: number[] = actor.position;
-        let posX: number =
-            prevPos[0] + Math.floor(Utils.range(distance * -1, distance));
-        let posY: number =
-            prevPos[1] + Math.floor(Utils.range(distance * -1, distance));
+        let posX: number = prevPos[0] + Math.floor(Utils.range(distance * -1, distance));
+        let posY: number = prevPos[1] + Math.floor(Utils.range(distance * -1, distance));
         actor.position = [posX, posY];
-        if (
-            actor.position[0] > area.width / 2 ||
-            actor.position[0] < area.width * -1 / 2
-        ) {
+        if (posX > area.width / 2 || posX < area.width * -1 / 2) {
             this.moveRandomly(area, actor, distance);
         }
-        if (
-            actor.position[1] > area.height / 2 ||
-            actor.position[1] < area.height * -1 / 2
-        ) {
+        if (posY > area.height / 2 || posY < area.height * -1 / 2) {
             this.moveRandomly(area, actor, distance);
         }
     }

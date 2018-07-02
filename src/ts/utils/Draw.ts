@@ -21,4 +21,9 @@ export class Draw {
             canvas.height
         );
     }
+
+    static updateCanvas(canvas): void {
+        canvas.clear();
+        console.log("Canvas cleared");
+    }
 }

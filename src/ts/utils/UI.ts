@@ -57,7 +57,7 @@ export function updateStats(actor: Actor) {
 }
 
 export function initStats() {
-    let statPane = document.createElement("div");
+    let statPane = document.getElementById("playareaStats");
     let statHeader = document.createElement("h2");
     let statColumn = Utils.create("div");
     statColumn.classList.add("statColumn");
@@ -65,7 +65,6 @@ export function initStats() {
     statPane.appendChild(statColumn);
     statHeader.textContent = stat_en_US.stats;
     statHeader.classList.add("statTitle", "vital");
-    statPane.id = "playareaStats";
     statPane.classList.add("UIelement");
     _.l("playpane").insertAdjacentElement("afterbegin", statPane);
     statColumn.appendChild(statHeader);

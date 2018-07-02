@@ -58,7 +58,7 @@ Utils.l("autoButton").onclick = function () {
                 clearInterval(myvar);
                 running = false;
             }
-        }, 500);
+        }, 100);
     } else if (running) {
         running = false;
         clearInterval(myvar);

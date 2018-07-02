@@ -7,6 +7,8 @@ import {getItem} from "./getItem";
 import {State} from "../utils/State";
 import {Draw} from "../utils/Draw";
 
+
+
 export class Combat {
     static basicAction(actor: Actor, target: Actor) {
         this.shoot(actor, target);
@@ -21,14 +23,15 @@ export class Combat {
             }
         }
         updateUI(actor);
+        Draw.updateCanvas(State.playArea);
     }
 
     static shoot(actor: Actor, target: Actor): void {
         let distance = Utils.distance(actor.position, target.position);
         console.log(distance);
-        if (distance < 1) {
+        if (distance < 1000) {
             // POINT BLANK
-            if (actor.stats.ref + Utils.dice(3, 10) >= 10) {
+            if (actor.stats.ref + Utils.dice(3, 10) >= 1) {
                 target.health -= actor.weapon.weaponDamage();
                 Messages.combat("hitNormal", actor, target);
             } else {
