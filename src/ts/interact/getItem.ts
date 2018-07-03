@@ -4,7 +4,7 @@ import {Utils} from "../utils/utils";
 import armors from "../items/armors";
 import {Messages} from "./messages";
 import {Statistics} from "../actors/resources/Statistics";
-import {updateUI} from "../utils/UI";
+import {UI} from "../utils/UI";
 
 let itemID = 0;
 let element = document.getElementById(":hover");
@@ -53,7 +53,7 @@ export class getItem {
                 } else {
                     Statistics.money += item.price;
                 }
-                updateUI(actor);
+                UI.updateUI(actor);
             }
         };
         if (ul.childElementCount == 0) {

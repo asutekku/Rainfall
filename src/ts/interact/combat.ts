@@ -1,5 +1,5 @@
 import {Utils} from "../utils/utils";
-import {updateUI} from "../utils/UI";
+import {UI} from "../utils/UI";
 import {Messages} from "./messages";
 import {Movement} from "./Movement";
 import {Actor} from "../actors/Actor";
@@ -19,10 +19,10 @@ export class Combat {
             if (!actor.isAlive()) {
                 actor.health = 0;
                 Messages.combat("death", actor, target);
-                updateUI(actor);
+                UI.updateUI(actor);
             }
         }
-        updateUI(actor);
+        UI.updateUI(actor);
         Draw.updateCanvas(State.playArea);
     }
 
@@ -141,7 +141,7 @@ export class Combat {
     static aimAttack(actor) {
         if (actor.weapon.accuracy < 100) {
             actor.weapon.accuracy += 10;
-            updateUI(actor);
+            UI.updateUI(actor);
         }
     }
 
@@ -167,7 +167,7 @@ export class Combat {
         Combat.gainLevel(actor, target);
         Combat.replaceEnemy(actor, target);
         Movement.moveRandomly(State.playArea, actor, 3);
-        updateUI(actor);
+        UI.updateUI(actor);
         actor.draw(State.playArea.context);
         //State.playArea.context.fillRect(actor.position[0],actor.position[1],3,3);
     }
@@ -176,7 +176,7 @@ export class Combat {
         if (actor.experience >= actor.maxExperience) {
             actor.gainLevel();
             Messages.combat("levelUp", actor, target);
-            updateUI(actor);
+            UI.updateUI(actor);
         }
     }
 
@@ -264,7 +264,7 @@ export class Combat {
                 if (target.weapon.averageDamage() > actor.weapon.averageDamage()) {
                     Messages.combat("lootWeaponBetter", actor, target);
                     actor.weapon = target.weapon;
-                    updateUI(actor);
+                    UI.updateUI(actor);
                 } else {
                     Messages.combat("lootWeaponWorse", actor, target);
                 }
@@ -275,7 +275,7 @@ export class Combat {
                 Messages.combat("lootFind", actor, target);
                 getItem.addItemToInventory(item, actor);
                 actor.items.push(item);
-                updateUI(actor);
+                UI.updateUI(actor);
                 break;
             default:
                 Messages.combat("lootFind", actor, target);

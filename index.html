@@ -7,7 +7,7 @@
     <!--<meta name="viewport" content="width=device-width, initial-scale=1.0">-->
     <link rel="stylesheet" type="text/css" href="src/css/style.css">
     <script> var exports = {}; </script>
-    <script data-main="build/ts/main.js" type="text/javascript" src="lib/require.js"></script>
+    <script data-main="build/ts/app.js" type="text/javascript" src="lib/require.js"></script>
     <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
 </head>
 
@@ -33,12 +33,12 @@
             <div>
                 <div class="statCard">
                     <span class="statTitle">Position:</span>
-                    <span class="stat" id="playerPosition">##NOT LOADED##</span>
+                    <span class="statValue" id="playerPosition">##NOT LOADED##</span>
                 </div>
             </div>
         </div>
         <div id="playpane">
-            <div id="playareaStats" class="UIelement"></div>
+            <div id="infoPane"></div>
             <div id="gamearea">
                 <div id="initLine">
                     <span id="initChar">></span>
@@ -51,36 +51,36 @@
                 <h2 class="statTitle vital">Attributes</h2>
                 <div class="statCard">
                     <span class="statTitle">Name:</span>
-                    <span class="stat" id="playerName">##NOT LOADED##</span>
+                    <span class="statValue" id="playerName">##NOT LOADED##</span>
                 </div>
                 <div class="statCard">
                     <span class="statTitle">Gender:</span>
-                    <span class="stat" id="charGender">##NOT LOADED##</span>
+                    <span class="statValue" id="charGender">##NOT LOADED##</span>
                 </div>
                 <div class="statCard">
                     <span class="statTitle">Role:</span>
-                    <span class="stat" id="charRole">##NOT LOADED##</span>
+                    <span class="statValue" id="charRole">##NOT LOADED##</span>
                 </div>
                 <div class="statCard tooltip">
                     <span class="tooltiptext" id="skillDesc">##NOT DEFINED##</span>
                     <span class="statTitle">Skill:</span>
-                    <span class="stat" id="charSkill">##NOT LOADED##</span>
+                    <span class="statValue" id="charSkill">##NOT LOADED##</span>
                 </div>
                 <div class="statCard">
                     <span class="statTitle">Level:</span>
-                    <span class="stat" id="charLvl">##NOT LOADED##</span>
+                    <span class="statValue" id="charLvl">##NOT LOADED##</span>
                 </div>
                 <div class="statCard">
                     <span class="statTitle">Experience:</span>
-                    <span class="stat" id="charExp">##NOT LOADED##</span>
+                    <span class="statValue" id="charExp">##NOT LOADED##</span>
                 </div>
                 <div class="statCard">
                     <span class="statTitle">Health points:</span>
-                    <span class="stat" id="charHP">##NOT LOADED##</span>
+                    <span class="statValue" id="charHP">##NOT LOADED##</span>
                 </div>
                 <div class="statCard">
                     <span class="statTitle">Currency:</span>
-                    <span class="stat" id="currency">##NOT LOADED##</span>
+                    <span class="statValue" id="currency">##NOT LOADED##</span>
                 </div>
             </div>
             <div class="UIelement" id="equipment">
@@ -92,31 +92,31 @@
                     <div class="statCard tooltip">
                         <span class="tooltiptext" id="weaponDesc">##NOT DEFINED##</span>
                         <span class="statTitle" id="weapon">Name:</span>
-                        <span class="stat" id="charWeapon">##NOT LOADED##</span>
+                        <span class="statValue" id="charWeapon">##NOT LOADED##</span>
                     </div>
                     <div class="statCard">
                         <span class="statTitle" id="weaponType">Type:</span>
-                        <span class="stat" id="charWeaponType">##NOT LOADED##</span>
+                        <span class="statValue" id="charWeaponType">##NOT LOADED##</span>
                     </div>
                     <div class="statCard">
                         <span class="statTitle" id="weaponDamage">Damage:</span>
-                        <span class="stat" id="charWeaponDamage">##NOT LOADED##</span>
+                        <span class="statValue" id="charWeaponDamage">##NOT LOADED##</span>
                     </div>
                     <div class="statCard">
                         <span class="statTitle" id="weaponAccuracy">Accuracy:</span>
-                        <span class="stat" id="charWeaponAccuracy">##NOT LOADED##</span>
+                        <span class="statValue" id="charWeaponAccuracy">##NOT LOADED##</span>
                     </div>
                     <div class="statCard">
                         <span class="statTitle" id="weaponRange">Range:</span>
-                        <span class="stat" id="charWeaponRange">##NOT LOADED##</span>
+                        <span class="statValue" id="charWeaponRange">##NOT LOADED##</span>
                     </div>
                     <div class="statCard">
                         <span class="statTitle">Critical chance:</span>
-                        <span class="stat" id="charCRIT">##NOT LOADED##</span>
+                        <span class="statValue" id="charCRIT">##NOT LOADED##</span>
                     </div>
                     <div class="statCard">
                         <span class="statTitle">Critical multiplier:</span>
-                        <span class="stat" id="charCRITM">##NOT LOADED##</span>
+                        <span class="statValue" id="charCRITM">##NOT LOADED##</span>
                     </div>
                 </div>
                 <div class="statCard tooltip">
@@ -127,22 +127,22 @@
                         <span class="tooltiptext"
                               id="equippedHeadArmorDesc">You are wearing nothing on your head.</span>
                         <span class="statTitle" id="headArmor">Head:</span>
-                        <span class="stat" id="equippedHeadArmor">Nothing</span>
+                        <span class="statValue" id="equippedHeadArmor">Nothing</span>
                     </div>
                     <div class="statCard tooltip">
                         <span class="tooltiptext" id="equippedUpperArmorDesc">You are wearing nothing on your upper body.</span>
                         <span class="statTitle" id="upperArmor">Upper body:</span>
-                        <span class="stat" id="equippedUpperArmor">Nothing</span>
+                        <span class="statValue" id="equippedUpperArmor">Nothing</span>
                     </div>
                     <div class="statCard tooltip">
                         <span class="tooltiptext" id="equippedLowerArmorDesc">You are wearing nothing on your lower body.</span>
                         <span class="statTitle" id="lowerArmor">Lower body:</span>
-                        <span class="stat" id="equippedLowerArmor">Nothing</span>
+                        <span class="statValue" id="equippedLowerArmor">Nothing</span>
                     </div>
                     <div class="statCard tooltip">
                         <span class="tooltiptext" id="stoppingPowerDesc">The total stopping power of your equipment: enemyDamage - x%</span>
                         <span class="statTitle" id="stoppingPower">Stopping power:</span>
-                        <span class="stat" id="armorStoppingPower">0</span>
+                        <span class="statValue" id="armorStoppingPower">0</span>
                     </div>
                 </div>
             </div>
@@ -155,7 +155,7 @@
                 <h2 class="statTitle vital">Statistics</h2>
                 <div class="statCard">
                     <span class="statTitle">Kills:</span>
-                    <span class="stat" id="kills">##NOT LOADED##</span>
+                    <span class="statValue" id="kills">##NOT LOADED##</span>
                 </div>
             </div>
         </div>
