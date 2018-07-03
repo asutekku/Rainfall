@@ -58,16 +58,14 @@ export class UI {
         Utils.l("SAV_val").textContent = actor.stats.sn.toString();
     }
 
-    static statPane() {
-        let statPane = Paper.paperContainer("playareaStats", "", lang.stats);
-        let statColumn = Utils.create("div");
-        statColumn.classList.add("statColumn");
-        statColumn.id = "statColumn1";
-        statPane.appendChild(statColumn);
+    static Stats() {
+        let statPane = Paper.paperContainer("", "infoAreaContainer", lang.stats);
+        let stats = Paper.paperInfoContainer("attributes", "UIElement", "Skills");
+        statPane.appendChild(stats);
         Stats.map(stat => {
-            statColumn.appendChild(Paper.paperStatCard(`${stat.name}:`, "", stat.description));
+            stats.appendChild(Paper.paperStatCard(`${stat.name}:`, "", stat.description));
         });
-        document.getElementById("infoPane").appendChild(statPane);
+        return statPane;
     }
 
     static initMap() {
@@ -89,6 +87,103 @@ export class UI {
             height += linesY;
             width += linesX;
         }
-        _.l("playareaStats").appendChild(map);
+        _.l("infoAreaContainer").appendChild(map);
+    }
+
+    static changeInfoPane(contentID: string) {
+        let infoPane = document.getElementById("infoPane");
+        infoPane.innerHTML = "";
+        switch (contentID) {
+            case "inventory":
+                infoPane.appendChild(this.Inventory());
+                break;
+            case "quests":
+                infoPane.appendChild(this.Quests());
+                break;
+            case "player":
+                infoPane.appendChild(this.Player());
+                break;
+            case "store":
+                infoPane.appendChild(this.Store());
+                break;
+            case "alliance":
+                infoPane.appendChild(this.Alliance());
+                break;
+            case "raid":
+                infoPane.appendChild(this.Raid());
+                break;
+            case "stats":
+                infoPane.appendChild(this.Stats());
+                break;
+        }
+    }
+
+    static Player(): HTMLElement {
+        let player = State.player;
+        let element = Paper.paperContainer("playerInfo_container", "infoAreaContainer", "Player");
+        let attributeContainer = function (): HTMLElement {
+            let attributes = Paper.paperInfoContainer("attributes", "UIElement", "Info");
+            let nameCard = Paper.paperStatCard("Name:", player.name, "", "playerName");
+            let genderCard = Paper.paperStatCard("Gender:", player.gender, "", "charGender");
+            let roleCard = Paper.paperStatCard("Role:", player.role.name, "", "charRole");
+            let skillCard = Paper.paperStatCard("Skill:", player.role.skill, player.role.skillDescription, "charSkill");
+            let levelCard = Paper.paperStatCard("Level:", player.level, "", "charLvl");
+            let expCard = Paper.paperStatCard("Experience:", `${player.experience}/${player.maxExperience}`, "", "charExp");
+            let hpCard = Paper.paperStatCard("Health points:", player.health, "", "charHP");
+            let moneyCard = Paper.paperStatCard("Currency:", `${player.currency}¥`, "", "currency");
+            attributes.append(nameCard, genderCard, roleCard, skillCard, levelCard, expCard, hpCard, moneyCard);
+            return attributes;
+        };
+        element.appendChild(attributeContainer());
+        return element;
+    }
+
+    static Quests(): HTMLElement {
+        let element = Paper.paperContainer("quest_container", "infoAreaContainer", "Quests");
+        return element;
+    }
+
+    static Inventory(): HTMLElement {
+        const categories = ["Weapons","Armor","Misc"];
+        let element = Paper.paperContainer("inventory_container", "infoAreaContainer", "");
+        let itemContainer = Paper.paperElement("inventoryItemContainer","");
+        let inventoryCategories = Paper.paperElement("inventoryCategories","");
+        let inventoryItemContainer = Paper.paperElement("inventoryItems","");
+        let itemInfoContainer = Paper.paperElement("itemInfoContainer","");
+        categories.map(cat => {
+            let catItem = document.createElement("div");
+            catItem.setAttribute("class","inventoryCategory");
+            catItem.textContent = cat;
+            inventoryCategories.appendChild(catItem);
+        });
+        itemContainer.appendChild(inventoryCategories);
+        itemContainer.appendChild(inventoryItemContainer);
+        element.appendChild(itemContainer);
+        element.appendChild(itemInfoContainer);
+        return element;
+    }
+
+    static updateInventory(player):void {
+        let inventoryState = State.UI.inventoryView;
+        player.items.filter(item => item.type === inventoryState)
+            .map(item => {
+                let inventoryItem = Paper.paperInventoryItem(item.name);
+                document.getElementById("inventoryItems").appendChild(inventoryItem);
+        })
+    }
+
+    static Store(): HTMLElement {
+        let element = Paper.paperContainer("store_container", "infoAreaContainer", "Store");
+        return element;
+    }
+
+    static Raid(): HTMLElement {
+        let element = Paper.paperContainer("raid_container", "infoAreaContainer", "Raid");
+        return element;
+    }
+
+    static Alliance(): HTMLElement {
+        let element = Paper.paperContainer("alliance_container", "infoAreaContainer", "Alliance");
+        return element;
     }
 }

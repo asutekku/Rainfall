@@ -46,7 +46,7 @@ body {
     font-family: monospace;
 }
 
-#playareaStats {
+#infoAreaContainer {
 
 }
 
@@ -167,22 +167,6 @@ h2.statTitle {
 
 #inventory {
     width: 280px;
-    height: 160px;
-}
-
-#inventoryItems::-webkit-scrollbar {
-    background-color: var(--background);
-}
-
-#inventoryItems::-webkit-scrollbar-thumb {
-    background-color: var(--baseColor);
-    border-radius: 5px;
-    width: 5px;
-}
-
-#inventoryItems {
-    overflow-x: hidden;
-    /*overflow: scroll;*/
     height: 160px;
 }
 
@@ -338,3 +322,61 @@ h3.statTitle {
 #initChar {
     margin-left: -15px;
 }
+
+#inventoryCategories {
+    width:100%;
+    display: flex;
+    justify-content: space-between;
+}
+#inventoryItemContainer{
+    width:700px;
+    height:auto;
+}
+#inventory_container{
+    display: flex;
+}
+
+.inventoryCategory {
+    background: #2D2923;
+    border: 2px solid #C89A5C;
+    width:100%;
+    text-align: center;
+    height:32px;
+    text-transform: uppercase;
+}
+#inventoryItems {
+    background: #2D2923;
+    border: 2px solid #C89A5C;
+    overflow-x: hidden;
+    height: 260px;
+}
+
+#inventoryItems::-webkit-scrollbar {
+    background-color: var(--background);
+}
+
+#inventoryItems::-webkit-scrollbar-thumb {
+    background-color: var(--baseColor);
+    border-radius: 5px;
+    width: 5px;
+}
+
+#itemInfoContainer{
+    float:left;
+    background: #2D2923;
+    border: 2px solid #C89A5C;
+    height:296px;
+    width:296px;
+}
+
+.inventoryItem{
+    width:50%;
+    height:50px;
+    background: #2D2923;
+    border: 2px solid #C89A5C;
+}
+
+h3 {
+    font-size: 16px;
+}
+

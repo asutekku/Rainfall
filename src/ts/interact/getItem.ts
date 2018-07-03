@@ -5,6 +5,7 @@ import armors from "../items/armors";
 import {Messages} from "./messages";
 import {Statistics} from "../actors/resources/Statistics";
 import {UI} from "../utils/UI";
+import {Paper} from "../utils/Paper";
 
 let itemID = 0;
 let element = document.getElementById(":hover");
@@ -39,9 +40,10 @@ export class getItem {
 
     static addItemToInventory(item, actor) {
         let text = item.name;
+        let inventoryItem = Paper.paperInventoryItem(text);
         let ul = document.getElementById("inventoryItems");
-        let inventoryItem = document.createElement("li");
-        inventoryItem.innerHTML = text + " - " + item.price + "¥";
+        //let inventoryItem = document.createElement("li");
+        //inventoryItem.innerHTML = text + " - " + item.price + "¥";
         inventoryItem.onclick = function () {
             if (actor.health != 0) {
                 this.parentNode.removeChild(this);

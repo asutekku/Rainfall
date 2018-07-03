@@ -16,6 +16,5 @@ let Stats = [
     new Stat(_.emp.name, _.emp.short, _.emp.description, 2),
     new Stat(_.hm.name, _.hm.short, _.hm.description, 2),
     new Stat(_.bt.name, _.bt.short, _.bt.description, 2),
-    new Stat(_.sn.name, _.sn.short, _.sn.description, 2)
 ];
 export default Stats;

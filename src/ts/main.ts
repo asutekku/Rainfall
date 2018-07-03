@@ -17,10 +17,8 @@ export class Rainfall {
         let grunt = new Enemy();
         State.playArea.actors.push(grunt);
         let deadMessageSent = false;
-        UI.statPane();
         UI.updateUI(State.player);
-        UI.updateStats(State.player);
-        UI.initMap();
+        //UI.initMap();
 
         Utils.l("hitButton").onclick = function () {
             if (State.player.isAlive()) {
@@ -38,7 +36,27 @@ export class Rainfall {
         };
 
         Utils.l("inventoryButton").onclick = function () {
-
+            UI.changeInfoPane("inventory");
+            UI.updateInventory(State.player);
+        };
+        Utils.l("questButton").onclick = function () {
+            UI.changeInfoPane("quests");
+        };
+        Utils.l("storeButton").onclick = function () {
+            UI.changeInfoPane("store");
+        };
+        Utils.l("playerButton").onclick = function () {
+            UI.changeInfoPane("player");
+        };
+        Utils.l("raidButton").onclick = function () {
+            UI.changeInfoPane("raid");
+        };
+        Utils.l("allianceButton").onclick = function () {
+            UI.changeInfoPane("alliance");
+        };
+        Utils.l("statButton").onclick = function () {
+            UI.changeInfoPane("stats");
+            UI.updateStats(State.player);
         };
 
         //Because respawning is so much more enjoyable than restarting
@@ -53,7 +71,7 @@ export class Rainfall {
             }
         };
 
-//Functionality for the autoplay (because no one likes to click away)
+        //Functionality for the autoplay (because no one likes to click away)
         let running = false;
         Utils.l("autoButton").onclick = function () {
             let myvar;
@@ -66,7 +84,7 @@ export class Rainfall {
                         clearInterval(myvar);
                         running = false;
                     }
-                }, 100);
+                }, 1000);
             } else if (running) {
                 running = false;
                 clearInterval(myvar);

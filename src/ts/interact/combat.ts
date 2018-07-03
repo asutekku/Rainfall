@@ -8,7 +8,6 @@ import {State} from "../utils/State";
 import {Draw} from "../utils/Draw";
 
 
-
 export class Combat {
     static basicAction(actor: Actor, target: Actor) {
         this.shoot(actor, target);
@@ -195,22 +194,18 @@ export class Combat {
     static lootEnemy(actor: Actor, target: Actor) {
         Messages.combat("loot", actor, target);
         let item = target.item;
+        let clothes = actor.lifepath.style.clothes,
+            upper = clothes.upper,
+            bottom = clothes.bottom,
+            headgear = clothes.headgear;
         switch (item.type) {
             case "upper":
-                if (
-                    actor.lifepath.style.clothes.upper == null ||
-                    actor.lifepath.style.clothes.upper.level < item.level
-                ) {
+                if (upper == null || upper.level < item.level) {
                     Messages.combat("lootFind", actor, target);
-                    actor.lifepath.style.clothes.upper = item;
-                    Utils.l("equippedUpperArmor").textContent =
-                        actor.lifepath.style.clothes.upper.name;
-                    Utils.l("equippedUpperArmorDesc").textContent =
-                        actor.lifepath.style.clothes.upper.description;
-                } else if (
-                    actor.lifepath.style.clothes.upper.level === item.level &&
-                    actor.lifepath.style.clothes.upper.level != null
-                ) {
+                    upper = item;
+                    Utils.l("equippedUpperArmor").textContent = upper.name;
+                    Utils.l("equippedUpperArmorDesc").textContent = upper.description;
+                } else if (upper.level === item.level && upper.level != null) {
                     Messages.combat("lootFindSame", actor, target);
                 } else {
                     Messages.combat("lootFindOld", actor, target);
@@ -218,43 +213,26 @@ export class Combat {
                 break;
 
             case "lower":
-                if (
-                    actor.lifepath.style.clothes.bottom == null ||
-                    actor.lifepath.style.clothes.bottom.level < item.level
-                ) {
+                if (bottom == null || bottom.level < item.level) {
                     Messages.combat("lootFind", actor, target);
-                    actor.lifepath.style.clothes.bottom = item;
+                    bottom = item;
                     Utils.l("equippedLowerArmor").textContent =
-                        actor.lifepath.style.clothes.bottom.name;
+                        bottom.name;
                     Utils.l("equippedLowerArmorDesc").textContent =
-                        actor.lifepath.style.clothes.bottom.description +
-                        " " +
-                        actor.lifepath.style.clothes.bottom.stoppingPower;
-                } else if (
-                    actor.lifepath.style.clothes.bottom.level === item.level &&
-                    actor.lifepath.style.clothes.bottom.level != null
-                ) {
+                        `${bottom.description} ${bottom.stoppingPower}`;
+                } else if (bottom.level === item.level && bottom.level != null) {
                     Messages.combat("lootFindSame", actor, target);
                 } else {
                     Messages.combat("lootFindOld", actor, target);
                 }
                 break;
             case "helmet":
-                if (
-                    actor.lifepath.style.clothes.headgear === null ||
-                    actor.lifepath.style.clothes.headgear.level < item.level
-                ) {
+                if (headgear === null || headgear.level < item.level) {
                     Messages.combat("lootFind", actor, target);
-                    actor.lifepath.style.clothes.headgear = item;
-                    Utils.l("equippedHeadArmor").textContent =
-                        actor.lifepath.style.clothes.headgear.name;
-                    Utils.l("equippedHeadArmorDesc").textContent =
-                        actor.lifepath.style.clothes.headgear.description +
-                        actor.lifepath.style.clothes.headgear.stoppingPower;
-                } else if (
-                    actor.lifepath.style.clothes.headgear.level === item.level &&
-                    actor.lifepath.style.clothes.headgear != null
-                ) {
+                    headgear = item;
+                    Utils.l("equippedHeadArmor").textContent = headgear.name;
+                    Utils.l("equippedHeadArmorDesc").textContent = headgear.description + headgear.stoppingPower;
+                } else if (headgear.level === item.level && headgear != null) {
                     Messages.combat("lootFindSame", actor, target);
                 } else {
                     Messages.combat("lootFindOld", actor, target);
@@ -283,15 +261,9 @@ export class Combat {
         }
         getItem.updateCurrency(target.currency, actor, target);
         actor.armor =
-            (actor.lifepath.style.clothes.headgear == null
-                ? 0
-                : actor.lifepath.style.clothes.headgear.stoppingPower) +
-            (actor.lifepath.style.clothes.upper == null
-                ? 0
-                : actor.lifepath.style.clothes.upper.stoppingPower) +
-            (actor.lifepath.style.clothes.bottom == null
-                ? 0
-                : actor.lifepath.style.clothes.bottom.stoppingPower);
+            (headgear == null ? 0 : headgear.stoppingPower) +
+            (upper == null ? 0 : upper.stoppingPower) +
+            (bottom == null ? 0 : bottom.stoppingPower);
         Utils.l("armorStoppingPower").textContent = actor.armor + "%";
     }
 }
