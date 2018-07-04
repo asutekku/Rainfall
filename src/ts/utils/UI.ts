@@ -4,6 +4,7 @@ import Stats from "../actors/resources/Stats";
 import {stat_en_US} from "../../lang/en_US";
 import {State} from "./State";
 import {Paper} from "./Paper";
+import {getItem} from "../interact/getItem";
 
 let _ = Utils;
 let lang = stat_en_US;
@@ -121,8 +122,10 @@ export class UI {
     static Player(): HTMLElement {
         let player = State.player;
         let element = Paper.paperContainer("playerInfo_container", "infoAreaContainer", "Player");
-        let attributeContainer = function (): HTMLElement {
+        let attributeContainer = function (): DocumentFragment {
+            let frag = document.createDocumentFragment();
             let attributes = Paper.paperInfoContainer("attributes", "UIElement", "Info");
+            frag.appendChild(attributes);
             let nameCard = Paper.paperStatCard("Name:", player.name, "", "playerName");
             let genderCard = Paper.paperStatCard("Gender:", player.gender, "", "charGender");
             let roleCard = Paper.paperStatCard("Role:", player.role.name, "", "charRole");
@@ -131,8 +134,15 @@ export class UI {
             let expCard = Paper.paperStatCard("Experience:", `${player.experience}/${player.maxExperience}`, "", "charExp");
             let hpCard = Paper.paperStatCard("Health points:", player.health, "", "charHP");
             let moneyCard = Paper.paperStatCard("Currency:", `${player.currency}¥`, "", "currency");
-            attributes.append(nameCard, genderCard, roleCard, skillCard, levelCard, expCard, hpCard, moneyCard);
-            return attributes;
+            attributes.appendChild(nameCard);
+            attributes.appendChild(genderCard);
+            attributes.appendChild(roleCard);
+            attributes.appendChild(skillCard);
+            attributes.appendChild(levelCard);
+            attributes.appendChild(expCard);
+            attributes.appendChild(hpCard);
+            attributes.appendChild(moneyCard);
+            return frag;
         };
         element.appendChild(attributeContainer());
         return element;
@@ -144,17 +154,23 @@ export class UI {
     }
 
     static Inventory(): HTMLElement {
-        const categories = ["Weapons","Armor","Misc"];
+        const categories = Object.keys(State.player.inventory);
         let element = Paper.paperContainer("inventory_container", "infoAreaContainer", "");
-        let itemContainer = Paper.paperElement("inventoryItemContainer","");
-        let inventoryCategories = Paper.paperElement("inventoryCategories","");
-        let inventoryItemContainer = Paper.paperElement("inventoryItems","");
-        let itemInfoContainer = Paper.paperElement("itemInfoContainer","");
+        let itemContainer = Paper.paperElement("inventoryItemContainer", "");
+        let inventoryCategories = Paper.paperElement("inventoryCategories", "");
+        let inventoryItemContainer = Paper.paperElement("inventoryItems", "");
+        let itemInfoContainer = Paper.paperElement("itemInfoContainer", "");
         categories.map(cat => {
             let catItem = document.createElement("div");
-            catItem.setAttribute("class","inventoryCategory");
+            catItem.setAttribute("class", "inventoryCategory");
+            catItem.id = `${cat}Inventory`;
             catItem.textContent = cat;
             inventoryCategories.appendChild(catItem);
+            catItem.onclick = function () {
+                State.UI.inventoryView = cat;
+                UI.changeInventoryView(cat);
+                UI.updateInventory();
+            };
         });
         itemContainer.appendChild(inventoryCategories);
         itemContainer.appendChild(inventoryItemContainer);
@@ -163,13 +179,27 @@ export class UI {
         return element;
     }
 
-    static updateInventory(player):void {
-        let inventoryState = State.UI.inventoryView;
-        player.items.filter(item => item.type === inventoryState)
-            .map(item => {
-                let inventoryItem = Paper.paperInventoryItem(item.name);
-                document.getElementById("inventoryItems").appendChild(inventoryItem);
+    static changeInventoryView(view) {
+        State.UI.inventoryView = view;
+        Array.from(document.getElementsByClassName("inventoryCategory")).map(item => {
+            item.classList.remove('activeInventoryCategory');
+        });
+        document.getElementById(`${view}Inventory`).classList.add('activeInventoryCategory');
+    }
+
+    static updateInventory(): void {
+        const invArea = document.getElementById("inventoryItems");
+        while (invArea.firstChild) {
+            invArea.removeChild(invArea.firstChild);
+        }
+        State.player.inventory[State.UI.inventoryView].forEach(item => {
+            let inventoryItem = Paper.paperInventoryItem(item);
+            invArea.appendChild(inventoryItem);
         })
+    }
+
+    static addItemToInventory(): void {
+
     }
 
     static Store(): HTMLElement {

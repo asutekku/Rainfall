@@ -4,6 +4,6 @@ export const State = {
     player: undefined,
     playArea: new mapGenerator("Thrive", 50, 400, 400).map,
     UI : {
-        inventoryView : "weapon"
+        inventoryView : "weapons"
     }
 };

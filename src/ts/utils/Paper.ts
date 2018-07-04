@@ -1,3 +1,6 @@
+import {getItem} from "../interact/getItem";
+import {Item} from "../items/Item";
+
 export class Paper {
     static paperElement(id?: string, className?: string): HTMLElement {
         const element = document.createElement("div");
@@ -55,17 +58,20 @@ export class Paper {
         return element;
     }
 
-    static paperInventoryItem(itemName):HTMLElement {
-        let item = this.paperElement(itemName);
-        item.setAttribute("class","inventoryItem");
+    static paperInventoryItem(item:Item):HTMLElement {
+        let itemElement = this.paperElement(item.name);
+        itemElement.setAttribute("class","inventoryItem");
         let itemTitle = document.createElement("span");
         itemTitle.setAttribute("class","itemTitle");
         let itemEquipped = document.createElement("span");
-        itemTitle.textContent = itemName;
+        itemTitle.textContent = item.name;
         itemEquipped.textContent = "";
-        item.appendChild(itemTitle);
-        item.appendChild(itemEquipped);
-        return item;
+        itemElement.appendChild(itemTitle);
+        itemElement.appendChild(itemEquipped);
+        itemElement.onclick = function () {
+            getItem.useItem(item);
+        };
+        return itemElement;
     }
 
 }

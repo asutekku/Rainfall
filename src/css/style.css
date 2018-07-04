@@ -380,3 +380,7 @@ h3 {
     font-size: 16px;
 }
 
+.activeInventoryCategory{
+    background: var(--baseColor);
+}
+

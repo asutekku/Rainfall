@@ -10,7 +10,6 @@ import {State} from "./utils/State";
 export class Rainfall {
     public static main(): void {
         State.player = new Player();
-        let playArea = State.playArea;
         State.player.update();
         State.player.updateAfter();
         State.playArea.actors.push(State.player);
@@ -37,7 +36,7 @@ export class Rainfall {
 
         Utils.l("inventoryButton").onclick = function () {
             UI.changeInfoPane("inventory");
-            UI.updateInventory(State.player);
+            UI.updateInventory();
         };
         Utils.l("questButton").onclick = function () {
             UI.changeInfoPane("quests");

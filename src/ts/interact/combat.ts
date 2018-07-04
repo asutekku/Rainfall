@@ -198,7 +198,9 @@ export class Combat {
             upper = clothes.upper,
             bottom = clothes.bottom,
             headgear = clothes.headgear;
-        switch (item.type) {
+        Messages.combat("lootFind", actor, target);
+        getItem.addItemToInventory(item, actor);
+        /*switch (item.type) {
             case "upper":
                 if (upper == null || upper.level < item.level) {
                     Messages.combat("lootFind", actor, target);
@@ -258,7 +260,7 @@ export class Combat {
             default:
                 Messages.combat("lootFind", actor, target);
                 break;
-        }
+        }*/
         getItem.updateCurrency(target.currency, actor, target);
         actor.armor =
             (headgear == null ? 0 : headgear.stoppingPower) +

@@ -34,7 +34,7 @@ export class Weapon implements Item {
         cost: number,
         description: string
     ) {
-        this.type = "weapon";
+        this.type = "weapons";
         this.weaponType = weaponType;
         this.name = name;
         this.accuracy = accuracy;

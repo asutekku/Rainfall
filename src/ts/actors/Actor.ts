@@ -7,6 +7,7 @@ import {Statistics} from "./resources/Statistics";
 import {Movement} from "../interact/Movement";
 import {Name} from "./resources/Name";
 import {State} from "../utils/State";
+import {Armor} from "../items/Armor";
 
 export class Actor {
     get weapon(): Weapon {
@@ -34,6 +35,12 @@ export class Actor {
     public currency: number;
     public position: number[];
     public kills: number;
+    inventory: {
+        weapons: Weapon[];
+        armor: Armor[];
+        misc: Item[];
+        medical: Item[];
+    };
     stats: {
         int: number;
         ref: number;
@@ -203,6 +210,12 @@ export class Actor {
         this.weapons = [];
         this.color = null;
         this.items = [];
+        this.inventory = {
+            weapons: [],
+            armor: [],
+            misc: [],
+            medical: [],
+        };
         this.currency = 0;
         this.position = [0, 0];
         this.kills = 0;
