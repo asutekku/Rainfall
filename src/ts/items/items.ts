@@ -62,22 +62,22 @@ let items = [
         "A common painter's style mask; nose and mouth coverage, with two replacable filters  on the sides. Good for keeping out the smog."
     ),
     new Scrap(
-        "random",
+        "misc",
         "Holo Generator",
         500,
         "Small box (10cmx5cmx10cm) projects a holographic picture from a replacable chip. Generator is compatible with chips from most digital cameras. Can be linked with a digital Recorder/Player."
     ),
-    new Scrap("random", "Laptop", 900, "Something"),
-    new Scrap("random", "Mastoid Commo", 100, "Something"),
-    new Scrap("random", "Binoglasses", 200, "Something"),
-    new Scrap("random", "Movie", 10, "Something"),
-    new Scrap("random", "Keylock", 20, "Something"),
+    new Scrap("misc", "Laptop", 900, "Something"),
+    new Scrap("misc", "Mastoid Commo", 100, "Something"),
+    new Scrap("misc", "Binoglasses", 200, "Something"),
+    new Scrap("misc", "Movie", 10, "Something"),
+    new Scrap("misc", "Keylock", 20, "Something"),
     new Medical("medical", "Dermal Stapler", 1000, 500, 20),
     new Medical("medical", "Bandaids", 10, "don't get hurt", 40),
     new Medical("medical", "Medi-X", 20, 80, "Something"),
-    new Scrap("random", "Nylon Carrybag", 5, "Something"),
-    new Scrap("random", "Cell Phone Service Contract", 100, "Something"),
-    new Scrap("random", "Kibble", 100, "Something"),
-    new Scrap("random", "Coffin", 20, "Something")
+    new Scrap("misc", "Nylon Carrybag", 5, "Something"),
+    new Scrap("misc", "Cell Phone Service Contract", 100, "Something"),
+    new Scrap("misc", "Kibble", 100, "Something"),
+    new Scrap("misc", "Coffin", 20, "Something")
 ];
 export default items;
