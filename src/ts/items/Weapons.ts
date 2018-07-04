@@ -13,22 +13,7 @@ let weapons = [
     //Militech Arms Avenger
     new Weapon(_.pistol, _.avenger.name, 50, 1, 1, 22, 2, 10, 2, 1, 50, 250, _.avenger.desc, _.avenger.brand),
     //Dai Lung Streetmaster
-    new Weapon(
-        _.pistol,
-        _.streetmaster.name,
-        50,
-        1,
-        3,
-        24,
-        2,
-        12,
-        2,
-        1,
-        50,
-        250,
-        _.streetmaster.desc,
-        _.streetmaster.brand
-    ),
+    new Weapon(_.pistol, _.streetM.name, 50, 1, 3, 24, 2, 12, 2, 1, 50, 250, _.streetM.desc, _.streetM.brand),
     //Federated Arms X-9m
     new Weapon(_.pistol, _.X9M.name, 50, 1, 1, 4, 2, 12, 2, 1, 50, 300, _.X9M.desc, _.X9M.brand),
     //BudgetArms Auto 3
@@ -55,134 +40,21 @@ let weapons = [
     new Weapon(_.submachine, _.MPK11.name, 50, 1, 1, 3, 4, 30, 20, 1, 200, 700, _.MPK11.desc, _.MPK11.brand),
     //Ingram MAC-14
     new Weapon(_.submachine, _.MAC14.name, 30, 1, 1, 5, 4, 20, 10, 1, 200, 650, _.MAC14.desc, _.MAC14.brand),
-
-    /*====================
-      -----ASSAULT RIFLE----
-      =====================*/
-
     //Militech Ronin Light Assault
-    new Weapon(
-        _.assaultRifle,
-        "Militech Ronin Light Assault",
-        60,
-        1,
-        0,
-        4,
-        5,
-        35,
-        30,
-        1,
-        400,
-        450,
-        "A light, all purpose update, similar to the M-16B."
-    ),
+    new Weapon(_.assaultRifle, _.roninL.name, 60, 1, 0, 4, 5, 35, 30, 1, 400, 450, _.roninL.desc, _.roninL.brand),
     //AKR-20 Medium Assault
-    new Weapon(
-        _.assaultRifle,
-        "AKR-20 Medium Assault",
-        50,
-        1,
-        0,
-        4,
-        5,
-        30,
-        30,
-        1,
-        400,
-        500,
-        "A plastic and carbon fiber update of the AKM, distributed throughout the remains of the Soviet bloc."
-    ),
+    new Weapon(_.assaultRifle, _.AKR20.name, 50, 1, 0, 4, 5, 30, 30, 1, 400, 500, _.AKR20.desc, _.AKR20.brand),
     //FN-RAL Hvy. AR
-    new Weapon(
-        _.assaultRifle,
-        "FN-RAL Hvy. AR",
-        40,
-        1,
-        2,
-        4,
-        6,
-        35,
-        30,
-        1,
-        400,
-        600,
-        "The standard NATO assault weapon for battlefield work. Bullpup design, collapsing stock."
-    ),
+    new Weapon(_.assaultRifle, _.FNRAL.name, 40, 1, 2, 4, 6, 35, 30, 1, 400, 600, _.FNRAL.desc, _.FNRAL.brand),
     //Kalishnikov A-80 Hvy. AR
-    new Weapon(
-        _.assaultRifle,
-        "Kalishnikov A-80 Hvy. AR",
-        40,
-        1,
-        2,
-        4,
-        6,
-        35,
-        25,
-        1,
-        400,
-        550,
-        "Another Soviet retread, with improved sighting and lightened with composites."
-    ),
-
-    /*====================
-      -------SHOTGUNS-------
-      =====================*/
-
+    new Weapon(_.assaultRifle, _.A80.name, 40, 1, 2, 4, 6, 35, 25, 1, 400, 550, _.A80.desc, _.A80.brand),
     //Arasaka Rapid Assault 12
-    new Weapon(
-        _.shotgun,
-        "Arasaka Rapid Assault 12",
-        40,
-        1,
-        0,
-        4,
-        4,
-        20,
-        10,
-        1,
-        50,
-        900,
-        "A high powered auto-shotgun with lethal firepower. Used by Arasaka worldwide. Another good reason to avoid the Boys in Black."
-    ),
+    new Weapon(_.shotgun, _.RA12.name, 40, 1, 0, 4, 4, 20, 10, 1, 50, 900, _.RA12.desc, _.RA12.brand),
     //Sternmeyer Stakeout 10
-    new Weapon(
-        _.shotgun,
-        "Sternmeyer Stakeout 10",
-        30,
-        1,
-        0,
-        4,
-        4,
-        10,
-        2,
-        1,
-        50,
-        450,
-        "Light duty stakeout shotgun, used by city police departments."
-    ),
-
-    /*====================
-      ---------MELEE--------
-      =====================*/
-
+    new Weapon(_.shotgun, _.stakeout.name, 30, 1, 0, 4, 4, 10, 2, 1, 50, 450, _.stakeout.desc, _.stakeout.brand),
     //Club
-    new Weapon(
-        _.melee,
-        "Club",
-        50,
-        1,
-        0,
-        4,
-        1,
-        1,
-        1,
-        1,
-        1,
-        0,
-        "Made from scraps of a makeshift house, this club has been proved to be great in close combat."
-    ),
+    new Weapon(_.melee, _.club.name, 50, 1, 0, 4, 1, 1, 1, 1, 1, 0, _.club.desc, _.club.brand),
     //Spoon (why not)
-    new Weapon(_.melee, "Spoon", 100, 1, 50, 50, 1, 1, 1, 1, 1, 0, "So many eyes have been couged with this.")
+    new Weapon(_.melee, _.spoon.name, 100, 1, 50, 50, 1, 1, 1, 1, 1, 0, _.spoon.desc, _.spoon.brand)
 ];
 export default weapons;

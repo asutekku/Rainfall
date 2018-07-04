@@ -31,7 +31,7 @@ export default class en_US {
             name: "Arms Avenger",
             desc: "A well-made autopistol with good range and accuracy. A professional's gun."
         },
-        streetmaster: {
+        streetM: {
             brand: "Dai Lung",
             name: "Streetmaster",
             desc: "Another Dai Lung cheapie, build for the Street."
@@ -106,6 +106,47 @@ export default class en_US {
             brand: "Ingram",
             name: "MAC-14",
             desc: "Updated MAC-10, with composite body and cylindrical feeding magazine."
+        },
+        roninL: {
+            brand: "Militech",
+            name: "Ronin Light Assault",
+            desc: "A light, all purpose update, similar to the M-16B."
+        },
+        AKR20: {
+            brand: "Kalashnikov",
+            name: "AKR-20 Medium Assault",
+            desc: "A plastic and carbon fiber update of the AKM, distributed throughout the remains of the Soviet bloc."
+        },
+        FNRAL: {
+            brand: "FN",
+            name: "FN-RAL",
+            desc: "The standard NATO assault weapon for battlefield work. Bullpup design, collapsing stock."
+        },
+        A80: {
+            brand: "Kalashnikov",
+            name: "A-80",
+            desc: "Another Soviet retread, with improved sighting and lightened with composites."
+        },
+        RA12: {
+            brand: "Arasaka",
+            name: "Arasaka Rapid Assault 12",
+            desc:
+                "A high powered auto-shotgun with lethal firepower. Used by Arasaka worldwide. Another good reason to avoid the Boys in Black."
+        },
+        stakeout: {
+            brand: "Sternmeyer",
+            name: "Stakeout 10",
+            desc: "Light duty stakeout shotgun, used by city police departments."
+        },
+        club: {
+            brand: "Makeshift",
+            name: "Club",
+            desc: "Made from scraps of a makeshift house, this club has been proved to be great in close combat."
+        },
+        spoon: {
+            brand: "Makeshift",
+            name: "Spoon",
+            desc: "So many eyes have been couged with this."
         }
     };
 
