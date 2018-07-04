@@ -1,7 +1,7 @@
-import {Stat} from "./Stat";
-import {stat_en_US} from "../../../lang/en_US";
+import { Stat } from "./Stat";
+import en_US from "../../../lang/en_US";
 
-let _ = stat_en_US;
+let _ = en_US.stat_en_US;
 
 let Stats = [
     new Stat(_.int.name, _.int.short, _.int.description, 2),
@@ -15,6 +15,6 @@ let Stats = [
     new Stat(_.leap.name, _.leap.short, _.leap.description, 2),
     new Stat(_.emp.name, _.emp.short, _.emp.description, 2),
     new Stat(_.hm.name, _.hm.short, _.hm.description, 2),
-    new Stat(_.bt.name, _.bt.short, _.bt.description, 2),
+    new Stat(_.bt.name, _.bt.short, _.bt.description, 2)
 ];
 export default Stats;

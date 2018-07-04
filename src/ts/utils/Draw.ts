@@ -1,10 +1,5 @@
 export class Draw {
-    static drawLine(
-        context: CanvasRenderingContext2D,
-        start: number[],
-        end: number[],
-        color: string
-    ) {
+    static drawLine(context: CanvasRenderingContext2D, start: number[], end: number[], color: string) {
         let ctx = context;
         ctx.strokeStyle = color;
         ctx.beginPath();
@@ -14,12 +9,7 @@ export class Draw {
     }
 
     static clearCanvas(canvas) {
-        canvas.context.clearRect(
-            -canvas.width / 2,
-            -canvas.height / 2,
-            canvas.width,
-            canvas.height
-        );
+        canvas.context.clearRect(-canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
     }
 
     static updateCanvas(canvas): void {

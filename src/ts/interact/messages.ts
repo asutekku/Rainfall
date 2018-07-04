@@ -1,20 +1,14 @@
-import {Utils} from "../utils/utils";
-import {Actor} from "../actors/Actor";
+import { Utils } from "../utils/utils";
+import { Actor } from "../actors/Actor";
 import colors from "../utils/colors";
-import {State} from "../utils/State";
+import { State } from "../utils/State";
 
 export class Messages {
     static combat(Case, actor, enemy) {
         let playerName = Utils.span(`&#91;${actor.name}&#93;`, actor.role.color);
         let targetName = Utils.span(`&#91;${enemy.name}&#93;`, enemy.role.color);
-        let str_actorDamage = Utils.span(
-            actor.weapon.weaponDamage(),
-            colors.hitRed
-        );
-        let str_actorDamageCrit = Utils.span(
-            actor.weapon.weaponDamage() * 2,
-            colors.hitRed
-        );
+        let str_actorDamage = Utils.span(actor.weapon.weaponDamage(), colors.hitRed);
+        let str_actorDamageCrit = Utils.span(actor.weapon.weaponDamage() * 2, colors.hitRed);
         let deathCharge = actor.currency * 0.45;
         let str_enemyHealth = enemy.health;
         let pronounP = enemy.gender === "Female" ? "her" : "his";
@@ -32,41 +26,25 @@ export class Messages {
             `(${enemy.health + actor.weapon.weaponDamage() * 2}=>0)`,
             colors.damageGreen
         );
-        let str_damageIndicator0 = Utils.span(
-            `(${enemy.health + actor.weapon.weaponDamage()}=>0)`,
-            colors.damageGreen
-        );
+        let str_damageIndicator0 = Utils.span(`(${enemy.health + actor.weapon.weaponDamage()}=>0)`, colors.damageGreen);
         let str_enemyDamageIndicator = Utils.span(
             `(${actor.health + enemy.damage}=>${actor.health})`,
             colors.damageGreen
         );
         let str_Critical = Utils.span("CRITICAL! ", colors.hitRed);
         let hitMiss = Utils.span("MISS! ", colors.hitRed);
-        let droppedItem =
-            str_actorItem(enemy) == undefined ? null : str_actorItem(enemy);
-        let droppedWeapon = Utils.span(
-            `&#91;${enemy.weapon.name}&#93;`,
-            colors.itemYellow
-        );
-        let currencyAmount = Utils.span(
-            `&#91;${enemy.currency}&#93;`,
-            colors.itemYellow
-        );
+        let droppedItem = str_actorItem(enemy) == undefined ? null : str_actorItem(enemy);
+        let droppedWeapon = Utils.span(`&#91;${enemy.weapon.name}&#93;`, colors.itemYellow);
+        let currencyAmount = Utils.span(`&#91;${enemy.currency}&#93;`, colors.itemYellow);
         let playerLVL = Utils.span(actor.level, colors.damageGreen);
         let playerLVLprev = Utils.span(actor.level - 1, colors.damageGreen);
 
         function str_weaponName(ownerActor) {
-            return Utils.span(
-                `&#91;${ownerActor.weapon.name}&#93;`,
-                colors.weaponBlue
-            );
+            return Utils.span(`&#91;${ownerActor.weapon.name}&#93;`, colors.weaponBlue);
         }
 
         function str_actorRole(ownerActor) {
-            return Utils.span(
-                `&#91;${ownerActor.role.name}&#93;`,
-                ownerActor.role.color
-            );
+            return Utils.span(`&#91;${ownerActor.role.name}&#93;`, ownerActor.role.color);
         }
 
         function str_actorItem(ownerActor) {
@@ -75,10 +53,8 @@ export class Messages {
 
         let damageType = actor.weapon.weaponType == "Melee" ? "hit" : "shot";
         let playerWeapon = str_weaponName(actor);
-        let enemyHealth =
-            enemy.health <= 0 ? str_damageIndicator0 : str_damageIndicator;
-        let enemyHealthCrit =
-            enemy.health <= 0 ? str_damageIndicatorCrit0 : str_damageIndicatorCrit;
+        let enemyHealth = enemy.health <= 0 ? str_damageIndicator0 : str_damageIndicator;
+        let enemyHealthCrit = enemy.health <= 0 ? str_damageIndicatorCrit0 : str_damageIndicatorCrit;
 
         function randomcase(amount: number) {
             return Math.floor(Math.random() * amount);
@@ -112,9 +88,7 @@ export class Messages {
                         );
                         break;
                     case 1:
-                        Utils.printLine(
-                            `${hitMiss} ${playerName} tried to attack ${targetName} but missed!`
-                        );
+                        Utils.printLine(`${hitMiss} ${playerName} tried to attack ${targetName} but missed!`);
                         break;
                     case 2:
                         Utils.printLine(
@@ -140,10 +114,7 @@ export class Messages {
             ///Level up message
             case "levelUp":
                 Utils.printLine(
-                    `You leveled up from ${Utils.span(
-                        actor.level - 1,
-                        colors.damageGreen
-                    )} to ${playerLVL}!`
+                    `You leveled up from ${Utils.span(actor.level - 1, colors.damageGreen)} to ${playerLVL}!`
                 );
                 break;
             ///Death message
@@ -184,9 +155,7 @@ export class Messages {
                 Utils.printLine(`You found ${droppedItem}.`);
                 break;
             case "lootFindSame":
-                Utils.printLine(
-                    `You found ${droppedItem} but as you already have it, you let it be.`
-                );
+                Utils.printLine(`You found ${droppedItem} but as you already have it, you let it be.`);
                 break;
             case "lootFindNew":
                 Utils.printLine(

@@ -1,3 +1,3 @@
-import {Rainfall} from "./main";
+import { Rainfall } from "./main";
 
 Rainfall.main();

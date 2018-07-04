@@ -1,9 +1,9 @@
-import {Actor} from "./Actor";
-import {Role} from "./resources/Role";
-import {Utils} from "../utils/utils";
-import {getItem} from "../interact/getItem";
-import {Statistics} from "./resources/Statistics";
-import {Name} from "./resources/Name";
+import { Actor } from "./Actor";
+import { Role } from "./resources/Role";
+import { Utils } from "../utils/utils";
+import { getItem } from "../interact/getItem";
+import { Statistics } from "./resources/Statistics";
+import { Name } from "./resources/Name";
 
 export class Enemy extends Actor {
     constructor() {

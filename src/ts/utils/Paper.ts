@@ -1,5 +1,5 @@
-import {getItem} from "../interact/getItem";
-import {Item} from "../items/Item";
+import { getItem } from "../interact/getItem";
+import { Item } from "../items/Item";
 
 export class Paper {
     static paperElement(id?: string, className?: string): HTMLElement {
@@ -11,7 +11,7 @@ export class Paper {
         return element;
     }
 
-    static paperStatCard(title: string, value?: string, description?: string,valueID?:string): HTMLElement {
+    static paperStatCard(title: string, value?: string, description?: string, valueID?: string): HTMLElement {
         const element: HTMLElement = this.paperElement();
         element.setAttribute("class", "statCard tooltip");
         const statTitle = document.createElement("span");
@@ -45,33 +45,36 @@ export class Paper {
         return element;
     }
 
-    static paperInfoContainer(id?: string, className?: string, title?: string):HTMLElement {
+    static paperInfoContainer(id?: string, className?: string, title?: string): HTMLElement {
         let element = this.paperElement(id, className);
         if (className !== null && className !== "") element.setAttribute("class", className);
         if (id !== null) element.id = id;
         if (title !== undefined) {
             let containerTitle = document.createElement("h2");
             containerTitle.textContent = title;
-            containerTitle.setAttribute("class","statTitle vital");
+            containerTitle.setAttribute("class", "statTitle vital");
             element.appendChild(containerTitle);
         }
         return element;
     }
 
-    static paperInventoryItem(item:Item):HTMLElement {
+    static paperInventoryItem(item: Item): HTMLElement {
         let itemElement = this.paperElement(item.name);
-        itemElement.setAttribute("class","inventoryItem");
+        itemElement.setAttribute("class", "inventoryItem");
         let itemTitle = document.createElement("span");
-        itemTitle.setAttribute("class","itemTitle");
+        itemTitle.setAttribute("class", "itemTitle");
         let itemEquipped = document.createElement("span");
         itemTitle.textContent = item.name;
         itemEquipped.textContent = "";
         itemElement.appendChild(itemTitle);
         itemElement.appendChild(itemEquipped);
-        itemElement.onclick = function () {
+        itemElement.onclick = function() {
             getItem.useItem(item);
+            document
+                .getElementById("inventoryItems")
+                .childNodes.forEach(item => item.classList.remove("activeSelection"));
+            itemElement.classList.add("activeSelection");
         };
         return itemElement;
     }
-
 }

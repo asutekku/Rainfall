@@ -1,6 +1,6 @@
-import {default as roles} from "./roles";
-import {default as names} from "./names";
-import {Utils} from "../../utils/utils";
+import { default as roles } from "./roles";
+import { default as names } from "./names";
+import { Utils } from "../../utils/utils";
 
 export class Name {
     get firstName(): string {

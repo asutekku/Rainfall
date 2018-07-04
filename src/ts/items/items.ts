@@ -1,4 +1,4 @@
-import {Medical, Scrap} from "./Scrap";
+import { Medical, Scrap } from "./Scrap";
 
 let items = [
     new Scrap("clothing", "Pants", 20, "something"),
@@ -21,24 +21,9 @@ let items = [
         40,
         "Common oxy/acetalyne type out of bottle. Hand held, about a foot long. More powerful models are available up to thermite lances."
     ),
-    new Scrap(
-        "tool",
-        "Tech Toolkit",
-        100,
-        "Mixed kit of tools for repair of mechanical items."
-    ),
-    new Scrap(
-        "tool",
-        "B & E Tools",
-        120,
-        "Advanced mixed kit of tools for repair of mechanical items."
-    ),
-    new Scrap(
-        "tool",
-        "Electronics Toolkit",
-        120,
-        "Advanced mixed kit of tools for repair of mechanical items."
-    ),
+    new Scrap("tool", "Tech Toolkit", 100, "Mixed kit of tools for repair of mechanical items."),
+    new Scrap("tool", "B & E Tools", 120, "Advanced mixed kit of tools for repair of mechanical items."),
+    new Scrap("tool", "Electronics Toolkit", 120, "Advanced mixed kit of tools for repair of mechanical items."),
     new Scrap(
         "tool",
         "Protective Goggles",
@@ -69,12 +54,7 @@ let items = [
         10,
         "Fluorescent tape gives off soft light equal to Glowstick, lasts up to 6 hours."
     ),
-    new Scrap(
-        "tool",
-        "Rope",
-        2,
-        "Braided synthetics in a variety of thicknesses and weights. Can hold up to 1000kg"
-    ),
+    new Scrap("tool", "Rope", 2, "Braided synthetics in a variety of thicknesses and weights. Can hold up to 1000kg"),
     new Scrap(
         "tool",
         "Breathing Mask",

@@ -376,6 +376,10 @@ h3.statTitle {
     border: 2px solid #C89A5C;
 }
 
+.activeSelection {
+    background: var(--baseColor);
+}
+
 h3 {
     font-size: 16px;
 }

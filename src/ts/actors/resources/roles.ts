@@ -2,8 +2,7 @@ export default {
     rockerboy: {
         name: "Rockerboy",
         skill: "Charismatic Leadership",
-        skillDescription:
-            "This skill allows Rocker to sway crowds equal to their ability level squared, times 200.",
+        skillDescription: "This skill allows Rocker to sway crowds equal to their ability level squared, times 200.",
         color: "#A93226"
     },
     solo: {
@@ -29,15 +28,13 @@ export default {
     media: {
         name: "Media",
         skill: "Credibility",
-        skillDescription:
-            "The ability to have people believe what you're saying while in your on-air persona.",
+        skillDescription: "The ability to have people believe what you're saying while in your on-air persona.",
         color: "#f8a912"
     },
     cop: {
         name: "Cop",
         skill: "Authority",
-        skillDescription:
-            "The ability to intimidate or control others through your position as a lawman.",
+        skillDescription: "The ability to intimidate or control others through your position as a lawman.",
         color: "#2980B9"
     },
     corporate: {

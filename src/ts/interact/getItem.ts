@@ -1,13 +1,13 @@
 import weapons from "../items/Weapons";
 import items from "../items/items";
-import {Utils} from "../utils/utils";
+import { Utils } from "../utils/utils";
 import armors from "../items/armors";
-import {Messages} from "./messages";
-import {Statistics} from "../actors/resources/Statistics";
-import {UI} from "../utils/UI";
-import {Paper} from "../utils/Paper";
-import {State} from "../utils/State";
-import {Item} from "../items/Item";
+import { Messages } from "./messages";
+import { Statistics } from "../actors/resources/Statistics";
+import { UI } from "../utils/UI";
+import { Paper } from "../utils/Paper";
+import { State } from "../utils/State";
+import { Item } from "../items/Item";
 
 let itemID = 0;
 let element = document.getElementById(":hover");
@@ -88,7 +88,9 @@ export class getItem {
     static useItem(item) {
         switch (item.type) {
             case "weapons":
+                State.player.inventory.weapons.forEach(w => (w.equipped = false));
                 State.player.weapon = item;
+                item.equipped = true;
                 UI.updateUI(State.player);
             case "armor":
                 //actor.inventory.armor.push(item);

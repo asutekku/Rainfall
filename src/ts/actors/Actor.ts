@@ -1,13 +1,13 @@
-import {Utils} from "../utils/utils";
-import {Role} from "./resources/Role";
-import {Weapon} from "../items/Weapon";
-import {Item} from "../items/Item";
-import {getItem} from "../interact/getItem";
-import {Statistics} from "./resources/Statistics";
-import {Movement} from "../interact/Movement";
-import {Name} from "./resources/Name";
-import {State} from "../utils/State";
-import {Armor} from "../items/Armor";
+import { Utils } from "../utils/utils";
+import { Role } from "./resources/Role";
+import { Weapon } from "../items/Weapon";
+import { Item } from "../items/Item";
+import { getItem } from "../interact/getItem";
+import { Statistics } from "./resources/Statistics";
+import { Movement } from "../interact/Movement";
+import { Name } from "./resources/Name";
+import { State } from "../utils/State";
+import { Armor } from "../items/Armor";
 
 export class Actor {
     get weapon(): Weapon {
@@ -214,7 +214,7 @@ export class Actor {
             weapons: [],
             armor: [],
             misc: [],
-            medical: [],
+            medical: []
         };
         this.currency = 0;
         this.position = [0, 0];
@@ -393,10 +393,7 @@ export class Actor {
         this.level = Statistics.level;
         this.experience = Math.floor(Statistics.level ^ (2 / 0.4));
         this.health = Math.floor(
-            Utils.range(
-                (Statistics.level ^ (2 / 0.09)) * 0.9,
-                (Statistics.level ^ (2 / 0.09)) * 1.1
-            )
+            Utils.range((Statistics.level ^ (2 / 0.09)) * 0.9, (Statistics.level ^ (2 / 0.09)) * 1.1)
         );
         this.maxHealth = this.health;
         this._weapon = getItem.weapon();

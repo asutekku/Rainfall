@@ -1,81 +1,21 @@
-import {weapons_en_US} from "../../lang/en_US";
+import en_US from "../../lang/en_US";
 
-let _ = weapons_en_US;
-import {Weapon} from "./Weapon";
+let _ = en_US.weapons;
+import { Weapon } from "./Weapon";
 
 let weapons = [
-    /*====================
-      --------PISTOLS-------
-      =====================*/
-
     //BudgetArms C-13
-    new Weapon(
-        _.pistol,
-        _.budgetArms,
-        40,
-        1,
-        0,
-        1.1,
-        1,
-        8,
-        2,
-        1,
-        50,
-        75,
-        _.budgetArmsDesc
-    ),
+    new Weapon(_.pistol, _.C13.name, 40, 1, 0, 1.1, 1, 8, 2, 1, 50, 75, _.C13.desc, _.C13.brand),
     //Dai Lung Cybermag 15
-    new Weapon(
-        _.pistol,
-        _.daiLungCybermag,
-        40,
-        2,
-        1,
-        3.1,
-        1,
-        8,
-        2,
-        1,
-        50,
-        75,
-        _.daiLungCybermagDesc
-    ),
+    new Weapon(_.pistol, _.cybermag.name, 40, 2, 1, 3.1, 1, 8, 2, 1, 50, 75, _.cybermag.desc, _.cybermag.brand),
     //Federated Arms x-22
-    new Weapon(
-        _.pistol,
-        _.federatedArms,
-        50,
-        1,
-        1,
-        3.7,
-        1,
-        8,
-        2,
-        1,
-        50,
-        150,
-        _.federatedArmsDesc
-    ),
+    new Weapon(_.pistol, _.X22.name, 50, 1, 1, 3.7, 1, 8, 2, 1, 50, 150, _.X22.desc, _.X22.brand),
     //Militech Arms Avenger
-    new Weapon(
-        _.pistol,
-        _.militechScavenger,
-        50,
-        1,
-        1,
-        22,
-        2,
-        10,
-        2,
-        1,
-        50,
-        250,
-        _.militechScavengerDesc
-    ),
+    new Weapon(_.pistol, _.avenger.name, 50, 1, 1, 22, 2, 10, 2, 1, 50, 250, _.avenger.desc, _.avenger.brand),
     //Dai Lung Streetmaster
     new Weapon(
         _.pistol,
-        _.daiLungStreetmaster,
+        _.streetmaster.name,
         50,
         1,
         3,
@@ -86,193 +26,35 @@ let weapons = [
         1,
         50,
         250,
-        _.daiLungStreetmasterDesc
+        _.streetmaster.desc,
+        _.streetmaster.brand
     ),
     //Federated Arms X-9m
-    new Weapon(_.pistol, _.x9m, 50, 1, 1, 4, 2, 12, 2, 1, 50, 300, _.x9mDesc),
+    new Weapon(_.pistol, _.X9M.name, 50, 1, 1, 4, 2, 12, 2, 1, 50, 300, _.X9M.desc, _.X9M.brand),
     //BudgetArms Auto 3
-    new Weapon(
-        _.pistol,
-        _.auto3,
-        40,
-        1,
-        0,
-        6.5,
-        3,
-        8,
-        2,
-        1,
-        50,
-        350,
-        _.auto3Desc
-    ),
+    new Weapon(_.pistol, _.auto3.name, 40, 1, 0, 6.5, 3, 8, 2, 1, 50, 350, _.auto3.desc, _.auto3.brand),
     //Sternmeyer Type 35
-    new Weapon(
-        _.pistol,
-        _.sternmeyer35,
-        50,
-        1,
-        0,
-        7,
-        3,
-        8,
-        2,
-        1,
-        50,
-        400,
-        _.sternmeyer35Desc
-    ),
+    new Weapon(_.pistol, _.type35.name, 50, 1, 0, 7, 3, 8, 2, 1, 50, 400, _.type35.desc, _.type35.brand),
     //Armalite 44
-    new Weapon(
-        _.pistol,
-        _.armalite,
-        50,
-        1,
-        1,
-        34,
-        4,
-        8,
-        1,
-        1,
-        50,
-        450,
-        _.armaliteDesc
-    ),
+    new Weapon(_.pistol, _.armalite44.name, 50, 1, 1, 34, 4, 8, 1, 1, 50, 450, _.armalite44.desc, _.armalite44.brand),
     //Colt AMT Model 2000
-    new Weapon(_.pistol, _.colt, 50, 1, 1, 6.1, 4, 8, 1, 1, 50, 500, _.coltDesc),
-
-    /*====================
-      ----SUBMACHINE GUNS---
-      =====================*/
-
+    new Weapon(_.pistol, _.colt.name, 50, 1, 1, 6.1, 4, 8, 1, 1, 50, 500, _.colt.desc, _.colt.brand),
     //Uzi Miniauto 9
-    new Weapon(
-        _.submachine,
-        "Uzi Miniauto 9",
-        60,
-        1,
-        1,
-        1.2,
-        2,
-        30,
-        35,
-        1,
-        150,
-        475,
-        "Uzi's entry into the 21st century, all plastic, with rotary electric clip and adjustable trigger. The choice for many security solos."
-    ),
+    new Weapon(_.submachine, _.miniauto.name, 60, 1, 1, 1.2, 2, 30, 35, 1, 150, 475, _.miniauto.desc, _.miniauto.brand),
     //H&K MP-2013
-    new Weapon(
-        _.submachine,
-        "H&K MP-2013",
-        60,
-        1,
-        3,
-        12,
-        2,
-        35,
-        32,
-        1,
-        150,
-        450,
-        "Heckler & Koch's updating of the MP-5K classic, with compud plastics and build in silencing."
-    ),
+    new Weapon(_.submachine, _.MP2013.name, 60, 1, 3, 12, 2, 35, 32, 1, 150, 450, _.MP2013.desc, _.MP2013.brand),
     //Fed. Arms Tech Assault II
-    new Weapon(
-        _.submachine,
-        "Fed. Arms Tech Assault II",
-        60,
-        1,
-        1,
-        5,
-        1,
-        50,
-        25,
-        1,
-        150,
-        400,
-        "An updated version of the venerable Tech Assault I, features larger clip, better autofire, no melting. Honest."
-    ),
+    new Weapon(_.submachine, _.assault2.name, 60, 1, 1, 5, 1, 50, 25, 1, 150, 400, _.assault2.desc, _.assault2.brand),
     //Arasaka Minami 10
-    new Weapon(
-        _.submachine,
-        "Arasaka Minami 10",
-        50,
-        1,
-        3,
-        21,
-        2,
-        40,
-        20,
-        1,
-        200,
-        500,
-        "The standard Arasaka Security weapon, found worldwide. A good, all around weapon."
-    ),
+    new Weapon(_.submachine, _.minami10.name, 50, 1, 3, 21, 2, 40, 20, 1, 200, 500, _.minami10.desc, _.minami10.brand),
     //H&K MPK-9
-    new Weapon(
-        _.submachine,
-        "Fed. Arms Tech Assault II",
-        60,
-        1,
-        3,
-        15,
-        1,
-        35,
-        25,
-        1,
-        200,
-        520,
-        "A light composite Submachine gun with integral sights. Used by many Euro solos."
-    ),
+    new Weapon(_.submachine, _.MPK9.name, 60, 1, 3, 15, 1, 35, 25, 1, 200, 520, _.MPK9.desc, _.MPK9.brand),
     //Sternmeyer SMG-21
-    new Weapon(
-        _.submachine,
-        "Sternmeyer SMG-21",
-        40,
-        1,
-        0,
-        5,
-        3,
-        30,
-        15,
-        1,
-        200,
-        500,
-        "Sternmeyer's best entry in the anti-terrorist category, with wide use on C-SWAT teams and PsychoSquads."
-    ),
+    new Weapon(_.submachine, _.SMG21.name, 40, 1, 0, 5, 3, 30, 15, 1, 200, 500, _.SMG21.desc, _.SMG21.brand),
     //H&K MPK-11
-    new Weapon(
-        _.submachine,
-        "H&K MPK-11",
-        50,
-        1,
-        1,
-        3,
-        4,
-        30,
-        20,
-        1,
-        200,
-        700,
-        "Possibly the most used Solo's gun in existence, the MPK-11 can be modified into four different designs, including a bullpup configuration, standard SMG, an assault carbine and a grenade launcher mount."
-    ),
+    new Weapon(_.submachine, _.MPK11.name, 50, 1, 1, 3, 4, 30, 20, 1, 200, 700, _.MPK11.desc, _.MPK11.brand),
     //Ingram MAC-14
-    new Weapon(
-        _.submachine,
-        "Ingram MAC-14",
-        30,
-        1,
-        1,
-        5,
-        4,
-        20,
-        10,
-        1,
-        200,
-        650,
-        "Updated MAC-10, with composite body and cylindrical feeding magazine."
-    ),
+    new Weapon(_.submachine, _.MAC14.name, 30, 1, 1, 5, 4, 20, 10, 1, 200, 650, _.MAC14.desc, _.MAC14.brand),
 
     /*====================
       -----ASSAULT RIFLE----
@@ -401,20 +183,6 @@ let weapons = [
         "Made from scraps of a makeshift house, this club has been proved to be great in close combat."
     ),
     //Spoon (why not)
-    new Weapon(
-        _.melee,
-        "Spoon",
-        100,
-        1,
-        50,
-        50,
-        1,
-        1,
-        1,
-        1,
-        1,
-        0,
-        "So many eyes have been couged with this."
-    )
+    new Weapon(_.melee, "Spoon", 100, 1, 50, 50, 1, 1, 1, 1, 1, 0, "So many eyes have been couged with this.")
 ];
 export default weapons;

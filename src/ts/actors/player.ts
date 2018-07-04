@@ -1,7 +1,7 @@
-import {Actor} from "./Actor";
-import {Role} from "./resources/Role";
-import {Name} from "./resources/Name";
-import {getItem} from "../interact/getItem";
+import { Actor } from "./Actor";
+import { Role } from "./resources/Role";
+import { Name } from "./resources/Name";
+import { getItem } from "../interact/getItem";
 
 export class Player extends Actor {
     constructor() {

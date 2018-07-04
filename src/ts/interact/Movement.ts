@@ -1,6 +1,6 @@
-import {Utils} from "../utils/utils";
-import {Actor} from "../actors/Actor";
-import {Map} from "../environment/Map";
+import { Utils } from "../utils/utils";
+import { Actor } from "../actors/Actor";
+import { Map } from "../environment/Map";
 
 export class Movement {
     static moveRandomly(area: Map, actor: Actor, distance: number) {
@@ -17,10 +17,7 @@ export class Movement {
     }
 
     static randomPosition(area: Map, range: number) {
-        return [
-            Math.floor(Utils.range(range * -1, range)),
-            Math.floor(Utils.range(range * -1, range))
-        ];
+        return [Math.floor(Utils.range(range * -1, range)), Math.floor(Utils.range(range * -1, range))];
     }
 
     static move(area: Map, actor: Actor, direction: string, distance: number) {
@@ -42,10 +39,7 @@ export class Movement {
     }
 
     static moveTo(actor: Actor, target: number[], distance) {
-        let Angle = Math.atan2(
-            target[1] - actor.position[1],
-            target[0] - actor.position[0]
-        );
+        let Angle = Math.atan2(target[1] - actor.position[1], target[0] - actor.position[0]);
         let Sin = Math.sin(Angle) * distance;
         let Cos = Math.cos(Angle) * distance;
         actor.position[0] += Math.floor(Cos);

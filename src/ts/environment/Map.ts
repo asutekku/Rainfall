@@ -1,5 +1,5 @@
-import {Setting} from "./Setting";
-import {Utils} from "../utils/utils";
+import { Setting } from "./Setting";
+import { Utils } from "../utils/utils";
 
 export class Map {
     name: string;
@@ -29,7 +29,8 @@ export class Map {
     }
 
     static clear(): void {
-        this.prototype.canvas.getContext("2d").clearRect(0, 0,
-            this.prototype.canvas.width, this.prototype.canvas.height)
+        this.prototype.canvas
+            .getContext("2d")
+            .clearRect(0, 0, this.prototype.canvas.width, this.prototype.canvas.height);
     }
 }

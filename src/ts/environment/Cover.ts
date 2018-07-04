@@ -1,4 +1,4 @@
-import {EnvironmentObject} from "./EnvironmentObject";
+import { EnvironmentObject } from "./EnvironmentObject";
 
 export class Cover implements EnvironmentObject {
     name: string;

@@ -1,4 +1,4 @@
-import {Setting} from "./Setting";
+import { Setting } from "./Setting";
 
 export const Settings = {
     city: new Setting("City"),

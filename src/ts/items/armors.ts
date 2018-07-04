@@ -1,7 +1,7 @@
-import {armors_en_US} from "../../lang/en_US";
+import { armors_en_US } from "../../lang/en_US";
 
 let _ = armors_en_US;
-import {Armor} from "./Armor";
+import { Armor } from "./Armor";
 
 let armors = [
     /*====================
@@ -18,25 +18,9 @@ let armors = [
         "A baseball cap from 21st century. It has some scribbles on it."
     ),
     //Beanie
-    new Armor(
-        "helmet",
-        _.headwearBeanie,
-        "none",
-        1,
-        0,
-        20,
-        "It's red and slightly small."
-    ),
+    new Armor("helmet", _.headwearBeanie, "none", 1, 0, 20, "It's red and slightly small."),
     //Bicycle
-    new Armor(
-        "helmet",
-        _.headwearCycling,
-        "none",
-        1.5,
-        2,
-        25,
-        "This bicycling helmet has some nails hammered on it."
-    ),
+    new Armor("helmet", _.headwearCycling, "none", 1.5, 2, 25, "This bicycling helmet has some nails hammered on it."),
     //Hockey Mask
     new Armor(
         "helmet",
@@ -88,15 +72,7 @@ let armors = [
         "Heavy duty protection for the head, standard for most military."
     ),
     //Police head
-    new Armor(
-        "helmet",
-        "Info Helm",
-        "policeSet",
-        6,
-        20,
-        250,
-        "Standard police helmet with lowlight infared vision."
-    ),
+    new Armor("helmet", "Info Helm", "policeSet", 6, 20, 250, "Standard police helmet with lowlight infared vision."),
 
     /*====================
               -----UPPER ARMOUR-----

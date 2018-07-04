@@ -1,12 +1,11 @@
-import {Utils} from "../utils/utils";
-import {UI} from "../utils/UI";
-import {Messages} from "./messages";
-import {Movement} from "./Movement";
-import {Actor} from "../actors/Actor";
-import {getItem} from "./getItem";
-import {State} from "../utils/State";
-import {Draw} from "../utils/Draw";
-
+import { Utils } from "../utils/utils";
+import { UI } from "../utils/UI";
+import { Messages } from "./messages";
+import { Movement } from "./Movement";
+import { Actor } from "../actors/Actor";
+import { getItem } from "./getItem";
+import { State } from "../utils/State";
+import { Draw } from "../utils/Draw";
 
 export class Combat {
     static basicAction(actor: Actor, target: Actor) {
@@ -39,12 +38,7 @@ export class Combat {
         } else if (distance < actor.weapon.range / 4) {
             if (actor.stats.ref + Utils.dice(3, 10) >= 15) {
                 target.health -= actor.weapon.weaponDamage();
-                Draw.drawLine(
-                    State.playArea.context,
-                    actor.position,
-                    target.position,
-                    actor.color
-                );
+                Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
                 Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
@@ -52,12 +46,7 @@ export class Combat {
         } else if (distance < actor.weapon.range / 2) {
             if (actor.stats.ref + Utils.dice(3, 10) >= 20) {
                 target.health -= actor.weapon.weaponDamage();
-                Draw.drawLine(
-                    State.playArea.context,
-                    actor.position,
-                    target.position,
-                    actor.color
-                );
+                Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
                 Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
@@ -65,12 +54,7 @@ export class Combat {
         } else if (distance < actor.weapon.range) {
             if (actor.stats.ref + Utils.dice(3, 10) >= 25) {
                 target.health -= actor.weapon.weaponDamage();
-                Draw.drawLine(
-                    State.playArea.context,
-                    actor.position,
-                    target.position,
-                    actor.color
-                );
+                Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
                 Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
@@ -78,12 +62,7 @@ export class Combat {
         } else if (distance < actor.weapon.range * 2) {
             if (actor.stats.ref + Utils.dice(3, 10) >= 30) {
                 target.health -= actor.weapon.weaponDamage();
-                Draw.drawLine(
-                    State.playArea.context,
-                    actor.position,
-                    target.position,
-                    actor.color
-                );
+                Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
                 Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
@@ -129,12 +108,10 @@ export class Combat {
     }
 
     //Melee only!
-    static parryAttack(actor: Actor, target: Actor) {
-    }
+    static parryAttack(actor: Actor, target: Actor) {}
 
     //Melee only!
-    static escapeFight(actor: Actor, target: Actor) {
-    }
+    static escapeFight(actor: Actor, target: Actor) {}
 
     //Increases accuracy
     static aimAttack(actor) {
@@ -144,8 +121,7 @@ export class Combat {
         }
     }
 
-    static mountVehicle(actor: Actor, target: Actor) {
-    }
+    static mountVehicle(actor: Actor, target: Actor) {}
 
     static reloadWeapon(actor: Actor, target: Actor) {
         //

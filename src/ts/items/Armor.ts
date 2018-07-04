@@ -1,4 +1,4 @@
-import {Item} from "./Item";
+import { Item } from "./Item";
 
 export class Armor implements Item {
     description: string;
@@ -10,15 +10,7 @@ export class Armor implements Item {
     rarity: number;
     cost: number;
 
-    constructor(
-        type,
-        name,
-        set,
-        level,
-        stoppingPower: number,
-        cost,
-        description
-    ) {
+    constructor(type, name, set, level, stoppingPower: number, cost, description) {
         this.type = type;
         this.name = name;
         this.set = set;

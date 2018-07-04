@@ -1,13 +1,14 @@
-import {Utils} from "./utils";
-import {Actor} from "../actors/Actor";
+import { Utils } from "./utils";
+import { Actor } from "../actors/Actor";
 import Stats from "../actors/resources/Stats";
-import {stat_en_US} from "../../lang/en_US";
-import {State} from "./State";
-import {Paper} from "./Paper";
-import {getItem} from "../interact/getItem";
+import en_US from "../../lang/en_US";
+import { State } from "./State";
+import { Paper } from "./Paper";
+import { getItem } from "../interact/getItem";
 
-let _ = Utils;
-let lang = stat_en_US;
+const _ = Utils;
+const statStrings = en_US.stats;
+const playerStrings = en_US.player;
 
 export class UI {
     static updateUI(actor: Actor) {
@@ -17,9 +18,10 @@ export class UI {
         _.l("charExp").textContent = actor.experience + "/" + actor.maxExperience;
         _.l("charWeapon").textContent = actor.weapon.name;
         _.l("weaponDesc").textContent = actor.weapon.description;
-        _.l("charWeaponDamage").textContent = `${actor.weapon.damage +
-        actor.weapon.diceThrows} - ${actor.weapon.diceThrows * 6 +
-        actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
+        _.l("charWeaponDamage").textContent = `${actor.weapon.damage + actor.weapon.diceThrows} - ${actor.weapon
+            .diceThrows *
+            6 +
+            actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
         _.l("charWeaponAccuracy").textContent = actor.weapon.accuracy + "%";
         _.l("charWeaponRange").textContent = actor.weapon.range + "m";
         _.l("charCRIT").textContent = `${actor.weapon.crit}%`;
@@ -60,7 +62,7 @@ export class UI {
     }
 
     static Stats() {
-        let statPane = Paper.paperContainer("", "infoAreaContainer", lang.stats);
+        let statPane = Paper.paperContainer("", "infoAreaContainer", statStrings.stats);
         let stats = Paper.paperInfoContainer("attributes", "UIElement", "Skills");
         statPane.appendChild(stats);
         Stats.map(stat => {
@@ -122,18 +124,28 @@ export class UI {
     static Player(): HTMLElement {
         let player = State.player;
         let element = Paper.paperContainer("playerInfo_container", "infoAreaContainer", "Player");
-        let attributeContainer = function (): DocumentFragment {
+        let attributeContainer = function(): DocumentFragment {
             let frag = document.createDocumentFragment();
             let attributes = Paper.paperInfoContainer("attributes", "UIElement", "Info");
             frag.appendChild(attributes);
-            let nameCard = Paper.paperStatCard("Name:", player.name, "", "playerName");
-            let genderCard = Paper.paperStatCard("Gender:", player.gender, "", "charGender");
-            let roleCard = Paper.paperStatCard("Role:", player.role.name, "", "charRole");
-            let skillCard = Paper.paperStatCard("Skill:", player.role.skill, player.role.skillDescription, "charSkill");
-            let levelCard = Paper.paperStatCard("Level:", player.level, "", "charLvl");
-            let expCard = Paper.paperStatCard("Experience:", `${player.experience}/${player.maxExperience}`, "", "charExp");
-            let hpCard = Paper.paperStatCard("Health points:", player.health, "", "charHP");
-            let moneyCard = Paper.paperStatCard("Currency:", `${player.currency}¥`, "", "currency");
+            let nameCard = Paper.paperStatCard(`${playerStrings.name}:`, player.name, "", "playerName");
+            let genderCard = Paper.paperStatCard(`${playerStrings.gender}:`, player.gender, "", "charGender");
+            let roleCard = Paper.paperStatCard(`${playerStrings.role}:`, player.role.name, "", "charRole");
+            let skillCard = Paper.paperStatCard(
+                `${playerStrings.skill}:`,
+                player.role.skill,
+                player.role.skillDescription,
+                "charSkill"
+            );
+            let levelCard = Paper.paperStatCard(`${playerStrings.level}:`, player.level, "", "charLvl");
+            let expCard = Paper.paperStatCard(
+                `${playerStrings.exp}:`,
+                `${player.experience}/${player.maxExperience}`,
+                "",
+                "charExp"
+            );
+            let hpCard = Paper.paperStatCard(`${playerStrings.hp}:`, player.health, "", "charHP");
+            let moneyCard = Paper.paperStatCard(`${playerStrings.money}:`, `${player.currency}¥`, "", "currency");
             attributes.appendChild(nameCard);
             attributes.appendChild(genderCard);
             attributes.appendChild(roleCard);
@@ -166,7 +178,7 @@ export class UI {
             catItem.id = `${cat}Inventory`;
             catItem.textContent = cat;
             inventoryCategories.appendChild(catItem);
-            catItem.onclick = function () {
+            catItem.onclick = function() {
                 State.UI.inventoryView = cat;
                 UI.changeInventoryView(cat);
                 UI.updateInventory();
@@ -181,10 +193,10 @@ export class UI {
 
     static changeInventoryView(view) {
         State.UI.inventoryView = view;
-        Array.from(document.getElementsByClassName("inventoryCategory")).map(item => {
-            item.classList.remove('activeInventoryCategory');
+        Array.from(document.getElementsByClassName("inventoryCategory")).forEach(item => {
+            item.classList.remove("activeInventoryCategory");
         });
-        document.getElementById(`${view}Inventory`).classList.add('activeInventoryCategory');
+        document.getElementById(`${view}Inventory`).classList.add("activeInventoryCategory");
     }
 
     static updateInventory(): void {
@@ -194,13 +206,12 @@ export class UI {
         }
         State.player.inventory[State.UI.inventoryView].forEach(item => {
             let inventoryItem = Paper.paperInventoryItem(item);
+            if (item.equipped === true) inventoryItem.classList.add("activeSelection");
             invArea.appendChild(inventoryItem);
-        })
+        });
     }
 
-    static addItemToInventory(): void {
-
-    }
+    static addItemToInventory(): void {}
 
     static Store(): HTMLElement {
         let element = Paper.paperContainer("store_container", "infoAreaContainer", "Store");

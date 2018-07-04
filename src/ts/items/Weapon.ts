@@ -1,6 +1,6 @@
-import {Utils} from "../utils/utils";
-import {Item} from "./Item";
-import {Actor} from "../actors/Actor";
+import { Utils } from "../utils/utils";
+import { Item } from "./Item";
+import { Actor } from "../actors/Actor";
 
 export class Weapon implements Item {
     weaponType: string;
@@ -18,6 +18,8 @@ export class Weapon implements Item {
     type: string;
     range: number;
     level: number;
+    equipped: boolean;
+    manufacturer: string;
 
     constructor(
         weaponType: string,
@@ -32,7 +34,8 @@ export class Weapon implements Item {
         reliability: number,
         range: number,
         cost: number,
-        description: string
+        description: string,
+        manufacturer: string
     ) {
         this.type = "weapons";
         this.weaponType = weaponType;
@@ -48,7 +51,9 @@ export class Weapon implements Item {
         this.range = range;
         this.cost = cost;
         this.description = description;
+        this.manufacturer = manufacturer;
         this.level = 0;
+        this.equipped = false;
     }
 
     averageDamage(): number {
