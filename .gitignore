@@ -7,3 +7,5 @@
 .idea/dictionaries/akU.xml
 build
 .idea/typescript-compiler.xml
+node_modules
+.idea
