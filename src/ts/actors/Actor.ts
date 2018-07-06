@@ -1,13 +1,13 @@
-import {Utils} from "../utils/utils";
-import {Role} from "./resources/Role";
-import {Weapon} from "../items/Weapon";
-import {Item} from "../items/Item";
-import {getItem} from "../interact/getItem";
-import {Statistics} from "./resources/Statistics";
-import {Movement} from "../interact/Movement";
-import {Name} from "./resources/Name";
-import {State} from "../utils/State";
-import {Armor} from "../items/Armor";
+import { Utils } from "../utils/utils";
+import { Role } from "./resources/Role";
+import { Weapon } from "../items/Weapon";
+import { Item } from "../items/Item";
+import { getItem } from "../interact/getItem";
+import { Statistics } from "./resources/Statistics";
+import { Movement } from "../interact/Movement";
+import { Name } from "./resources/Name";
+import { State } from "../utils/State";
+import { Armor } from "../items/Armor";
 
 export class Actor {
     item: any;
@@ -18,7 +18,7 @@ export class Actor {
     public experience: number;
     public health: number;
     public weapon: Weapon;
-    public armor:number;
+    public armor: number;
     public equipment = {
         headgear: null,
         upper: null,

@@ -1,5 +1,5 @@
-import {getItem} from "../interact/getItem";
-import {Item} from "../items/Item";
+import { getItem } from "../interact/getItem";
+import { Item } from "../items/Item";
 
 export class Paper {
     static paperElement(id?: string, className?: string): HTMLElement {
@@ -70,11 +70,13 @@ export class Paper {
         itemElement.appendChild(itemTitle);
         itemElement.appendChild(itemEquipped);
         itemElement.classList.add(embed + "_node");
-        itemElement.onclick = function () {
+        itemElement.onclick = function() {
             if (item.equipped) {
                 itemElement.classList.remove("activeSelection");
             } else {
-                Array.from(document.getElementById("inventoryItems").childNodes).filter(e => e.classList.contains(embed + "_node")).forEach(item => item.classList.remove("activeSelection"));
+                Array.from(document.getElementById("inventoryItems").childNodes)
+                    .filter((e: HTMLElement) => e.classList.contains(embed + "_node"))
+                    .forEach((item: HTMLElement) => item.classList.remove("activeSelection"));
                 itemElement.classList.add("activeSelection");
             }
             getItem.useItem(item);

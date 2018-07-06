@@ -19,7 +19,11 @@ export class Utils {
     }
 
     static colorize(what): string {
-        let randomColor = "#" + Math.random().toString(16).substr(-3);
+        let randomColor =
+            "#" +
+            Math.random()
+                .toString(16)
+                .substr(-3);
         return `<span style="color:${randomColor}">${what}</span>`;
     }
 

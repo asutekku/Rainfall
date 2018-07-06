@@ -1,9 +1,9 @@
-import {Utils} from "./utils";
+import { Utils } from "./utils";
 import Stats from "../actors/resources/Stats";
 import en_US from "../../lang/en_US";
-import {State} from "./State";
-import {Paper} from "./Paper";
-import {Armor} from "../items/Armor";
+import { State } from "./State";
+import { Paper } from "./Paper";
+import { Armor } from "../items/Armor";
 
 const _ = Utils;
 const statStrings = en_US.stats;
@@ -20,8 +20,8 @@ export class UI {
         _.l("weaponDesc").textContent = actor.weapon.description;
         _.l("charWeaponDamage").textContent = `${actor.weapon.damage + actor.weapon.diceThrows} - ${actor.weapon
             .diceThrows *
-        6 +
-        actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
+            6 +
+            actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
         _.l("charWeaponAccuracy").textContent = actor.weapon.accuracy + "%";
         _.l("charWeaponRange").textContent = actor.weapon.range + "m";
         _.l("charCRIT").textContent = `${actor.weapon.crit}%`;
@@ -40,7 +40,7 @@ export class UI {
             actor.weapon.rateOfFire;
         _.l("charWeaponAccuracy").textContent = actor.weapon.accuracy + "%";
         _.l("charWeaponType").textContent = actor.weapon.weaponType;
-        _.l("armorStoppingPower").textContent = `${UI.getStoppingPower()}%`
+        _.l("armorStoppingPower").textContent = `${UI.getStoppingPower()}%`;
         _.l("playerPosition").textContent = actor.position.toString();
     }
 
@@ -52,9 +52,12 @@ export class UI {
     }
 
     static getStoppingPower() {
-        return Object.entries(State.player.equipment).filter(e => e[1]).map(e => {
-            return e[1]
-        }).reduce((acc, b) => acc + b.stoppingPower, 0);
+        return Object.entries(State.player.equipment)
+            .filter(e => e[1])
+            .map(e => {
+                return e[1];
+            })
+            .reduce((acc: number, b: Armor) => acc + b.stoppingPower, 0);
     }
 
     static updateStats() {
@@ -138,7 +141,7 @@ export class UI {
     static Player(): HTMLElement {
         let player = State.player;
         let element = Paper.paperContainer("playerInfo_container", "infoAreaContainer", "Player");
-        let attributeContainer = function (): DocumentFragment {
+        let attributeContainer = function(): DocumentFragment {
             let frag = document.createDocumentFragment();
             let attributes = Paper.paperInfoContainer("attributes", "UIElement", "Info");
             frag.appendChild(attributes);
@@ -192,7 +195,7 @@ export class UI {
             catItem.id = `${cat}Inventory`;
             catItem.textContent = cat;
             inventoryCategories.appendChild(catItem);
-            catItem.onclick = function () {
+            catItem.onclick = function() {
                 State.UI.inventoryView = cat;
                 UI.changeInventoryView(cat);
                 UI.updateInventory();
@@ -225,8 +228,7 @@ export class UI {
         });
     }
 
-    static addItemToInventory(): void {
-    }
+    static addItemToInventory(): void {}
 
     static Store(): HTMLElement {
         let element = Paper.paperContainer("store_container", "infoAreaContainer", "Store");

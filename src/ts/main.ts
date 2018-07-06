@@ -8,8 +8,7 @@ import { Statistics } from "./actors/resources/Statistics";
 import { State } from "./utils/State";
 
 export class Rainfall {
-
-    static setPlayer(){
+    static setPlayer() {
         State.player = new Player();
     }
     public static main(): void {

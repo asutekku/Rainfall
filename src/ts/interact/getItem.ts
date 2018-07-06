@@ -1,12 +1,12 @@
 import weapons from "../items/Weapons";
 import items from "../items/items";
-import {Utils} from "../utils/utils";
+import { Utils } from "../utils/utils";
 import armors from "../items/armors";
-import {Messages} from "./messages";
-import {UI} from "../utils/UI";
-import {Paper} from "../utils/Paper";
-import {State} from "../utils/State";
-import {Weapon} from "../items/Weapon";
+import { Messages } from "./messages";
+import { UI } from "../utils/UI";
+import { Paper } from "../utils/Paper";
+import { State } from "../utils/State";
+import { Weapon } from "../items/Weapon";
 
 export class getItem {
     static weapon() {
