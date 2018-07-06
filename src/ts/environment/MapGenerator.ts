@@ -21,7 +21,7 @@ export class mapGenerator {
                 }
             }
             if (placeable) {
-                building.draw(this.map.context);
+                building.draw(this.map.context!);
                 bArr.push(building);
             }
         }

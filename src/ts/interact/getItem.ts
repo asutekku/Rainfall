@@ -7,6 +7,10 @@ import { UI } from "../utils/UI";
 import { Paper } from "../utils/Paper";
 import { State } from "../utils/State";
 import { Weapon } from "../items/Weapon";
+import {Actor} from "../actors/Actor";
+import {Item} from "../items/Item";
+import {Player} from "../actors/player";
+import {Armor} from "../items/Armor";
 
 export class getItem {
     static weapon() {
@@ -24,7 +28,7 @@ export class getItem {
         }
     }
 
-    static updateCurrency(money, actor, target) {
+    static updateCurrency(money:number, actor:Actor, target:Actor) {
         if (money >= 0) {
             Messages.combat("getMoney", actor, target);
             actor.currency += money;
@@ -33,13 +37,13 @@ export class getItem {
         }
     }
 
-    static addItemToInventory(item, actor) {
+    static addItemToInventory(item:Item, actor:Actor) {
         switch (item.type) {
             case "weapons":
-                actor.inventory.weapons.push(item);
+                actor.inventory.weapons.push(item as Weapon);
                 break;
             case "armor":
-                actor.inventory.armor.push(item);
+                actor.inventory.armor.push(item as Armor);
                 break;
             case "medical":
                 actor.inventory.medical.push(item);
@@ -57,44 +61,42 @@ export class getItem {
         }
     }
 
-    static getWeapon(toGet): Weapon {
-        return weapons.find(e => e.id === toGet);
+    static getWeapon(toGet:string): Weapon {
+        return weapons.find(e => e.id === toGet)!;
     }
 
-    static useItem(item) {
+    static useItem(item:Item) {
+        const player:Player = State.player!;
         switch (item.type) {
             case "weapons":
                 if (!item.equipped) {
-                    State.player.inventory.weapons.forEach(w => (w.equipped = false));
-                    State.player.weapon = item;
+                    player.inventory.weapons.forEach(w => (w.equipped = false));
+                    player.weapon = item as Weapon;
                     item.equipped = true;
                 } else {
-                    State.player.inventory.weapons.forEach(w => (w.equipped = false));
-                    State.player.weapon = getItem.getWeapon("weapon_fists");
+                    player.inventory.weapons.forEach(w => (w.equipped = false));
+                    player.weapon = getItem.getWeapon("weapon_fists");
                     item.equipped = false;
                 }
                 break;
             case "armor":
                 if (!item.equipped) {
-                    State.player.inventory.armor.forEach(w => {
+                    player.inventory.armor.forEach(w => {
                         if (w.equipped && w.bodypart == item.bodypart) w.equipped = false;
                     });
-                    State.player.equipment[item.bodypart] = item;
+                    (player.equipment as any)[item.bodypart!] = item;
                     item.equipped = true;
                 } else {
-                    State.player.inventory.armor.forEach(w => {
+                    player.inventory.armor.forEach(w => {
                         if (w.equipped && w.bodypart == item.bodypart) w.equipped = false;
                     });
-                    State.player.equipment[item.bodypart] = null;
+                    (player.equipment as any)[item.bodypart!] = null;
                     item.equipped = false;
                 }
-                UI.updateEquipment(item);
+                UI.updateEquipment(item as Armor);
                 break;
             case "medical":
-                State.player.health += item.restorePoints;
-                if (State.player.health >= State.player.maxHealth) {
-                    State.player.health = State.player.maxHealth;
-                }
+                player.health = player.health >= player.maxHealth ? player.maxHealth : player.health += item.restorePoints!;
                 break;
             default:
                 //actor.inventory.misc.push(item);

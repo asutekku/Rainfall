@@ -200,12 +200,13 @@ export class Actor {
     constructor() {
         this.gender = Name.getGender();
         this.name = `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
-        this.role = null;
+        this.role = new Role();
         this.skill = null;
         this.level = 1;
-        this.experience = null;
+        this.experience = 0;
         this.health = 100;
-        this.weapon = null;
+        this.maxHealth = 100;
+        this.weapon = getItem.getWeapon("weapon_fists");
         this.armor = 0;
         this.equipment = {
             headgear: null,
@@ -216,7 +217,7 @@ export class Actor {
             accessories: null
         };
         this.weapons = [];
-        this.color = null;
+        this.color = "";
         this.items = [];
         this.inventory = {
             weapons: [],
@@ -615,9 +616,9 @@ export class Actor {
         return this.health > 0;
     }
 
-    draw(context) {
+    /*draw(context) {
         context.clearRect(this.position[0], this.position[1], 3, 3);
         context.fillStyle = this.color;
         context.fillRect(this.position[0], this.position[1], 3, 3);
-    }
+    }*/
 }

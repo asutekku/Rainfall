@@ -5,15 +5,14 @@ export class Vehicle {
     private price: number;
     private health: number;
     private maxSpeed: number;
-    private driver: Actor;
+    private driver?: Actor;
     private passengers: Actor[];
 
-    constructor() {
-        this.name = null;
-        this.price = null;
-        this.health = null;
-        this.maxSpeed = null;
-        this.driver = null;
+    constructor(name:string,price:number,health:number,maxSpeed:number) {
+        this.name = name;
+        this.price = price;
+        this.health = health;
+        this.maxSpeed = maxSpeed;
         this.passengers = [];
     }
 }

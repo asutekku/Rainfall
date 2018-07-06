@@ -12,7 +12,7 @@ export class Armor implements Item {
     cost: number;
     equipped: boolean;
 
-    constructor(bodypart, name, set, level, stoppingPower: number, cost, description) {
+    constructor(bodypart:string, name:string, set:string, level:number, stoppingPower: number, cost:number, description:string) {
         this.bodypart = bodypart;
         this.type = "armor";
         this.name = name;

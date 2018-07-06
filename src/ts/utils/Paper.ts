@@ -7,7 +7,7 @@ export class Paper {
         if (className !== undefined && className !== "") {
             element.setAttribute("class", className);
         }
-        if (id !== undefined || id !== "") element.id = id;
+        if (id !== undefined || id !== "") element.id = id!;
         return element;
     }
 
@@ -17,11 +17,11 @@ export class Paper {
         const statTitle = document.createElement("span");
         const statValue = document.createElement("span");
         statTitle.textContent = title;
-        statValue.textContent = value;
+        statValue.textContent = value ? value : "";
         if (description !== null || description !== "") {
             const toolTipText = document.createElement("span");
             toolTipText.setAttribute("class", "tooltiptext");
-            toolTipText.textContent = description;
+            toolTipText.textContent = description!;
             element.appendChild(toolTipText);
         }
         statTitle.setAttribute("class", "statTitle");
@@ -38,17 +38,17 @@ export class Paper {
         if (title !== null && title !== "") {
             const header = document.createElement("h2");
             header.classList.add("containerHeader");
-            header.textContent = title;
+            header.textContent = title!;
             element.appendChild(header);
         }
-        if (className !== null && className !== "") element.setAttribute("class", className);
+        if (className !== null && className !== "") element.setAttribute("class", className!);
         return element;
     }
 
     static paperInfoContainer(id?: string, className?: string, title?: string): HTMLElement {
         let element = this.paperElement(id, className);
-        if (className !== null && className !== "") element.setAttribute("class", className);
-        if (id !== null) element.id = id;
+        if (className !== null && className !== "") element.setAttribute("class", className!);
+        if (id !== null) element.id = id!;
         if (title !== undefined) {
             let containerTitle = document.createElement("h2");
             containerTitle.textContent = title;
@@ -58,7 +58,7 @@ export class Paper {
         return element;
     }
 
-    static paperInventoryItem(item): HTMLElement {
+    static paperInventoryItem(item:Item): HTMLElement {
         let itemElement = this.paperElement(item.name);
         itemElement.setAttribute("class", "inventoryItem");
         let itemTitle = document.createElement("span");
@@ -74,9 +74,11 @@ export class Paper {
             if (item.equipped) {
                 itemElement.classList.remove("activeSelection");
             } else {
-                Array.from(document.getElementById("inventoryItems").childNodes)
-                    .filter((e: HTMLElement) => e.classList.contains(embed + "_node"))
-                    .forEach((item: HTMLElement) => item.classList.remove("activeSelection"));
+                Array.from(document.getElementById("inventoryItems")!.childNodes)!
+                    .filter((e: any) => {
+                        return e.classList.contains(embed + "_node");
+                    })
+                    .forEach((item: any) => item.classList.remove("activeSelection"));
                 itemElement.classList.add("activeSelection");
             }
             getItem.useItem(item);
