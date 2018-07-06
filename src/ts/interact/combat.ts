@@ -17,10 +17,10 @@ export class Combat {
             if (!actor.isAlive()) {
                 actor.health = 0;
                 Messages.combat("death", actor, target);
-                UI.updateUI(actor);
+                UI.updateUI();
             }
         }
-        UI.updateUI(actor);
+        UI.updateUI();
         Draw.updateCanvas(State.playArea);
     }
 
@@ -117,7 +117,7 @@ export class Combat {
     static aimAttack(actor) {
         if (actor.weapon.accuracy < 100) {
             actor.weapon.accuracy += 10;
-            UI.updateUI(actor);
+            UI.updateUI();
         }
     }
 
@@ -142,7 +142,7 @@ export class Combat {
         Combat.gainLevel(actor, target);
         Combat.replaceEnemy(actor, target);
         Movement.moveRandomly(State.playArea, actor, 3);
-        UI.updateUI(actor);
+        UI.updateUI();
         actor.draw(State.playArea.context);
         //State.playArea.context.fillRect(actor.position[0],actor.position[1],3,3);
     }
@@ -151,7 +151,7 @@ export class Combat {
         if (actor.experience >= actor.maxExperience) {
             actor.gainLevel();
             Messages.combat("levelUp", actor, target);
-            UI.updateUI(actor);
+            UI.updateUI();
         }
     }
 

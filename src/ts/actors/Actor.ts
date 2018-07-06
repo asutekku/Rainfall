@@ -1,13 +1,13 @@
-import { Utils } from "../utils/utils";
-import { Role } from "./resources/Role";
-import { Weapon } from "../items/Weapon";
-import { Item } from "../items/Item";
-import { getItem } from "../interact/getItem";
-import { Statistics } from "./resources/Statistics";
-import { Movement } from "../interact/Movement";
-import { Name } from "./resources/Name";
-import { State } from "../utils/State";
-import { Armor } from "../items/Armor";
+import {Utils} from "../utils/utils";
+import {Role} from "./resources/Role";
+import {Weapon} from "../items/Weapon";
+import {Item} from "../items/Item";
+import {getItem} from "../interact/getItem";
+import {Statistics} from "./resources/Statistics";
+import {Movement} from "../interact/Movement";
+import {Name} from "./resources/Name";
+import {State} from "../utils/State";
+import {Armor} from "../items/Armor";
 
 export class Actor {
     get weapon(): Weapon {
@@ -27,7 +27,15 @@ export class Actor {
     public experience: number;
     public health: number;
     private _weapon: Weapon;
-    public armor: any;
+    public armor:number;
+    public equipment = {
+        headgear: null,
+        upper: null,
+        lower: null,
+        arms: null,
+        feet: null,
+        accessories: null
+    };
     public weapons: any[];
     public color: string;
     public gender: string;
@@ -41,6 +49,7 @@ export class Actor {
         misc: Item[];
         medical: Item[];
     };
+
     stats: {
         int: number;
         ref: number;
@@ -206,7 +215,15 @@ export class Actor {
         this.experience = null;
         this.health = 100;
         this._weapon = getItem.weapon();
-        this.armor = null;
+        this.armor = 0;
+        this.equipment = {
+            headgear: null,
+            upper: null,
+            lower: null,
+            arms: null,
+            feet: null,
+            accessories: null
+        };
         this.weapons = [];
         this.color = null;
         this.items = [];
@@ -398,6 +415,14 @@ export class Actor {
         this.maxHealth = this.health;
         this._weapon = getItem.weapon();
         this.armor = 0;
+        this.equipment = {
+            headgear: null,
+            upper: null,
+            lower: null,
+            arms: null,
+            feet: null,
+            accessories: null
+        };
         this.weapons = [];
         this.color = this.role.color;
         this.items = [getItem.item()];

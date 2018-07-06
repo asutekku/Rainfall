@@ -1,7 +1,7 @@
 import { Stat } from "./Stat";
 import en_US from "../../../lang/en_US";
 
-let _ = en_US.stat_en_US;
+let _ = en_US.stats;
 
 let Stats = [
     new Stat(_.int.name, _.int.short, _.int.description, 2),

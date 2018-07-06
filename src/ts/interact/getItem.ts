@@ -1,16 +1,11 @@
 import weapons from "../items/Weapons";
 import items from "../items/items";
-import { Utils } from "../utils/utils";
+import {Utils} from "../utils/utils";
 import armors from "../items/armors";
-import { Messages } from "./messages";
-import { Statistics } from "../actors/resources/Statistics";
-import { UI } from "../utils/UI";
-import { Paper } from "../utils/Paper";
-import { State } from "../utils/State";
-import { Item } from "../items/Item";
-
-let itemID = 0;
-let element = document.getElementById(":hover");
+import {Messages} from "./messages";
+import {UI} from "../utils/UI";
+import {Paper} from "../utils/Paper";
+import {State} from "../utils/State";
 
 export class getItem {
     static weapon() {
@@ -41,7 +36,6 @@ export class getItem {
     }
 
     static addItemToInventory(item, actor) {
-        console.log(item.type);
         switch (item.type) {
             case "weapons":
                 actor.inventory.weapons.push(item);
@@ -62,27 +56,6 @@ export class getItem {
         if (State.UI.inventoryView === item.type) {
             ul.appendChild(inventoryItem);
         }
-        //let inventoryItem = document.createElement("li");
-        //inventoryItem.innerHTML = text + " - " + item.price + "¥";
-        /*inventoryItem.onclick = function () {
-            if (actor.health != 0) {
-                //this.parentNode.removeChild(this);
-                if (item.type == "medical") {
-                    actor.health += item.restorePoints;
-                    if (actor.health >= actor.maxHealth) {
-                        actor.health = actor.maxHealth;
-                    }
-                } else {
-                    Statistics.money += item.price;
-                }
-                UI.updateUI(actor);
-            }
-        };
-        if (ul.childElementCount == 0) {
-            ul.appendChild(inventoryItem);
-        } else {
-            ul.insertBefore(inventoryItem, ul.firstChild);
-        }*/
     }
 
     static useItem(item) {
@@ -91,9 +64,18 @@ export class getItem {
                 State.player.inventory.weapons.forEach(w => (w.equipped = false));
                 State.player.weapon = item;
                 item.equipped = true;
-                UI.updateUI(State.player);
+                break;
             case "armor":
-                //actor.inventory.armor.push(item);
+                switch (item.bodypart) {
+                    case "headgear":
+                        State.player.inventory.armor.forEach(w => {
+                            w.equipped = w.bodypart !== "headgear";
+                        });
+                        State.player.equipment.headgear = item;
+                        item.equipped = true;
+                        break;
+                }
+                UI.updateEquipment(item);
                 break;
             case "medical":
                 State.player.health += item.restorePoints;
@@ -105,5 +87,6 @@ export class getItem {
                 //actor.inventory.misc.push(item);
                 break;
         }
+        UI.updateUI();
     }
 }

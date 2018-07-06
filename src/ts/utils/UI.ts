@@ -1,17 +1,17 @@
-import { Utils } from "./utils";
-import { Actor } from "../actors/Actor";
+import {Utils} from "./utils";
 import Stats from "../actors/resources/Stats";
 import en_US from "../../lang/en_US";
-import { State } from "./State";
-import { Paper } from "./Paper";
-import { getItem } from "../interact/getItem";
+import {State} from "./State";
+import {Paper} from "./Paper";
+import {Armor} from "../items/Armor";
 
 const _ = Utils;
 const statStrings = en_US.stats;
 const playerStrings = en_US.player;
 
 export class UI {
-    static updateUI(actor: Actor) {
+    static updateUI() {
+        let actor = State.player;
         _.l("charHP").textContent = `${actor.health}/${actor.maxHealth}`;
         _.l("charLvl").textContent = actor.level.toString();
         _.l("kills").textContent = actor.kills.toString();
@@ -20,8 +20,8 @@ export class UI {
         _.l("weaponDesc").textContent = actor.weapon.description;
         _.l("charWeaponDamage").textContent = `${actor.weapon.damage + actor.weapon.diceThrows} - ${actor.weapon
             .diceThrows *
-            6 +
-            actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
+        6 +
+        actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
         _.l("charWeaponAccuracy").textContent = actor.weapon.accuracy + "%";
         _.l("charWeaponRange").textContent = actor.weapon.range + "m";
         _.l("charCRIT").textContent = `${actor.weapon.crit}%`;
@@ -44,7 +44,17 @@ export class UI {
         _.l("playerPosition").textContent = actor.position.toString();
     }
 
-    static updateStats(actor: Actor) {
+    static updateEquipment(armor?: Armor) {
+        let actor = State.player;
+        let armorDesc = armor.description ? armor.description : en_US.UI.armor[`${armor.type}DescEmpty`],
+            armorStop = armor.stoppingPower ? armor.stoppingPower : "0%";
+        Utils.l(`${armor.bodypart}_equipped`).textContent = armor.name ? armor.name : en_US.UI.armor.empty;
+        Utils.l(`${armor.bodypart}_equipped_desc`).textContent = `${armorDesc} / ${armorStop}`;
+        Utils.l(`armorStoppingPower`).textContent = actor.equipment.entries.reduce((a, b) => a + b.stoppingPower, 0);
+    }
+
+    static updateStats() {
+        let actor = State.player;
         Utils.l("INT_val").textContent = actor.stats.int.toString();
         Utils.l("REF_val").textContent = actor.stats.ref.toString();
         Utils.l("COO_val").textContent = actor.stats.tech.toString();
@@ -124,7 +134,7 @@ export class UI {
     static Player(): HTMLElement {
         let player = State.player;
         let element = Paper.paperContainer("playerInfo_container", "infoAreaContainer", "Player");
-        let attributeContainer = function(): DocumentFragment {
+        let attributeContainer = function (): DocumentFragment {
             let frag = document.createDocumentFragment();
             let attributes = Paper.paperInfoContainer("attributes", "UIElement", "Info");
             frag.appendChild(attributes);
@@ -137,14 +147,14 @@ export class UI {
                 player.role.skillDescription,
                 "charSkill"
             );
-            let levelCard = Paper.paperStatCard(`${playerStrings.level}:`, player.level, "", "charLvl");
+            let levelCard = Paper.paperStatCard(`${playerStrings.level}:`, player.level.toString(), "", "charLvl");
             let expCard = Paper.paperStatCard(
                 `${playerStrings.exp}:`,
                 `${player.experience}/${player.maxExperience}`,
                 "",
                 "charExp"
             );
-            let hpCard = Paper.paperStatCard(`${playerStrings.hp}:`, player.health, "", "charHP");
+            let hpCard = Paper.paperStatCard(`${playerStrings.hp}:`, player.health.toString(), "", "charHP");
             let moneyCard = Paper.paperStatCard(`${playerStrings.money}:`, `${player.currency}¥`, "", "currency");
             attributes.appendChild(nameCard);
             attributes.appendChild(genderCard);
@@ -178,7 +188,7 @@ export class UI {
             catItem.id = `${cat}Inventory`;
             catItem.textContent = cat;
             inventoryCategories.appendChild(catItem);
-            catItem.onclick = function() {
+            catItem.onclick = function () {
                 State.UI.inventoryView = cat;
                 UI.changeInventoryView(cat);
                 UI.updateInventory();
@@ -211,7 +221,8 @@ export class UI {
         });
     }
 
-    static addItemToInventory(): void {}
+    static addItemToInventory(): void {
+    }
 
     static Store(): HTMLElement {
         let element = Paper.paperContainer("store_container", "infoAreaContainer", "Store");

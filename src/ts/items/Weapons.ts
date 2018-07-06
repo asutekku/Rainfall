@@ -1,5 +1,4 @@
 import en_US from "../../lang/en_US";
-
 let _ = en_US.weapons;
 import { Weapon } from "./Weapon";
 

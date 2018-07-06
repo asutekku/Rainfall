@@ -1,15 +1,10 @@
-import { armors_en_US } from "../../lang/en_US";
-
-let _ = armors_en_US;
+import en_US from "../../lang/en_US";
+let _ = en_US.armor;
 import { Armor } from "./Armor";
 
 let armors = [
-    /*====================
-              -------HEADGEAR-------
-              =====================*/
-    //Baseball
     new Armor(
-        "helmet",
+        "headgear",
         _.headwearCap,
         "none",
         1,
@@ -18,12 +13,12 @@ let armors = [
         "A baseball cap from 21st century. It has some scribbles on it."
     ),
     //Beanie
-    new Armor("helmet", _.headwearBeanie, "none", 1, 0, 20, "It's red and slightly small."),
+    new Armor("headgear", _.headwearBeanie, "none", 1, 0, 20, "It's red and slightly small."),
     //Bicycle
-    new Armor("helmet", _.headwearCycling, "none", 1.5, 2, 25, "This bicycling helmet has some nails hammered on it."),
+    new Armor("headgear", _.headwearCycling, "none", 1.5, 2, 25, "This bicycling helmet has some nails hammered on it."),
     //Hockey Mask
     new Armor(
-        "helmet",
+        "headgear",
         "Hockey Mask",
         "none",
         2,
@@ -33,7 +28,7 @@ let armors = [
     ),
     //Motorcycle
     new Armor(
-        "helmet",
+        "headgear",
         "Motorcycle Helmet",
         "heavyLeatherSet",
         2.5,
@@ -43,7 +38,7 @@ let armors = [
     ),
     //Kevlar Helmet
     new Armor(
-        "helmet",
+        "headgear",
         "Kevlar Helmet",
         "kevlarSet",
         3,
@@ -53,7 +48,7 @@ let armors = [
     ),
     //Steel helmet
     new Armor(
-        "helmet",
+        "headgear",
         "Steel Helmet",
         "lightSet",
         4,
@@ -63,7 +58,7 @@ let armors = [
     ),
     //Nylon helmet
     new Armor(
-        "helmet",
+        "headgear",
         "Nylon Helmet",
         "heavySet",
         5,
@@ -72,7 +67,7 @@ let armors = [
         "Heavy duty protection for the head, standard for most military."
     ),
     //Police head
-    new Armor("helmet", "Info Helm", "policeSet", 6, 20, 250, "Standard police helmet with lowlight infared vision."),
+    new Armor("headgear", "Info Helm", "policeSet", 6, 20, 250, "Standard police helmet with lowlight infared vision."),
 
     /*====================
               -----UPPER ARMOUR-----

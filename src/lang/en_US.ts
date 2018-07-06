@@ -246,4 +246,13 @@ export default class en_US {
         hp: "Health points",
         money: "Currency"
     };
+
+    static UI = {
+        armor: {
+            empty: "Empty",
+            headgearDescEmpty: "You are wearing nothing on your head.",
+            upperDescEmpty: "You are wearing nothing on your upper body.",
+            lowerDescEmpty: "You are wearing nothing on your lower body.",
+        }
+    }
 }

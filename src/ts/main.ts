@@ -8,15 +8,20 @@ import { Statistics } from "./actors/resources/Statistics";
 import { State } from "./utils/State";
 
 export class Rainfall {
-    public static main(): void {
+
+    static setPlayer(){
         State.player = new Player();
+    }
+    public static main(): void {
+        this.setPlayer();
+        State.player = new Player();
+        console.log(State.player);
         State.player.update();
         State.player.updateAfter();
         State.playArea.actors.push(State.player);
         let grunt = new Enemy();
         State.playArea.actors.push(grunt);
         let deadMessageSent = false;
-        UI.updateUI(State.player);
         //UI.initMap();
 
         Utils.l("hitButton").onclick = function() {
@@ -55,7 +60,7 @@ export class Rainfall {
         };
         Utils.l("statButton").onclick = function() {
             UI.changeInfoPane("stats");
-            UI.updateStats(State.player);
+            UI.updateStats();
         };
 
         //Because respawning is so much more enjoyable than restarting
@@ -66,28 +71,29 @@ export class Rainfall {
                 Messages.combat("respawn", State.player, grunt);
                 deadMessageSent = false;
                 Statistics.money -= Math.floor(Statistics.money * 0.45);
-                UI.updateUI(State.player);
+                UI.updateUI();
             }
         };
 
         //Functionality for the autoplay (because no one likes to click away)
         let running = false;
         Utils.l("autoButton").onclick = function() {
-            let myvar;
+            let int;
             if (!running) {
                 running = true;
-                myvar = setInterval(function() {
+                int = setInterval(function() {
                     if (State.player.isAlive()) {
                         Combat.basicAction(State.player, grunt);
                     } else {
-                        clearInterval(myvar);
+                        clearInterval(int);
                         running = false;
                     }
                 }, 1000);
             } else if (running) {
                 running = false;
-                clearInterval(myvar);
+                clearInterval(int);
             }
         };
+        UI.updateUI();
     }
 }
