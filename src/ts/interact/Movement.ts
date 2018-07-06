@@ -38,7 +38,7 @@ export class Movement {
         }
     }
 
-    static moveTo(actor: Actor, target: number[], distance) {
+    static moveTo(actor: Actor, target: number[], distance:number) {
         let Angle = Math.atan2(target[1] - actor.position[1], target[0] - actor.position[0]);
         let Sin = Math.sin(Angle) * distance;
         let Cos = Math.cos(Angle) * distance;
@@ -46,7 +46,7 @@ export class Movement {
         actor.position[1] += Math.floor(Sin);
     }
 
-    mountVehicle(actor, vehicle) {
-        //
-    }
+    /*mountVehicle(actor:Actor, vehicle:Vehicle) {
+
+    }*/
 }

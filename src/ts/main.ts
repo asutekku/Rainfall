@@ -9,11 +9,8 @@ import { State } from "./utils/State";
 
 export class Rainfall {
 
-    static setPlayer(){
-        State.player = new Player();
-    }
     public static main(): void {
-        this.setPlayer();
+        State.player = new Player();
         State.player.update();
         State.player.updateAfter();
         State.playArea.actors.push(State.player);
@@ -22,51 +19,51 @@ export class Rainfall {
         let deadMessageSent = false;
         //UI.initMap();
 
-        Utils.l("hitButton").onclick = function() {
-            if (State.player.isAlive()) {
-                Combat.basicAction(State.player, grunt);
+        Utils.l("hitButton")!.onclick = function() {
+            if (State.player!.isAlive()) {
+                Combat.basicAction(State.player!, grunt);
             } else if (deadMessageSent === false) {
-                Messages.combat("youredead", State.player, grunt);
+                Messages.combat("youredead", State.player!, grunt);
                 deadMessageSent = true;
             }
         };
 
         //For the people who are stuck
-        Utils.l("restartButton").onclick = function() {
+        Utils.l("restartButton")!.onclick = function() {
             window.localStorage.clear();
             location.reload();
         };
 
-        Utils.l("inventoryButton").onclick = function() {
+        Utils.l("inventoryButton")!.onclick = function() {
             UI.changeInfoPane("inventory");
             UI.updateInventory();
         };
-        Utils.l("questButton").onclick = function() {
+        Utils.l("questButton")!.onclick = function() {
             UI.changeInfoPane("quests");
         };
-        Utils.l("storeButton").onclick = function() {
+        Utils.l("storeButton")!.onclick = function() {
             UI.changeInfoPane("store");
         };
-        Utils.l("playerButton").onclick = function() {
+        Utils.l("playerButton")!.onclick = function() {
             UI.changeInfoPane("player");
         };
-        Utils.l("raidButton").onclick = function() {
+        Utils.l("raidButton")!.onclick = function() {
             UI.changeInfoPane("raid");
         };
-        Utils.l("allianceButton").onclick = function() {
+        Utils.l("allianceButton")!.onclick = function() {
             UI.changeInfoPane("alliance");
         };
-        Utils.l("statButton").onclick = function() {
+        Utils.l("statButton")!.onclick = function() {
             UI.changeInfoPane("stats");
             UI.updateStats();
         };
 
         //Because respawning is so much more enjoyable than restarting
-        Utils.l("respawnButton").onclick = function() {
-            if (!State.player.isAlive()) {
-                State.player.health = State.player.maxHealth;
+        Utils.l("respawnButton")!.onclick = function() {
+            if (!State.player!.isAlive()) {
+                State.player!.health = State.player!.maxHealth;
                 clearInterval();
-                Messages.combat("respawn", State.player, grunt);
+                Messages.combat("respawn", State.player!, grunt);
                 deadMessageSent = false;
                 Statistics.money -= Math.floor(Statistics.money * 0.45);
                 UI.updateUI();
@@ -75,13 +72,13 @@ export class Rainfall {
 
         //Functionality for the autoplay (because no one likes to click away)
         let running = false;
-        Utils.l("autoButton").onclick = function() {
-            let int;
+        Utils.l("autoButton")!.onclick = function() {
+            let int:any;
             if (!running) {
                 running = true;
                 int = setInterval(function() {
-                    if (State.player.isAlive()) {
-                        Combat.basicAction(State.player, grunt);
+                    if (State.player!.isAlive()) {
+                        Combat.basicAction(State.player!, grunt);
                     } else {
                         clearInterval(int);
                         running = false;

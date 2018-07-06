@@ -1,11 +1,12 @@
-import {Utils} from "../utils/utils";
-import {UI} from "../utils/UI";
-import {Messages} from "./messages";
-import {Movement} from "./Movement";
-import {Actor} from "../actors/Actor";
-import {getItem} from "./getItem";
-import {State} from "../utils/State";
-import {Draw} from "../utils/Draw";
+import { Utils } from "../utils/utils";
+import { UI } from "../utils/UI";
+import { Messages } from "./messages";
+import { Movement } from "./Movement";
+import { Actor } from "../actors/Actor";
+import { getItem } from "./getItem";
+import { State } from "../utils/State";
+import { Draw } from "../utils/Draw";
+import get = Reflect.get;
 
 export class Combat {
     static basicAction(actor: Actor, target: Actor) {
@@ -37,7 +38,7 @@ export class Combat {
         } else if (distance < actor.weapon.range / 4) {
             if (actor.stats.ref + Utils.dice(3, 10) >= 15) {
                 target.health -= actor.weapon.weaponDamage();
-                Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
+                //Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
                 Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
@@ -45,7 +46,7 @@ export class Combat {
         } else if (distance < actor.weapon.range / 2) {
             if (actor.stats.ref + Utils.dice(3, 10) >= 20) {
                 target.health -= actor.weapon.weaponDamage();
-                Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
+                //Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
                 Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
@@ -53,7 +54,7 @@ export class Combat {
         } else if (distance < actor.weapon.range) {
             if (actor.stats.ref + Utils.dice(3, 10) >= 25) {
                 target.health -= actor.weapon.weaponDamage();
-                Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
+                //Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
                 Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
@@ -61,7 +62,7 @@ export class Combat {
         } else if (distance < actor.weapon.range * 2) {
             if (actor.stats.ref + Utils.dice(3, 10) >= 30) {
                 target.health -= actor.weapon.weaponDamage();
-                Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
+                //Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
                 Messages.combat("hitNormal", actor, target);
             } else {
                 this.dodgeAttack(actor, target);
@@ -91,7 +92,7 @@ export class Combat {
         }
     }
 
-    static attack(actor, target, multiplier): void {
+    static attack(actor:Actor, target:Actor, multiplier:number): void {
         if (target.armor != 0) {
             let def = 1 - target.armor / 100;
             target.health -= actor.weapon.weaponDamage() * def * multiplier;
@@ -103,33 +104,28 @@ export class Combat {
     static dodgeAttack(actor: Actor, target: Actor): void {
         Messages.combat("hitMiss", actor, target);
         Movement.moveTo(actor, target.position, actor.stats.ma.ma);
-        actor.draw(State.playArea.context);
+        //actor.draw(State.playArea.context);
     }
 
     //Melee only!
-    static parryAttack(actor: Actor, target: Actor) {
-    }
+    static parryAttack(actor: Actor, target: Actor) {}
 
-    static escapeFight(actor: Actor, target: Actor) {
-    }
+    static escapeFight(actor: Actor, target: Actor) {}
 
     //Increases accuracy
-    static aimAttack(actor) {
+    static aimAttack(actor:Actor) {
         if (actor.weapon.accuracy < 100) {
             actor.weapon.accuracy += 10;
             UI.updateUI();
         }
     }
 
-    static mountVehicle(actor: Actor, target: Actor) {
-    }
+    static mountVehicle(actor: Actor, target: Actor) {}
 
-    static reloadWeapon(actor: Actor, target: Actor) {
-        //
-    }
+    static reloadWeapon(actor: Actor, target: Actor) {}
 
-    static aidActor(actor, amount) {
-        actor.health = actor.health > actor.maxHealth ? actor.maxHealth : actor.health += amount;
+    static aidActor(actor:Actor, amount:number) {
+        actor.health = actor.health > actor.maxHealth ? actor.maxHealth : (actor.health += amount);
     }
 
     static killEnemy(actor: Actor, target: Actor) {
@@ -141,7 +137,7 @@ export class Combat {
         Combat.replaceEnemy(actor, target);
         Movement.moveRandomly(State.playArea, actor, 3);
         UI.updateUI();
-        actor.draw(State.playArea.context);
+        //actor.draw(State.playArea.context);
         //State.playArea.context.fillRect(actor.position[0],actor.position[1],3,3);
     }
 
@@ -156,7 +152,7 @@ export class Combat {
     static replaceEnemy(actor: Actor, target: Actor) {
         target.update();
         Movement.moveRandomly(State.playArea, target, State.playArea.width / 3);
-        target.draw(State.playArea.context);
+        //target.draw(State.playArea.context);
         if (actor.role.name === target.role.name) {
             Messages.combat("encounterSame", actor, target);
             Combat.replaceEnemy(actor, target);
@@ -168,17 +164,9 @@ export class Combat {
     static lootEnemy(actor: Actor, target: Actor) {
         Messages.combat("loot", actor, target);
         let item = target.item;
-        let clothes = actor.lifepath.style.clothes,
-            upper = clothes.upper,
-            bottom = clothes.bottom,
-            headgear = clothes.headgear;
         Messages.combat("lootFind", actor, target);
         getItem.addItemToInventory(item, actor);
         getItem.updateCurrency(target.currency, actor, target);
-        actor.armor =
-            (headgear ? headgear.stoppingPower : 0) +
-            (upper ? upper.stoppingPower : 0) +
-            (bottom ? bottom.stoppingPower : 0);
-        Utils.l("armorStoppingPower").textContent = actor.armor + "%";
+        actor.armor = UI.getStoppingPower();
     }
 }

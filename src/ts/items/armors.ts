@@ -15,7 +15,15 @@ let armors = [
     //Beanie
     new Armor("headgear", _.headwearBeanie, "none", 1, 0, 20, "It's red and slightly small."),
     //Bicycle
-    new Armor("headgear", _.headwearCycling, "none", 1.5, 2, 25, "This bicycling helmet has some nails hammered on it."),
+    new Armor(
+        "headgear",
+        _.headwearCycling,
+        "none",
+        1.5,
+        2,
+        25,
+        "This bicycling helmet has some nails hammered on it."
+    ),
     //Hockey Mask
     new Armor(
         "headgear",

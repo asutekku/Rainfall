@@ -2,11 +2,11 @@ let spanId: number = 0;
 let spanIdToRemove: number = 1;
 
 export class Utils {
-    static l(what): HTMLElement | null {
+    static l(what:string): HTMLElement | null {
         return document.getElementById(what);
     }
 
-    static create(what): HTMLElement | null {
+    static create(what:string): HTMLElement | null {
         return document.createElement(what);
     }
 
@@ -14,32 +14,35 @@ export class Utils {
         return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    static save(what, string: string): void {
+    static save(what:string, string: string): void {
         return localStorage.setItem(what, string);
     }
 
-    static colorize(what): string {
-        let randomColor = "#" + Math.random().toString(16).substr(-3);
+    static colorize(what:string): string {
+        let randomColor =
+            "#" +
+            Math.random()
+                .toString(16)
+                .substr(-3);
         return `<span style="color:${randomColor}">${what}</span>`;
     }
 
     static printLine(line: string): void {
         spanId += 1;
         let node = document.createElement("span");
-        let content = document.getElementById("actions");
+        let content = document.getElementById("actions")!;
         node.id = "message_" + spanId;
         node.style.whiteSpace = "normal";
-        node.innerHTML = '<span class="iClass">></span>' + line + "<br>";
+        node.innerHTML = `<span class="iClass">></span>${line}<br>`;
         content.insertBefore(node, content.childNodes[0]);
-        let childNodes = document.getElementById("actions").childElementCount;
-        if (childNodes >= 50) {
-            let oldNode = document.getElementById("message_" + spanIdToRemove);
+        if (content.childElementCount >= 50) {
+            let oldNode = document.getElementById("message_" + spanIdToRemove)!;
             oldNode.remove();
             spanIdToRemove += 1;
         }
     }
 
-    static span(line, color): string {
+    static span(line:string, color:string): string {
         return `<span style=color:${color}>${line}</span>`;
     }
 

@@ -8,12 +8,12 @@ export class Draw {
         ctx.stroke();
     }
 
-    static clearCanvas(canvas) {
-        canvas.context.clearRect(-canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
+    static clearCanvas(canvas:HTMLCanvasElement) {
+        let ctx = canvas.getContext("2d")!;
+        ctx.clearRect(-canvas.width / 2, -canvas.height / 2, canvas.width, canvas.height);
     }
 
-    static updateCanvas(canvas): void {
-        canvas.clear();
-        console.log("Canvas cleared");
+    static updateCanvas(canvas:HTMLCanvasElement): void {
+        canvas.getContext("2d")!.clearRect(0,0,canvas.width,canvas.height);
     }
 }

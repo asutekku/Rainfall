@@ -36,7 +36,7 @@ export class Weapon implements Item {
         cost: number,
         description: string,
         manufacturer: string,
-        id:string
+        id: string
     ) {
         this.type = "weapons";
         this.weaponType = weaponType;

@@ -2,13 +2,15 @@ import { Utils } from "../utils/utils";
 import { Actor } from "../actors/Actor";
 import colors from "../utils/colors";
 import { State } from "../utils/State";
+import {Player} from "../actors/player";
+import {Enemy} from "../actors/Enemy";
 
 export class Messages {
-    static combat(Case, actor, enemy) {
+    static combat(Case:string, actor:Player, enemy:Enemy) {
         let playerName = Utils.span(`&#91;${actor.name}&#93;`, actor.role.color);
         let targetName = Utils.span(`&#91;${enemy.name}&#93;`, enemy.role.color);
-        let str_actorDamage = Utils.span(actor.weapon.weaponDamage(), colors.hitRed);
-        let str_actorDamageCrit = Utils.span(actor.weapon.weaponDamage() * 2, colors.hitRed);
+        let str_actorDamage = Utils.span(actor.weapon.weaponDamage().toString(), colors.hitRed);
+        let str_actorDamageCrit = Utils.span((actor.weapon.weaponDamage() * 2).toString(), colors.hitRed);
         let deathCharge = actor.currency * 0.45;
         let str_enemyHealth = enemy.health;
         let pronounP = enemy.gender === "Female" ? "her" : "his";
@@ -28,7 +30,7 @@ export class Messages {
         );
         let str_damageIndicator0 = Utils.span(`(${enemy.health + actor.weapon.weaponDamage()}=>0)`, colors.damageGreen);
         let str_enemyDamageIndicator = Utils.span(
-            `(${actor.health + enemy.damage}=>${actor.health})`,
+            `(${actor.health + enemy.weapon.damage}=>${actor.health})`,
             colors.damageGreen
         );
         let str_Critical = Utils.span("CRITICAL! ", colors.hitRed);
@@ -36,18 +38,18 @@ export class Messages {
         let droppedItem = str_actorItem(enemy) == undefined ? null : str_actorItem(enemy);
         let droppedWeapon = Utils.span(`&#91;${enemy.weapon.name}&#93;`, colors.itemYellow);
         let currencyAmount = Utils.span(`&#91;${enemy.currency}&#93;`, colors.itemYellow);
-        let playerLVL = Utils.span(actor.level, colors.damageGreen);
-        let playerLVLprev = Utils.span(actor.level - 1, colors.damageGreen);
+        let playerLVL = Utils.span(actor.level.toString(), colors.damageGreen);
+        let playerLVLprev = Utils.span((actor.level - 1).toString(), colors.damageGreen);
 
-        function str_weaponName(ownerActor) {
+        function str_weaponName(ownerActor:Actor) {
             return Utils.span(`&#91;${ownerActor.weapon.name}&#93;`, colors.weaponBlue);
         }
 
-        function str_actorRole(ownerActor) {
+        function str_actorRole(ownerActor:Actor) {
             return Utils.span(`&#91;${ownerActor.role.name}&#93;`, ownerActor.role.color);
         }
 
-        function str_actorItem(ownerActor) {
+        function str_actorItem(ownerActor:Actor) {
             return Utils.span(`&#91;${ownerActor.item.name}&#93;`, colors.itemYellow);
         }
 
@@ -114,7 +116,7 @@ export class Messages {
             ///Level up message
             case "levelUp":
                 Utils.printLine(
-                    `You leveled up from ${Utils.span(actor.level - 1, colors.damageGreen)} to ${playerLVL}!`
+                    `You leveled up from ${Utils.span((actor.level - 1).toString(), colors.damageGreen)} to ${playerLVL}!`
                 );
                 break;
             ///Death message
@@ -189,7 +191,7 @@ export class Messages {
         }
     }
 
-    static encounter(Case, actor: Actor, target: Actor) {
+    static encounter(Case:string, actor: Actor, target: Actor) {
         let targetName = Utils.span(`&#91;${target.name}&#93;`, target.color);
         let playerName = Utils.span(`&#91;${actor.name}&#93;`, actor.color);
         switch (Case) {

@@ -12,7 +12,7 @@ export class Map {
     context: CanvasRenderingContext2D | null;
     actors: any[];
 
-    constructor(name, height, width, depth, setting) {
+    constructor(name:string, height:number, width:number, depth:number, setting:Setting) {
         this.name = name;
         this.height = height;
         this.width = width;
@@ -25,12 +25,11 @@ export class Map {
         this.canvas.height = height;
         this.canvas.width = width;
         this.context = this.canvas.getContext("2d");
-        this.context.translate(width * 0.5, height * 0.5);
+        this.context!.translate((width ? width : 100) * 0.5, (height ? height : 100) * 0.5);
     }
 
     static clear(): void {
-        this.prototype.canvas
-            .getContext("2d")
-            .clearRect(0, 0, this.prototype.canvas.width, this.prototype.canvas.height);
+        this.prototype.canvas!.getContext("2d")!
+            .clearRect(0, 0, this.prototype.canvas!.width, this.prototype.canvas!.height);
     }
 }

@@ -134,7 +134,8 @@ export default class en_US {
         AKR20: {
             brand: "Kalashnikov",
             name: "AKR-20 Medium Assault",
-            desc: "A plastic and carbon fiber update of the AKM, distributed throughout the remains of the Soviet bloc.",
+            desc:
+                "A plastic and carbon fiber update of the AKM, distributed throughout the remains of the Soviet bloc.",
             id: "weapon_AKR20"
         },
         FNRAL: {
@@ -284,14 +285,15 @@ export default class en_US {
             empty: "Empty",
             headgearDescEmpty: "You are wearing nothing on your head.",
             upperDescEmpty: "You are wearing nothing on your upper body.",
-            lowerDescEmpty: "You are wearing nothing on your lower body.",
+            lowerDescEmpty: "You are wearing nothing on your lower body."
         }
-    }
+    };
 
     static Drugs: Object = {
         synthCoke: {
             name: "SynthCoke",
-            desc: "The second generation, synthetic replacement for cocaine. Like the original, its side effects are nasty: paranoia, psychological addiction.",
+            desc:
+                "The second generation, synthetic replacement for cocaine. Like the original, its side effects are nasty: paranoia, psychological addiction.",
             type: "Stimulant",
             cost: 1000,
             strength: 1,
@@ -300,7 +302,8 @@ export default class en_US {
         },
         stim: {
             name: "Stimulant",
-            desc: "Stim increases endurance, allowing the user to stay alert for longer periods. Side effects include mental delusions.",
+            desc:
+                "Stim increases endurance, allowing the user to stay alert for longer periods. Side effects include mental delusions.",
             type: "Stimulant",
             cost: 500,
             strength: 3,
@@ -309,7 +312,8 @@ export default class en_US {
         },
         syncomp: {
             name: "Syncomp 15",
-            desc: "Syncomp is a broad spectrum poison antidote, used to treat nerve and biotoxins. REF is reduced at the rate of 1 point per dose.",
+            desc:
+                "Syncomp is a broad spectrum poison antidote, used to treat nerve and biotoxins. REF is reduced at the rate of 1 point per dose.",
             type: "Antidote",
             cost: 650,
             strength: 3,
@@ -318,7 +322,8 @@ export default class en_US {
         },
         speedheal: {
             name: "Speedheal",
-            desc: "Speedheal is designed to enhance the natural healing processes. Side effects are reduced for a period of 1 week after use.",
+            desc:
+                "Speedheal is designed to enhance the natural healing processes. Side effects are reduced for a period of 1 week after use.",
             type: "Healing Drug",
             cost: 1650,
             strength: 2,
@@ -327,7 +332,8 @@ export default class en_US {
         },
         boost: {
             name: "Boost",
-            desc: "Boost increases intelligence. A Boost addict has gained full tolerance - his intelligence is no longer increased, and he must have more Boost within twelve hours or be reduced to screaming fits and hallucinations.",
+            desc:
+                "Boost increases intelligence. A Boost addict has gained full tolerance - his intelligence is no longer increased, and he must have more Boost within twelve hours or be reduced to screaming fits and hallucinations.",
             type: "INT Booster",
             cost: 12,
             strength: 4,
@@ -345,7 +351,8 @@ export default class en_US {
         },
         smash: {
             name: "Smash",
-            desc: "Smash is 2020's answer to aIcohol - it's yellow, foamy, and comes in cans. It makes you loose, happy and ready to party. ",
+            desc:
+                "Smash is 2020's answer to aIcohol - it's yellow, foamy, and comes in cans. It makes you loose, happy and ready to party. ",
             type: "Euphoric",
             cost: 900,
             strength: 1,
@@ -354,7 +361,8 @@ export default class en_US {
         },
         dorph: {
             name: "'Dorph",
-            desc: "Designed as a combat drug and painkiller, endorphins reduce pain and stress effects. 'Dorph allows you to reduce the effects of stun or shock. Dorph also has a nasty cost in nervous system damage.",
+            desc:
+                "Designed as a combat drug and painkiller, endorphins reduce pain and stress effects. 'Dorph allows you to reduce the effects of stun or shock. Dorph also has a nasty cost in nervous system damage.",
             type: "Pain Negation",
             cost: 250,
             strength: 2,
@@ -370,5 +378,5 @@ export default class en_US {
             difficulty: 13,
             duration: 1
         }
-    }
+    };
 }
