@@ -14,8 +14,6 @@ export class Rainfall {
     }
     public static main(): void {
         this.setPlayer();
-        State.player = new Player();
-        console.log(State.player);
         State.player.update();
         State.player.updateAfter();
         State.playArea.actors.push(State.player);

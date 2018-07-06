@@ -1,11 +1,11 @@
-import { Utils } from "../utils/utils";
-import { UI } from "../utils/UI";
-import { Messages } from "./messages";
-import { Movement } from "./Movement";
-import { Actor } from "../actors/Actor";
-import { getItem } from "./getItem";
-import { State } from "../utils/State";
-import { Draw } from "../utils/Draw";
+import {Utils} from "../utils/utils";
+import {UI} from "../utils/UI";
+import {Messages} from "./messages";
+import {Movement} from "./Movement";
+import {Actor} from "../actors/Actor";
+import {getItem} from "./getItem";
+import {State} from "../utils/State";
+import {Draw} from "../utils/Draw";
 
 export class Combat {
     static basicAction(actor: Actor, target: Actor) {
@@ -21,12 +21,11 @@ export class Combat {
             }
         }
         UI.updateUI();
-        Draw.updateCanvas(State.playArea);
+        //Draw.updateCanvas(State.playArea);
     }
 
     static shoot(actor: Actor, target: Actor): void {
         let distance = Utils.distance(actor.position, target.position);
-        console.log(distance);
         if (distance < 1000) {
             // POINT BLANK
             if (actor.stats.ref + Utils.dice(3, 10) >= 1) {
@@ -69,7 +68,7 @@ export class Combat {
             }
         } else {
             Movement.moveTo(actor, target.position, actor.stats.ma.ma);
-            actor.draw(State.playArea.context);
+            //actor.draw(State.playArea.context);
         }
     }
 
@@ -108,9 +107,11 @@ export class Combat {
     }
 
     //Melee only!
-    static parryAttack(actor: Actor, target: Actor) {}
+    static parryAttack(actor: Actor, target: Actor) {
+    }
 
-    static escapeFight(actor: Actor, target: Actor) {}
+    static escapeFight(actor: Actor, target: Actor) {
+    }
 
     //Increases accuracy
     static aimAttack(actor) {
@@ -120,17 +121,15 @@ export class Combat {
         }
     }
 
-    static mountVehicle(actor: Actor, target: Actor) {}
+    static mountVehicle(actor: Actor, target: Actor) {
+    }
 
     static reloadWeapon(actor: Actor, target: Actor) {
         //
     }
 
     static aidActor(actor, amount) {
-        actor.health += amount;
-        if (actor.health > actor.maxHealth) {
-            actor.health = actor.maxHealth;
-        }
+        actor.health = actor.health > actor.maxHealth ? actor.maxHealth : actor.health += amount;
     }
 
     static killEnemy(actor: Actor, target: Actor) {

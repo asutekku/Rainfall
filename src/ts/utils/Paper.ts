@@ -1,5 +1,5 @@
-import { getItem } from "../interact/getItem";
-import { Item } from "../items/Item";
+import {getItem} from "../interact/getItem";
+import {Item} from "../items/Item";
 
 export class Paper {
     static paperElement(id?: string, className?: string): HTMLElement {
@@ -63,21 +63,22 @@ export class Paper {
         itemElement.setAttribute("class", "inventoryItem");
         let itemTitle = document.createElement("span");
         itemTitle.setAttribute("class", "itemTitle");
+        let embed = item.bodypart ? item.bodypart : item.type;
         let itemEquipped = document.createElement("span");
         itemTitle.textContent = item.name;
         itemEquipped.textContent = "";
         itemElement.appendChild(itemTitle);
         itemElement.appendChild(itemEquipped);
-        itemElement.onclick = function() {
-            getItem.useItem(item);
-            if (item.equipped){
-            document.getElementById("inventoryItems")
-                .childNodes.forEach(item => item.classList.remove("activeSelection"));
-            itemElement.classList.add("activeSelection");
+        itemElement.classList.add(embed + "_node");
+        itemElement.onclick = function () {
+            if (item.equipped) {
+                itemElement.classList.remove("activeSelection");
             } else {
-                document.getElementById("inventoryItems")
-                    .childNodes.forEach(item => item.classList.remove("activeSelection"));
+                Array.from(document.getElementById("inventoryItems").childNodes).filter(e => e.classList.contains(embed + "_node")).forEach(item => item.classList.remove("activeSelection"));
+                itemElement.classList.add("activeSelection");
             }
+            getItem.useItem(item);
+            console.log(item.equipped);
         };
         return itemElement;
     }

@@ -40,17 +40,21 @@ export class UI {
             actor.weapon.rateOfFire;
         _.l("charWeaponAccuracy").textContent = actor.weapon.accuracy + "%";
         _.l("charWeaponType").textContent = actor.weapon.weaponType;
-        _.l("armorStoppingPower").textContent = actor.armor + "%";
+        _.l("armorStoppingPower").textContent = `${UI.getStoppingPower()}%`
         _.l("playerPosition").textContent = actor.position.toString();
     }
 
     static updateEquipment(armor?: Armor) {
-        let actor = State.player;
-        let armorDesc = armor.description ? armor.description : en_US.UI.armor[`${armor.type}DescEmpty`],
-            armorStop = armor.stoppingPower ? armor.stoppingPower : "0%";
-        Utils.l(`${armor.bodypart}_equipped`).textContent = armor.name ? armor.name : en_US.UI.armor.empty;
+        let armorDesc = armor.equipped ? armor.description : en_US.UI.armor[`${armor.type}DescEmpty`],
+            armorStop = armor.equipped ? armor.stoppingPower : "0%";
+        Utils.l(`${armor.bodypart}_equipped`).textContent = armor.equipped ? armor.name : en_US.UI.armor.empty;
         Utils.l(`${armor.bodypart}_equipped_desc`).textContent = `${armorDesc} / ${armorStop}`;
-        Utils.l(`armorStoppingPower`).textContent = actor.equipment.entries.reduce((a, b) => a + b.stoppingPower, 0);
+    }
+
+    static getStoppingPower() {
+        return Object.entries(State.player.equipment).filter(e => e[1]).map(e => {
+            return e[1]
+        }).reduce((acc, b) => acc + b.stoppingPower, 0);
     }
 
     static updateStats() {

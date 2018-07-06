@@ -50,8 +50,9 @@ export class getItem {
         }
         //UI.updateInventory(actor);
         let inventoryItem = Paper.paperInventoryItem(item);
+
         let ul = document.getElementById("inventoryItems");
-        if (State.UI.inventoryView === item.type) {
+        if (ul && State.UI.inventoryView === item.type) {
             ul.appendChild(inventoryItem);
         }
     }
@@ -68,20 +69,24 @@ export class getItem {
                     State.player.weapon = item;
                     item.equipped = true;
                 } else {
-                    State.player.weapon = getItem.getWeapon("weapon_fists");
                     State.player.inventory.weapons.forEach(w => (w.equipped = false));
+                    State.player.weapon = getItem.getWeapon("weapon_fists");
                     item.equipped = false;
                 }
                 break;
             case "armor":
-                switch (item.bodypart) {
-                    case "headgear":
-                        State.player.inventory.armor.forEach(w => {
-                            w.equipped = w.bodypart !== "headgear";
-                        });
-                        State.player.equipment.headgear = item;
-                        item.equipped = true;
-                        break;
+                if (!item.equipped) {
+                    State.player.inventory.armor.forEach(w => {
+                        if (w.equipped && w.bodypart == item.bodypart) w.equipped = false;
+                    });
+                    State.player.equipment[item.bodypart] = item;
+                    item.equipped = true;
+                } else {
+                    State.player.inventory.armor.forEach(w => {
+                        if (w.equipped && w.bodypart == item.bodypart) w.equipped = false;
+                    });
+                    State.player.equipment[item.bodypart] = null;
+                    item.equipped = false;
                 }
                 UI.updateEquipment(item);
                 break;
