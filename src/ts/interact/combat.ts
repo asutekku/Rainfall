@@ -110,7 +110,6 @@ export class Combat {
     //Melee only!
     static parryAttack(actor: Actor, target: Actor) {}
 
-    //Melee only!
     static escapeFight(actor: Actor, target: Actor) {}
 
     //Increases accuracy
@@ -176,72 +175,11 @@ export class Combat {
             headgear = clothes.headgear;
         Messages.combat("lootFind", actor, target);
         getItem.addItemToInventory(item, actor);
-        /*switch (item.type) {
-            case "upper":
-                if (upper == null || upper.level < item.level) {
-                    Messages.combat("lootFind", actor, target);
-                    upper = item;
-                    Utils.l("equippedUpperArmor").textContent = upper.name;
-                    Utils.l("equippedUpperArmorDesc").textContent = upper.description;
-                } else if (upper.level === item.level && upper.level != null) {
-                    Messages.combat("lootFindSame", actor, target);
-                } else {
-                    Messages.combat("lootFindOld", actor, target);
-                }
-                break;
-
-            case "lower":
-                if (bottom == null || bottom.level < item.level) {
-                    Messages.combat("lootFind", actor, target);
-                    bottom = item;
-                    Utils.l("equippedLowerArmor").textContent =
-                        bottom.name;
-                    Utils.l("equippedLowerArmorDesc").textContent =
-                        `${bottom.description} ${bottom.stoppingPower}`;
-                } else if (bottom.level === item.level && bottom.level != null) {
-                    Messages.combat("lootFindSame", actor, target);
-                } else {
-                    Messages.combat("lootFindOld", actor, target);
-                }
-                break;
-            case "helmet":
-                if (headgear === null || headgear.level < item.level) {
-                    Messages.combat("lootFind", actor, target);
-                    headgear = item;
-                    Utils.l("equippedHeadArmor").textContent = headgear.name;
-                    Utils.l("equippedHeadArmorDesc").textContent = headgear.description + headgear.stoppingPower;
-                } else if (headgear.level === item.level && headgear != null) {
-                    Messages.combat("lootFindSame", actor, target);
-                } else {
-                    Messages.combat("lootFindOld", actor, target);
-                }
-                break;
-            case "weapon":
-                if (target.weapon.averageDamage() > actor.weapon.averageDamage()) {
-                    Messages.combat("lootWeaponBetter", actor, target);
-                    actor.weapon = target.weapon;
-                    UI.updateUI(actor);
-                } else {
-                    Messages.combat("lootWeaponWorse", actor, target);
-                }
-                break;
-            case "medical":
-                break;
-            case "tool":
-                Messages.combat("lootFind", actor, target);
-                getItem.addItemToInventory(item, actor);
-                actor.items.push(item);
-                UI.updateUI(actor);
-                break;
-            default:
-                Messages.combat("lootFind", actor, target);
-                break;
-        }*/
         getItem.updateCurrency(target.currency, actor, target);
         actor.armor =
-            (headgear == null ? 0 : headgear.stoppingPower) +
-            (upper == null ? 0 : upper.stoppingPower) +
-            (bottom == null ? 0 : bottom.stoppingPower);
+            (headgear ? headgear.stoppingPower : 0) +
+            (upper ? upper.stoppingPower : 0) +
+            (bottom ? bottom.stoppingPower : 0);
         Utils.l("armorStoppingPower").textContent = actor.armor + "%";
     }
 }

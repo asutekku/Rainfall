@@ -14,139 +14,171 @@ export default class en_US {
         C13: {
             brand: "BudgetArms",
             name: "BudgetArms C-13",
-            desc: `A light duty autopistol used as a hold-out and lady's gun`
+            desc: `A light duty autopistol used as a hold-out and lady's gun`,
+            id: "weapon_c13"
         },
         cybermag: {
             brand: "Dai Lung",
             name: "Cybermag 15",
-            desc: "Cheap Hong Kong knockoff, often used by boosters and other street trash."
+            desc: "Cheap Hong Kong knockoff, often used by boosters and other street trash.",
+            id: "weapon_cybermag"
         },
         X22: {
             brand: "Federated Arms",
             name: "X-22",
-            desc: 'The ubiquitous "Polymer-one-shot" cheap plastic pistol. Available in designer colors.'
+            desc: 'The ubiquitous "Polymer-one-shot" cheap plastic pistol. Available in designer colors.',
+            id: "weapon_X22"
         },
         avenger: {
             brand: "Militech",
             name: "Arms Avenger",
-            desc: "A well-made autopistol with good range and accuracy. A professional's gun."
+            desc: "A well-made autopistol with good range and accuracy. A professional's gun.",
+            id: "weapon_avenger"
         },
         streetM: {
             brand: "Dai Lung",
             name: "Streetmaster",
-            desc: "Another Dai Lung cheapie, build for the Street."
+            desc: "Another Dai Lung cheapie, build for the Street.",
+            id: "weapon_streetM"
         },
         X9M: {
             brand: "Federated Arms",
             name: "X-9m",
-            desc: "A sturdy Solo's gun, used as a standard military sidearm in the U.S. and E.C.C."
+            desc: "A sturdy Solo's gun, used as a standard military sidearm in the U.S. and E.C.C.",
+            id: "weapon_X9M"
         },
         auto3: {
             brand: "BudgetArms",
             name: "Auto 3",
-            desc: "It's cheap. It's powerful. It blows up sometimes. What else do you want?"
+            desc: "It's cheap. It's powerful. It blows up sometimes. What else do you want?",
+            id: "weapon_auto3"
         },
         type35: {
             brand: "Sternmeyer",
             name: "Type 35",
             desc:
-                "Rugged, reliable, with excellent stopping power. Another fine E.C.C. product from the United Germanies."
+                "Rugged, reliable, with excellent stopping power. Another fine E.C.C. product from the United Germanies.",
+            id: "weapon_type35"
         },
         armalite44: {
             brand: "Armalite",
             name: "Armalite 44",
-            desc: "Designed as an alternate to the 1998 U.S. Army sidearm trials. A solid contender."
+            desc: "Designed as an alternate to the 1998 U.S. Army sidearm trials. A solid contender.",
+            id: "weapon_armalite44"
         },
         colt: {
             brand: "Colt",
             name: "AMT Model 2000",
             desc:
-                "Now the standard officer's sidearm for the U.S. Army, the M-2000 served well in the Central American Wars."
+                "Now the standard officer's sidearm for the U.S. Army, the M-2000 served well in the Central American Wars.",
+            id: "weapon_colt"
         },
         miniauto: {
             brand: "Uzi",
             name: "Miniauto 9",
             desc:
-                "Uzi's entry into the 21st century, all plastic, with rotary electric clip and adjustable trigger. The choice for many security solos."
+                "Uzi's entry into the 21st century, all plastic, with rotary electric clip and adjustable trigger. The choice for many security solos.",
+            id: "weapon_miniauto"
         },
         MP2013: {
             brand: "Heckler & Koch",
             name: "H&K MP-2013",
-            desc: "Heckler & Koch's updating of the MP-5K classic, with compud plastics and build in silencing."
+            desc: "Heckler & Koch's updating of the MP-5K classic, with compud plastics and build in silencing.",
+            id: "weapon_MP2013"
         },
         assault2: {
             brand: "Federated Arms",
             name: "Tech Assault II",
             desc:
-                "An updated version of the venerable Tech Assault I, features larger clip, better autofire, no melting. Honest."
+                "An updated version of the venerable Tech Assault I, features larger clip, better autofire, no melting. Honest.",
+            id: "weapon_assault2"
         },
         minami10: {
             brand: "Arasaka",
             name: "Minami 10",
-            desc: "The standard Arasaka Security weapon, found worldwide. A good, all around weapon."
+            desc: "The standard Arasaka Security weapon, found worldwide. A good, all around weapon.",
+            id: "weapon_minami10"
         },
         MPK9: {
             brand: "Heckler & Koch",
             name: "H&K MPK-9",
-            desc: "A light composite Submachine gun with integral sights. Used by many Euro solos."
+            desc: "A light composite Submachine gun with integral sights. Used by many Euro solos.",
+            id: "weapon_MPK9"
         },
         MPK11: {
             brand: "Heckler & Koch",
             name: "MPK-11",
             desc:
-                "Possibly the most used Solo's gun in existence, the MPK-11 can be modified into four different designs, including a bullpup configuration, standard SMG, an assault carbine and a grenade launcher mount."
+                "Possibly the most used Solo's gun in existence, the MPK-11 can be modified into four different designs, including a bullpup configuration, standard SMG, an assault carbine and a grenade launcher mount.",
+            id: "weapon_MPK11"
         },
         SMG21: {
             brand: "Sternmeyer",
             name: "SMG-21",
             desc:
-                "Sternmeyer's best entry in the anti-terrorist category, with wide use on C-SWAT teams and PsychoSquads."
+                "Sternmeyer's best entry in the anti-terrorist category, with wide use on C-SWAT teams and PsychoSquads.",
+            id: "weapon_SMG21"
         },
         MAC14: {
             brand: "Ingram",
             name: "MAC-14",
-            desc: "Updated MAC-10, with composite body and cylindrical feeding magazine."
+            desc: "Updated MAC-10, with composite body and cylindrical feeding magazine.",
+            id: "weapon_MAC14"
         },
         roninL: {
             brand: "Militech",
             name: "Ronin Light Assault",
-            desc: "A light, all purpose update, similar to the M-16B."
+            desc: "A light, all purpose update, similar to the M-16B.",
+            id: "weapon_roninL"
         },
         AKR20: {
             brand: "Kalashnikov",
             name: "AKR-20 Medium Assault",
-            desc: "A plastic and carbon fiber update of the AKM, distributed throughout the remains of the Soviet bloc."
+            desc: "A plastic and carbon fiber update of the AKM, distributed throughout the remains of the Soviet bloc.",
+            id: "weapon_AKR20"
         },
         FNRAL: {
             brand: "FN",
             name: "FN-RAL",
-            desc: "The standard NATO assault weapon for battlefield work. Bullpup design, collapsing stock."
+            desc: "The standard NATO assault weapon for battlefield work. Bullpup design, collapsing stock.",
+            id: "weapon_FNRAL"
         },
         A80: {
             brand: "Kalashnikov",
             name: "A-80",
-            desc: "Another Soviet retread, with improved sighting and lightened with composites."
+            desc: "Another Soviet retread, with improved sighting and lightened with composites.",
+            id: "weapon_A80"
         },
         RA12: {
             brand: "Arasaka",
             name: "Arasaka Rapid Assault 12",
             desc:
-                "A high powered auto-shotgun with lethal firepower. Used by Arasaka worldwide. Another good reason to avoid the Boys in Black."
+                "A high powered auto-shotgun with lethal firepower. Used by Arasaka worldwide. Another good reason to avoid the Boys in Black.",
+            id: "weapon_RA12"
         },
         stakeout: {
             brand: "Sternmeyer",
             name: "Stakeout 10",
-            desc: "Light duty stakeout shotgun, used by city police departments."
+            desc: "Light duty stakeout shotgun, used by city police departments.",
+            id: "weapon_stakeout"
         },
         club: {
             brand: "Makeshift",
             name: "Club",
-            desc: "Made from scraps of a makeshift house, this club has been proved to be great in close combat."
+            desc: "Made from scraps of a makeshift house, this club has been proved to be great in close combat.",
+            id: "weapon_club"
         },
         spoon: {
             brand: "Makeshift",
             name: "Spoon",
-            desc: "So many eyes have been couged with this."
+            desc: "So many eyes have been couged with this.",
+            id: "weapon_spoon"
+        },
+        fists: {
+            brand: "Unuequipped",
+            name: "Fists",
+            desc: "Ready to beat the shit out of the enemies of yours? Of course you are, you were made ready for it.",
+            id: "weapon_fists"
         }
     };
 
@@ -253,6 +285,90 @@ export default class en_US {
             headgearDescEmpty: "You are wearing nothing on your head.",
             upperDescEmpty: "You are wearing nothing on your upper body.",
             lowerDescEmpty: "You are wearing nothing on your lower body.",
+        }
+    }
+
+    static Drugs: Object = {
+        synthCoke: {
+            name: "SynthCoke",
+            desc: "The second generation, synthetic replacement for cocaine. Like the original, its side effects are nasty: paranoia, psychological addiction.",
+            type: "Stimulant",
+            cost: 1000,
+            strength: 1,
+            difficulty: 20,
+            duration: 1
+        },
+        stim: {
+            name: "Stimulant",
+            desc: "Stim increases endurance, allowing the user to stay alert for longer periods. Side effects include mental delusions.",
+            type: "Stimulant",
+            cost: 500,
+            strength: 3,
+            difficulty: 10,
+            duration: 1
+        },
+        syncomp: {
+            name: "Syncomp 15",
+            desc: "Syncomp is a broad spectrum poison antidote, used to treat nerve and biotoxins. REF is reduced at the rate of 1 point per dose.",
+            type: "Antidote",
+            cost: 650,
+            strength: 3,
+            difficulty: 13,
+            duration: 1
+        },
+        speedheal: {
+            name: "Speedheal",
+            desc: "Speedheal is designed to enhance the natural healing processes. Side effects are reduced for a period of 1 week after use.",
+            type: "Healing Drug",
+            cost: 1650,
+            strength: 2,
+            difficulty: 33,
+            duration: 1
+        },
+        boost: {
+            name: "Boost",
+            desc: "Boost increases intelligence. A Boost addict has gained full tolerance - his intelligence is no longer increased, and he must have more Boost within twelve hours or be reduced to screaming fits and hallucinations.",
+            type: "INT Booster",
+            cost: 12,
+            strength: 4,
+            difficulty: 12,
+            duration: 1
+        },
+        blueglass: {
+            name: "Blue Glass",
+            desc: `Blue Glass was originally developed as a biological weapon. Under stress, you will have a 3 in 10 chance of "flashing out" - reduced to staring blankly at the pretty colors in your mind (reduce INT by 1 per dose). Roll 1D10 and hope.`,
+            type: "Hallucinogenic",
+            cost: 1000,
+            strength: 1,
+            difficulty: 20,
+            duration: 1
+        },
+        smash: {
+            name: "Smash",
+            desc: "Smash is 2020's answer to aIcohol - it's yellow, foamy, and comes in cans. It makes you loose, happy and ready to party. ",
+            type: "Euphoric",
+            cost: 900,
+            strength: 1,
+            difficulty: 18,
+            duration: 1
+        },
+        dorph: {
+            name: "'Dorph",
+            desc: "Designed as a combat drug and painkiller, endorphins reduce pain and stress effects. 'Dorph allows you to reduce the effects of stun or shock. Dorph also has a nasty cost in nervous system damage.",
+            type: "Pain Negation",
+            cost: 250,
+            strength: 2,
+            difficulty: 5,
+            duration: 1
+        },
+        blacklace: {
+            name: "Black Lace",
+            desc: "A high powered version of 'Dorph which imparts euphoria, adrenal rush, and invulnerability to pain.",
+            type: "Pain Negation",
+            cost: 650,
+            strength: 3,
+            difficulty: 13,
+            duration: 1
         }
     }
 }

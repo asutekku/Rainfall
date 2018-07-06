@@ -2,6 +2,7 @@
   "compilerOptions": {
     "outDir": "./build",
     "module": "amd",
+    "lib": ["es2017","dom"],
     "allowJs": true,
     "target": "es6"
   },

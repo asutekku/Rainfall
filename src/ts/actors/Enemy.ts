@@ -15,6 +15,7 @@ export class Enemy extends Actor {
         this.item = getItem.item();
         this.role = new Role();
         this.color = this.role.color;
+        this.weapon = getItem.weapon();
         this.level = Math.floor(Statistics.level + Utils.range(1, 3));
         this.currency = Math.floor(Utils.range(20, 50));
         this.health = Utils.range(

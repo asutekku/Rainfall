@@ -6,6 +6,7 @@ import {Messages} from "./messages";
 import {UI} from "../utils/UI";
 import {Paper} from "../utils/Paper";
 import {State} from "../utils/State";
+import {Weapon} from "../items/Weapon";
 
 export class getItem {
     static weapon() {
@@ -13,16 +14,13 @@ export class getItem {
     }
 
     static item() {
-        let randomItem = Math.floor(Math.random() * 4);
-        switch (randomItem) {
-            case 0:
-                return Utils.pickRandom(armors);
-            case 1:
-                return Utils.pickRandom(weapons);
-            case 2:
-                return Utils.pickRandom(items);
-            case 3:
-                return Utils.pickRandom(items);
+        let randomItem = Math.floor(Math.random() * 3);
+        if (randomItem === 0) {
+            return Utils.pickRandom(armors);
+        } else if (randomItem === 1) {
+            return Utils.pickRandom(weapons);
+        } else if (randomItem === 2) {
+            return Utils.pickRandom(items);
         }
     }
 
@@ -58,12 +56,22 @@ export class getItem {
         }
     }
 
+    static getWeapon(toGet): Weapon {
+        return weapons.find(e => e.id === toGet);
+    }
+
     static useItem(item) {
         switch (item.type) {
             case "weapons":
-                State.player.inventory.weapons.forEach(w => (w.equipped = false));
-                State.player.weapon = item;
-                item.equipped = true;
+                if (!item.equipped) {
+                    State.player.inventory.weapons.forEach(w => (w.equipped = false));
+                    State.player.weapon = item;
+                    item.equipped = true;
+                } else {
+                    State.player.weapon = getItem.getWeapon("weapon_fists");
+                    State.player.inventory.weapons.forEach(w => (w.equipped = false));
+                    item.equipped = false;
+                }
                 break;
             case "armor":
                 switch (item.bodypart) {

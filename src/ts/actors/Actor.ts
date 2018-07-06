@@ -10,15 +10,6 @@ import {State} from "../utils/State";
 import {Armor} from "../items/Armor";
 
 export class Actor {
-    get weapon(): Weapon {
-        if (this._weapon != null) return this._weapon;
-        return null;
-    }
-
-    set weapon(value: Weapon) {
-        this._weapon = value;
-    }
-
     item: any;
     public name: string;
     public role: Role;
@@ -26,7 +17,7 @@ export class Actor {
     public level: number;
     public experience: number;
     public health: number;
-    private _weapon: Weapon;
+    public weapon: Weapon;
     public armor:number;
     public equipment = {
         headgear: null,
@@ -214,7 +205,7 @@ export class Actor {
         this.level = 1;
         this.experience = null;
         this.health = 100;
-        this._weapon = getItem.weapon();
+        this.weapon = null;
         this.armor = 0;
         this.equipment = {
             headgear: null,
@@ -413,7 +404,6 @@ export class Actor {
             Utils.range((Statistics.level ^ (2 / 0.09)) * 0.9, (Statistics.level ^ (2 / 0.09)) * 1.1)
         );
         this.maxHealth = this.health;
-        this._weapon = getItem.weapon();
         this.armor = 0;
         this.equipment = {
             headgear: null,

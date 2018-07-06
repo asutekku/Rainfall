@@ -1,6 +1,5 @@
 import { Utils } from "../utils/utils";
 import { Item } from "./Item";
-import { Actor } from "../actors/Actor";
 
 export class Weapon implements Item {
     weaponType: string;
@@ -20,6 +19,7 @@ export class Weapon implements Item {
     level: number;
     equipped: boolean;
     manufacturer: string;
+    id: string;
 
     constructor(
         weaponType: string,
@@ -35,7 +35,8 @@ export class Weapon implements Item {
         range: number,
         cost: number,
         description: string,
-        manufacturer: string
+        manufacturer: string,
+        id:string
     ) {
         this.type = "weapons";
         this.weaponType = weaponType;
@@ -54,6 +55,7 @@ export class Weapon implements Item {
         this.manufacturer = manufacturer;
         this.level = 0;
         this.equipped = false;
+        this.id = id;
     }
 
     averageDamage(): number {

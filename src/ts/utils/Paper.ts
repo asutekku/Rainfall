@@ -58,7 +58,7 @@ export class Paper {
         return element;
     }
 
-    static paperInventoryItem(item: Item): HTMLElement {
+    static paperInventoryItem(item): HTMLElement {
         let itemElement = this.paperElement(item.name);
         itemElement.setAttribute("class", "inventoryItem");
         let itemTitle = document.createElement("span");
@@ -70,10 +70,14 @@ export class Paper {
         itemElement.appendChild(itemEquipped);
         itemElement.onclick = function() {
             getItem.useItem(item);
-            document
-                .getElementById("inventoryItems")
+            if (item.equipped){
+            document.getElementById("inventoryItems")
                 .childNodes.forEach(item => item.classList.remove("activeSelection"));
             itemElement.classList.add("activeSelection");
+            } else {
+                document.getElementById("inventoryItems")
+                    .childNodes.forEach(item => item.classList.remove("activeSelection"));
+            }
         };
         return itemElement;
     }
