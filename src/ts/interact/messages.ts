@@ -5,14 +5,16 @@ import { State } from "../utils/State";
 import {Player} from "../actors/player";
 import {Enemy} from "../actors/Enemy";
 
+/**
+ * TODO: FIX THE MESS THIS IS
+ */
 export class Messages {
     static combat(Case:string, actor:Player, enemy:Enemy) {
-        let playerName = Utils.span(`&#91;${actor.name}&#93;`, actor.role.color);
-        let targetName = Utils.span(`&#91;${enemy.name}&#93;`, enemy.role.color);
+        let playerName = Utils.span(`[${actor.name}]`, actor.role.color);
+        let targetName = Utils.span(`[${enemy.name}]`, enemy.role.color);
         let str_actorDamage = Utils.span(actor.weapon.weaponDamage().toString(), colors.hitRed);
         let str_actorDamageCrit = Utils.span((actor.weapon.weaponDamage() * 2).toString(), colors.hitRed);
         let deathCharge = actor.currency * 0.45;
-        let str_enemyHealth = enemy.health;
         let pronounP = enemy.gender === "Female" ? "her" : "his";
         let pronounS = enemy.gender === "Female" ? "she" : "he";
         let pronounO = enemy.gender === "Female" ? "her" : "him";

@@ -7,6 +7,7 @@
     --titleColor: #e0f0f0;
     --background: #0f0f0f;
     --borderStyle: none;
+    --inventoryItemSize: 80px;
 }
 
 html {
@@ -38,6 +39,7 @@ body {
     margin: 0;
     background: var(--background);
 }
+
 #infoPane {
     width: 100%;
     height: 35%;
@@ -137,7 +139,7 @@ body {
     background: #29241d;
     height: 100%;
     width: auto;
-    float:right;
+    float: right;
 }
 
 .vital {
@@ -324,27 +326,34 @@ h3.statTitle {
 }
 
 #inventoryCategories {
-    width:100%;
+    width: 100%;
     display: flex;
     justify-content: space-between;
 }
-#inventoryItemContainer{
-    width:700px;
-    height:auto;
+
+#inventoryItemContainer {
+    width: 700px;
+    height: auto;
 }
-#inventory_container{
+
+#inventory_container {
     display: flex;
 }
 
 .inventoryCategory {
     background: #2D2923;
     border: 2px solid #C89A5C;
-    width:100%;
+    width: 100%;
     text-align: center;
-    height:32px;
+    height: 32px;
     text-transform: uppercase;
 }
+
 #inventoryItems {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 10px;
+    grid-auto-rows: minmax(var(--inventoryItemSize), var(--inventoryItemSize));
     background: #2D2923;
     border: 2px solid #C89A5C;
     overflow-x: hidden;
@@ -353,38 +362,50 @@ h3.statTitle {
 
 #inventoryItems::-webkit-scrollbar {
     background-color: var(--background);
+    width: 2px;
 }
 
 #inventoryItems::-webkit-scrollbar-thumb {
     background-color: var(--baseColor);
     border-radius: 5px;
-    width: 5px;
+    width: 2px;
 }
 
-#itemInfoContainer{
-    float:left;
+#itemInfoContainer {
+    float: left;
     background: #2D2923;
     border: 2px solid #C89A5C;
-    height:296px;
-    width:296px;
+    height: 296px;
+    width: 296px;
 }
 
-.inventoryItem{
-    width:50%;
-    height:50px;
+.inventoryItem {
+    height: var(--inventoryItemSize);
     background: #2D2923;
     border: 2px solid #C89A5C;
 }
 
 .activeSelection {
-    background: var(--baseColor);
+    background: #000000;
 }
 
 h3 {
     font-size: 16px;
 }
 
-.activeInventoryCategory{
+.itemTitle {
+    float:right;
+    margin-top:4px;
+    margin-right:8px;
+}
+
+.itemType {
+    float:left;
+    margin-top:4px;
+    margin-left:6px;
+}
+
+.activeInventoryCategory {
     background: var(--baseColor);
 }
 

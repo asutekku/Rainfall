@@ -1,5 +1,6 @@
-import { getItem } from "../interact/getItem";
-import { Item } from "../items/Item";
+import {getItem} from "../interact/getItem";
+import {Item} from "../items/Item";
+import {Weapon} from "../items/Weapon";
 
 export class Paper {
     static paperElement(id?: string, className?: string): HTMLElement {
@@ -58,19 +59,27 @@ export class Paper {
         return element;
     }
 
-    static paperInventoryItem(item:Item): HTMLElement {
-        let itemElement = this.paperElement(item.name);
+    static paperInventoryItem(item: Item): HTMLElement {
+        let itemElement = this.paperElement(item.id);
         itemElement.setAttribute("class", "inventoryItem");
         let itemTitle = document.createElement("span");
+        let itemType = document.createElement("span");
+        let itemCount = document.createElement("span");
         itemTitle.setAttribute("class", "itemTitle");
+        itemType.setAttribute("class", "itemType");
+        itemCount.setAttribute("class", "itemCount");
         let embed = item.bodypart ? item.bodypart : item.type;
         let itemEquipped = document.createElement("span");
         itemTitle.textContent = item.name;
+        itemType.textContent = item.type == "weapons" ? (item as Weapon).weaponType : item.type;
+        itemCount.textContent = "1x";
         itemEquipped.textContent = "";
+        itemElement.appendChild(itemType);
         itemElement.appendChild(itemTitle);
         itemElement.appendChild(itemEquipped);
+        itemElement.appendChild(itemCount);
         itemElement.classList.add(embed + "_node");
-        itemElement.onclick = function() {
+        itemElement.onclick = function () {
             if (item.equipped) {
                 itemElement.classList.remove("activeSelection");
             } else {
@@ -82,7 +91,6 @@ export class Paper {
                 itemElement.classList.add("activeSelection");
             }
             getItem.useItem(item);
-            console.log(item.equipped);
         };
         return itemElement;
     }

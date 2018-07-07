@@ -1,12 +1,12 @@
 import weapons from "../items/Weapons";
 import items from "../items/items";
-import { Utils } from "../utils/utils";
+import {Utils} from "../utils/utils";
 import armors from "../items/armors";
-import { Messages } from "./messages";
-import { UI } from "../utils/UI";
-import { Paper } from "../utils/Paper";
-import { State } from "../utils/State";
-import { Weapon } from "../items/Weapon";
+import {Messages} from "./messages";
+import {UI} from "../utils/UI";
+import {Paper} from "../utils/Paper";
+import {State} from "../utils/State";
+import {Weapon} from "../items/Weapon";
 import {Actor} from "../actors/Actor";
 import {Item} from "../items/Item";
 import {Player} from "../actors/player";
@@ -28,7 +28,7 @@ export class getItem {
         }
     }
 
-    static updateCurrency(money:number, actor:Actor, target:Actor) {
+    static updateCurrency(money: number, actor: Actor, target: Actor) {
         if (money >= 0) {
             Messages.combat("getMoney", actor, target);
             actor.currency += money;
@@ -37,9 +37,11 @@ export class getItem {
         }
     }
 
-    static addItemToInventory(item:Item, actor:Actor) {
+    static addItemToInventory(item: Item, actor: Actor) {
+        let multiple: boolean = false;
         switch (item.type) {
             case "weapons":
+                multiple = !!actor.inventory.weapons.find(invItem => invItem.id.toString() === (item as Weapon).id.toString());
                 actor.inventory.weapons.push(item as Weapon);
                 break;
             case "armor":
@@ -52,21 +54,24 @@ export class getItem {
                 actor.inventory.misc.push(item);
                 break;
         }
-        //UI.updateInventory(actor);
-        let inventoryItem = Paper.paperInventoryItem(item);
-
-        let ul = document.getElementById("inventoryItems");
-        if (ul && State.UI.inventoryView === item.type) {
-            ul.appendChild(inventoryItem);
+        let inventoryContainer = document.getElementById("inventoryItems")!;
+        if (!multiple) {
+            let inventoryItem: HTMLElement = Paper.paperInventoryItem(item);
+            if (inventoryContainer && State.UI.inventoryView === item.type) {
+                inventoryContainer.appendChild(inventoryItem);
+            }
+        } else {
+            let invItemCount = document.getElementById(item.id!.toString())!.querySelector(".itemCount")!;
+            invItemCount!.textContent = `${(parseInt(invItemCount.textContent!, 10) + 1).toString()}x`;
         }
     }
 
-    static getWeapon(toGet:string): Weapon {
+    static getWeapon(toGet: string): Weapon {
         return weapons.find(e => e.id === toGet)!;
     }
 
-    static useItem(item:Item) {
-        const player:Player = State.player!;
+    static useItem(item: Item) {
+        const player: Player = State.player!;
         switch (item.type) {
             case "weapons":
                 if (!item.equipped) {
