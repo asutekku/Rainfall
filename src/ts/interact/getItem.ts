@@ -91,31 +91,33 @@ export class getItem {
     static useItem(item: Item) {
         const player: Player = State.player!;
         if (item instanceof Weapon) {
-            player.inventory.weapons.forEach(w => (w.equipped = false));
             getItem.clearEquips(item);
+            let equipDiv = document.getElementById(item.id)!.getElementsByClassName("itemEquipped")[0],
+                equipWeapon = !item.equipped;
+            equipDiv.textContent = !item.equipped ? "[Equipped]" : "";
             if (!item.equipped) {
                 player.weapon = item as Weapon;
-                document.getElementById(item.id)!.getElementsByClassName("itemEquipped")[0].textContent = "[Equipped]";
-                item.equipped = true;
             } else {
                 player.weapon = getItem.getWeapon("weapon_fists");
-                item.equipped = false;
             }
-        } else if (item instanceof Armor) {
-            player.inventory.armor.forEach(w => {
-                if (w.equipped && w.bodypart == item.bodypart) w.equipped = false;
-            });
+            player.inventory.weapons.forEach(w => (w.equipped = false));
+            item.equipped = equipWeapon;
+        }
+        if (item instanceof Armor) {
+            let equipDiv = document.getElementById(item.id)!.getElementsByClassName("itemEquipped")[0],
+                equipArmor = !item.equipped;
             getItem.clearEquips(item);
+            equipDiv.textContent = !item.equipped ? "[Equipped]" : "";
             if (!item.equipped) {
-                document.getElementById(item.id)!.getElementsByClassName("itemEquipped")[0].textContent = "[Equipped]";
                 (player.equipment as any)[item.bodypart!] = item;
-                item.equipped = true;
             } else {
                 (player.equipment as any)[item.bodypart!] = null;
-                item.equipped = false;
             }
+            player.inventory.armor.filter(w => w.bodypart == item.bodypart).forEach(e => (e.equipped = false));
+            item.equipped = equipArmor;
             UI.updateEquipment(item as Armor);
-        } else if (item.type === "medical") {
+        }
+        if (item.type === "medical") {
             player.health =
                 player.health >= player.maxHealth ? player.maxHealth : (player.health += item.restorePoints!);
         } else {

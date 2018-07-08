@@ -119,7 +119,7 @@ export class Paper {
         fragment.appendChild(itemTitleContainer);
         if (item instanceof Weapon) {
             fragment.appendChild(Paper.inventoryInfoItem("Manufacturer: ", (item as Weapon).manufacturer));
-            fragment.appendChild(Paper.inventoryInfoItem("Ammo type: ", (item as Weapon).ammoType));
+            if (item.ammoType!== "")fragment.appendChild(Paper.inventoryInfoItem("Ammo type: ", (item as Weapon).ammoType));
         } else if (item instanceof Armor) {
             fragment.appendChild(Paper.inventoryInfoItem("Type: ", (item as Armor).bodypart));
             fragment.appendChild(Paper.inventoryInfoItem("Set: ", (item as Armor).set));
