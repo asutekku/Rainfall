@@ -26,13 +26,13 @@ export class Combat {
 
     static shoot(actor: Actor, target: Actor): void {
         let distance: number = Utils.distance(actor.position, target.position);
-        let shotTarget = false;
-        let dices = actor.stats.ref + Utils.dice(3, 10);
+        let shotTarget: boolean = false;
+        let dices: number = actor.stats.ref + Utils.dice(3, 10);
         if (distance < 2) shotTarget = dices >= 1;
-        else if (distance < actor.weapon.range / 4) shotTarget = dices >= 15;
-        else if (distance < actor.weapon.range / 2) shotTarget = dices >= 20;
-        else if (distance < actor.weapon.range) shotTarget = dices >= 25;
-        else if (distance < actor.weapon.range * 2) shotTarget = dices >= 30;
+        else if (distance <= actor.weapon.range / 4) shotTarget = dices >= 15;
+        else if (distance <= actor.weapon.range / 2) shotTarget = dices >= 20;
+        else if (distance <= actor.weapon.range) shotTarget = dices >= 25;
+        else if (distance <= actor.weapon.range * 2) shotTarget = dices >= 30;
         if (shotTarget) {
             target.health -= actor.weapon.weaponDamage();
             Messages.combat("hitNormal", actor, target);
@@ -42,37 +42,26 @@ export class Combat {
     }
 
     static hitActor(actor: Actor, target: Actor): void {
-        let beforeHealth = target.health;
-        if (Utils.chance(actor.weapon.crit)) {
-            //CRITICAL HIT
-            Combat.attack(actor, target, 2);
-            if (beforeHealth === target.health) {
-                Combat.dodgeAttack(actor, target);
-            } else Messages.combat("hitCritical", actor, target);
+        let beforeHealth: number = target.health;
+        const multi: number = Utils.chance(actor.weapon.crit) ? 2 : 1;
+        Combat.attack(actor, target, multi);
+        if (beforeHealth === target.health) {
+            Combat.dodgeAttack(actor, target);
+        } else if (multi == 2) {
+            Messages.combat("hitCritical", actor, target);
         } else {
-            //NORMAL HIT
-            Combat.attack(actor, target, 1);
-            if (beforeHealth === target.health) {
-                Combat.dodgeAttack(actor, target);
-            } else {
-                Messages.combat("hitNormal", actor, target);
-            }
+            Messages.combat("hitNormal", actor, target);
         }
     }
 
     static attack(actor: Actor, target: Actor, multiplier: number): void {
-        if (target.armor != 0) {
-            let def = 1 - target.armor / 100;
-            target.health -= actor.weapon.weaponDamage() * def * multiplier;
-        } else {
-            target.health -= actor.weapon.weaponDamage() * multiplier;
-        }
+        const def = target.armor != 0 ? 1 - target.armor / 100 : 1;
+        target.health -= actor.weapon.weaponDamage() * def * multiplier;
     }
 
     static dodgeAttack(actor: Actor, target: Actor): void {
         Messages.combat("hitMiss", actor, target);
         Movement.moveTo(actor, target.position, actor.stats.ma.ma);
-        //actor.draw(State.playArea.context);
     }
 
     //Melee only!
@@ -124,7 +113,6 @@ export class Combat {
     static replaceEnemy(actor: Actor, target: Actor) {
         target.update();
         Movement.moveRandomly(State.playArea, target, State.playArea.width / 3);
-        //target.draw(State.playArea.context);
         if (actor.role.name === target.role.name) {
             Messages.combat("encounterSame", actor, target);
             Combat.replaceEnemy(actor, target);
@@ -135,9 +123,8 @@ export class Combat {
 
     static lootEnemy(actor: Actor, target: Actor) {
         Messages.combat("loot", actor, target);
-        let item = target.item;
         Messages.combat("lootFind", actor, target);
-        getItem.addItemToInventory(item, actor);
+        getItem.addItemToInventory(target.item, actor);
         getItem.updateCurrency(target.currency, actor, target);
         actor.armor = UI.getStoppingPower();
     }
