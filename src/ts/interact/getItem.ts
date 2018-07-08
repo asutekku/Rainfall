@@ -1,4 +1,4 @@
-import weapons from "../items/Weapons";
+import Equipment from "../items/Equipment";
 import items from "../items/items";
 import {Utils} from "../utils/utils";
 import armors from "../items/armors";
@@ -11,6 +11,8 @@ import {Actor} from "../actors/Actor";
 import {Item} from "../items/Item";
 import {Player} from "../actors/player";
 import {Armor} from "../items/Armor";
+
+const weapons = Equipment.weapons;
 
 export class getItem {
     static weapon() {
