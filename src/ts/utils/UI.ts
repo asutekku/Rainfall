@@ -1,11 +1,11 @@
-import {Utils} from "./utils";
+import { Utils } from "./utils";
 import Stats from "../actors/resources/Stats";
 import en_US from "../../lang/en_US";
-import {State} from "./State";
-import {Paper} from "./Paper";
-import {Armor} from "../items/Armor";
-import {Player} from "../actors/player";
-import {Item} from "../items/Item";
+import { State } from "./State";
+import { Paper } from "./Paper";
+import { Armor } from "../items/Armor";
+import { Player } from "../actors/player";
+import { Item } from "../items/Item";
 
 const _ = Utils;
 const statStrings = en_US.stats;
@@ -22,8 +22,8 @@ export class UI {
         _.l("weaponDesc")!.textContent = actor.weapon.description;
         _.l("charWeaponDamage")!.textContent = `${actor.weapon.damage + actor.weapon.diceThrows} - ${actor.weapon
             .diceThrows *
-        6 +
-        actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
+            6 +
+            actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
         _.l("charWeaponAccuracy")!.textContent = actor.weapon.accuracy + "%";
         _.l("charWeaponRange")!.textContent = actor.weapon.range + "m";
         _.l("charCRIT")!.textContent = `${actor.weapon.crit}%`;
@@ -116,8 +116,8 @@ export class UI {
     static changeInfoPane(contentID: string) {
         let infoPane = document.getElementById("infoPane")!;
         Array.from(document.getElementsByClassName("sideBar")[0]!.childNodes)
-            .filter(e=>e.nodeName !== "#text" )
-            .forEach(e=>(e as HTMLElement).classList.remove("buttonActiveSelection"));
+            .filter(e => e.nodeName !== "#text")
+            .forEach(e => (e as HTMLElement).classList.remove("buttonActiveSelection"));
         let pressedButton = document.getElementById(`${contentID}Button`)!;
         pressedButton.classList.add("buttonActiveSelection");
         infoPane.innerHTML = "";
@@ -149,7 +149,7 @@ export class UI {
     static Player(): HTMLElement {
         let player: Player = State.player!;
         let element = Paper.paperContainer("playerInfo_container", "infoAreaContainer", "Player");
-        let attributeContainer = function (): DocumentFragment {
+        let attributeContainer = function(): DocumentFragment {
             let frag = document.createDocumentFragment();
             let attributes = Paper.paperInfoContainer("attributes", "UIElement", "Info");
             frag.appendChild(attributes);
@@ -209,7 +209,7 @@ export class UI {
             catTitle.textContent = cat;
             inventoryCategories.appendChild(catItem);
             catItem.appendChild(catTitle);
-            catItem.onclick = function () {
+            catItem.onclick = function() {
                 State.UI.inventoryView = cat;
                 UI.changeInventoryView(cat);
                 UI.updateInventory();
@@ -224,7 +224,7 @@ export class UI {
         return element;
     }
 
-    static changeInventoryView(view:string) {
+    static changeInventoryView(view: string) {
         State.UI.inventoryView = view;
         Array.from(document.getElementsByClassName("inventoryCategory")).forEach(item => {
             item.classList.remove("activeInventoryCategory");
@@ -233,22 +233,28 @@ export class UI {
     }
 
     static updateInventory(): void {
-        const player:Player = State.player!;
+        const player: Player = State.player!;
         const invArea = document.getElementById("inventoryItems");
         if (invArea) {
             while (invArea.firstChild) {
                 invArea.removeChild(invArea.firstChild);
             }
-            (player.inventory as any)[State.UI.inventoryView].forEach((item:Item) => {
-                let inventoryItem = Paper.paperInventoryItem(item);
-                if (item.equipped === true) inventoryItem.classList.add("activeSelection");
+            let inventoryViewItems = (player.inventory as any)[State.UI.inventoryView];
+            let unique = [...new Set(inventoryViewItems)];
+            unique.forEach((item: any) => {
+                let inventoryItem = Paper.paperInventoryItem(item),
+                    count = inventoryViewItems.reduce(function(n: number, val: number) {
+                        return n + (val === item ? 1 : 0);
+                    }, 0);
+                if (item.equipped === true)
+                    inventoryItem.getElementsByClassName("itemEquipped")[0].textContent = "[Equipped]";
+                inventoryItem.getElementsByClassName("itemCount")[0].textContent = `${count}x`;
                 invArea.appendChild(inventoryItem);
             });
         }
     }
 
-    static addItemToInventory(): void {
-    }
+    static addItemToInventory(): void {}
 
     static Store(): HTMLElement {
         let element = Paper.paperContainer("store_container", "infoAreaContainer", "Store");

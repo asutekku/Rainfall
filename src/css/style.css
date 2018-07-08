@@ -236,7 +236,7 @@ button:hover {
 
 #gamearea {
     overflow: hidden;
-    height:100%;
+    height:800px;
     background: var(--backgroundLight);
     padding: 4px;
 }
@@ -477,7 +477,14 @@ h3 {
 }
 
 .itemEquipped {
-    color: var(--textColor)
+    display: table-cell;
+    vertical-align: bottom;
+    margin-bottom: 4px;
+    margin-left: 4px;
+    justify-self: start;
+    align-self: end;
+    grid-area: c;
+    color: var(--textColorDim)
 }
 
 .itemCount {

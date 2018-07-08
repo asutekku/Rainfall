@@ -10,7 +10,15 @@ export class Drug implements Item {
     diff: number;
     duration: number; //minutes
 
-    constructor(name:string, description:string, drugType:string, cost:number, strength:number, diff:number, duration:number) {
+    constructor(
+        name: string,
+        description: string,
+        drugType: string,
+        cost: number,
+        strength: number,
+        diff: number,
+        duration: number
+    ) {
         this.type = "drug";
         this.drugType = drugType;
         this.name = name;

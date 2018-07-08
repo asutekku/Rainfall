@@ -4,7 +4,7 @@ export class Stat {
     value: number;
     short: string;
 
-    constructor(name:string, short:string, desc:string, val:number) {
+    constructor(name: string, short: string, desc: string, val: number) {
         this.name = name;
         this.short = short;
         this.description = desc;

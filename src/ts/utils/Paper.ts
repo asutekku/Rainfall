@@ -1,6 +1,7 @@
-import {getItem} from "../interact/getItem";
-import {Item} from "../items/Item";
-import {Weapon} from "../items/Weapon";
+import { getItem } from "../interact/getItem";
+import { Item } from "../items/Item";
+import { Weapon } from "../items/Weapon";
+import { Armor } from "../items/Armor";
 
 let selected: Item | undefined;
 
@@ -76,12 +77,13 @@ export class Paper {
         itemType.textContent = item.type == "weapons" ? (item as Weapon).weaponType : item.type;
         itemCount.textContent = "1x";
         itemEquipped.textContent = "";
+        itemEquipped.classList.add("itemEquipped");
         itemElement.appendChild(itemType);
         itemElement.appendChild(itemTitle);
         itemElement.appendChild(itemEquipped);
         itemElement.appendChild(itemCount);
         itemElement.classList.add(embed + "_node");
-        itemElement.onclick = function () {
+        itemElement.onclick = function() {
             const infoContainer = document.getElementById("itemStatsContainer")!;
             const infoExtraContainer = document.getElementById("itemExtraContainer")!;
             infoContainer.innerHTML = "";
@@ -91,16 +93,16 @@ export class Paper {
                 selected = undefined;
             } else {
                 selected = item;
-                Array.from(document.getElementById("inventoryItems")!.childNodes)!
-                    .filter((e: any) => {
-                        return e.classList.contains(embed + "_node");
-                    })
-                    .forEach((item: any) => item.classList.remove("activeSelection"));
+                Array.from(document.getElementById("inventoryItems")!.childNodes)!.forEach((item: any) =>
+                    item.classList.remove("activeSelection")
+                );
                 itemElement.classList.add("activeSelection");
                 infoContainer.appendChild(Paper.paperInventoryItemInfo(item));
                 if (item instanceof Weapon) {
                     infoExtraContainer.appendChild(Paper.weaponStats(item as Weapon));
                     infoExtraContainer.appendChild(Paper.equipButton(item as Weapon));
+                } else if (item instanceof Armor) {
+                    infoExtraContainer.appendChild(Paper.equipButton(item as Armor));
                 }
             }
         };
@@ -118,6 +120,9 @@ export class Paper {
         if (item instanceof Weapon) {
             fragment.appendChild(Paper.inventoryInfoItem("Manufacturer: ", (item as Weapon).manufacturer));
             fragment.appendChild(Paper.inventoryInfoItem("Ammo type: ", (item as Weapon).ammoType));
+        } else if (item instanceof Armor) {
+            fragment.appendChild(Paper.inventoryInfoItem("Type: ", (item as Armor).bodypart));
+            fragment.appendChild(Paper.inventoryInfoItem("Set: ", (item as Armor).set));
         }
         fragment.appendChild(Paper.inventoryInfoItem("Description: ", (item as Weapon).description));
         return fragment;
@@ -190,7 +195,7 @@ export class Paper {
         progressTitle.classList.add("progressTitle");
         progressBar.value = value;
         progressBar.classList.add("progressBar");
-        progressValue.textContent = `${value.toString()}${modifier ? modifier : ''}`;
+        progressValue.textContent = `${value.toString()}${modifier ? modifier : ""}`;
         progressValue.classList.add("progressValue");
         progressBar.max = max;
         progressContainer.classList.add("progressContainer");

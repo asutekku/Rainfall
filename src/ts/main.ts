@@ -8,7 +8,6 @@ import { Statistics } from "./actors/resources/Statistics";
 import { State } from "./utils/State";
 
 export class Rainfall {
-
     public static main(): void {
         State.player = new Player();
         State.player.update();
@@ -73,7 +72,7 @@ export class Rainfall {
         //Functionality for the autoplay (because no one likes to click away)
         let running = false;
         Utils.l("autoButton")!.onclick = function() {
-            let int:any;
+            let int: any;
             if (!running) {
                 running = true;
                 int = setInterval(function() {

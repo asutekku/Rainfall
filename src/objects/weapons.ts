@@ -39,7 +39,7 @@ export default {
         type: "Pistol",
         brand: "Federated Arms",
         name: "X-22",
-        desc: "The ubiquitous \"Polymer-one-shot\" cheap plastic pistol. Available in designer colors.",
+        desc: 'The ubiquitous "Polymer-one-shot" cheap plastic pistol. Available in designer colors.',
         id: "weapon_X22",
         ammo: "6mm",
         reliability: 1,
@@ -165,32 +165,34 @@ export default {
         type: "Pistol",
         brand: "Colt",
         name: "AMT Model 2000",
-        desc: "Now the standard officer's sidearm for the U.S. Army, the M-2000 served well in the Central American Wars.",
+        desc:
+            "Now the standard officer's sidearm for the U.S. Army, the M-2000 served well in the Central American Wars.",
         id: "weapon_colt",
         ammo: "12mm",
         reliability: 1,
         accuracy: 50,
         rarity: 1,
         damage: 1,
-        crit:6.1,
+        crit: 6.1,
         diceThrows: 4,
         shots: 8,
         rateOfFire: 1,
         cost: 75,
-        range: 500
+        range: 50
     },
     miniauto: {
         type: "Submachine Gun",
         brand: "Uzi",
         name: "Miniauto 9",
-        desc: "Uzi's entry into the 21st century, all plastic, with rotary electric clip and adjustable trigger. The choice for many security solos.",
+        desc:
+            "Uzi's entry into the 21st century, all plastic, with rotary electric clip and adjustable trigger. The choice for many security solos.",
         id: "weapon_miniauto",
         ammo: "9mm",
         reliability: 1,
         accuracy: 60,
         rarity: 1,
         damage: 1,
-        crit:1.2,
+        crit: 1.2,
         diceThrows: 2,
         shots: 30,
         rateOfFire: 35,
@@ -219,7 +221,8 @@ export default {
         type: "Submachine Gun",
         brand: "Federated Arms",
         name: "Tech Assault II",
-        desc: "An updated version of the venerable Tech Assault I, features larger clip, better autofire, no melting. Honest.",
+        desc:
+            "An updated version of the venerable Tech Assault I, features larger clip, better autofire, no melting. Honest.",
         id: "weapon_assault2",
         ammo: "6mm",
         reliability: 1,
@@ -273,7 +276,8 @@ export default {
         type: "Submachine Gun",
         brand: "Heckler & Koch",
         name: "MPK-11",
-        desc: "Possibly the most used Solo's gun in existence, the MPK-11 can be modified into four different designs, including a bullpup configuration, standard SMG, an assault carbine and a grenade launcher mount.",
+        desc:
+            "Possibly the most used Solo's gun in existence, the MPK-11 can be modified into four different designs, including a bullpup configuration, standard SMG, an assault carbine and a grenade launcher mount.",
         id: "weapon_MPK11",
         ammo: "9mm",
         reliability: 1,
@@ -399,7 +403,8 @@ export default {
         type: "Shotgun",
         brand: "Arasaka",
         name: "Arasaka Rapid Assault 12",
-        desc: "A high powered auto-shotgun with lethal firepower. Used by Arasaka worldwide. Another good reason to avoid the Boys in Black.",
+        desc:
+            "A high powered auto-shotgun with lethal firepower. Used by Arasaka worldwide. Another good reason to avoid the Boys in Black.",
         id: "weapon_RA12",
         ammo: "12 gauge",
         reliability: 1,
@@ -485,4 +490,4 @@ export default {
         cost: 0,
         range: 2
     }
-}
+};

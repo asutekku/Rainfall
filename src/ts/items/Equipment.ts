@@ -1,5 +1,5 @@
-import {Weapon} from "./Weapon";
-import {default as w} from "../../objects/weapons";
+import { Weapon } from "./Weapon";
+import { default as w } from "../../objects/weapons";
 
 export default class Equipment {
     static weapons: Weapon[] = Array.from(Object.values(w as Object)).map(e => {
@@ -19,6 +19,7 @@ export default class Equipment {
             e.desc,
             e.brand,
             e.id,
-            e.ammo)
+            e.ammo
+        );
     });
 }

@@ -38,7 +38,7 @@ export class Movement {
         }
     }
 
-    static moveTo(actor: Actor, target: number[], distance:number) {
+    static moveTo(actor: Actor, target: number[], distance: number) {
         let Angle = Math.atan2(target[1] - actor.position[1], target[0] - actor.position[0]);
         let Sin = Math.sin(Angle) * distance;
         let Cos = Math.cos(Angle) * distance;

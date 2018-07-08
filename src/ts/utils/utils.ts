@@ -2,11 +2,11 @@ let spanId: number = 0;
 let spanIdToRemove: number = 1;
 
 export class Utils {
-    static l(what:string): HTMLElement | null {
+    static l(what: string): HTMLElement | null {
         return document.getElementById(what);
     }
 
-    static create(what:string): HTMLElement | null {
+    static create(what: string): HTMLElement | null {
         return document.createElement(what);
     }
 
@@ -14,11 +14,11 @@ export class Utils {
         return arr[Math.floor(Math.random() * arr.length)];
     }
 
-    static save(what:string, string: string): void {
+    static save(what: string, string: string): void {
         return localStorage.setItem(what, string);
     }
 
-    static colorize(what:string): string {
+    static colorize(what: string): string {
         let randomColor =
             "#" +
             Math.random()
@@ -42,7 +42,7 @@ export class Utils {
         }
     }
 
-    static span(line:string, spanClass:string): string {
+    static span(line: string, spanClass: string): string {
         return `<span class="${spanClass}">${line}</span>`;
     }
 

@@ -8,7 +8,7 @@ export class Scrap implements Item {
     cost: number;
     level: number;
 
-    constructor(type:string, name:string, cost:number, description:string) {
+    constructor(type: string, name: string, cost: number, description: string) {
         this.type = type;
         this.name = name;
         this.cost = cost;
@@ -27,7 +27,7 @@ export class Medical implements Item {
     restorePoints: number;
     level: number;
 
-    constructor(type:string, name:string, cost:number, restorePoints:number, description:string) {
+    constructor(type: string, name: string, cost: number, restorePoints: number, description: string) {
         this.type = type;
         this.name = name;
         this.cost = cost;

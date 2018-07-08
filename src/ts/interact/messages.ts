@@ -1,14 +1,13 @@
-import {Utils} from "../utils/utils";
-import {Actor} from "../actors/Actor";
-import {State} from "../utils/State";
-import {Player} from "../actors/player";
-import {Enemy} from "../actors/Enemy";
+import { Utils } from "../utils/utils";
+import { Actor } from "../actors/Actor";
+import { State } from "../utils/State";
+import { Player } from "../actors/player";
+import { Enemy } from "../actors/Enemy";
 
 /**
  * TODO: FIX THE MESS THIS IS
  */
 export class Messages {
-
     static combat(Case: string, actor: Player, enemy: Enemy) {
         let playerName = Utils.span(`[${actor.name}]`, `${actor.role.name.toLowerCase()}Color`);
         let targetName = Utils.span(`[${enemy.name}]`, `${enemy.role.name.toLowerCase()}Color`);
@@ -26,7 +25,10 @@ export class Messages {
             `(${enemy.health + actor.weapon.weaponDamage() * 2}=>${enemy.health})`,
             "damageGreen"
         );
-        let str_damageIndicatorCrit0 = Utils.span(`(${enemy.health + actor.weapon.weaponDamage() * 2}=>0)`, "damageGreen");
+        let str_damageIndicatorCrit0 = Utils.span(
+            `(${enemy.health + actor.weapon.weaponDamage() * 2}=>0)`,
+            "damageGreen"
+        );
         let str_damageIndicator0 = Utils.span(`(${enemy.health + actor.weapon.weaponDamage()}=>0)`, "damageGreen");
         let str_enemyDamageIndicator = Utils.span(
             `(${actor.health + enemy.weapon.damage}=>${actor.health})`,
@@ -91,14 +93,21 @@ export class Messages {
                 }
                 break;
             case "encounter":
-                lineToPrint = `You encountered ${targetName}. Just by looking at ${pronounP} attire you can see ${pronounS} is a ${str_actorRole(enemy)}.`;
+                lineToPrint = `You encountered ${targetName}. Just by looking at ${pronounP} attire you can see ${pronounS} is a ${str_actorRole(
+                    enemy
+                )}.`;
                 break;
             case "encounterSame":
-                lineToPrint = `You encountered ${targetName}. However you see ${pronounP} is also ${str_actorRole(enemy)} so you just greet ${pronounO} and venture forward.`;
+                lineToPrint = `You encountered ${targetName}. However you see ${pronounP} is also ${str_actorRole(
+                    enemy
+                )} so you just greet ${pronounO} and venture forward.`;
                 break;
             ///Level up message
             case "levelUp":
-                lineToPrint = `You leveled up from ${Utils.span((actor.level - 1).toString(), "damageGreen")} to ${playerLVL}!`;
+                lineToPrint = `You leveled up from ${Utils.span(
+                    (actor.level - 1).toString(),
+                    "damageGreen"
+                )} to ${playerLVL}!`;
                 break;
             ///Death message
             case "death":
@@ -109,13 +118,16 @@ export class Messages {
                 break;
             ///Respawn message
             case "respawn":
-                lineToPrint = `${Utils.span(`[Nanobots]`, "weaponBlue")} from TraumaTeam revitalize you. You have been charged ${deathCharge} yens.`;
+                lineToPrint = `${Utils.span(
+                    `[Nanobots]`,
+                    "weaponBlue"
+                )} from TraumaTeam revitalize you. You have been charged ${deathCharge} yens.`;
                 break;
             ///Looking for loot message
             case "loot":
                 switch (randomcase(3)) {
                     case 0:
-                        lineToPrint = `As the blood still flows from ${targetName}'s liquidated carcass, you search through ${pronounP} belongings.`
+                        lineToPrint = `As the blood still flows from ${targetName}'s liquidated carcass, you search through ${pronounP} belongings.`;
                         break;
                     case 1:
                         lineToPrint = `You search through ${targetName}'s belongings.`;

@@ -5,6 +5,6 @@ export interface Item {
     type: string;
     name: string;
     cost: number;
-    id?:string;
-    description:string;
+    id?: string;
+    description: string;
 }

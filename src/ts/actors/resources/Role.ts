@@ -1,6 +1,6 @@
 import { default as roles } from "./roles";
 
-let randomProperty = function(obj:Object) {
+let randomProperty = function(obj: Object) {
     let keys = Object.keys(obj);
     return (obj as any)[keys[(keys.length * Math.random()) << 0]];
 };

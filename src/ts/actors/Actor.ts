@@ -587,7 +587,7 @@ export class Actor {
         };
     }
 
-    reposition():void {
+    reposition(): void {
         this.position = [
             this.position[0] + Math.floor(Utils.range(-50, 50)),
             this.position[1] + Math.floor(Utils.range(-50, 50))
