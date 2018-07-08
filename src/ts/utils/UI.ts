@@ -198,6 +198,8 @@ export class UI {
         let inventoryCategories = Paper.paperElement("inventoryCategories", "");
         let inventoryItemContainer = Paper.paperElement("inventoryItems", "");
         let itemInfoContainer = Paper.paperElement("itemInfoContainer", "");
+        let itemStatsContainer = Paper.paperElement("itemStatsContainer", "");
+        let itemExtraContainer = Paper.paperElement("itemExtraContainer", "");
         categories.map(cat => {
             let catItem = document.createElement("div");
             let catTitle = document.createElement("span");
@@ -215,6 +217,8 @@ export class UI {
         });
         itemContainer.appendChild(inventoryCategories);
         itemContainer.appendChild(inventoryItemContainer);
+        itemInfoContainer.appendChild(itemStatsContainer);
+        itemInfoContainer.appendChild(itemExtraContainer);
         element.appendChild(itemContainer);
         element.appendChild(itemInfoContainer);
         return element;

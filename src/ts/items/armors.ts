@@ -52,7 +52,7 @@ let armors = [
         3,
         8,
         60,
-        '/"Borrowed/" from the local Private Security Company, these helmets are proven to keep your head safe from blunt attacks. Best worn with ski-goggles.'
+        `"Borrowed" from the local Private Security Company, these helmets are proven to keep your head safe from blunt attacks. Best worn with ski-goggles.`
     ),
     //Steel helmet
     new Armor(
@@ -62,7 +62,7 @@ let armors = [
         4,
         10,
         70,
-        '/"Sir Jonathan III/" has been engraved to the inside of this Armet helmet. The eye opening is really small so the field of view is extremely limited.'
+        `"Sir Jonathan III" has been engraved to the inside of this Armet helmet. The eye opening is really small so the field of view is extremely limited.`
     ),
     //Nylon helmet
     new Armor(

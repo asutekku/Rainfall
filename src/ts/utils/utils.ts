@@ -33,7 +33,7 @@ export class Utils {
         let content = document.getElementById("actions")!;
         node.id = "message_" + spanId;
         node.classList.add("actionMessage");
-        node.innerHTML = `<span class="iClass">></span>${line}<br>`;
+        node.innerHTML = `<span class="messageArrow">></span>${line}<br>`;
         content.insertBefore(node, content.childNodes[0]);
         if (content.childElementCount >= 50) {
             let oldNode = document.getElementById("message_" + spanIdToRemove)!;
@@ -42,8 +42,8 @@ export class Utils {
         }
     }
 
-    static span(line:string, color:string): string {
-        return `<span style=color:${color}>${line}</span>`;
+    static span(line:string, spanClass:string): string {
+        return `<span class="${spanClass}">${line}</span>`;
     }
 
     static dice(times: number, sides: number): number {

@@ -2,6 +2,8 @@ import {getItem} from "../interact/getItem";
 import {Item} from "../items/Item";
 import {Weapon} from "../items/Weapon";
 
+let selected: Item | undefined;
+
 export class Paper {
     static paperElement(id?: string, className?: string): HTMLElement {
         const element = document.createElement("div");
@@ -80,11 +82,15 @@ export class Paper {
         itemElement.appendChild(itemCount);
         itemElement.classList.add(embed + "_node");
         itemElement.onclick = function () {
-            const infoContainer = document.getElementById("itemInfoContainer")!;
+            const infoContainer = document.getElementById("itemStatsContainer")!;
+            const infoExtraContainer = document.getElementById("itemExtraContainer")!;
             infoContainer.innerHTML = "";
-            if (item.equipped) {
+            infoExtraContainer.innerHTML = "";
+            if (selected === item) {
                 itemElement.classList.remove("activeSelection");
+                selected = undefined;
             } else {
+                selected = item;
                 Array.from(document.getElementById("inventoryItems")!.childNodes)!
                     .filter((e: any) => {
                         return e.classList.contains(embed + "_node");
@@ -92,36 +98,91 @@ export class Paper {
                     .forEach((item: any) => item.classList.remove("activeSelection"));
                 itemElement.classList.add("activeSelection");
                 infoContainer.appendChild(Paper.paperInventoryItemInfo(item));
+                if (item instanceof Weapon) {
+                    infoExtraContainer.appendChild(Paper.weaponStats(item as Weapon));
+                    infoExtraContainer.appendChild(Paper.equipButton(item as Weapon));
+                }
             }
-            getItem.useItem(item);
         };
         return itemElement;
     }
 
     static paperInventoryItemInfo(item: Item): DocumentFragment {
-        let fragment: DocumentFragment = document.createDocumentFragment();
-        let itemTitleContainer: HTMLDivElement = document.createElement("div");
-        let itemDescriptionContainer: HTMLDivElement = document.createElement("div");
+        let fragment: DocumentFragment = document.createDocumentFragment(),
+            itemTitleContainer: HTMLDivElement = document.createElement("div"),
+            itemDescriptionContainer: HTMLDivElement = document.createElement("div"),
+            itemDescription: HTMLDivElement = document.createElement("div"),
+            itemDescriptionSpan: HTMLSpanElement = document.createElement("span"),
+            itemTitle: HTMLSpanElement = document.createElement("span");
         itemTitleContainer.classList.add("inventoryItemInfoTitle");
-        itemDescriptionContainer.classList.add("inventoryItemInfoDescription");
-        let itemTitle: HTMLSpanElement = document.createElement("span");
+        itemDescriptionContainer.classList.add("inventoryItemInfoContainer");
+        itemDescription.textContent = "Description: ";
+        itemDescription.classList.add("itemInfoPrimary");
+        itemDescriptionSpan.classList.add("itemInfoSecondary");
+        itemDescriptionSpan.textContent = item.description;
         itemTitle.textContent = item.name.toString();
-        itemDescriptionContainer.textContent = item.description;
         itemTitleContainer.appendChild(itemTitle);
         fragment.appendChild(itemTitleContainer);
-        fragment.appendChild(itemDescriptionContainer);
         if (item instanceof Weapon) {
-            fragment.appendChild(Paper.paperProgressBar("Damage",(item as Weapon).averageDamage(),750));
-            fragment.appendChild(Paper.paperProgressBar("Range",(item as Weapon).range,1000,"m"));
-            fragment.appendChild(Paper.paperProgressBar("Rate of Fire",(item as Weapon).rateOfFire,50));
-            fragment.appendChild(Paper.paperProgressBar("Accuracy",(item as Weapon).accuracy,100,"%"));
-            fragment.appendChild(Paper.paperProgressBar("Critical chance",(item as Weapon).crit,100,"%"));
-            fragment.appendChild(Paper.paperProgressBar("Clip size",(item as Weapon).shots,50));
+            let manufactContainer: HTMLDivElement = document.createElement("div"),
+                manufactTitle: HTMLDivElement = document.createElement("div"),
+                manufacturer: HTMLSpanElement = document.createElement("span");
+            manufactTitle.textContent = "Manufacturer: ";
+            manufactTitle.classList.add("itemInfoPrimary");
+            manufactContainer.classList.add("inventoryItemInfoContainer");
+            manufacturer.textContent = (item as Weapon).manufacturer;
+            manufacturer.classList.add("weaponManufacturer","itemInfoSecondary");
+            manufactContainer.appendChild(manufactTitle);
+            manufactTitle.appendChild(manufacturer);
+            fragment.appendChild(manufactContainer);
         }
+        itemDescription.appendChild(itemDescriptionSpan);
+        itemDescriptionContainer.appendChild(itemDescription);
+        fragment.appendChild(itemDescriptionContainer);
         return fragment;
     }
 
-    static paperProgressBar(title: string, value: number, max: number,modifier?:string): DocumentFragment {
+    static weaponStats(weapon: Weapon): DocumentFragment {
+        let fragment: DocumentFragment = document.createDocumentFragment(),
+            statContainer: HTMLDivElement = document.createElement("div"),
+            statsTitleContainer: HTMLHeadingElement = document.createElement("div"),
+            statsTitle: HTMLSpanElement = document.createElement("span");
+        statContainer.classList.add("weaponStatContainer");
+        statsTitleContainer.classList.add("inventoryItemInfoTitle");
+        statsTitle.textContent = "Weapon stats:";
+        statContainer.appendChild(Paper.paperProgressBar("Damage", weapon.averageDamage(), 750));
+        statContainer.appendChild(Paper.paperProgressBar("Range", weapon.range, 1000, "m"));
+        statContainer.appendChild(Paper.paperProgressBar("Rate of Fire", weapon.rateOfFire, 50));
+        statContainer.appendChild(Paper.paperProgressBar("Accuracy", weapon.accuracy, 100, "%"));
+        statContainer.appendChild(Paper.paperProgressBar("Critical chance", weapon.crit, 100, "%"));
+        statContainer.appendChild(Paper.paperProgressBar("Clip size", weapon.shots, 50));
+        statsTitleContainer.appendChild(statsTitle);
+        fragment.appendChild(statsTitleContainer);
+        fragment.appendChild(statContainer);
+        return fragment;
+    }
+
+    static equipButton(item: Item): DocumentFragment {
+        let frag = document.createDocumentFragment(),
+            equipButton = document.createElement("button");
+        equipButton.textContent = item.equipped ? "Unequip" : "Equip";
+        equipButton.classList.add("button");
+        equipButton.classList.add("inventoryButton");
+        equipButton.onclick = () => {
+            if (!item.equipped) {
+                equipButton.textContent = "Unequip";
+                equipButton.classList.add("buttonActiveSelection");
+            } else {
+                equipButton.textContent = "Equip";
+                equipButton.classList.remove("buttonActiveSelection");
+            }
+            getItem.useItem(item);
+        };
+        frag.appendChild(equipButton);
+        return frag;
+    }
+
+    static paperProgressBar(title: string, value: number, max: number, modifier?: string): DocumentFragment {
         let frag: DocumentFragment = document.createDocumentFragment(),
             progressContainer: HTMLDivElement = document.createElement("div"),
             progressBar: HTMLProgressElement = document.createElement("progress"),

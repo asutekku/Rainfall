@@ -28,7 +28,7 @@ export class Combat {
         let distance: number = Utils.distance(actor.position, target.position);
         let shotTarget: boolean = false;
         let dices: number = actor.stats.ref + Utils.dice(3, 10);
-        if (distance < 2) shotTarget = dices >= 1;
+        if (distance < 2000) shotTarget = dices >= 1;
         else if (distance <= actor.weapon.range / 4) shotTarget = dices >= 15;
         else if (distance <= actor.weapon.range / 2) shotTarget = dices >= 20;
         else if (distance <= actor.weapon.range) shotTarget = dices >= 25;
