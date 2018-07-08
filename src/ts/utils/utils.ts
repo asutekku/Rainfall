@@ -32,7 +32,7 @@ export class Utils {
         let node = document.createElement("span");
         let content = document.getElementById("actions")!;
         node.id = "message_" + spanId;
-        node.style.whiteSpace = "normal";
+        node.classList.add("actionMessage");
         node.innerHTML = `<span class="iClass">></span>${line}<br>`;
         content.insertBefore(node, content.childNodes[0]);
         if (content.childElementCount >= 50) {

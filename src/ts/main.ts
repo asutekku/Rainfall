@@ -38,7 +38,7 @@ export class Rainfall {
             UI.changeInfoPane("inventory");
             UI.updateInventory();
         };
-        Utils.l("questButton")!.onclick = function() {
+        Utils.l("questsButton")!.onclick = function() {
             UI.changeInfoPane("quests");
         };
         Utils.l("storeButton")!.onclick = function() {

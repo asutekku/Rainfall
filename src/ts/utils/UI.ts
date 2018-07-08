@@ -115,6 +115,11 @@ export class UI {
 
     static changeInfoPane(contentID: string) {
         let infoPane = document.getElementById("infoPane")!;
+        Array.from(document.getElementsByClassName("sideBar")[0]!.childNodes)
+            .filter(e=>e.nodeName !== "#text" )
+            .forEach(e=>(e as HTMLElement).classList.remove("buttonActiveSelection"));
+        let pressedButton = document.getElementById(`${contentID}Button`)!;
+        pressedButton.classList.add("buttonActiveSelection");
         infoPane.innerHTML = "";
         switch (contentID) {
             case "inventory":
@@ -195,10 +200,13 @@ export class UI {
         let itemInfoContainer = Paper.paperElement("itemInfoContainer", "");
         categories.map(cat => {
             let catItem = document.createElement("div");
+            let catTitle = document.createElement("span");
+            catTitle.classList.add("catTitle");
             catItem.setAttribute("class", "inventoryCategory");
             catItem.id = `${cat}Inventory`;
-            catItem.textContent = cat;
+            catTitle.textContent = cat;
             inventoryCategories.appendChild(catItem);
+            catItem.appendChild(catTitle);
             catItem.onclick = function () {
                 State.UI.inventoryView = cat;
                 UI.changeInventoryView(cat);

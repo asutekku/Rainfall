@@ -1,26 +1,33 @@
-.element {
-    width: 100px;
-}
-
 :root {
-    --baseColor: #c99b5c;
-    --titleColor: #e0f0f0;
-    --background: #0f0f0f;
+    --baseColor: #D2FEFD;
+    --titleColor: #934E41;
+    --background: #0e0e0e;
+    --backgroundLight: #090909;
+    --playColor: #070606;
     --borderStyle: none;
+    --buttonTextColor: #d1d1d1;
+    --buttonColor: #070606;
     --inventoryItemSize: 80px;
+    --selectionActive: #1c1818;
+    --selectionActiveBorder: #934E41;
+    --selectionHover: #0d0d0d;
+    --selectionHoverBorder: #3c3c3c;
+    --borderColor:#292929;
+    --textColor: #e8e8e8;
+    --textColorDim: #9e9e9e;
 }
 
 html {
     height: 100%;
     width: 100%;
     margin: 0;
-    font-family: /*Futura, "Trebuchet MS", Arial,*/ monospace;
+    font-family: monospace;
 }
 
 body {
     height: 100%;
-    background: #2d2d2d;
-    color: #e8e8e8;
+    background: var(--background);
+    color: var(--textColor);
     margin: 0;
     padding: 0;
 }
@@ -67,7 +74,7 @@ body {
     display: flex;
 }
 
-#charpane {
+.sideBar {
     width: 200px;
     height: 100%;
     background: var(--background);
@@ -78,7 +85,7 @@ body {
     flex: 1;
     height: 100%;
     width: 10px;
-    background: #141414;
+    background: var(--backgroundLight);
     float: left;
     overflow: hidden;
     /*position: relative;*/
@@ -143,7 +150,7 @@ body {
 }
 
 .vital {
-    color: var(--baseColor);
+    color: var(--selectionActiveBorder);
 }
 
 h2.statTitle {
@@ -181,25 +188,35 @@ button.kill {
     position: relative;
     /*top: 25px;*/
     font-family: monospace;
-    margin-top: 5px;
+    margin-top: 0px;
     margin-bottom: 5px;
     height: 40px;
     width: 90%;
     align-content: center;
     left: 5%;
+    cursor: pointer;
     text-transform: uppercase;
-    border-top-right-radius: 5px;
-    border-bottom-left-radius: 5px;
-    border: 2px solid var(--baseColor);
-    /*font-size: 16px;*/
+    border-width: 0 0 0 4px;
+    border-style: solid;
+    border-color: var(--borderColor);
     font-weight: 500;
-    font-style: bold;
-    color: #d1d1d1;
-    background: #29241d;
+    color: var(--buttonTextColor);
+    background: var(--buttonColor);
     -moz-transition: all 0.2s ease-in;
     -o-transition: all 0.2s ease-in;
     -webkit-transition: all 0.2s ease-in;
     transition: all 0.1s ease-in;
+}
+button:focus {outline:0;}
+
+button:hover {
+    background: var(--selectionActive);
+    border-color: var(--selectionHoverBorder);
+}
+
+.buttonActiveSelection{
+    border-color: var(--selectionActiveBorder);
+    color: var(--selectionActiveBorder);
 }
 
 #gamearea {
@@ -207,9 +224,6 @@ button.kill {
     float: left;
 }
 
-.button:active {
-    background: #a2763b;
-}
 
 .tooltip {
     position: relative;
@@ -219,12 +233,12 @@ button.kill {
 .tooltip .tooltiptext {
     visibility: hidden;
     width: 200px;
-    background-color: #29241d;
+    background-color: var(--selectionActive);
     color: #d1d1d1;
     text-align: center;
-    border-top-left-radius: 10px;
-    border-bottom-right-radius: 10px;
-    border: 2px solid var(--baseColor);
+    border-width: 0 4px 0 0;
+    border-style: solid;
+    border-color: var(--selectionActiveBorder);
     padding: 5px 0;
     position: absolute;
     z-index: 40;
@@ -341,71 +355,121 @@ h3.statTitle {
 }
 
 .inventoryCategory {
-    background: #2D2923;
-    border: 2px solid #C89A5C;
+    background: var(--backgroundLight);
+    display: inline-block;
     width: 100%;
     text-align: center;
     height: 32px;
     text-transform: uppercase;
+    cursor: pointer;
+}
+
+.activeInventoryCategory {
+    border-style: solid;
+    border-width: 2px 0 0 0;
+    border-color: var(--selectionActiveBorder);
+    color: var(--selectionActiveBorder);
+}
+
+.catTitle {
+    position:relative;
+    top:6px;
+    vertical-align: middle;
 }
 
 #inventoryItems {
     display: grid;
+    background: var(--backgroundLight);
     grid-template-columns: repeat(2, 1fr);
     grid-gap: 10px;
     grid-auto-rows: minmax(var(--inventoryItemSize), var(--inventoryItemSize));
-    background: #2D2923;
-    border: 2px solid #C89A5C;
     overflow-x: hidden;
     height: 260px;
+    padding: 0 8px 8px 8px;
 }
 
 #inventoryItems::-webkit-scrollbar {
-    background-color: var(--background);
-    width: 2px;
+    background-color: var(--borderColor);
+    width: 5px;
 }
 
 #inventoryItems::-webkit-scrollbar-thumb {
-    background-color: var(--baseColor);
+    background-color: #6A6A6A;
     border-radius: 5px;
     width: 2px;
 }
 
 #itemInfoContainer {
     float: left;
-    background: #2D2923;
-    border: 2px solid #C89A5C;
+    background: var(--backgroundLight);
     height: 296px;
     width: 296px;
+    margin-left: 10px;
 }
 
 .inventoryItem {
+    display: grid;
+    background: #000000;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-areas: "a b" "c d";
     height: var(--inventoryItemSize);
-    background: #2D2923;
-    border: 2px solid #C89A5C;
+    border-width: 0 0 0 4px;
+    border-style: solid;
+    border-color: var(--borderColor);
+    cursor: pointer;
+}
+
+.inventoryItem:hover {
+    border-color: var(--selectionHoverBorder);
+    background: var(--selectionHover);;
 }
 
 .activeSelection {
-    background: #000000;
+    background: var(--selectionActive);
+    border-color: var(--selectionActiveBorder);
+}
+.activeSelection:hover {
+    background: var(--selectionActive);
+    border-color: var(--selectionActiveBorder);
 }
 
 h3 {
     font-size: 16px;
 }
 
-.itemTitle {
-    float:right;
-    margin-top:4px;
-    margin-right:8px;
-}
-
 .itemType {
-    float:left;
-    margin-top:4px;
-    margin-left:6px;
+    float: left;
+    text-transform: capitalize;
+    margin-top: 4px;
+    margin-left: 6px;
+    grid-area: a;
+    color: var(--textColorDim)
 }
 
-.activeInventoryCategory {
-    background: var(--baseColor);
+.itemTitle {
+    float: right;
+    margin-top: 4px;
+    margin-right: 8px;
+    grid-area: b;
+    justify-self: end;
+    color: var(--textColor)
 }
 
+.itemEquipped {
+    color: var(--textColor)
+}
+
+.itemCount {
+    display: table-cell;
+    vertical-align: bottom;
+    margin-bottom: 4px;
+    margin-right: 8px;
+    justify-self: end;
+    align-self: end;
+    grid-area: d;
+    color: var(--textColorDim)
+}
+
+.actionMessage{
+    font-size: 13px;
+}

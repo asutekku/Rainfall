@@ -133,7 +133,7 @@ export default class en_US {
         },
         AKR20: {
             brand: "Kalashnikov",
-            name: "AKR-20 Medium Assault",
+            name: "AKR-20",
             desc:
                 "A plastic and carbon fiber update of the AKM, distributed throughout the remains of the Soviet bloc.",
             id: "weapon_AKR20"
