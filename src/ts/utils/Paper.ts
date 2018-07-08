@@ -80,6 +80,8 @@ export class Paper {
         itemElement.appendChild(itemCount);
         itemElement.classList.add(embed + "_node");
         itemElement.onclick = function () {
+            const infoContainer = document.getElementById("itemInfoContainer")!;
+            infoContainer.innerHTML = "";
             if (item.equipped) {
                 itemElement.classList.remove("activeSelection");
             } else {
@@ -89,9 +91,57 @@ export class Paper {
                     })
                     .forEach((item: any) => item.classList.remove("activeSelection"));
                 itemElement.classList.add("activeSelection");
+                infoContainer.appendChild(Paper.paperInventoryItemInfo(item));
             }
             getItem.useItem(item);
         };
         return itemElement;
+    }
+
+    static paperInventoryItemInfo(item: Item): DocumentFragment {
+        let fragment: DocumentFragment = document.createDocumentFragment();
+        let itemTitleContainer: HTMLDivElement = document.createElement("div");
+        let itemDescriptionContainer: HTMLDivElement = document.createElement("div");
+        itemTitleContainer.classList.add("inventoryItemInfoTitle");
+        itemDescriptionContainer.classList.add("inventoryItemInfoDescription");
+        let itemTitle: HTMLSpanElement = document.createElement("span");
+        itemTitle.textContent = item.name.toString();
+        itemDescriptionContainer.textContent = item.description;
+        itemTitleContainer.appendChild(itemTitle);
+        fragment.appendChild(itemTitleContainer);
+        fragment.appendChild(itemDescriptionContainer);
+        if (item instanceof Weapon) {
+            fragment.appendChild(Paper.paperProgressBar("Damage",(item as Weapon).averageDamage(),750));
+            fragment.appendChild(Paper.paperProgressBar("Range",(item as Weapon).range,1000,"m"));
+            fragment.appendChild(Paper.paperProgressBar("Rate of Fire",(item as Weapon).rateOfFire,50));
+            fragment.appendChild(Paper.paperProgressBar("Accuracy",(item as Weapon).accuracy,100,"%"));
+            fragment.appendChild(Paper.paperProgressBar("Critical chance",(item as Weapon).crit,100,"%"));
+            fragment.appendChild(Paper.paperProgressBar("Clip size",(item as Weapon).shots,50));
+        }
+        return fragment;
+    }
+
+    static paperProgressBar(title: string, value: number, max: number,modifier?:string): DocumentFragment {
+        let frag: DocumentFragment = document.createDocumentFragment(),
+            progressContainer: HTMLDivElement = document.createElement("div"),
+            progressBar: HTMLProgressElement = document.createElement("progress"),
+            progressTitle: HTMLDivElement = document.createElement("div"),
+            progressbarContainer: HTMLDivElement = document.createElement("div"),
+            progressValue: HTMLDivElement = document.createElement("div");
+        progressTitle.textContent = `${title}:`;
+        progressTitle.classList.add("progressTitle");
+        progressBar.value = value;
+        progressBar.classList.add("progressBar");
+        progressValue.textContent = `${value.toString()}${modifier ? modifier : ''}`;
+        progressValue.classList.add("progressValue");
+        progressBar.max = max;
+        progressContainer.classList.add("progressContainer");
+        progressbarContainer.classList.add("progressbarContainer");
+        progressContainer.appendChild(progressTitle);
+        progressbarContainer.appendChild(progressBar);
+        progressbarContainer.appendChild(progressValue);
+        progressContainer.appendChild(progressbarContainer);
+        frag.appendChild(progressContainer);
+        return frag;
     }
 }

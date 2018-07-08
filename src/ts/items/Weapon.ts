@@ -59,8 +59,8 @@ export class Weapon implements Item {
     }
 
     averageDamage(): number {
-        let low = this.diceThrows * this.rateOfFire + this.damage;
-        let high = this.diceThrows * 6 * this.rateOfFire + this.damage;
+        let low = this.diceThrows * this.rateOfFire + this.damage,
+            high = this.diceThrows * 6 * this.rateOfFire + this.damage;
         return (low + high) / 2;
     }
 

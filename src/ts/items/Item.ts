@@ -6,4 +6,5 @@ export interface Item {
     name: string;
     cost: number;
     id?:string;
+    description:string;
 }

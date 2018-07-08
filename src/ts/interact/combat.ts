@@ -1,11 +1,11 @@
-import { Utils } from "../utils/utils";
-import { UI } from "../utils/UI";
-import { Messages } from "./messages";
-import { Movement } from "./Movement";
-import { Actor } from "../actors/Actor";
-import { getItem } from "./getItem";
-import { State } from "../utils/State";
-import { Draw } from "../utils/Draw";
+import {Utils} from "../utils/utils";
+import {UI} from "../utils/UI";
+import {Messages} from "./messages";
+import {Movement} from "./Movement";
+import {Actor} from "../actors/Actor";
+import {getItem} from "./getItem";
+import {State} from "../utils/State";
+import {Draw} from "../utils/Draw";
 import get = Reflect.get;
 
 export class Combat {
@@ -22,54 +22,22 @@ export class Combat {
             }
         }
         UI.updateUI();
-        //Draw.updateCanvas(State.playArea);
     }
 
     static shoot(actor: Actor, target: Actor): void {
-        let distance = Utils.distance(actor.position, target.position);
-        if (distance < 1000) {
-            // POINT BLANK
-            if (actor.stats.ref + Utils.dice(3, 10) >= 1) {
-                target.health -= actor.weapon.weaponDamage();
-                Messages.combat("hitNormal", actor, target);
-            } else {
-                this.dodgeAttack(actor, target);
-            }
-        } else if (distance < actor.weapon.range / 4) {
-            if (actor.stats.ref + Utils.dice(3, 10) >= 15) {
-                target.health -= actor.weapon.weaponDamage();
-                //Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
-                Messages.combat("hitNormal", actor, target);
-            } else {
-                this.dodgeAttack(actor, target);
-            }
-        } else if (distance < actor.weapon.range / 2) {
-            if (actor.stats.ref + Utils.dice(3, 10) >= 20) {
-                target.health -= actor.weapon.weaponDamage();
-                //Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
-                Messages.combat("hitNormal", actor, target);
-            } else {
-                this.dodgeAttack(actor, target);
-            }
-        } else if (distance < actor.weapon.range) {
-            if (actor.stats.ref + Utils.dice(3, 10) >= 25) {
-                target.health -= actor.weapon.weaponDamage();
-                //Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
-                Messages.combat("hitNormal", actor, target);
-            } else {
-                this.dodgeAttack(actor, target);
-            }
-        } else if (distance < actor.weapon.range * 2) {
-            if (actor.stats.ref + Utils.dice(3, 10) >= 30) {
-                target.health -= actor.weapon.weaponDamage();
-                //Draw.drawLine(State.playArea.context, actor.position, target.position, actor.color);
-                Messages.combat("hitNormal", actor, target);
-            } else {
-                this.dodgeAttack(actor, target);
-            }
+        let distance: number = Utils.distance(actor.position, target.position);
+        let shotTarget = false;
+        let dices = actor.stats.ref + Utils.dice(3, 10);
+        if (distance < 2) shotTarget = dices >= 1;
+        else if (distance < actor.weapon.range / 4) shotTarget = dices >= 15;
+        else if (distance < actor.weapon.range / 2) shotTarget = dices >= 20;
+        else if (distance < actor.weapon.range) shotTarget = dices >= 25;
+        else if (distance < actor.weapon.range * 2) shotTarget = dices >= 30;
+        if (shotTarget) {
+            target.health -= actor.weapon.weaponDamage();
+            Messages.combat("hitNormal", actor, target);
         } else {
-            Movement.moveTo(actor, target.position, actor.stats.ma.ma);
-            //actor.draw(State.playArea.context);
+            this.dodgeAttack(actor, target);
         }
     }
 
@@ -92,7 +60,7 @@ export class Combat {
         }
     }
 
-    static attack(actor:Actor, target:Actor, multiplier:number): void {
+    static attack(actor: Actor, target: Actor, multiplier: number): void {
         if (target.armor != 0) {
             let def = 1 - target.armor / 100;
             target.health -= actor.weapon.weaponDamage() * def * multiplier;
@@ -108,23 +76,27 @@ export class Combat {
     }
 
     //Melee only!
-    static parryAttack(actor: Actor, target: Actor) {}
+    static parryAttack(actor: Actor, target: Actor) {
+    }
 
-    static escapeFight(actor: Actor, target: Actor) {}
+    static escapeFight(actor: Actor, target: Actor) {
+    }
 
     //Increases accuracy
-    static aimAttack(actor:Actor) {
+    static aimAttack(actor: Actor) {
         if (actor.weapon.accuracy < 100) {
             actor.weapon.accuracy += 10;
             UI.updateUI();
         }
     }
 
-    static mountVehicle(actor: Actor, target: Actor) {}
+    static mountVehicle(actor: Actor, target: Actor) {
+    }
 
-    static reloadWeapon(actor: Actor, target: Actor) {}
+    static reloadWeapon(actor: Actor, target: Actor) {
+    }
 
-    static aidActor(actor:Actor, amount:number) {
+    static aidActor(actor: Actor, amount: number) {
         actor.health = actor.health > actor.maxHealth ? actor.maxHealth : (actor.health += amount);
     }
 

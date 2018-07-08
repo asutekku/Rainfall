@@ -587,11 +587,10 @@ export class Actor {
         };
     }
 
-    reposition() {
-        let previousPos = this.position;
+    reposition():void {
         this.position = [
-            previousPos[0] + Math.floor(Utils.range(-50, 50)),
-            previousPos[1] + Math.floor(Utils.range(-50, 50))
+            this.position[0] + Math.floor(Utils.range(-50, 50)),
+            this.position[1] + Math.floor(Utils.range(-50, 50))
         ];
     }
 
