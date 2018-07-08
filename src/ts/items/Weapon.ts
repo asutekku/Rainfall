@@ -20,6 +20,7 @@ export class Weapon implements Item {
     equipped: boolean;
     manufacturer: string;
     id: string;
+    ammoType: string;
 
     constructor(
         weaponType: string,
@@ -36,7 +37,8 @@ export class Weapon implements Item {
         cost: number,
         description: string,
         manufacturer: string,
-        id: string
+        id: string,
+        ammo:string
     ) {
         this.type = "weapons";
         this.weaponType = weaponType;
@@ -56,6 +58,7 @@ export class Weapon implements Item {
         this.level = 0;
         this.equipped = false;
         this.id = id;
+        this.ammoType = ammo;
     }
 
     averageDamage(): number {

@@ -110,35 +110,16 @@ export class Paper {
     static paperInventoryItemInfo(item: Item): DocumentFragment {
         let fragment: DocumentFragment = document.createDocumentFragment(),
             itemTitleContainer: HTMLDivElement = document.createElement("div"),
-            itemDescriptionContainer: HTMLDivElement = document.createElement("div"),
-            itemDescription: HTMLDivElement = document.createElement("div"),
-            itemDescriptionSpan: HTMLSpanElement = document.createElement("span"),
             itemTitle: HTMLSpanElement = document.createElement("span");
         itemTitleContainer.classList.add("inventoryItemInfoTitle");
-        itemDescriptionContainer.classList.add("inventoryItemInfoContainer");
-        itemDescription.textContent = "Description: ";
-        itemDescription.classList.add("itemInfoPrimary");
-        itemDescriptionSpan.classList.add("itemInfoSecondary");
-        itemDescriptionSpan.textContent = item.description;
         itemTitle.textContent = item.name.toString();
         itemTitleContainer.appendChild(itemTitle);
         fragment.appendChild(itemTitleContainer);
         if (item instanceof Weapon) {
-            let manufactContainer: HTMLDivElement = document.createElement("div"),
-                manufactTitle: HTMLDivElement = document.createElement("div"),
-                manufacturer: HTMLSpanElement = document.createElement("span");
-            manufactTitle.textContent = "Manufacturer: ";
-            manufactTitle.classList.add("itemInfoPrimary");
-            manufactContainer.classList.add("inventoryItemInfoContainer");
-            manufacturer.textContent = (item as Weapon).manufacturer;
-            manufacturer.classList.add("weaponManufacturer","itemInfoSecondary");
-            manufactContainer.appendChild(manufactTitle);
-            manufactTitle.appendChild(manufacturer);
-            fragment.appendChild(manufactContainer);
+            fragment.appendChild(Paper.inventoryInfoItem("Manufacturer: ", (item as Weapon).manufacturer));
+            fragment.appendChild(Paper.inventoryInfoItem("Ammo type: ", (item as Weapon).ammoType));
         }
-        itemDescription.appendChild(itemDescriptionSpan);
-        itemDescriptionContainer.appendChild(itemDescription);
-        fragment.appendChild(itemDescriptionContainer);
+        fragment.appendChild(Paper.inventoryInfoItem("Description: ", (item as Weapon).description));
         return fragment;
     }
 
@@ -160,6 +141,22 @@ export class Paper {
         fragment.appendChild(statsTitleContainer);
         fragment.appendChild(statContainer);
         return fragment;
+    }
+
+    static inventoryInfoItem(title: string, content: string): DocumentFragment {
+        let frag: DocumentFragment = document.createDocumentFragment(),
+            itemContainer: HTMLDivElement = document.createElement("div"),
+            itemTitle: HTMLDivElement = document.createElement("div"),
+            itemContent: HTMLSpanElement = document.createElement("span");
+        itemTitle.textContent = title;
+        itemContent.textContent = content;
+        itemContainer.classList.add("inventoryItemInfoContainer");
+        itemTitle.classList.add("itemInfoPrimary");
+        itemContent.classList.add("itemInfoSecondary");
+        itemTitle.appendChild(itemContent);
+        itemContainer.appendChild(itemTitle);
+        frag.appendChild(itemContainer);
+        return frag;
     }
 
     static equipButton(item: Item): DocumentFragment {
