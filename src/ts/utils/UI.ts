@@ -124,6 +124,7 @@ export class UI {
         switch (contentID) {
             case "inventory":
                 infoPane.appendChild(this.Inventory());
+                UI.changeInventoryView(State.UI.inventoryView);
                 break;
             case "quests":
                 infoPane.appendChild(this.Quests());
