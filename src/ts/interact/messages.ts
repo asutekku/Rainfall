@@ -169,7 +169,7 @@ export class Messages {
     }
 
     static encounter(Case: string, actor: Actor, target: Actor) {
-        let targetName = Utils.span(`[${target.name}]`, target.color);
+        const targetName:string = Utils.span(`[${target.name}]`, `${target.role.name.toLowerCase()}Color`);
         switch (Case) {
             case "distance":
                 Utils.printLine(
