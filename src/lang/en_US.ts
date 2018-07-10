@@ -111,7 +111,7 @@ export default class en_US {
         }
     };
 
-    static Drugs: Object = {
+    static Drugs = {
         synthCoke: {
             name: "SynthCoke",
             desc:
@@ -199,6 +199,13 @@ export default class en_US {
             strength: 3,
             difficulty: 13,
             duration: 1
+        }
+    };
+
+    static Combat = {
+        hit: {
+            normal:
+                "${playerName} ${damageType} ${targetName} with ${playerWeapon} and caused ${str_actorDamage} damage. ${enemyHealth}"
         }
     };
 }

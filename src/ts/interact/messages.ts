@@ -8,6 +8,48 @@ import { Enemy } from "../actors/Enemy";
  * TODO: FIX THE MESS THIS IS
  */
 export class Messages {
+    static playerWeapon = () => Utils.span(`[${State.player!.weapon.name}]`, "weaponBlue");
+
+    static damageCrit = function(): string {
+        return Utils.span(
+            `(${State.currentEnemy!.health + State.player!.weapon.weaponDamage() * 2}=>${State.currentEnemy!.health})`,
+            "damageGreen"
+        );
+    };
+    static damageCrit0 = function(): string {
+        return Utils.span(
+            `(${State.currentEnemy!.health + State.player!.weapon.weaponDamage() * 2}=>0)`,
+            "damageGreen"
+        );
+    };
+
+    static enemyHealth = function(): string {
+        return State.currentEnemy!.health <= 0 ? Messages.damageCrit0() : Messages.damageCrit();
+    };
+    static playerName = function(): string {
+        return Utils.span(`[${State.player!.name}]`, `${State.player!.role.name.toLowerCase()}Color`);
+    };
+    static targetName = function(): string {
+        return Utils.span(`[${State.currentEnemy!.name}]`, `${State.currentEnemy!.role.name.toLowerCase()}Color`);
+    };
+    static damageType = function(): string {
+        return State.player!.weapon.weaponType === "Melee" ? "hit" : "shot";
+    };
+    static playerDamage = function(): string {
+        return Utils.span(State.player!.weapon.weaponDamage().toString(), "hitRed");
+    };
+
+    static getCombatStrings() {
+        return {
+            playerName: Messages.playerName(),
+            targetName: Messages.targetName(),
+            playerWeapon: Messages.playerWeapon(),
+            str_actorDamage: Messages.playerDamage(),
+            enemyHealth: Messages.enemyHealth(),
+            damageType: Messages.damageType()
+        };
+    }
+
     static combat(Case: string, actor: Player, enemy: Enemy) {
         let playerName = Utils.span(`[${actor.name}]`, `${actor.role.name.toLowerCase()}Color`);
         let targetName = Utils.span(`[${enemy.name}]`, `${enemy.role.name.toLowerCase()}Color`);
@@ -19,14 +61,6 @@ export class Messages {
         let pronounO = enemy.gender === "Female" ? "her" : "him";
         let str_damageIndicator = Utils.span(
             `(${enemy.health + actor.weapon.weaponDamage()}=>${enemy.health})`,
-            "damageGreen"
-        );
-        let str_damageIndicatorCrit = Utils.span(
-            `(${enemy.health + actor.weapon.weaponDamage() * 2}=>${enemy.health})`,
-            "damageGreen"
-        );
-        let str_damageIndicatorCrit0 = Utils.span(
-            `(${enemy.health + actor.weapon.weaponDamage() * 2}=>0)`,
             "damageGreen"
         );
         let str_damageIndicator0 = Utils.span(`(${enemy.health + actor.weapon.weaponDamage()}=>0)`, "damageGreen");
@@ -41,6 +75,14 @@ export class Messages {
         let currencyAmount = Utils.span(`[${enemy.currency}]`, "itemYellow");
         let playerLVL = Utils.span(actor.level.toString(), "damageGreen");
         let playerLVLprev = Utils.span((actor.level - 1).toString(), "damageGreen");
+        const str_damageIndicatorCrit = Utils.span(
+            `(${State.currentEnemy!.health + State.player!.weapon.weaponDamage() * 2}=>${State.currentEnemy!.health})`,
+            "damageGreen"
+        );
+        const str_damageIndicatorCrit0 = Utils.span(
+            `(${State.currentEnemy!.health + State.player!.weapon.weaponDamage() * 2}=>0)`,
+            "damageGreen"
+        );
 
         function str_weaponName(ownerActor: Actor): string {
             return Utils.span(`[${ownerActor.weapon.name}]`, "weaponBlue");
@@ -169,7 +211,7 @@ export class Messages {
     }
 
     static encounter(Case: string, actor: Actor, target: Actor) {
-        const targetName:string = Utils.span(`[${target.name}]`, `${target.role.name.toLowerCase()}Color`);
+        const targetName: string = Utils.span(`[${target.name}]`, `${target.role.name.toLowerCase()}Color`);
         switch (Case) {
             case "distance":
                 Utils.printLine(
@@ -180,4 +222,9 @@ export class Messages {
                 break;
         }
     }
+
+    static fillTemplate = (template: string, templateVars: Object) => {
+        template = template.replace(/\${/g, "${this.");
+        return new Function(`return \`${template}\`;`).call(templateVars);
+    };
 }

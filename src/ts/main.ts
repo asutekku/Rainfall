@@ -3,9 +3,9 @@ import { Player } from "./actors/player";
 import { Enemy } from "./actors/Enemy";
 import { UI } from "./utils/UI";
 import { Combat } from "./interact/combat";
-import { Messages } from "./interact/messages";
 import { Statistics } from "./actors/resources/Statistics";
 import { State } from "./utils/State";
+import { Messages } from "./interact/messages";
 
 export class Rainfall {
     public static main(): void {
@@ -13,16 +13,18 @@ export class Rainfall {
         State.player.update();
         State.player.updateAfter();
         State.playArea.actors.push(State.player);
-        let grunt = new Enemy();
-        State.playArea.actors.push(grunt);
+        State.currentEnemy = new Enemy();
+        State.currentEnemy.update();
+        State.currentEnemy.updateAfter();
+        State.playArea.actors.push(State.currentEnemy);
         let deadMessageSent = false;
         //UI.initMap();
 
         Utils.l("hitButton")!.onclick = function() {
             if (State.player!.isAlive()) {
-                Combat.basicAction(State.player!, grunt);
+                Combat.basicAction(State.player!, State.currentEnemy!);
             } else if (deadMessageSent === false) {
-                Messages.combat("youredead", State.player!, grunt);
+                Messages.combat("youredead", State.player!, State.currentEnemy!);
                 deadMessageSent = true;
             }
         };
@@ -62,7 +64,7 @@ export class Rainfall {
             if (!State.player!.isAlive()) {
                 State.player!.health = State.player!.maxHealth;
                 clearInterval();
-                Messages.combat("respawn", State.player!, grunt);
+                Messages.combat("respawn", State.player!, State.currentEnemy!);
                 deadMessageSent = false;
                 Statistics.money -= Math.floor(Statistics.money * 0.45);
                 UI.updateUI();
@@ -77,7 +79,7 @@ export class Rainfall {
                 running = true;
                 int = setInterval(function() {
                     if (State.player!.isAlive()) {
-                        Combat.basicAction(State.player!, grunt);
+                        Combat.basicAction(State.player!, State.currentEnemy!);
                     } else {
                         clearInterval(int);
                         running = false;

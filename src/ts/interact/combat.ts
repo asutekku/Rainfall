@@ -5,8 +5,9 @@ import { Movement } from "./Movement";
 import { Actor } from "../actors/Actor";
 import { getItem } from "./getItem";
 import { State } from "../utils/State";
-import { Draw } from "../utils/Draw";
-import get = Reflect.get;
+import en_US from "./../../lang/en_US";
+
+const cString = en_US.Combat;
 
 export class Combat {
     static basicAction(actor: Actor, target: Actor) {
@@ -35,7 +36,8 @@ export class Combat {
         else if (distance <= actor.weapon.range * 2) shotTarget = dices >= 30;
         if (shotTarget) {
             target.health -= actor.weapon.weaponDamage();
-            Messages.combat("hitNormal", actor, target);
+            Utils.printLine(Messages.fillTemplate(cString.hit.normal, combatStrings));
+            //Messages.combat("hitNormal", actor, target);
         } else {
             this.dodgeAttack(actor, target);
         }
@@ -107,7 +109,7 @@ export class Combat {
     }
 
     static replaceEnemy(actor: Actor, target: Actor) {
-        target.update();
+        State.currentEnemy!.update();
         Movement.moveRandomly(State.playArea, target, State.playArea.width / 3);
         if (actor.role.name === target.role.name) {
             Messages.combat("encounterSame", actor, target);

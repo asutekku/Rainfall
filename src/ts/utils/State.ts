@@ -1,6 +1,7 @@
 import { mapGenerator } from "../environment/MapGenerator";
 import { Map } from "../environment/Map";
 import { Player } from "../actors/player";
+import { Enemy } from "../actors/Enemy";
 
 interface gameState {
     player?: Player;
@@ -8,6 +9,7 @@ interface gameState {
     UI: {
         inventoryView: string;
     };
+    currentEnemy?: Enemy;
 }
 
 export const State: gameState = {
