@@ -82,7 +82,7 @@ export class Rainfall {
                         clearInterval(int);
                         running = false;
                     }
-                }, 1000);
+                }, 500);
             } else if (running) {
                 running = false;
                 clearInterval(int);

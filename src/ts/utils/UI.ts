@@ -33,13 +33,7 @@ export class UI {
         _.l("charRole")!.textContent = actor.role.name;
         _.l("charSkill")!.textContent = actor.role.skill;
         _.l("skillDesc")!.textContent = actor.role.skillDescription;
-        _.l("charWeaponDamage")!.textContent =
-            actor.weapon.damage +
-            actor.weapon.diceThrows +
-            " - " +
-            (actor.weapon.diceThrows * 6 + actor.weapon.damage) +
-            " * " +
-            actor.weapon.rateOfFire;
+        _.l("charWeaponDamage")!.textContent = `${actor.weapon.averageDamage()}`;
         _.l("charWeaponAccuracy")!.textContent = actor.weapon.accuracy + "%";
         _.l("charWeaponType")!.textContent = actor.weapon.weaponType;
         _.l("armorStoppingPower")!.textContent = `${UI.getStoppingPower()}%`;

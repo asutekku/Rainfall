@@ -39,6 +39,7 @@ export class Actor {
         armor: Armor[];
         misc: Item[];
         medical: Item[];
+        [key: string]: Item[];
     };
 
     stats: {

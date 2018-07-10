@@ -11,6 +11,7 @@ import { Actor } from "../actors/Actor";
 import { Item } from "../items/Item";
 import { Player } from "../actors/player";
 import { Armor } from "../items/Armor";
+import { Medical } from "../items/Scrap";
 
 const weapons = Equipment.weapons;
 
@@ -39,34 +40,23 @@ export class getItem {
         }
     }
 
-    static addItemToInventory(item: Item, actor: Actor) {
-        let multiple: boolean = false;
-        switch (item.type) {
-            case "weapons":
-                multiple = !!actor.inventory.weapons.find(
-                    invItem => invItem.id.toString() === (item as Weapon).id.toString()
-                );
-                actor.inventory.weapons.push(item as Weapon);
-                break;
-            case "armor":
-                actor.inventory.armor.push(item as Armor);
-                break;
-            case "medical":
-                actor.inventory.medical.push(item);
-                break;
-            default:
-                actor.inventory.misc.push(item);
-                break;
-        }
-        let inventoryContainer = document.getElementById("inventoryItems")!;
-        if (!multiple) {
-            let inventoryItem: HTMLElement = Paper.paperInventoryItem(item);
-            if (inventoryContainer && State.UI.inventoryView === item.type) {
-                inventoryContainer.appendChild(inventoryItem);
+    static addItemToInventory(item: Item | Armor | Weapon | Medical, actor: Actor) {
+        let multiple: boolean = !!actor.inventory[item.type!.toString()].find(
+            i => i.id.toString() === item.id!.toString()
+        );
+        actor.inventory[item.type.toString()].push(item);
+        const inventoryContainer: HTMLElement = document.getElementById("inventoryItems")!;
+        if (inventoryContainer) {
+            const invItemCount = document.getElementById(item.id.toString());
+            if (!multiple) {
+                let inventoryItem: HTMLElement = Paper.paperInventoryItem(item);
+                if (inventoryContainer && State.UI.inventoryView === item.type) {
+                    inventoryContainer.appendChild(inventoryItem);
+                }
+            } else if (invItemCount) {
+                const itemCount = parseInt(invItemCount!.querySelector(".itemCount")!.textContent!, 10);
+                invItemCount.querySelector(".itemCount")!.textContent = `${itemCount + 1}x`;
             }
-        } else {
-            let invItemCount = document.getElementById(item.id!.toString())!.querySelector(".itemCount")!;
-            invItemCount!.textContent = `${(parseInt(invItemCount.textContent!, 10) + 1).toString()}x`;
         }
     }
 

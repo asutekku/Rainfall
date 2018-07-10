@@ -9,6 +9,7 @@ export class Drug implements Item {
     strength: number;
     diff: number;
     duration: number; //minutes
+    id: string;
 
     constructor(
         name: string,
@@ -27,5 +28,6 @@ export class Drug implements Item {
         this.strength = strength;
         this.diff = diff;
         this.duration = duration;
+        this.id = `drug_${this.name.replace(" ", "").toLowerCase()}`;
     }
 }
