@@ -12,6 +12,9 @@ import { Item } from "../items/Item";
 import { Player } from "../actors/player";
 import { Armor } from "../items/Armor";
 import { Medical } from "../items/Scrap";
+import en_US from "./../../lang/en_US";
+
+const Log = en_US.Log;
 
 const weapons = Equipment.weapons;
 
@@ -33,10 +36,10 @@ export class getItem {
 
     static updateCurrency(money: number, actor: Actor, target: Actor) {
         if (money >= 0) {
-            Messages.combat("getMoney", actor, target);
+            Messages.logMessage(Log.findMoney, actor);
             actor.currency += money;
         } else {
-            Messages.combat("noMoney", actor, target);
+            Messages.logMessage(Log.insufficientFunds, actor);
         }
     }
 
@@ -85,11 +88,7 @@ export class getItem {
             let equipDiv = document.getElementById(item.id)!.getElementsByClassName("itemEquipped")[0],
                 equipWeapon = !item.equipped;
             equipDiv.textContent = !item.equipped ? "[Equipped]" : "";
-            if (!item.equipped) {
-                player.weapon = item as Weapon;
-            } else {
-                player.weapon = getItem.getWeapon("weapon_fists");
-            }
+            player.weapon = equipWeapon ? (item as Weapon) : getItem.getWeapon("weapon_fists");
             player.inventory.weapons.forEach(w => (w.equipped = false));
             item.equipped = equipWeapon;
         }
@@ -98,11 +97,7 @@ export class getItem {
                 equipArmor = !item.equipped;
             getItem.clearEquips(item);
             equipDiv.textContent = !item.equipped ? "[Equipped]" : "";
-            if (!item.equipped) {
-                (player.equipment as any)[item.bodypart!] = item;
-            } else {
-                (player.equipment as any)[item.bodypart!] = null;
-            }
+            player.equipment[item.bodypart!] = equipArmor ? item : null;
             player.inventory.armor.filter(w => w.bodypart == item.bodypart).forEach(e => (e.equipped = false));
             item.equipped = equipArmor;
             UI.updateEquipment(item as Armor);

@@ -1,3 +1,5 @@
+import { Utils } from "../ts/utils/utils";
+
 export default class en_US {
     static armor = {
         headwearCap: "Baseball Cap",
@@ -202,10 +204,39 @@ export default class en_US {
         }
     };
 
-    static Combat = {
+    static Log = {
         hit: {
             normal:
-                "${playerName} ${damageType} ${targetName} with ${playerWeapon} and caused ${str_actorDamage} damage. ${enemyHealth}"
-        }
+                "${playerName} ${damageType} ${targetName} with ${playerWeapon} and caused ${playerDamage} damage. ${enemyHealth}",
+            critical:
+                "${str_Critical} ${playerName} ${damageType} ${targetName} with ${playerWeapon} and caused ${playerDamage} damage. ${enemyHealthCrit}",
+            criticalKill:
+                "${str_Critical} ${playerName} ${damageType} ${targetName} with ${playerWeapon} and caused ${playerDamage} damage. ${str_damageIndicatorCrit0}",
+            kill: "${playerName} killed ${targetName}",
+            miss1:
+                "${hitMiss} ${playerName} tried to attack ${targetName} but ${pronounS} was able to dodge the ${damageType}!",
+            miss2: "${hitMiss} ${playerName} tried to attack ${targetName} but missed!",
+            miss3: "${hitMiss} ${targetName} was able to jump away from ${playerName}'s ${damageType}!"
+        },
+        encounter:
+            "You encountered ${targetName}. Just by looking at ${pronounP} attire you can see ${pronounS} is a ${targetRole}",
+        encounterSame:
+            "You encountered ${targetName}. However you see ${pronounP} is also ${enemyRole} so you just greet ${pronounO} and venture forward.",
+        levelUp: "You leveled up from ${actorLevelOld} to ${actorLevel}!",
+        death: "You have been killed by ${targetName}",
+        dead: "You are dead, try respawning!",
+        respawn: "${nanobots}from TraumaTeam revitalize you. You have been charged ${deathCharge} yens.",
+        loot: {
+            search1:
+                "As the blood still flows from ${targetName}'s liquidated carcass, you search through ${pronounP} belongings.",
+            search2: "You search through ${targetName}'s belongings.",
+            search3:
+                "As you advance towards ${targetName}'s dead body you look around if ${pronounS} has anything valuable with ${pronounO}.",
+            find: "You found ${lootDrop}.",
+            finsSame: "You found ${lootDrop} but as you already have it, you let it be."
+        },
+        insufficientFunds: "Your funds are insufficient.",
+        findMoney: "You found ${currencyDrop}.",
+        loseMoney: "You lost ${currencyDrop}."
     };
 }

@@ -19,13 +19,14 @@ export class Actor {
     public health: number;
     public weapon: Weapon;
     public armor: number;
-    public equipment = {
-        headgear: null,
-        upper: null,
-        lower: null,
-        arms: null,
-        feet: null,
-        accessories: null
+    equipment: {
+        headgear: Armor | null;
+        upper: Armor | null;
+        lower: Armor | null;
+        arms: Armor | null;
+        feet: Armor | null;
+        accessories: Armor | null;
+        [key: string]: Item | null;
     };
     public weapons: any[];
     public color: string;

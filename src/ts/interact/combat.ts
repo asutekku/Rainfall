@@ -7,28 +7,32 @@ import { getItem } from "./getItem";
 import { State } from "../utils/State";
 import en_US from "./../../lang/en_US";
 
-const cString = en_US.Combat;
+const Log = en_US.Log;
 
 export class Combat {
-    static basicAction(actor: Actor, target: Actor) {
+    static basicAction(actor: Actor, target: Actor): void {
         this.shoot(actor, target);
         if (!target.isAlive()) {
             Combat.killEnemy(actor, target);
         } else {
             this.shoot(target, actor);
-            if (!actor.isAlive()) {
-                actor.health = 0;
-                Messages.combat("death", actor, target);
-                UI.updateUI();
-            }
+            this.isAlive(target);
         }
         UI.updateUI();
     }
 
+    static isAlive(actor: Actor): void {
+        if (!actor.isAlive()) {
+            actor.health = 0;
+            Messages.logMessage(Log.death, actor);
+            UI.updateUI();
+        }
+    }
+
     static shoot(actor: Actor, target: Actor): void {
-        let distance: number = Utils.distance(actor.position, target.position);
+        const distance: number = Utils.distance(actor.position, target.position),
+            dices: number = actor.stats.ref + Utils.dice(3, 10);
         let shotTarget: boolean = false;
-        let dices: number = actor.stats.ref + Utils.dice(3, 10);
         if (distance < 2000) shotTarget = dices >= 1;
         else if (distance <= actor.weapon.range / 4) shotTarget = dices >= 15;
         else if (distance <= actor.weapon.range / 2) shotTarget = dices >= 20;
@@ -36,23 +40,9 @@ export class Combat {
         else if (distance <= actor.weapon.range * 2) shotTarget = dices >= 30;
         if (shotTarget) {
             target.health -= actor.weapon.weaponDamage();
-            Utils.printLine(Messages.fillTemplate(cString.hit.normal, combatStrings));
-            //Messages.combat("hitNormal", actor, target);
+            Messages.logMessage(Log.hit.normal, actor);
         } else {
             this.dodgeAttack(actor, target);
-        }
-    }
-
-    static hitActor(actor: Actor, target: Actor): void {
-        let beforeHealth: number = target.health;
-        const multi: number = Utils.chance(actor.weapon.crit) ? 2 : 1;
-        Combat.attack(actor, target, multi);
-        if (beforeHealth === target.health) {
-            Combat.dodgeAttack(actor, target);
-        } else if (multi == 2) {
-            Messages.combat("hitCritical", actor, target);
-        } else {
-            Messages.combat("hitNormal", actor, target);
         }
     }
 
@@ -62,7 +52,7 @@ export class Combat {
     }
 
     static dodgeAttack(actor: Actor, target: Actor): void {
-        Messages.combat("hitMiss", actor, target);
+        Messages.logMessage(Log.hit.miss1, actor);
         Movement.moveTo(actor, target.position, actor.stats.ma.ma);
     }
 
@@ -84,13 +74,14 @@ export class Combat {
     static reloadWeapon(actor: Actor, target: Actor) {}
 
     static aidActor(actor: Actor, amount: number) {
-        actor.health = actor.health > actor.maxHealth ? actor.maxHealth : (actor.health += amount);
+        if (actor.health > actor.maxHealth) actor.health = actor.maxHealth;
+        else actor.health += amount;
     }
 
     static killEnemy(actor: Actor, target: Actor) {
         actor.kills += 1;
         actor.experience += target.experience;
-        Messages.combat("kill", actor, target);
+        Messages.logMessage(Log.hit.kill, actor);
         Combat.lootEnemy(actor, target);
         Combat.gainLevel(actor, target);
         Combat.replaceEnemy(actor, target);
@@ -103,16 +94,17 @@ export class Combat {
     static gainLevel(actor: Actor, target: Actor) {
         if (actor.experience >= actor.maxExperience) {
             actor.gainLevel();
-            Messages.combat("levelUp", actor, target);
+            Messages.logMessage(Log.levelUp, actor);
             UI.updateUI();
         }
     }
 
     static replaceEnemy(actor: Actor, target: Actor) {
-        State.currentEnemy!.update();
+        target.update();
+        console.log(target);
         Movement.moveRandomly(State.playArea, target, State.playArea.width / 3);
         if (actor.role.name === target.role.name) {
-            Messages.combat("encounterSame", actor, target);
+            Messages.logMessage(Log.encounterSame, actor);
             Combat.replaceEnemy(actor, target);
         } else {
             Messages.encounter("distance", actor, target);
@@ -120,8 +112,8 @@ export class Combat {
     }
 
     static lootEnemy(actor: Actor, target: Actor) {
-        Messages.combat("loot", actor, target);
-        Messages.combat("lootFind", actor, target);
+        Messages.logMessage(Log.loot.search1, actor);
+        Messages.logMessage(Log.loot.find, actor);
         getItem.addItemToInventory(target.item, actor);
         getItem.updateCurrency(target.currency, actor, target);
         actor.armor = UI.getStoppingPower();

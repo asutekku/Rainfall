@@ -6,6 +6,7 @@ import { Combat } from "./interact/combat";
 import { Statistics } from "./actors/resources/Statistics";
 import { State } from "./utils/State";
 import { Messages } from "./interact/messages";
+import en_US from "../lang/en_US";
 
 export class Rainfall {
     public static main(): void {
@@ -24,7 +25,7 @@ export class Rainfall {
             if (State.player!.isAlive()) {
                 Combat.basicAction(State.player!, State.currentEnemy!);
             } else if (deadMessageSent === false) {
-                Messages.combat("youredead", State.player!, State.currentEnemy!);
+                Messages.logMessage(en_US.Log.dead);
                 deadMessageSent = true;
             }
         };
@@ -64,7 +65,7 @@ export class Rainfall {
             if (!State.player!.isAlive()) {
                 State.player!.health = State.player!.maxHealth;
                 clearInterval();
-                Messages.combat("respawn", State.player!, State.currentEnemy!);
+                Messages.logMessage(en_US.Log.respawn);
                 deadMessageSent = false;
                 Statistics.money -= Math.floor(Statistics.money * 0.45);
                 UI.updateUI();
