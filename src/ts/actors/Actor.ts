@@ -197,7 +197,7 @@ export class Actor {
         lifeEvents: any[];
     };
     public maxHealth: number;
-    maxExperience: number = 100;
+    maxExperience: number;
 
     constructor() {
         this.gender = Name.getGender();
@@ -206,6 +206,7 @@ export class Actor {
         this.skill = null;
         this.level = 1;
         this.experience = 0;
+        this.maxExperience = 100;
         this.health = 100;
         this.maxHealth = 100;
         this.weapon = getItem.getWeapon("weapon_fists");
@@ -401,8 +402,8 @@ export class Actor {
         this.name = `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
         this.role = new Role();
         this.skill = this.role.skill;
-        this.level = Statistics.level;
-        this.experience = Math.floor(Statistics.level ^ (2 / 0.4));
+        this.level = State.player!.level;
+        this.experience = Math.floor(Math.pow(State.player!.level, (2 / 1.6)));
         this.health = Math.floor(
             Utils.range((Statistics.level ^ (2 / 0.09)) * 0.9, (Statistics.level ^ (2 / 0.09)) * 1.1)
         );
@@ -608,8 +609,8 @@ export class Actor {
         this.level += 1;
         Statistics.level += 1;
         this.experience = 0;
-        this.maxExperience = this.level ^ (2 / 0.04);
-        this.maxHealth = this.level ^ (2 / 0.1);
+        this.maxExperience += (this.level ^ (3 / 2))*5;
+        this.maxHealth += (this.level ^ (3 / 2));
         this.health = this.maxHealth;
     }
 

@@ -33,6 +33,6 @@ export class Statistics {
 
     private static _kills: number = 0;
     private static _money: number = 0;
-    private static _level: number = 0;
+    private static _level: number = 1;
     private static _inventory: any[] = [];
 }

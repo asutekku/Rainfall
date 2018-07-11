@@ -18,6 +18,7 @@ export class Combat {
             this.shoot(target, actor);
             this.isAlive(target);
         }
+        console.log(actor.level);
         UI.updateUI();
     }
 
@@ -25,7 +26,6 @@ export class Combat {
         if (!actor.isAlive()) {
             actor.health = 0;
             Messages.logMessage(Log.death, actor);
-            UI.updateUI();
         }
     }
 
@@ -83,25 +83,20 @@ export class Combat {
         actor.experience += target.experience;
         Messages.logMessage(Log.hit.kill, actor);
         Combat.lootEnemy(actor, target);
-        Combat.gainLevel(actor, target);
+        if (actor.experience >= actor.maxExperience) Combat.gainLevel(actor, target);
         Combat.replaceEnemy(actor, target);
         Movement.moveRandomly(State.playArea, actor, 3);
-        UI.updateUI();
         //actor.draw(State.playArea.context);
         //State.playArea.context.fillRect(actor.position[0],actor.position[1],3,3);
     }
 
     static gainLevel(actor: Actor, target: Actor) {
-        if (actor.experience >= actor.maxExperience) {
-            actor.gainLevel();
-            Messages.logMessage(Log.levelUp, actor);
-            UI.updateUI();
-        }
+        actor.gainLevel();
+        Messages.logMessage(Log.levelUp, actor);
     }
 
     static replaceEnemy(actor: Actor, target: Actor) {
         target.update();
-        console.log(target);
         Movement.moveRandomly(State.playArea, target, State.playArea.width / 3);
         if (actor.role.name === target.role.name) {
             Messages.logMessage(Log.encounterSame, actor);

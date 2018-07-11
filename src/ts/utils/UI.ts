@@ -13,7 +13,7 @@ const playerStrings = en_US.player;
 
 export class UI {
     static updateUI() {
-        let actor: Player = State.player!;
+        const actor: Player = State.player!;
         _.l("charHP")!.textContent = `${actor.health}/${actor.maxHealth}`;
         _.l("charLvl")!.textContent = actor.level.toString();
         _.l("kills")!.textContent = actor.kills.toString();
@@ -38,6 +38,11 @@ export class UI {
         _.l("charWeaponType")!.textContent = actor.weapon.weaponType;
         _.l("armorStoppingPower")!.textContent = `${UI.getStoppingPower()}%`;
         _.l("playerPosition")!.textContent = actor.position.toString();
+    }
+
+    static updateExp(): void {
+        const actor: Player = State.player!;
+        _.l("charExp")!.textContent = actor.experience + "/" + actor.maxExperience;
     }
 
     static updateEquipment(armor: Armor) {
