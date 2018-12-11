@@ -1,160 +1,158 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
     <title>Rainfall</title>
     <meta charset="UTF-8">
     <!--<meta name="viewport" content="width=device-width, initial-scale=1.0">-->
     <link rel="stylesheet" type="text/css" href="src/css/style.css">
-    <script> var exports = {}; </script>
-    <script data-main="build/ts/app.js" type="text/javascript" src="lib/require.js"></script>
-    <link href="https://fonts.googleapis.com/css?family=Press+Start+2P" rel="stylesheet">
+    <!--<script data-main="build/ts/app.js" type="text/javascript" src="lib/require.js"></script>-->
 </head>
 
 <body>
-<div id="canvas">
-    <div class="UIelement" id="navbar">
-        <h1 id="title">Rainfall</h1>
-    </div>
-    <div id="mainpane">
-        <div class="UIelement" id="charpane">
-            <button class="button" type="button" id="playerButton">Player</button>
-            <button class="button" type="button" id="questButton">Quests</button>
-            <button class="button" type="button" id="storeButton">Store</button>
-            <button class="button" type="button" id="allianceButton">Alliance</button>
-            <button class="button" type="button" id="inventoryButton">Inventory</button>
-            <button class="button" type="button" id="raidButton">Raid</button>
-            <button class="button" type="button" id="hitButton">Attack</button>
-            <button class="button" type="button" id="autoButton">Auto!</button>
-            <button class="button" type="button" id="restartButton">Restart!</button>
-            <button class="button" type="button" id="respawnButton">Respawn</button>
-            <button class="button" type="button" id="statButton">Stats</button>
-            <div>
-                <div class="statCard">
-                    <span class="statTitle">Position:</span>
-                    <span class="statValue" id="playerPosition">##NOT LOADED##</span>
-                </div>
-            </div>
+    <div id="canvas">
+        <div class="UIelement" id="navbar">
+            <h1 id="title">Rainfall</h1>
         </div>
-        <div id="playpane">
-            <div id="infoPane"></div>
-            <div id="gamearea">
-                <div id="initLine">
-                    <span id="initChar">></span>
-                </div>
-                <span id="actions"></span>
-            </div>
-        </div>
-        <div id="statpane">
-            <div class="UIelement" id="attributes">
-                <h2 class="statTitle vital">Attributes</h2>
-                <div class="statCard">
-                    <span class="statTitle">Name:</span>
-                    <span class="statValue" id="playerName">##NOT LOADED##</span>
-                </div>
-                <div class="statCard">
-                    <span class="statTitle">Gender:</span>
-                    <span class="statValue" id="charGender">##NOT LOADED##</span>
-                </div>
-                <div class="statCard">
-                    <span class="statTitle">Role:</span>
-                    <span class="statValue" id="charRole">##NOT LOADED##</span>
-                </div>
-                <div class="statCard tooltip">
-                    <span class="tooltiptext" id="skillDesc">##NOT DEFINED##</span>
-                    <span class="statTitle">Skill:</span>
-                    <span class="statValue" id="charSkill">##NOT LOADED##</span>
-                </div>
-                <div class="statCard">
-                    <span class="statTitle">Level:</span>
-                    <span class="statValue" id="charLvl">##NOT LOADED##</span>
-                </div>
-                <div class="statCard">
-                    <span class="statTitle">Experience:</span>
-                    <span class="statValue" id="charExp">##NOT LOADED##</span>
-                </div>
-                <div class="statCard">
-                    <span class="statTitle">Health points:</span>
-                    <span class="statValue" id="charHP">##NOT LOADED##</span>
-                </div>
-                <div class="statCard">
-                    <span class="statTitle">Currency:</span>
-                    <span class="statValue" id="currency">##NOT LOADED##</span>
-                </div>
-            </div>
-            <div class="UIelement" id="equipment">
-                <h2 class="statTitle vital">Equipment</h2><br>
-                <div class="statCard tooltip">
-                    <span class="statTitle vital" id="weapon">Weapon:</span>
-                </div>
-                <div class="inset">
-                    <div class="statCard tooltip">
-                        <span class="tooltiptext" id="weaponDesc">##NOT DEFINED##</span>
-                        <span class="statTitle" id="weaponName">Name:</span>
-                        <span class="statValue" id="charWeapon">##NOT LOADED##</span>
-                    </div>
+        <div id="root">
+            <div class="sideBar" id="sideBar">
+                <button class="button" type="button" id="playerButton">Player</button>
+                <button class="button" type="button" id="questsButton">Quests</button>
+                <button class="button" type="button" id="storeButton">Store</button>
+                <button class="button" type="button" id="allianceButton">Alliance</button>
+                <button class="button" type="button" id="inventoryButton">Inventory</button>
+                <button class="button" type="button" id="raidButton">Raid</button>
+                <button class="button" type="button" id="hitButton">Combat</button>
+                <button class="button" type="button" id="autoButton">Auto!</button>
+                <button class="button" type="button" id="restartButton">Restart!</button>
+                <button class="button" type="button" id="respawnButton">Respawn</button>
+                <button class="button" type="button" id="statButton">Stats</button>
+                <div>
                     <div class="statCard">
-                        <span class="statTitle" id="weaponType">Type:</span>
-                        <span class="statValue" id="charWeaponType">##NOT LOADED##</span>
-                    </div>
-                    <div class="statCard">
-                        <span class="statTitle" id="weaponDamage">Damage:</span>
-                        <span class="statValue" id="charWeaponDamage">##NOT LOADED##</span>
-                    </div>
-                    <div class="statCard">
-                        <span class="statTitle" id="weaponAccuracy">Accuracy:</span>
-                        <span class="statValue" id="charWeaponAccuracy">##NOT LOADED##</span>
-                    </div>
-                    <div class="statCard">
-                        <span class="statTitle" id="weaponRange">Range:</span>
-                        <span class="statValue" id="charWeaponRange">##NOT LOADED##</span>
-                    </div>
-                    <div class="statCard">
-                        <span class="statTitle">Critical chance:</span>
-                        <span class="statValue" id="charCRIT">##NOT LOADED##</span>
-                    </div>
-                    <div class="statCard">
-                        <span class="statTitle">Critical multiplier:</span>
-                        <span class="statValue" id="charCRITM">##NOT LOADED##</span>
-                    </div>
-                </div>
-                <div class="statCard tooltip">
-                    <span class="statTitle vital" id="armor">Armor:</span>
-                </div>
-                <div class="inset">
-                    <div class="statCard tooltip">
-                        <span class="tooltiptext"
-                              id="headgear_equipped_desc">You are wearing nothing on your head.</span>
-                        <span class="statTitle" id="headArmor">Head:</span>
-                        <span class="statValue" id="headgear_equipped">Nothing</span>
-                    </div>
-                    <div class="statCard tooltip">
-                        <span class="tooltiptext" id="upper_equipped_desc">You are wearing nothing on your upper body.</span>
-                        <span class="statTitle" id="upperArmor">Upper body:</span>
-                        <span class="statValue" id="upper_equipped">Nothing</span>
-                    </div>
-                    <div class="statCard tooltip">
-                        <span class="tooltiptext" id="lower_equipped_desc">You are wearing nothing on your lower body.</span>
-                        <span class="statTitle" id="lowerArmor">Lower body:</span>
-                        <span class="statValue" id="lower_equipped">Nothing</span>
-                    </div>
-                    <div class="statCard tooltip">
-                        <span class="tooltiptext" id="stoppingPowerDesc">The total stopping power of your equipment: enemyDamage - x%</span>
-                        <span class="statTitle" id="stoppingPower">Stopping power:</span>
-                        <span class="statValue" id="armorStoppingPower">0</span>
+                        <span class="statTitle">Position:</span>
+                        <span class="statValue" id="playerPosition">##NOT LOADED##</span>
                     </div>
                 </div>
             </div>
-            <div class="UIelement" id="stats">
-                <h2 class="statTitle vital">Statistics</h2>
-                <div class="statCard">
-                    <span class="statTitle">Kills:</span>
-                    <span class="statValue" id="kills">##NOT LOADED##</span>
+            <div id="playPane">
+                <div id="infoPane" class="gridElement"></div>
+                <div id="gamearea" class="gridElement">
+                    <div id="initLine">
+                        <span id="initChar">></span>
+                    </div>
+                </div>
+            </div>
+            <div id="statpane">
+                <div class="UIelement" id="attributes">
+                    <h2 class="statTitle vital">Attributes</h2>
+                    <div class="statCard">
+                        <span class="statTitle">Name:</span>
+                        <span class="statValue" id="playerName">##NOT LOADED##</span>
+                    </div>
+                    <div class="statCard">
+                        <span class="statTitle">Gender:</span>
+                        <span class="statValue" id="charGender">##NOT LOADED##</span>
+                    </div>
+                    <div class="statCard">
+                        <span class="statTitle">Role:</span>
+                        <span class="statValue" id="charRole">##NOT LOADED##</span>
+                    </div>
+                    <div class="statCard tooltip">
+                        <span class="tooltiptext" id="skillDesc">##NOT DEFINED##</span>
+                        <span class="statTitle">Skill:</span>
+                        <span class="statValue" id="charSkill">##NOT LOADED##</span>
+                    </div>
+                    <div class="statCard">
+                        <span class="statTitle">Level:</span>
+                        <span class="statValue" id="charLvl">##NOT LOADED##</span>
+                    </div>
+                    <div class="statCard">
+                        <span class="statTitle">Experience:</span>
+                        <span class="statValue" id="charExp">##NOT LOADED##</span>
+                    </div>
+                    <div class="statCard">
+                        <span class="statTitle">Health points:</span>
+                        <span class="statValue" id="charHP">##NOT LOADED##</span>
+                    </div>
+                    <div class="statCard">
+                        <span class="statTitle">Currency:</span>
+                        <span class="statValue" id="currency">##NOT LOADED##</span>
+                    </div>
+                </div>
+                <div class="UIelement" id="equipment">
+                    <h2 class="statTitle vital">Equipment</h2><br>
+                    <div class="statCard tooltip">
+                        <span class="statTitle vital" id="weapon">Weapon:</span>
+                    </div>
+                    <div class="inset">
+                        <div class="statCard tooltip">
+                            <span class="tooltiptext" id="weaponDesc">##NOT DEFINED##</span>
+                            <span class="statTitle" id="weaponName">Name:</span>
+                            <span class="statValue" id="charWeapon">##NOT LOADED##</span>
+                        </div>
+                        <div class="statCard">
+                            <span class="statTitle" id="weaponType">Type:</span>
+                            <span class="statValue" id="charWeaponType">##NOT LOADED##</span>
+                        </div>
+                        <div class="statCard">
+                            <span class="statTitle" id="weaponDamage">Damage:</span>
+                            <span class="statValue" id="charWeaponDamage">##NOT LOADED##</span>
+                        </div>
+                        <div class="statCard">
+                            <span class="statTitle" id="weaponAccuracy">Accuracy:</span>
+                            <span class="statValue" id="charWeaponAccuracy">##NOT LOADED##</span>
+                        </div>
+                        <div class="statCard">
+                            <span class="statTitle" id="weaponRange">Range:</span>
+                            <span class="statValue" id="charWeaponRange">##NOT LOADED##</span>
+                        </div>
+                        <div class="statCard">
+                            <span class="statTitle">Critical chance:</span>
+                            <span class="statValue" id="charCRIT">##NOT LOADED##</span>
+                        </div>
+                    </div>
+                    <div class="statCard tooltip">
+                        <span class="statTitle vital" id="armor">Armor:</span>
+                    </div>
+                    <div class="inset">
+                        <div class="statCard tooltip">
+                            <span class="tooltiptext" id="headgear_equipped_desc">You are wearing nothing on your head.</span>
+                            <span class="statTitle" id="headArmor">Head:</span>
+                            <span class="statValue" id="headgear_equipped">Nothing</span>
+                        </div>
+                        <div class="statCard tooltip">
+                            <span class="tooltiptext" id="upper_equipped_desc">You are wearing nothing on your upper
+                                body.</span>
+                            <span class="statTitle" id="upperArmor">Upper body:</span>
+                            <span class="statValue" id="upper_equipped">Nothing</span>
+                        </div>
+                        <div class="statCard tooltip">
+                            <span class="tooltiptext" id="lower_equipped_desc">You are wearing nothing on your lower
+                                body.</span>
+                            <span class="statTitle" id="lowerArmor">Lower body:</span>
+                            <span class="statValue" id="lower_equipped">Nothing</span>
+                        </div>
+                        <div class="statCard tooltip">
+                            <span class="tooltiptext" id="stoppingPowerDesc">The total stopping power of your
+                                equipment: enemyDamage - x%</span>
+                            <span class="statTitle" id="stoppingPower">Stopping power:</span>
+                            <span class="statValue" id="armorStoppingPower">0</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="UIelement" id="stats">
+                    <h2 class="statTitle vital">Statistics</h2>
+                    <div class="statCard">
+                        <span class="statTitle">Kills:</span>
+                        <span class="statValue" id="kills">##NOT LOADED##</span>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
+    <script src="./node_modules/react/umd/react.development.js"></script>
+    <script src="./node_modules/react-dom/umd/react-dom.development.js"></script>
+    <script src="./dist/bundle.js"></script>
 </body>
 
 </html>

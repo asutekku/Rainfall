@@ -2,10 +2,16 @@
   "compilerOptions": {
     "outDir": "./build",
     "module": "amd",
-    "lib": ["es2017","dom"],
+    "lib": [
+      "es2017",
+      "dom"
+    ],
     "allowJs": true,
     "target": "es6",
-    "strict":true
+    "strict": true,
+    "jsx": "react",
+    "moduleResolution": "node",
+    "noImplicitAny": true
   },
   "include": [
     "./src/**/*",

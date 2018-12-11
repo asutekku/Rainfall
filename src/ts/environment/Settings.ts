@@ -1,6 +1,6 @@
-import { Setting } from "./Setting";
+import {Setting} from "./Setting";
 
 export const Settings = {
     city: new Setting("City"),
-    desert: new Setting("Desert")
+    desert: new Setting("Desert"),
 };

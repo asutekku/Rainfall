@@ -1,207 +1,100 @@
-import { Utils } from "../utils/utils";
-import { Actor } from "../actors/Actor";
-import colors from "../utils/colors";
-import { State } from "../utils/State";
+import {Actor} from "../actors/Actor";
 import {Player} from "../actors/player";
-import {Enemy} from "../actors/Enemy";
+import {State} from "../utils/State";
+import {Utils} from "../utils/utils";
+import {MessageCombat} from "./messageSchema";
 
 export class Messages {
-    static combat(Case:string, actor:Player, enemy:Enemy) {
-        let playerName = Utils.span(`&#91;${actor.name}&#93;`, actor.role.color);
-        let targetName = Utils.span(`&#91;${enemy.name}&#93;`, enemy.role.color);
-        let str_actorDamage = Utils.span(actor.weapon.weaponDamage().toString(), colors.hitRed);
-        let str_actorDamageCrit = Utils.span((actor.weapon.weaponDamage() * 2).toString(), colors.hitRed);
-        let deathCharge = actor.currency * 0.45;
-        let str_enemyHealth = enemy.health;
-        let pronounP = enemy.gender === "Female" ? "her" : "his";
-        let pronounS = enemy.gender === "Female" ? "she" : "he";
-        let pronounO = enemy.gender === "Female" ? "her" : "him";
-        let str_damageIndicator = Utils.span(
-            `(${enemy.health + actor.weapon.weaponDamage()}=>${enemy.health})`,
-            colors.damageGreen
-        );
-        let str_damageIndicatorCrit = Utils.span(
-            `(${enemy.health + actor.weapon.weaponDamage() * 2}=>${enemy.health})`,
-            colors.damageGreen
-        );
-        let str_damageIndicatorCrit0 = Utils.span(
-            `(${enemy.health + actor.weapon.weaponDamage() * 2}=>0)`,
-            colors.damageGreen
-        );
-        let str_damageIndicator0 = Utils.span(`(${enemy.health + actor.weapon.weaponDamage()}=>0)`, colors.damageGreen);
-        let str_enemyDamageIndicator = Utils.span(
-            `(${actor.health + enemy.weapon.damage}=>${actor.health})`,
-            colors.damageGreen
-        );
-        let str_Critical = Utils.span("CRITICAL! ", colors.hitRed);
-        let hitMiss = Utils.span("MISS! ", colors.hitRed);
-        let droppedItem = str_actorItem(enemy) == undefined ? null : str_actorItem(enemy);
-        let droppedWeapon = Utils.span(`&#91;${enemy.weapon.name}&#93;`, colors.itemYellow);
-        let currencyAmount = Utils.span(`&#91;${enemy.currency}&#93;`, colors.itemYellow);
-        let playerLVL = Utils.span(actor.level.toString(), colors.damageGreen);
-        let playerLVLprev = Utils.span((actor.level - 1).toString(), colors.damageGreen);
+    public static nanobots = Utils.span(`[Nanobots]`, "weaponBlue");
+    public static actorWeapon = (actor: Actor) => Utils.span(`${actor.weapon.name}]`);
+    public static damageCrit = (actor: Actor, target: Actor): string =>
+        Utils.span(`(${target.health + actor.weapon.weaponDamage() * 2} => ${target.health})`, "damageGreen");
+    public static damageCrit0 = (actor: Actor, target: Actor): string =>
+        Utils.span(`(${target.health + actor.weapon.weaponDamage() * 2} => 0)`, "damageGreen");
+    public static getHealth = (actor: Actor, target: Actor): string =>
+        actor.health <= 0 ? Messages.damageCrit0(actor, target) : Messages.damageCrit(actor, target);
+    public static actorName = (actor: Actor): string => Utils.span(`[${actor.name}]`, `${actor.role.name.toLowerCase()}Color`);
+    public static damageType = (actor: Actor): string => (actor.weapon.weaponType === "Melee" ? "hit" : "shot");
+    public static causedDamage = (actor: Actor): string => Utils.span(actor.weapon.weaponDamage().toString(), "hitRed");
+    public static getPron = (actor: Actor) => ({
+        pronounP: actor.gender === "Female" ? "her" : "his",
+        pronounS: actor.gender === "Female" ? "she" : "he",
+        pronounO: actor.gender === "Female" ? "her" : "him",
+    });
+    public static level = (actor: Actor) => Utils.span(actor.level.toString(), "damageGreen");
+    public static levelOld = (actor: Actor) => Utils.span((actor.level - 1).toString(), "damageGreen");
+    public static lootDrop = (actor: Actor) => Utils.span(`[${actor.item.name}]`, "itemYellow");
+    public static currencyDrop = (actor: Actor) => Utils.span(`<${actor.currency}¥>`, "itemYellow");
 
-        function str_weaponName(ownerActor:Actor) {
-            return Utils.span(`&#91;${ownerActor.weapon.name}&#93;`, colors.weaponBlue);
-        }
+    public static getCombatStrings = (actor: Actor, target: Actor) => ({
+        playerName: Messages.actorName(actor),
+        targetName: Messages.actorName(target),
+        playerWeapon: Messages.actorWeapon(actor),
+        playerDamage: Messages.causedDamage(actor),
+        enemyHealth: Messages.getHealth(actor, target),
+        damageType: Messages.damageType(actor),
+        pronounP: Messages.getPron(target).pronounP,
+        pronounS: Messages.getPron(target).pronounS,
+        pronounO: Messages.getPron(target).pronounO,
+        actorLevel: Messages.level(actor),
+        actorLevelOld: Messages.levelOld(actor),
+        nanobots: Messages.nanobots,
+        deathCharge: actor.currency * 0.45,
+        lootDrop: Messages.lootDrop(target),
+        currencyDrop: Messages.currencyDrop(target),
+    });
 
-        function str_actorRole(ownerActor:Actor) {
-            return Utils.span(`&#91;${ownerActor.role.name}&#93;`, ownerActor.role.color);
-        }
+    public static getCombatMessage = (actor: Actor, target: Actor, prevHP: number): MessageCombat => {
+        const params = {
+            msg: 'Hello',
+            attacker: actor,
+            defender: target,
+            attType: actor.weapon.type,
+            critical: false,
+            damage: actor.weapon.damage,
+            prevHP,
+        };
+        return new MessageCombat(params);
+    };
 
-        function str_actorItem(ownerActor:Actor) {
-            return Utils.span(`&#91;${ownerActor.item.name}&#93;`, colors.itemYellow);
-        }
-
-        let damageType = actor.weapon.weaponType == "Melee" ? "hit" : "shot";
-        let playerWeapon = str_weaponName(actor);
-        let enemyHealth = enemy.health <= 0 ? str_damageIndicator0 : str_damageIndicator;
-        let enemyHealthCrit = enemy.health <= 0 ? str_damageIndicatorCrit0 : str_damageIndicatorCrit;
-
-        function randomcase(amount: number) {
-            return Math.floor(Math.random() * amount);
-        }
-
-        switch (Case) {
-            ///ACTOR MESSAGES///
-            case "hitNormal":
-                Utils.printLine(
-                    `${playerName} ${damageType} ${targetName} with ${playerWeapon} and caused ${str_actorDamage} damage. ${enemyHealth}`
-                );
-                break;
-            case "hitCritical":
-                Utils.printLine(
-                    `${str_Critical} ${playerName} ${damageType} ${targetName} with ${playerWeapon} and caused ${str_actorDamage} damage. ${enemyHealthCrit}`
-                );
-                break;
-            case "hitCriticalKill":
-                Utils.printLine(
-                    `${str_Critical} ${playerName} ${damageType} ${targetName} with ${playerWeapon} and caused ${str_actorDamageCrit} damage. ${str_damageIndicatorCrit0}`
-                );
-                break;
-            case "kill":
-                Utils.printLine(`${playerName} killed ${targetName} !`);
-                break;
-            case "hitMiss":
-                switch (randomcase(3)) {
-                    case 0:
-                        Utils.printLine(
-                            `${hitMiss} ${playerName} tried to attack ${targetName} but ${pronounS} was able to dodge the ${damageType}!`
-                        );
-                        break;
-                    case 1:
-                        Utils.printLine(`${hitMiss} ${playerName} tried to attack ${targetName} but missed!`);
-                        break;
-                    case 2:
-                        Utils.printLine(
-                            `${hitMiss} ${targetName} was able to jump away from ${playerName}'s ${damageType}!`
-                        );
-                        break;
-                }
-                break;
-            case "encounter":
-                Utils.printLine(
-                    `You encountered ${targetName}. Just by looking at ${pronounP} attire you can see ${pronounS} is a ${str_actorRole(
-                        enemy
-                    )}.`
-                );
-                break;
-            case "encounterSame":
-                Utils.printLine(
-                    `You encountered ${targetName}. However you see ${pronounP} is also ${str_actorRole(
-                        enemy
-                    )} so you just greet ${pronounO} and venture forward.`
-                );
-                break;
-            ///Level up message
-            case "levelUp":
-                Utils.printLine(
-                    `You leveled up from ${Utils.span((actor.level - 1).toString(), colors.damageGreen)} to ${playerLVL}!`
-                );
-                break;
-            ///Death message
-            case "death":
-                Utils.printLine(`You have been killed by ${targetName}`);
-                break;
-            case "youredead":
-                Utils.printLine("You are dead, try respawning!");
-                break;
-            ///Respawn message
-            case "respawn":
-                Utils.printLine(
-                    `${Utils.span(
-                        "[Nanobots]",
-                        colors.weaponBlue
-                    )} from TraumaTeam revitalize you. You have been charged ${deathCharge} yens.`
-                );
-                break;
-            ///Looking for loot message
-            case "loot":
-                switch (randomcase(3)) {
-                    case 0:
-                        Utils.printLine(
-                            `As the blood still flows from ${targetName}'s liquidated carcass, you search through ${pronounP} belongings.`
-                        );
-                        break;
-                    case 1:
-                        Utils.printLine(`You search through ${targetName}'s belongings.`);
-                        break;
-                    case 2:
-                        Utils.printLine(
-                            `As you advance towards ${targetName}'s dead body you look around if ${pronounS} has anything valuable with ${pronounO}.`
-                        );
-                        break;
-                }
-                break;
-            case "lootFind":
-                Utils.printLine(`You found ${droppedItem}.`);
-                break;
-            case "lootFindSame":
-                Utils.printLine(`You found ${droppedItem} but as you already have it, you let it be.`);
-                break;
-            case "lootFindNew":
-                Utils.printLine(
-                    `You found ${droppedItem}. It looks much better than your current equipment so you swap them.`
-                );
-                break;
-            case "lootFindOld":
-                Utils.printLine(
-                    `You found ${droppedItem} but it looks worse than your current equipment so you let it be.`
-                );
-                break;
-            case "lootWeaponBetter":
-                Utils.printLine(
-                    `The enemy dropped ${droppedWeapon}. It appears to be much more powerful than your ${playerWeapon} so you take it.`
-                );
-                break;
-            case "lootWeaponWorse":
-                Utils.printLine(
-                    `The enemy dropped ${pronounO} ${droppedWeapon}. It's worse than your current weapon so you let it be.`
-                );
-                break;
-            case "noMoney":
-                Utils.printLine("Your funds are insufficient.");
-                break;
-            case "getMoney":
-                Utils.printLine(`You found ${currencyAmount} yens.`);
-                break;
-            case "lostMoney":
-                Utils.printLine(`You lost ${currencyAmount} yens.`);
-                break;
-        }
-    }
-
-    static encounter(Case:string, actor: Actor, target: Actor) {
-        let targetName = Utils.span(`&#91;${target.name}&#93;`, target.color);
-        let playerName = Utils.span(`&#91;${actor.name}&#93;`, actor.color);
+    public static encounter(Case: string, actor: Actor, target: Actor) {
+        const targetName: string = Utils.span(`[${target.name}]`, `${target.role.name.toLowerCase()}Color`);
         switch (Case) {
             case "distance":
                 Utils.printLine(
                     `The distance between you and ${targetName} is ${Math.floor(
-                        Utils.distance(actor.position, target.position)
-                    )}m.`
+                        Utils.distance(actor.position, target.position),
+                    )}m.`,
                 );
                 break;
         }
+    }
+
+    public static getStrings = (actor: Actor, target: Actor) => {
+        return Messages.getCombatStrings(actor, target);
+    };
+
+    public static logMessage = (msg: string, actor ?: Actor, msgCase ?: string) => {
+        let v: object;
+        if (!(actor instanceof Player)) {
+            v = Messages.getCombatStrings(State.currentEnemy!, State.player!);
+        } else {
+            v = Messages.getCombatStrings(State.player!, State.currentEnemy!);
+        }
+        if (!msgCase) {
+            Utils.printLine(Messages.fillTemplate(msg, v));
+        } else {
+            switch (msgCase) {
+                case "combat":
+                    v = Messages.getCombatStrings(State.player!, State.currentEnemy!);
+                    break;
+            }
+            Utils.printLine(Messages.fillTemplate(msg, v));
+        }
+    };
+
+    public static fillTemplate = (template: string, templateVars: Object) => {
+        template = template.replace(/\${/g, "${this.");
+        return new Function(`return \`${template}\`;`).call(templateVars);
     }
 }

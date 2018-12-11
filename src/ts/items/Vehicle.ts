@@ -8,7 +8,7 @@ export class Vehicle {
     private driver?: Actor;
     private passengers: Actor[];
 
-    constructor(name:string,price:number,health:number,maxSpeed:number) {
+    constructor(name: string, price: number, health: number, maxSpeed: number) {
         this.name = name;
         this.price = price;
         this.health = health;

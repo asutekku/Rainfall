@@ -1,24 +1,30 @@
-import weapons from "../items/Weapons";
-import items from "../items/items";
-import { Utils } from "../utils/utils";
-import armors from "../items/armors";
-import { Messages } from "./messages";
-import { UI } from "../utils/UI";
-import { Paper } from "../utils/Paper";
-import { State } from "../utils/State";
-import { Weapon } from "../items/Weapon";
 import {Actor} from "../actors/Actor";
-import {Item} from "../items/Item";
 import {Player} from "../actors/player";
 import {Armor} from "../items/Armor";
+import armors from "../items/armors";
+import Equipment from "../items/Equipment";
+import {Item} from "../items/Item";
+import items from "../items/items";
+import {Medical} from "../items/Scrap";
+import {Weapon} from "../items/Weapon";
+import {Paper} from "../utils/Paper";
+import {State} from "../utils/State";
+import {UI} from "../utils/UI";
+import {Utils} from "../utils/utils";
+import en_US from "./../../lang/en_US";
+import {Messages} from "./messages";
 
-export class getItem {
-    static weapon() {
+const Log = en_US.Log;
+
+const weapons = Equipment.weapons;
+
+export class GetItem {
+    public static weapon() {
         return Utils.pickRandom(weapons);
     }
 
-    static item() {
-        let randomItem = Math.floor(Math.random() * 3);
+    public static item() {
+        const randomItem = Math.floor(Math.random() * 3);
         if (randomItem === 0) {
             return Utils.pickRandom(armors);
         } else if (randomItem === 1) {
@@ -28,79 +34,79 @@ export class getItem {
         }
     }
 
-    static updateCurrency(money:number, actor:Actor, target:Actor) {
+    public static updateCurrency(money: number, actor: Actor) {
         if (money >= 0) {
-            Messages.combat("getMoney", actor, target);
+            Messages.logMessage(Log.findMoney, actor);
             actor.currency += money;
         } else {
-            Messages.combat("noMoney", actor, target);
+            Messages.logMessage(Log.insufficientFunds, actor);
         }
     }
 
-    static addItemToInventory(item:Item, actor:Actor) {
-        switch (item.type) {
-            case "weapons":
-                actor.inventory.weapons.push(item as Weapon);
-                break;
-            case "armor":
-                actor.inventory.armor.push(item as Armor);
-                break;
-            case "medical":
-                actor.inventory.medical.push(item);
-                break;
-            default:
-                actor.inventory.misc.push(item);
-                break;
-        }
-        //UI.updateInventory(actor);
-        let inventoryItem = Paper.paperInventoryItem(item);
-
-        let ul = document.getElementById("inventoryItems");
-        if (ul && State.UI.inventoryView === item.type) {
-            ul.appendChild(inventoryItem);
-        }
-    }
-
-    static getWeapon(toGet:string): Weapon {
-        return weapons.find(e => e.id === toGet)!;
-    }
-
-    static useItem(item:Item) {
-        const player:Player = State.player!;
-        switch (item.type) {
-            case "weapons":
-                if (!item.equipped) {
-                    player.inventory.weapons.forEach(w => (w.equipped = false));
-                    player.weapon = item as Weapon;
-                    item.equipped = true;
-                } else {
-                    player.inventory.weapons.forEach(w => (w.equipped = false));
-                    player.weapon = getItem.getWeapon("weapon_fists");
-                    item.equipped = false;
+    public static addItemToInventory(item: Item | Armor | Weapon | Medical, actor: Actor) {
+        const multiple: boolean = !!actor.inventory[item.type!.toString()].find(
+            (i) => i.id.toString() === item.id!.toString(),
+        );
+        actor.inventory[item.type.toString()].push(item);
+        const inventoryContainer: HTMLElement = document.getElementById("inventoryItems")!;
+        if (inventoryContainer) {
+            const invItemCount = document.getElementById(item.id.toString());
+            if (!multiple) {
+                const inventoryItem: HTMLElement = Paper.paperInventoryItem(item);
+                if (inventoryContainer && State.UI.inventoryView === item.type) {
+                    inventoryContainer.appendChild(inventoryItem);
                 }
-                break;
-            case "armor":
-                if (!item.equipped) {
-                    player.inventory.armor.forEach(w => {
-                        if (w.equipped && w.bodypart == item.bodypart) w.equipped = false;
-                    });
-                    (player.equipment as any)[item.bodypart!] = item;
-                    item.equipped = true;
-                } else {
-                    player.inventory.armor.forEach(w => {
-                        if (w.equipped && w.bodypart == item.bodypart) w.equipped = false;
-                    });
-                    (player.equipment as any)[item.bodypart!] = null;
-                    item.equipped = false;
+            } else if (invItemCount) {
+                const itemCount = parseInt(invItemCount!.querySelector(".itemCount")!.textContent!, 10);
+                invItemCount.querySelector(".itemCount")!.textContent = `${itemCount + 1}x`;
+            }
+        }
+    }
+
+    public static getWeapon(toGet: string): Weapon {
+        return weapons.find((e) => e.id === toGet)!;
+    }
+
+    public static clearEquips(item: Item): void {
+        if (item instanceof Armor) {
+            Array.from(document.getElementsByClassName("inventoryItem")).forEach((e) => {
+                if (e.classList.contains(`${item.bodypart}_node`)) {
+                    e.getElementsByClassName("itemEquipped")[0].textContent = "";
                 }
-                UI.updateEquipment(item as Armor);
-                break;
-            case "medical":
-                player.health = player.health >= player.maxHealth ? player.maxHealth : player.health += item.restorePoints!;
-                break;
-            default:
-                //actor.inventory.misc.push(item);
-                break;
+            });
+        } else {
+            Array.from(document.getElementsByClassName("inventoryItem")).forEach((e) => {
+                e.getElementsByClassName("itemEquipped")[0].textContent = "";
+            });
+        }
+    }
+
+    public static useItem(item: Item) {
+        const player: Player = State.player!;
+        if (item instanceof Weapon) {
+            GetItem.clearEquips(item);
+            const equipDiv = document.getElementById(item.id)!.getElementsByClassName("itemEquipped")[0];
+            const equipWeapon = !item.equipped;
+            equipDiv.textContent = !item.equipped ? "[Equipped]" : "";
+            player.weapon = equipWeapon ? (item as Weapon) : GetItem.getWeapon("weapon_fists");
+            player.inventory.weapons.forEach((w) => (w.equipped = false));
+            item.equipped = equipWeapon;
+        }
+        if (item instanceof Armor) {
+            const equipDiv = document.getElementById(item.id)!.getElementsByClassName("itemEquipped")[0];
+            const equipArmor = !item.equipped;
+            GetItem.clearEquips(item);
+            equipDiv.textContent = !item.equipped ? "[Equipped]" : "";
+            player.equipment[item.bodypart!] = equipArmor ? item : null;
+            player.inventory.armor.filter((w) => w.bodypart === item.bodypart).forEach((e) => (e.equipped = false));
+            item.equipped = equipArmor;
+            UI.updateEquipment(item as Armor);
+        }
+        if (item.type === "medical") {
+            player.health =
+                player.health >= player.maxHealth ? player.maxHealth : (player.health += item.restorePoints!);
+        } else {
+            // currentActor.inventory.misc.push(item);
         }
         UI.updateUI();
     }

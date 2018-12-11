@@ -1,27 +1,52 @@
-.element {
-    width: 100px;
-}
-
 :root {
-    --baseColor: #c99b5c;
-    --titleColor: #e0f0f0;
-    --background: #0f0f0f;
+    --baseColor: #D2FEFD;
+    --titleColor: #934E41;
+    --background: #0e0e0e;
+    --backgroundLight: #090909;
+    --playColor: #070606;
     --borderStyle: none;
+    --buttonTextColor: #d1d1d1;
+    --buttonColor: #070606;
+    --inventoryItemSize: 60px;
+    --questItemSize: 80px;
+    --selectionActive: #1c1818;
+    --selectionActiveBorder: #934E41;
+    --selectionHover: #0d0d0d;
+    --selectionHoverBorder: #3c3c3c;
+    --borderColor: #292929;
+    --textColor: #e8e8e8;
+    --textColorDim: #9e9e9e;
 }
 
 html {
     height: 100%;
     width: 100%;
     margin: 0;
-    font-family: /*Futura, "Trebuchet MS", Arial,*/ monospace;
+    font-family: monospace;
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none;
 }
 
 body {
     height: 100%;
-    background: #2d2d2d;
-    color: #e8e8e8;
+    width: 100%;
+    background: var(--background);
+    color: var(--textColor);
     margin: 0;
     padding: 0;
+}
+
+.containerInset {
+    padding: 4px;
+}
+
+.gridElement {
+    background: var(--background);
+    height: 100%;
 }
 
 #navbar {
@@ -38,16 +63,15 @@ body {
     margin: 0;
     background: var(--background);
 }
+
 #infoPane {
     width: 100%;
-    height: 35%;
-    background: var(--background);
-    float: left;
-    font-family: monospace;
 }
 
-#infoAreaContainer {
-
+.infoAreaContainer {
+    display: grid;
+    grid-template-columns: repeat(1, 1fr);
+    grid-gap: 6px;
 }
 
 #title {
@@ -60,56 +84,65 @@ body {
 
 #mainpane {
     width: 100%;
-    height: 900px;
+    height: 100%;
     background: var(--background);
     display: flex;
 }
 
-#charpane {
+#sidebar {
     width: 200px;
     height: 100%;
     background: var(--background);
+    margin-right: 5px;
     float: left;
 }
 
-#playpane {
+#actionLog {
     flex: 1;
-    height: 100%;
-    width: 10px;
-    background: #141414;
-    float: left;
     overflow: hidden;
-    /*position: relative;*/
+}
+
+#playPane {
+    flex: 1;
+    grid-gap: 6px;
+    height: 100%;
+    float: left;
+    width: 50%;
     z-index: 0;
-    opacity: 0.99;
+    margin-right: 5px;
     font-family: monospace;
     font-size: 15px;
 }
 
 #statpane {
     width: 300px;
-    height: 900px;
-    /*margin-left: 5px;*/
+    height: 100%;
+    margin-left: 5px;
     background: var(--background);
     float: right;
     right: 20px;
     z-index: 1;
 }
 
+#gamearea {
+    overflow: hidden;
+    height: 100%;
+    background: var(--backgroundLight);
+    padding: 4px;
+}
+
 .statValue {
     padding: 0;
-    margin: 5px;
     float: right;
 }
 
 .statTitle {
     padding: 0;
-    margin: 5px;
     float: left;
 }
 
 .containerHeader {
-    color: var(--baseColor);
+    color: var(--selectionActiveBorder);
     padding: 0;
     margin: 5px;
     float: left;
@@ -137,11 +170,11 @@ body {
     background: #29241d;
     height: 100%;
     width: auto;
-    float:right;
+    float: right;
 }
 
 .vital {
-    color: var(--baseColor);
+    color: var(--selectionActiveBorder);
 }
 
 h2.statTitle {
@@ -177,36 +210,43 @@ button.kill {
 
 .button {
     position: relative;
-    /*top: 25px;*/
     font-family: monospace;
-    margin-top: 5px;
-    margin-bottom: 5px;
+    padding: 5px;
     height: 40px;
-    width: 90%;
+    width: 100%;
     align-content: center;
-    left: 5%;
+    cursor: pointer;
     text-transform: uppercase;
-    border-top-right-radius: 5px;
-    border-bottom-left-radius: 5px;
-    border: 2px solid var(--baseColor);
-    /*font-size: 16px;*/
+    border: 0 solid var(--borderColor);
+    border-left-width: 4px;
     font-weight: 500;
-    font-style: bold;
-    color: #d1d1d1;
-    background: #29241d;
+    color: var(--buttonTextColor);
+    background: var(--buttonColor);
     -moz-transition: all 0.2s ease-in;
     -o-transition: all 0.2s ease-in;
     -webkit-transition: all 0.2s ease-in;
     transition: all 0.1s ease-in;
 }
 
-#gamearea {
-    padding-left: 18px;
-    float: left;
+.inventoryButton {
+    width: 50%;
+    position: absolute;
+    bottom: 0;
+    right: 0;
 }
 
-.button:active {
-    background: #a2763b;
+button:focus {
+    outline: 0;
+}
+
+button:hover {
+    background: var(--selectionActive);
+    border-color: var(--selectionHoverBorder);
+}
+
+.buttonActiveSelection {
+    border-color: var(--selectionActiveBorder);
+    color: var(--selectionActiveBorder);
 }
 
 .tooltip {
@@ -217,12 +257,12 @@ button.kill {
 .tooltip .tooltiptext {
     visibility: hidden;
     width: 200px;
-    background-color: #29241d;
+    background-color: var(--selectionActive);
     color: #d1d1d1;
     text-align: center;
-    border-top-left-radius: 10px;
-    border-bottom-right-radius: 10px;
-    border: 2px solid var(--baseColor);
+    border-width: 0 4px 0 0;
+    border-style: solid;
+    border-color: var(--selectionActiveBorder);
     padding: 5px 0;
     position: absolute;
     z-index: 40;
@@ -248,20 +288,6 @@ h3.statTitle {
     height: 50%;
 }
 
-.dropbtn {
-    background-color: #4caf50;
-    color: white;
-    padding: 16px;
-    font-size: 16px;
-    border: none;
-    cursor: pointer;
-}
-
-.dropbtn:hover,
-.dropbtn:focus {
-    background-color: #3e8e41;
-}
-
 .dropdown {
     top: 10px;
     float: left;
@@ -275,7 +301,7 @@ h3.statTitle {
     background-color: #f9f9f9;
     min-width: 160px;
     overflow: auto;
-    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
     right: 0;
     z-index: 1;
 }
@@ -303,7 +329,7 @@ h3.statTitle {
 }
 
 .UIelement {
-    border: 0px var(--borderStyle) var(--baseColor);
+    border: 0 var(--borderStyle) var(--baseColor);
 }
 
 #canvas {
@@ -311,80 +337,434 @@ h3.statTitle {
     height: 100%;
 }
 
-.iClass {
-    margin-left: -15px;
-}
-
 #placeholderImage {
     width: 260px;
 }
 
-#initChar {
-    margin-left: -15px;
+#inventoryItemContainer {
+    width: 100%;
+    height: auto;
 }
 
-#inventoryCategories {
-    width:100%;
+.itemCollectionCategories {
+    width: 100%;
     display: flex;
     justify-content: space-between;
 }
-#inventoryItemContainer{
-    width:700px;
-    height:auto;
-}
-#inventory_container{
+
+.infoAreaTitleArea {
+    width: 100%;
     display: flex;
+    justify-content: space-between;
 }
 
-.inventoryCategory {
-    background: #2D2923;
-    border: 2px solid #C89A5C;
-    width:100%;
+.infoAreaItem {
+    width: 100%;
+    height: 500px;
+    background: var(--backgroundLight);
+}
+
+#inventory_container {
+    display: grid;
+}
+
+.title-submenu {
+    background: var(--backgroundLight);
+    display: inline-block;
+    width: 100%;
     text-align: center;
-    height:32px;
+    height: 32px;
+    text-transform: uppercase;
+    cursor: pointer;
+    border-style: solid;
+    border-width: 2px 0 0 0;
+    border-color: var(--backgroundLight);
+}
+
+.title-submenu-active {
+    border-style: solid;
+    border-width: 2px 0 0 0;
+    border-color: var(--selectionActiveBorder);
+    color: var(--selectionActiveBorder);
+}
+
+.title-main {
+    background: var(--backgroundLight);
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    height: 32px;
     text-transform: uppercase;
 }
+
+.catTitle {
+    position: relative;
+    top: 6px;
+    vertical-align: middle;
+}
+
 #inventoryItems {
-    background: #2D2923;
-    border: 2px solid #C89A5C;
+    display: grid;
+    font-size: 13px;
+    background: var(--backgroundLight);
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 6px;
+    grid-auto-rows: minmax(var(--inventoryItemSize), var(--inventoryItemSize));
     overflow-x: hidden;
     height: 260px;
+    padding: 0 8px 8px 8px;
+}
+
+.combatCategroy {
+    display: grid;
+    font-size: 13px;
+    background: var(--backgroundLight);
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 6px;
+    grid-auto-rows: minmax(var(--inventoryItemSize), var(--inventoryItemSize));
+    overflow-x: hidden;
+    height: 260px;
+    padding: 0 8px 8px 8px;
 }
 
 #inventoryItems::-webkit-scrollbar {
-    background-color: var(--background);
-}
-
-#inventoryItems::-webkit-scrollbar-thumb {
-    background-color: var(--baseColor);
-    border-radius: 5px;
+    background-color: var(--borderColor);
     width: 5px;
 }
 
-#itemInfoContainer{
-    float:left;
-    background: #2D2923;
-    border: 2px solid #C89A5C;
-    height:296px;
-    width:296px;
+#inventoryItems::-webkit-scrollbar-thumb {
+    background-color: #6A6A6A;
+    border-radius: 5px;
+    width: 2px;
 }
 
-.inventoryItem{
-    width:50%;
-    height:50px;
-    background: #2D2923;
-    border: 2px solid #C89A5C;
+.itemCollection-50 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    background: var(--backgroundLight);
+    height: 300px;
+    padding: 10px;
+    font-size: 13px;
+}
+
+.itemCollection-100 {
+    display: block;
+    background: var(--backgroundLight);
+    height: 300px;
+    padding: 10px;
+    font-size: 13px;
+}
+
+#itemExtraContainer {
+    height: 100%;
+    width: 100%;
+    position: relative;
+}
+
+.inventoryItem {
+    display: grid;
+    background: #000000;
+    grid-template-columns: repeat(2, 1fr);
+    grid-template-areas: "a b" "c d";
+    height: var(--inventoryItemSize);
+    border-width: 0 0 0 4px;
+    border-style: solid;
+    border-color: var(--borderColor);
+    cursor: pointer;
+}
+
+.inventoryItem:hover {
+    border-color: var(--selectionHoverBorder);
+    background: var(--selectionHover);;
 }
 
 .activeSelection {
-    background: var(--baseColor);
+    background: var(--selectionActive);
+    border-color: var(--selectionActiveBorder);
+}
+
+.activeSelection:hover {
+    background: var(--selectionActive);
+    border-color: var(--selectionActiveBorder);
 }
 
 h3 {
     font-size: 16px;
 }
 
-.activeInventoryCategory{
-    background: var(--baseColor);
+.itemType {
+    float: left;
+    text-transform: capitalize;
+    margin-top: 4px;
+    margin-left: 6px;
+    grid-area: a;
+    color: var(--textColorDim)
 }
 
+.itemTitle {
+    float: right;
+    margin-top: 4px;
+    margin-right: 8px;
+    grid-area: b;
+    justify-self: end;
+    color: var(--textColor)
+}
+
+.itemEquipped {
+    display: table-cell;
+    vertical-align: bottom;
+    margin-bottom: 4px;
+    margin-left: 4px;
+    justify-self: start;
+    align-self: end;
+    grid-area: c;
+    color: var(--textColorDim)
+}
+
+.itemCount {
+    display: table-cell;
+    vertical-align: bottom;
+    margin-bottom: 4px;
+    margin-right: 8px;
+    justify-self: end;
+    align-self: end;
+    grid-area: d;
+    color: var(--textColorDim)
+}
+
+.actionMessage {
+    font-size: 13px;
+    padding-bottom: 1px;
+    margin-left: 1em;
+    text-indent: -1em;
+}
+
+.actionMessage-first {
+    font-size: 13px;
+    padding-bottom: 1px;
+}
+
+#actions {
+    overflow: auto;
+}
+
+.progressContainer {
+    height: 26px;
+    margin-bottom: 2px;
+}
+
+.progressbarContainer {
+    display: flex;
+}
+
+.inventoryItemInfoTitle {
+    font-size: 18px;
+    height: 20px;
+    margin-bottom: 8px;
+}
+
+.inventoryItemInfoDescription {
+    height: 90px;
+}
+
+progress {
+    width: 90%;
+    height: 4px;
+}
+
+/*noinspection CssUnknownProperty*/
+progress[value] {
+    -webkit-appearance: none;
+    appearance: none;
+}
+
+.progressValue {
+    float: left;
+    position: relative;
+    bottom: 5px;
+}
+
+.progressTitle {
+    margin-bottom: 2px;
+}
+
+progress::-webkit-progress-bar {
+    background: transparent;
+}
+
+progress::-webkit-progress-value {
+    background: var(--selectionActiveBorder);
+}
+
+.hitRed {
+    color: #d95050;
+}
+
+.damageGreen {
+    color: #48dd48;
+}
+
+.weaponBlue {
+    color: #346be6;
+}
+
+.itemYellow {
+    color: #ddb01d;
+}
+
+.playerColor {
+    color: #5dd65d;
+}
+
+.rockerboyColor {
+    color: #A93226;
+}
+
+.soloColor {
+    color: #27AE60;
+}
+
+.netrunnerColor {
+    color: #2E86C1;
+}
+
+.techieColor {
+    color: #A2D9CE;
+}
+
+.mediaColor {
+    color: #f8a912;
+}
+
+.copColor {
+    color: #2980B9;
+}
+
+.corporateColor {
+    color: #fff145;
+}
+
+.fixerColor {
+    color: #ed9b51;
+}
+
+.nomadColor {
+    color: #2ECC71;
+}
+
+.inventoryItemInfoContainer {
+    margin-bottom: 6px;
+}
+
+.itemInfoSecondary {
+    color: var(--textColorDim);
+}
+
+.itemContainer-100 {
+    background: #000000;
+    display: inline-block;
+    -webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+    -moz-box-sizing: border-box; /* Firefox, other Gecko */
+    box-sizing: border-box; /* Opera/IE 8+ */
+    width: 100%;
+    overflow: auto;
+    border: 0 solid var(--borderColor);
+    border-left-width: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 5px 5px 10px 10px;
+    margin-bottom: 10px;
+}
+
+.itemContainer-100:hover {
+    background: var(--selectionActive);
+}
+
+.itemContainer-active {
+    border-color: var(--selectionActiveBorder);
+    background: var(--selectionActive);
+}
+
+.itemContainer-top-left {
+    float: left;
+    text-transform: capitalize;
+    grid-area: a;
+    color: var(--textColorDim)
+}
+
+.itemContainer-top-right {
+    float: right;
+}
+
+.itemContainer-middle {
+    float: left;
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.questItems {
+    float: left;
+}
+
+.itemContainer-bottom-left {
+    float: left;
+    bottom: 0;
+}
+
+.itemContainerRow-top {
+    width: 100%;
+    height: 20px;
+    margin-bottom: 5px;
+}
+
+.itemContainerRow-middle {
+    width: 100%;
+    height: auto;
+    margin-bottom: 15px;
+}
+
+.itemContainerRow-bottom {
+    width: 100%;
+    height: 20px;
+    margin-bottom: 5px;
+}
+
+.itemContainer-bottom-right {
+    float: right;
+}
+
+.noSelect {
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none;
+    /* Non-prefixed version, currently
+                                     supported by Chrome and Opera */
+}
+
+.charPortraitContainer {
+    float: left;
+    margin-right: 10px;
+    height: 150px;
+    width: 150px;
+}
+
+.charPortrait {
+    height: 150px;
+    width: 150px;
+}
+
+.characterInfo {
+    display: flex;
+}
+
+.characterAbout {
+    float: left;
+}
+
+.underline {
+    border: 0 solid var(--borderColor);
+    border-bottom-width: 2px;
+}

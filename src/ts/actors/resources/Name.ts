@@ -1,6 +1,5 @@
-import { default as roles } from "./roles";
-import { default as names } from "./names";
-import { Utils } from "../../utils/utils";
+import {Utils} from "../../utils/utils";
+import {default as names} from "./names";
 
 export class Name {
     get firstName(): string {
@@ -19,31 +18,34 @@ export class Name {
         this._surname = value;
     }
 
-    private _firstName: string;
-    private _surname: string;
-    gender: string;
+    public gender: string;
 
-    constructor() {
-        this.gender = Name.getGender();
-        this._firstName = Name.getFirstname(this.gender);
-        this._surname = Name.getSurname();
-    }
-
-    static getGender(): string {
-        let randomNumber = Math.floor(2 * Math.random());
+    public static getGender(): string {
+        const randomNumber = Math.floor(2 * Math.random());
         if (1 === randomNumber) {
             return "Male";
         }
         return "Female";
     }
 
-    static getFirstname(gender: string) {
-        if (gender == "Male") {
+    public static getFirstname(gender: string) {
+        if (gender === "Male") {
             return Utils.pickRandom(names.male);
-        } else return Utils.pickRandom(names.female);
+        } else {
+            return Utils.pickRandom(names.female);
+        }
     }
 
-    static getSurname() {
+    public static getSurname() {
         return Utils.pickRandom(names.surname);
+    }
+
+    private _firstName: string;
+    private _surname: string;
+
+    constructor() {
+        this.gender = Name.getGender();
+        this._firstName = Name.getFirstname(this.gender);
+        this._surname = Name.getSurname();
     }
 }

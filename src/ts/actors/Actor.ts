@@ -1,16 +1,16 @@
-import { Utils } from "../utils/utils";
-import { Role } from "./resources/Role";
-import { Weapon } from "../items/Weapon";
-import { Item } from "../items/Item";
-import { getItem } from "../interact/getItem";
-import { Statistics } from "./resources/Statistics";
-import { Movement } from "../interact/Movement";
-import { Name } from "./resources/Name";
-import { State } from "../utils/State";
-import { Armor } from "../items/Armor";
+import {GetItem} from "../interact/getItem";
+import {Movement} from "../interact/Movement";
+import {Armor} from "../items/Armor";
+import {Item} from "../items/Item";
+import {Weapon} from "../items/Weapon";
+import {State} from "../utils/State";
+import {Utils} from "../utils/utils";
+import {Name} from "./resources/Name";
+import {Role} from "./resources/Role";
+import {Statistics} from "./resources/Statistics";
 
 export class Actor {
-    item: any;
+    public item: any;
     public name: string;
     public role: Role;
     public skill: any;
@@ -19,13 +19,14 @@ export class Actor {
     public health: number;
     public weapon: Weapon;
     public armor: number;
-    public equipment = {
-        headgear: null,
-        upper: null,
-        lower: null,
-        arms: null,
-        feet: null,
-        accessories: null
+    public equipment: {
+        headgear: Armor | null;
+        upper: Armor | null;
+        lower: Armor | null;
+        arms: Armor | null;
+        feet: Armor | null;
+        accessories: Armor | null;
+        [key: string]: Item | null;
     };
     public weapons: any[];
     public color: string;
@@ -34,14 +35,15 @@ export class Actor {
     public currency: number;
     public position: number[];
     public kills: number;
-    inventory: {
+    public inventory: {
         weapons: Weapon[];
         armor: Armor[];
         misc: Item[];
         medical: Item[];
+        [key: string]: Item[];
     };
 
-    stats: {
+    public stats: {
         int: number;
         ref: number;
         tech: number;
@@ -56,6 +58,33 @@ export class Actor {
         emp: number;
         lift: number;
     };
+    public lifepath: {
+        style: {
+            clothes: {
+                headgear: any;
+                upper: any;
+                jacket: any;
+                bottom: any;
+                shoes: any;
+                accessories: any;
+            };
+            hair: any;
+            affectations: any;
+            ethnicity: any;
+            language: any;
+        };
+        familyBackground: any;
+        motivations: {
+            traits: any;
+            valuedPerson: any;
+            valueMost: any;
+            feelAboutPeople: any;
+            valuedPossession: any;
+        };
+        lifeEvents: any[];
+    };
+    public maxHealth: number;
+    public maxExperience: number;
     private skills: {
         special: {
             authority: number;
@@ -169,33 +198,6 @@ export class Actor {
         };
     };
     private cybernetics: any[];
-    lifepath: {
-        style: {
-            clothes: {
-                headgear: any;
-                upper: any;
-                jacket: any;
-                bottom: any;
-                shoes: any;
-                accessories: any;
-            };
-            hair: any;
-            affectations: any;
-            ethnicity: any;
-            language: any;
-        };
-        familyBackground: any;
-        motivations: {
-            traits: any;
-            valuedPerson: any;
-            valueMost: any;
-            feelAboutPeople: any;
-            valuedPossession: any;
-        };
-        lifeEvents: any[];
-    };
-    public maxHealth: number;
-    maxExperience: number = 100;
 
     constructor() {
         this.gender = Name.getGender();
@@ -204,9 +206,10 @@ export class Actor {
         this.skill = null;
         this.level = 1;
         this.experience = 0;
+        this.maxExperience = 100;
         this.health = 100;
         this.maxHealth = 100;
-        this.weapon = getItem.getWeapon("weapon_fists");
+        this.weapon = GetItem.getWeapon("weapon_fists");
         this.armor = 0;
         this.equipment = {
             headgear: null,
@@ -214,7 +217,7 @@ export class Actor {
             lower: null,
             arms: null,
             feet: null,
-            accessories: null
+            accessories: null,
         };
         this.weapons = [];
         this.color = "";
@@ -223,7 +226,7 @@ export class Actor {
             weapons: [],
             armor: [],
             misc: [],
-            medical: []
+            medical: [],
         };
         this.currency = 0;
         this.position = [0, 0];
@@ -237,15 +240,15 @@ export class Actor {
             lk: 1,
             ma: {
                 ma: 1,
-                run: 1, //this.stats.movementAllowance.stamina * 3,
-                leap: 1 //this.stats.movementAllowance.stamina / 4
+                run: 1, // this.stats.movementAllowance.stamina * 3,
+                leap: 1, // this.stats.movementAllowance.stamina / 4
             },
-            bt: 2, //2-10
+            bt: 2, // 2-10
             btm: 0,
             emp: 1,
             hm: 1,
             sn: 1,
-            lift: 1
+            lift: 1,
         };
         this.skills = {
             special: {
@@ -258,23 +261,23 @@ export class Actor {
                 juryRig: 0,
                 medicalTech: 0,
                 resources: 0,
-                streetDeal: 0
+                streetDeal: 0,
             },
             att: {
                 personalGrooming: 0,
-                wardrobeAndStyle: 0
+                wardrobeAndStyle: 0,
             },
             body: {
                 endurance: 0,
                 strength: 0,
-                swimming: 0
+                swimming: 0,
             },
             cool: {
                 interrogation: 0,
                 intimidate: 0,
                 oratory: 0,
                 resistTorture: 0,
-                streetwise: 0
+                streetwise: 0,
             },
             emp: {
                 humanPerception: 0,
@@ -283,7 +286,7 @@ export class Actor {
                 seduction: 0,
                 social: 0,
                 persuasion: 0,
-                perform: 0
+                perform: 0,
             },
             int: {
                 accounting: 0,
@@ -309,7 +312,7 @@ export class Actor {
                 systemKnowledge: 0,
                 teaching: 0,
                 wilderness: 0,
-                zoology: 0
+                zoology: 0,
             },
             language: {
                 english: 0,
@@ -317,7 +320,7 @@ export class Actor {
                 chinese: 0,
                 german: 0,
                 korean: 0,
-                french: 0
+                french: 0,
             },
             ref: {
                 archery: 0,
@@ -341,7 +344,7 @@ export class Actor {
                 pilotVect: 0,
                 rifle: 0,
                 stealth: 0,
-                submachinegun: 0
+                submachinegun: 0,
             },
             tech: {
                 aero: 0,
@@ -363,8 +366,8 @@ export class Actor {
                 lockPick: 0,
                 pickPocket: 0,
                 instrument: 0,
-                weaponSmith: 0
-            }
+                weaponSmith: 0,
+            },
         };
         this.cybernetics = [];
         this.lifepath = {
@@ -375,12 +378,12 @@ export class Actor {
                     jacket: null,
                     bottom: null,
                     shoes: null,
-                    accessories: null
+                    accessories: null,
                 },
                 hair: null,
                 affectations: null,
                 ethnicity: null,
-                language: null
+                language: null,
             },
             familyBackground: null,
             motivations: {
@@ -388,21 +391,21 @@ export class Actor {
                 valuedPerson: null,
                 valueMost: null,
                 feelAboutPeople: null,
-                valuedPossession: null
+                valuedPossession: null,
             },
-            lifeEvents: []
+            lifeEvents: [],
         };
     }
 
-    update() {
+    public update() {
         this.gender = Name.getGender();
         this.name = `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
         this.role = new Role();
         this.skill = this.role.skill;
-        this.level = Statistics.level;
-        this.experience = Math.floor(Statistics.level ^ (2 / 0.4));
+        this.level = State.player!.level;
+        this.experience = Math.floor(Math.pow(State.player!.level, (2 / 1.6)));
         this.health = Math.floor(
-            Utils.range((Statistics.level ^ (2 / 0.09)) * 0.9, (Statistics.level ^ (2 / 0.09)) * 1.1)
+            Utils.range((Statistics.level ^ (2 / 0.09)) * 0.9, (Statistics.level ^ (2 / 0.09)) * 1.1),
         );
         this.maxHealth = this.health;
         this.armor = 0;
@@ -412,12 +415,12 @@ export class Actor {
             lower: null,
             arms: null,
             feet: null,
-            accessories: null
+            accessories: null,
         };
         this.weapons = [];
         this.color = this.role.color;
-        this.items = [getItem.item()];
-        this.item = getItem.item();
+        this.items = [GetItem.item()];
+        this.item = GetItem.item();
         this.currency = Math.floor(Utils.range(20, 100));
         this.position = Movement.randomPosition(State.playArea, 50);
         this.kills = 0;
@@ -431,14 +434,14 @@ export class Actor {
             ma: {
                 ma: Utils.dice(1, 10),
                 run: this.stats.ma.ma * 3,
-                leap: this.stats.ma.ma / 4
+                leap: this.stats.ma.ma / 4,
             },
-            bt: Utils.dice(1, 11) - 1, //2-10
+            bt: Utils.dice(1, 11) - 1, // 2-10
             btm: Math.ceil(this.stats.bt / 2),
             emp: Utils.dice(1, 10),
             lift: Utils.dice(1, 10),
             hm: this.stats.emp * 10,
-            sn: this.stats.bt
+            sn: this.stats.bt,
         };
         this.skills = {
             special: {
@@ -451,23 +454,23 @@ export class Actor {
                 juryRig: Utils.dice(1, 5),
                 medicalTech: Utils.dice(1, 5),
                 resources: Utils.dice(1, 5),
-                streetDeal: Utils.dice(1, 5)
+                streetDeal: Utils.dice(1, 5),
             },
             att: {
                 personalGrooming: Utils.dice(1, 5),
-                wardrobeAndStyle: Utils.dice(1, 5)
+                wardrobeAndStyle: Utils.dice(1, 5),
             },
             body: {
                 endurance: Utils.dice(1, 5),
                 strength: Utils.dice(1, 5),
-                swimming: Utils.dice(1, 5)
+                swimming: Utils.dice(1, 5),
             },
             cool: {
                 interrogation: Utils.dice(1, 5),
                 intimidate: Utils.dice(1, 5),
                 oratory: Utils.dice(1, 5),
                 resistTorture: Utils.dice(1, 5),
-                streetwise: Utils.dice(1, 5)
+                streetwise: Utils.dice(1, 5),
             },
             emp: {
                 humanPerception: Utils.dice(1, 5),
@@ -476,7 +479,7 @@ export class Actor {
                 seduction: Utils.dice(1, 5),
                 social: Utils.dice(1, 5),
                 persuasion: Utils.dice(1, 5),
-                perform: Utils.dice(1, 5)
+                perform: Utils.dice(1, 5),
             },
             int: {
                 accounting: Utils.dice(1, 5),
@@ -488,21 +491,21 @@ export class Actor {
                 composition: Utils.dice(1, 5),
                 diagnosis: Utils.dice(1, 5),
                 education: Utils.dice(1, 5),
+                evade: Utils.dice(1, 5),
                 expert: Utils.dice(1, 5),
                 gamble: Utils.dice(1, 5),
                 geology: Utils.dice(1, 5),
-                evade: Utils.dice(1, 5),
                 history: Utils.dice(1, 5),
                 librarySearch: Utils.dice(1, 5),
                 math: Utils.dice(1, 5),
                 physics: Utils.dice(1, 5),
                 programming: Utils.dice(1, 5),
-                tracking: Utils.dice(1, 5),
                 stockMarket: Utils.dice(1, 5),
                 systemKnowledge: Utils.dice(1, 5),
                 teaching: Utils.dice(1, 5),
+                tracking: Utils.dice(1, 5),
                 wilderness: Utils.dice(1, 5),
-                zoology: Utils.dice(1, 5)
+                zoology: Utils.dice(1, 5),
             },
             language: {
                 english: Utils.dice(1, 5),
@@ -510,7 +513,7 @@ export class Actor {
                 chinese: Utils.dice(1, 5),
                 german: Utils.dice(1, 5),
                 korean: Utils.dice(1, 5),
-                french: Utils.dice(1, 5)
+                french: Utils.dice(1, 5),
             },
             ref: {
                 archery: Utils.dice(1, 5),
@@ -534,7 +537,7 @@ export class Actor {
                 pilotVect: Utils.dice(1, 5),
                 rifle: Utils.dice(1, 5),
                 stealth: Utils.dice(1, 5),
-                submachinegun: Utils.dice(1, 5)
+                submachinegun: Utils.dice(1, 5),
             },
             tech: {
                 aero: Utils.dice(1, 5),
@@ -556,8 +559,8 @@ export class Actor {
                 lockPick: Utils.dice(1, 5),
                 pickPocket: Utils.dice(1, 5),
                 instrument: Utils.dice(1, 5),
-                weaponSmith: Utils.dice(1, 5)
-            }
+                weaponSmith: Utils.dice(1, 5),
+            },
         };
         this.cybernetics = [];
         this.lifepath = {
@@ -568,12 +571,12 @@ export class Actor {
                     jacket: null,
                     bottom: null,
                     shoes: null,
-                    accessories: null
+                    accessories: null,
                 },
                 hair: null,
                 affectations: null,
                 ethnicity: null,
-                language: null
+                language: null,
             },
             familyBackground: null,
             motivations: {
@@ -581,21 +584,20 @@ export class Actor {
                 valuedPerson: null,
                 valueMost: null,
                 feelAboutPeople: null,
-                valuedPossession: null
+                valuedPossession: null,
             },
-            lifeEvents: []
+            lifeEvents: [],
         };
     }
 
-    reposition() {
-        let previousPos = this.position;
+    public reposition(): void {
         this.position = [
-            previousPos[0] + Math.floor(Utils.range(-50, 50)),
-            previousPos[1] + Math.floor(Utils.range(-50, 50))
+            this.position[0] + Math.floor(Utils.range(-50, 50)),
+            this.position[1] + Math.floor(Utils.range(-50, 50)),
         ];
     }
 
-    updateAfter() {
+    public updateAfter() {
         this.stats.ma.run = this.stats.ma.ma * 3;
         this.stats.ma.leap = this.stats.ma.ma / 4;
         this.stats.btm = Math.ceil(this.stats.bt / 2);
@@ -603,16 +605,16 @@ export class Actor {
         this.stats.sn = this.stats.bt;
     }
 
-    gainLevel() {
+    public gainLevel() {
         this.level += 1;
         Statistics.level += 1;
         this.experience = 0;
-        this.maxExperience = this.level ^ (2 / 0.04);
-        this.maxHealth = this.level ^ (2 / 0.1);
+        this.maxExperience += (this.level ^ (3 / 2)) * 5;
+        this.maxHealth += (this.level ^ (3 / 2));
         this.health = this.maxHealth;
     }
 
-    isAlive(): boolean {
+    public isAlive(): boolean {
         return this.health > 0;
     }
 

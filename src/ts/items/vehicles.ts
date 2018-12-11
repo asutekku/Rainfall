@@ -6,7 +6,7 @@ export default {
             health: 100,
             maxSpeed: 50,
             driver: null,
-            passengers: null
+            passengers: null,
         },
         {
             name: "Motorcycle",
@@ -14,7 +14,7 @@ export default {
             health: 200,
             maxSpeed: 150,
             driver: null,
-            passengers: null
+            passengers: null,
         },
         {
             name: "CityCar",
@@ -22,7 +22,7 @@ export default {
             health: 400,
             maxSpeed: 180,
             driver: null,
-            passengers: null
+            passengers: null,
         },
         {
             name: "Small Subcompact",
@@ -30,7 +30,7 @@ export default {
             health: 500,
             maxSpeed: 160,
             driver: null,
-            passengers: null
+            passengers: null,
         },
         {
             name: "Medium Sedan",
@@ -38,7 +38,7 @@ export default {
             health: 700,
             maxSpeed: 160,
             driver: null,
-            passengers: null
+            passengers: null,
         },
         {
             name: "Sportscar",
@@ -46,7 +46,7 @@ export default {
             health: 500,
             maxSpeed: 240,
             driver: null,
-            passengers: null
+            passengers: null,
         },
         {
             name: "Luxury Sedan",
@@ -54,7 +54,7 @@ export default {
             health: 600,
             maxSpeed: 180,
             driver: null,
-            passengers: null
-        }
-    ]
+            passengers: null,
+        },
+    ],
 };
