@@ -15,7 +15,7 @@ export default {
         shots: 8,
         rateOfFire: 2,
         cost: 75,
-        range: 50
+        range: 50,
     },
     cybermag: {
         type: "Pistol",
@@ -33,7 +33,7 @@ export default {
         shots: 8,
         rateOfFire: 2,
         cost: 75,
-        range: 50
+        range: 50,
     },
     X22: {
         type: "Pistol",
@@ -51,7 +51,7 @@ export default {
         shots: 8,
         rateOfFire: 2,
         cost: 150,
-        range: 50
+        range: 50,
     },
     avenger: {
         type: "Pistol",
@@ -69,7 +69,7 @@ export default {
         shots: 10,
         rateOfFire: 2,
         cost: 250,
-        range: 50
+        range: 50,
     },
     streetM: {
         type: "Pistol",
@@ -87,7 +87,7 @@ export default {
         shots: 12,
         rateOfFire: 2,
         cost: 250,
-        range: 50
+        range: 50,
     },
     X9M: {
         type: "Pistol",
@@ -105,7 +105,7 @@ export default {
         shots: 12,
         rateOfFire: 2,
         cost: 300,
-        range: 50
+        range: 50,
     },
     auto3: {
         type: "Pistol",
@@ -123,7 +123,7 @@ export default {
         shots: 8,
         rateOfFire: 2,
         cost: 350,
-        range: 50
+        range: 50,
     },
     type35: {
         type: "Pistol",
@@ -141,7 +141,7 @@ export default {
         shots: 8,
         rateOfFire: 2,
         cost: 400,
-        range: 50
+        range: 50,
     },
     armalite44: {
         type: "Pistol",
@@ -159,7 +159,7 @@ export default {
         shots: 8,
         rateOfFire: 1,
         cost: 450,
-        range: 50
+        range: 50,
     },
     colt: {
         type: "Pistol",
@@ -178,7 +178,7 @@ export default {
         shots: 8,
         rateOfFire: 1,
         cost: 75,
-        range: 50
+        range: 50,
     },
     miniauto: {
         type: "Submachine Gun",
@@ -197,7 +197,7 @@ export default {
         shots: 30,
         rateOfFire: 35,
         cost: 475,
-        range: 150
+        range: 150,
     },
     MP2013: {
         type: "Submachine Gun",
@@ -215,7 +215,7 @@ export default {
         shots: 35,
         rateOfFire: 32,
         cost: 450,
-        range: 150
+        range: 150,
     },
     assault2: {
         type: "Submachine Gun",
@@ -234,7 +234,7 @@ export default {
         shots: 50,
         rateOfFire: 25,
         cost: 400,
-        range: 150
+        range: 150,
     },
     minami10: {
         type: "Submachine Gun",
@@ -252,7 +252,7 @@ export default {
         shots: 40,
         rateOfFire: 20,
         cost: 500,
-        range: 200
+        range: 200,
     },
     MPK9: {
         type: "Submachine Gun",
@@ -270,7 +270,7 @@ export default {
         shots: 35,
         rateOfFire: 25,
         cost: 520,
-        range: 200
+        range: 200,
     },
     MPK11: {
         type: "Submachine Gun",
@@ -289,7 +289,7 @@ export default {
         shots: 30,
         rateOfFire: 20,
         cost: 700,
-        range: 200
+        range: 200,
     },
     SMG21: {
         type: "Submachine Gun",
@@ -307,7 +307,7 @@ export default {
         shots: 30,
         rateOfFire: 15,
         cost: 500,
-        range: 200
+        range: 200,
     },
     MAC14: {
         type: "Assault Rifle",
@@ -325,7 +325,7 @@ export default {
         shots: 20,
         rateOfFire: 10,
         cost: 650,
-        range: 200
+        range: 200,
     },
     roninL: {
         type: "Assault Rifle",
@@ -343,7 +343,7 @@ export default {
         shots: 35,
         rateOfFire: 30,
         cost: 450,
-        range: 400
+        range: 400,
     },
     AKR20: {
         type: "Assault Rifle",
@@ -361,7 +361,7 @@ export default {
         shots: 30,
         rateOfFire: 30,
         cost: 500,
-        range: 400
+        range: 400,
     },
     FNRAL: {
         type: "Assault Rifle",
@@ -379,7 +379,7 @@ export default {
         shots: 35,
         rateOfFire: 30,
         cost: 600,
-        range: 400
+        range: 400,
     },
     A80: {
         type: "Assault Rifle",
@@ -397,7 +397,7 @@ export default {
         shots: 35,
         rateOfFire: 25,
         cost: 550,
-        range: 400
+        range: 400,
     },
     RA12: {
         type: "Shotgun",
@@ -416,7 +416,7 @@ export default {
         shots: 20,
         rateOfFire: 2,
         cost: 900,
-        range: 50
+        range: 50,
     },
     stakeout: {
         type: "Shotgun",
@@ -434,7 +434,7 @@ export default {
         shots: 10,
         rateOfFire: 2,
         cost: 450,
-        range: 50
+        range: 50,
     },
     club: {
         type: "Melee",
@@ -452,7 +452,7 @@ export default {
         shots: 1,
         rateOfFire: 1,
         cost: 0,
-        range: 2
+        range: 2,
     },
     spoon: {
         type: "Melee",
@@ -470,7 +470,7 @@ export default {
         shots: 1,
         rateOfFire: 1,
         cost: 0,
-        range: 2
+        range: 2,
     },
     fists: {
         type: "Melee",
@@ -488,6 +488,6 @@ export default {
         shots: 1,
         rateOfFire: 1,
         cost: 0,
-        range: 2
-    }
+        range: 2,
+    },
 };

@@ -67,7 +67,7 @@ export default {
         "Curcio",
         "Rolland",
         "Godfrey",
-        "Ruy"
+        "Ruy",
     ],
     female: [
         "Eve",
@@ -189,7 +189,7 @@ export default {
         "Consuelo",
         "Gayle",
         "Loreen",
-        "Ailsun"
+        "Ailsun",
     ],
     surname: [
         "Jones",
@@ -324,6 +324,6 @@ export default {
         "Graeser",
         "Shields",
         "Lawlan",
-        "Capon"
-    ]
+        "Capon",
+    ],
 };

@@ -1,10 +1,10 @@
 import * as React from "react";
-import {Category} from "../general/category";
-import skills from "../../items/skills";
-import {SkillComponent} from "./skillComponent";
-import {Skill} from "../../items/Skill";
 import {Actor} from "../../actors/Actor";
+import {Skill} from "../../items/Skill";
+import skills from "../../items/skills";
 import {Message} from "../actionLog/messageComponent";
+import {Category} from "../general/category";
+import {SkillComponent} from "./skillComponent";
 
 export interface CombatMenuProps {
     actor: Actor;
@@ -24,21 +24,21 @@ export class CombatMenu extends React.Component<CombatMenuProps, CombatMenuState
     }
 
 
-    handleClick = (selection: string) => {
-        this.setState({selection: selection});
+    public handleClick = (selection: string) => {
+        this.setState({selection});
     };
 
-    getMessage = (msg: Message) => {
+    public getMessage = (msg: Message) => {
         this.props.messages(msg);
     };
 
-    getSkills() {
+    public getSkills() {
         return skills.combat.map((e: Skill, i) => {
             return <SkillComponent skill={e} key={i} actor={this.props.actor} enemy={this.props.enemy} skillMSG={this.getMessage}/>;
-        })
+        });
     }
 
-    render() {
+    public render() {
         return (
             <div className={"itemCollection"}>
                 <div className={"itemCollectionContainer"}>
@@ -50,6 +50,6 @@ export class CombatMenu extends React.Component<CombatMenuProps, CombatMenuState
                         {this.getSkills()}
                     </div>
                 </div>
-            </div>)
+            </div>);
     }
 }

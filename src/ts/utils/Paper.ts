@@ -1,21 +1,23 @@
-import { getItem } from "../interact/getItem";
-import { Item } from "../items/Item";
-import { Weapon } from "../items/Weapon";
-import { Armor } from "../items/Armor";
+import {GetItem} from "../interact/getItem";
+import {Armor} from "../items/Armor";
+import {Item} from "../items/Item";
+import {Weapon} from "../items/Weapon";
 
 let selected: Item | undefined;
 
 export class Paper {
-    static paperElement(id?: string, className?: string): HTMLElement {
+    public static paperElement(id?: string, className?: string): HTMLElement {
         const element = document.createElement("div");
         if (className !== undefined && className !== "") {
             element.setAttribute("class", className);
         }
-        if (id !== undefined || id !== "") element.id = id!;
+        if (id !== undefined || id !== "") {
+            element.id = id!;
+        }
         return element;
     }
 
-    static paperStatCard(title: string, value?: string, description?: string, valueID?: string): HTMLElement {
+    public static paperStatCard(title: string, value?: string, description?: string, valueID?: string): HTMLElement {
         const element: HTMLElement = this.paperElement();
         element.setAttribute("class", "statCard tooltip");
         const statTitle = document.createElement("span");
@@ -36,8 +38,8 @@ export class Paper {
         return element;
     }
 
-    static paperContainer(id: string, className?: string, title?: string): HTMLElement {
-        let element = this.paperElement(id, className);
+    public static paperContainer(id: string, className?: string, title?: string): HTMLElement {
+        const element = this.paperElement(id, className);
         element.id = id;
         if (title !== null && title !== "") {
             const header = document.createElement("h2");
@@ -45,16 +47,22 @@ export class Paper {
             header.textContent = title!;
             element.appendChild(header);
         }
-        if (className !== null && className !== "") element.setAttribute("class", className!);
+        if (className !== null && className !== "") {
+            element.setAttribute("class", className!);
+        }
         return element;
     }
 
-    static paperInfoContainer(id?: string, className?: string, title?: string): HTMLElement {
-        let element = this.paperElement(id, className);
-        if (className !== null && className !== "") element.setAttribute("class", className!);
-        if (id !== null) element.id = id!;
+    public static paperInfoContainer(id?: string, className?: string, title?: string): HTMLElement {
+        const element = this.paperElement(id, className);
+        if (className !== null && className !== "") {
+            element.setAttribute("class", className!);
+        }
+        if (id !== null) {
+            element.id = id!;
+        }
         if (title !== undefined) {
-            let containerTitle = document.createElement("h2");
+            const containerTitle = document.createElement("h2");
             containerTitle.textContent = title;
             containerTitle.setAttribute("class", "statTitle vital");
             element.appendChild(containerTitle);
@@ -62,19 +70,19 @@ export class Paper {
         return element;
     }
 
-    static paperInventoryItem(item: Item): HTMLElement {
-        let itemElement = this.paperElement(item.id);
+    public static paperInventoryItem(item: Item): HTMLElement {
+        const itemElement = this.paperElement(item.id);
         itemElement.setAttribute("class", "inventoryItem");
-        let itemTitle = document.createElement("span");
-        let itemType = document.createElement("span");
-        let itemCount = document.createElement("span");
+        const itemTitle = document.createElement("span");
+        const itemType = document.createElement("span");
+        const itemCount = document.createElement("span");
         itemTitle.setAttribute("class", "itemTitle");
         itemType.setAttribute("class", "itemType");
         itemCount.setAttribute("class", "itemCount");
-        let embed = item.bodypart ? item.bodypart : item.type;
-        let itemEquipped = document.createElement("span");
+        const embed = item.bodypart ? item.bodypart : item.type;
+        const itemEquipped = document.createElement("span");
         itemTitle.textContent = item.name;
-        itemType.textContent = item.type == "weapons" ? (item as Weapon).weaponType : item.type;
+        itemType.textContent = item.type === "weapons" ? (item as Weapon).weaponType : item.type;
         itemCount.textContent = "1x";
         itemEquipped.textContent = "";
         itemEquipped.classList.add("itemEquipped");
@@ -83,7 +91,7 @@ export class Paper {
         itemElement.appendChild(itemEquipped);
         itemElement.appendChild(itemCount);
         itemElement.classList.add(embed + "_node");
-        itemElement.onclick = function() {
+        itemElement.onclick = () => {
             const infoContainer = document.getElementById("itemStatsContainer")!;
             const infoExtraContainer = document.getElementById("itemExtraContainer")!;
             infoContainer.innerHTML = "";
@@ -94,7 +102,7 @@ export class Paper {
             } else {
                 selected = item;
                 Array.from(document.getElementById("inventoryItems")!.childNodes)!.forEach((item: any) =>
-                    item.classList.remove("activeSelection")
+                    item.classList.remove("activeSelection"),
                 );
                 itemElement.classList.add("activeSelection");
                 infoContainer.appendChild(Paper.paperInventoryItemInfo(item));
@@ -109,8 +117,8 @@ export class Paper {
         return itemElement;
     }
 
-    static paperInventoryItemInfo(item: Item): DocumentFragment {
-        let fragment: DocumentFragment = document.createDocumentFragment(),
+    public static paperInventoryItemInfo(item: Item): DocumentFragment {
+        const fragment: DocumentFragment = document.createDocumentFragment(),
             itemTitleContainer: HTMLDivElement = document.createElement("div"),
             itemTitle: HTMLSpanElement = document.createElement("span");
         itemTitleContainer.classList.add("inventoryItemInfoTitle");
@@ -119,8 +127,9 @@ export class Paper {
         fragment.appendChild(itemTitleContainer);
         if (item instanceof Weapon) {
             fragment.appendChild(Paper.inventoryInfoItem("Manufacturer: ", (item as Weapon).manufacturer));
-            if (item.ammoType !== "")
+            if (item.ammoType !== "") {
                 fragment.appendChild(Paper.inventoryInfoItem("Ammo type: ", (item as Weapon).ammoType));
+            }
         } else if (item instanceof Armor) {
             fragment.appendChild(Paper.inventoryInfoItem("Type: ", (item as Armor).bodypart));
             fragment.appendChild(Paper.inventoryInfoItem("Set: ", (item as Armor).set));
@@ -129,8 +138,8 @@ export class Paper {
         return fragment;
     }
 
-    static weaponStats(weapon: Weapon): DocumentFragment {
-        let fragment: DocumentFragment = document.createDocumentFragment(),
+    public static weaponStats(weapon: Weapon): DocumentFragment {
+        const fragment: DocumentFragment = document.createDocumentFragment(),
             statContainer: HTMLDivElement = document.createElement("div"),
             statsTitleContainer: HTMLHeadingElement = document.createElement("div"),
             statsTitle: HTMLSpanElement = document.createElement("span");
@@ -149,8 +158,8 @@ export class Paper {
         return fragment;
     }
 
-    static inventoryInfoItem(title: string, content: string): DocumentFragment {
-        let frag: DocumentFragment = document.createDocumentFragment(),
+    public static inventoryInfoItem(title: string, content: string): DocumentFragment {
+        const frag: DocumentFragment = document.createDocumentFragment(),
             itemContainer: HTMLDivElement = document.createElement("div"),
             itemTitle: HTMLDivElement = document.createElement("div"),
             itemContent: HTMLSpanElement = document.createElement("span");
@@ -165,8 +174,8 @@ export class Paper {
         return frag;
     }
 
-    static equipButton(item: Item): DocumentFragment {
-        let frag = document.createDocumentFragment(),
+    public static equipButton(item: Item): DocumentFragment {
+        const frag = document.createDocumentFragment(),
             equipButton = document.createElement("button");
         equipButton.textContent = item.equipped ? "Unequip" : "Equip";
         equipButton.classList.add("button");
@@ -179,14 +188,14 @@ export class Paper {
                 equipButton.textContent = "Equip";
                 equipButton.classList.remove("buttonActiveSelection");
             }
-            getItem.useItem(item);
+            GetItem.useItem(item);
         };
         frag.appendChild(equipButton);
         return frag;
     }
 
-    static paperProgressBar(title: string, value: number, max: number, modifier?: string): DocumentFragment {
-        let frag: DocumentFragment = document.createDocumentFragment(),
+    public static paperProgressBar(title: string, value: number, max: number, modifier?: string): DocumentFragment {
+        const frag: DocumentFragment = document.createDocumentFragment(),
             progressContainer: HTMLDivElement = document.createElement("div"),
             progressBar: HTMLProgressElement = document.createElement("progress"),
             progressTitle: HTMLDivElement = document.createElement("div"),

@@ -15,14 +15,14 @@ export class CharacterStats extends React.Component<StatsProps, StatsState> {
 
     constructor(props: any) {
         super(props);
-        this.state = {actor: this.props.actor}
+        this.state = {actor: this.props.actor};
     }
 
-    handleChange = () => {
+    public handleChange = () => {
         this.setState({actor: this.props.actor});
     };
 
-    render() {
+    public render() {
         return (
             <div className={'characterInfo'}>
                 <CharacterPortrait imgSource={this.props.actor.role.portrait}/>
@@ -39,6 +39,6 @@ export class CharacterStats extends React.Component<StatsProps, StatsState> {
                     <StatListItem name={'Range:'} value={`${this.props.actor!.weapon.range}m`}/>
                     <StatListItem name={'Critical chance:'} value={`${this.props.actor!.weapon.crit}%`}/>
                 </div>
-            </div>)
+            </div>);
     }
 }

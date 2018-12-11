@@ -12,16 +12,16 @@ interface SidebarState {
 
 export class Sidebar extends React.Component<SidebarProps, SidebarState> {
 
-    state: Readonly<SidebarState> = {
-        activeSelection: "Character"
+    public state: Readonly<SidebarState> = {
+        activeSelection: "Character",
     };
 
-    handleClick = (selection: string) => {
+    public handleClick = (selection: string) => {
         this.setState({activeSelection: selection});
         this.props.activeSelection(selection);
     };
 
-    render() {
+    public render() {
         return (
             <div id='sidebar'>
                 <PrimaryTitle title={'Menu'} noMenus={true}/>
@@ -34,6 +34,6 @@ export class Sidebar extends React.Component<SidebarProps, SidebarState> {
                 <MenuButton text='Restart' update={this.handleClick} active={this.state.activeSelection}/>
                 <MenuButton text='Respawn' update={this.handleClick} active={this.state.activeSelection}/>
                 <MenuButton text='Stats' update={this.handleClick} active={this.state.activeSelection}/>
-            </div>)
+            </div>);
     }
 }

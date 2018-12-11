@@ -1,8 +1,8 @@
 export class Stat {
-    name: string;
-    description: string;
-    value: number;
-    short: string;
+    public name: string;
+    public description: string;
+    public value: number;
+    public short: string;
 
     constructor(name: string, short: string, desc: string, val: number) {
         this.name = name;

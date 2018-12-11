@@ -11,7 +11,7 @@ export class Message extends React.Component<MessageProps, {}> {
         super(props);
     }
 
-    render(): any {
-        return <div className={'actionMessage'}>> {this.props.text}</div>
+    public render(): any {
+        return <div className={'actionMessage'}>> {this.props.text}</div>;
     }
 }

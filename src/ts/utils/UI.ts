@@ -1,17 +1,17 @@
-import {Utils} from "./utils";
-import Stats from "../actors/resources/Stats";
 import en_US from "../../lang/en_US";
-import {State} from "./State";
-import {Paper} from "./Paper";
-import {Armor} from "../items/Armor";
 import {Player} from "../actors/player";
+import Stats from "../actors/resources/Stats";
+import {Armor} from "../items/Armor";
+import {Paper} from "./Paper";
+import {State} from "./State";
+import {Utils} from "./utils";
 
 const _ = Utils;
 const statStrings = en_US.stats;
 const playerStrings = en_US.player;
 
 export class UI {
-    static updateUI() {
+    public static updateUI() {
         const actor: Player = State.player!;
         _.l("charHP")!.textContent = `${actor.health}/${actor.maxHealth}`;
         _.l("charLvl")!.textContent = actor.level.toString();
@@ -39,30 +39,30 @@ export class UI {
         _.l("playerPosition")!.textContent = actor.position.toString();
     }
 
-    static updateExp(): void {
+    public static updateExp(): void {
         const actor: Player = State.player!;
         _.l("charExp")!.textContent = actor.experience + "/" + actor.maxExperience;
     }
 
-    static updateEquipment(armor: Armor) {
-        let armorDesc = armor.equipped ? armor.description : (en_US.UI.armor as any)[`${armor.type!}DescEmpty`],
-            armorStop = armor.equipped ? armor.stoppingPower.toString() : "0%";
+    public static updateEquipment(armor: Armor) {
+        const armorDesc = armor.equipped ? armor.description : (en_US.UI.armor as any)[`${armor.type!}DescEmpty`];
+        const armorStop = armor.equipped ? armor.stoppingPower.toString() : "0%";
         Utils.l(`${armor.bodypart}_equipped`)!.textContent = armor.equipped ? armor.name : en_US.UI.armor.empty;
         Utils.l(`${armor.bodypart}_equipped_desc`)!.textContent = `${armorDesc} / ${armorStop}`;
     }
 
-    static getStoppingPower() {
+    public static getStoppingPower() {
         const player: Player = State.player!;
         return Object.entries(player.equipment)
-            .filter(e => e[1])
-            .map(e => {
+            .filter((e) => e[1])
+            .map((e) => {
                 return e[1];
             })
             .reduce((acc: number, b) => acc + (b! as any).stoppingPower, 0);
     }
 
-    static updateStats() {
-        let actor: Player = State.player!;
+    public static updateStats() {
+        const actor: Player = State.player!;
         Utils.l("INT_val")!.textContent = actor.stats.int.toString();
         Utils.l("REF_val")!.textContent = actor.stats.ref.toString();
         Utils.l("COO_val")!.textContent = actor.stats.tech.toString();
@@ -79,24 +79,24 @@ export class UI {
         Utils.l("SAV_val")!.textContent = actor.stats.sn.toString();
     }
 
-    static Stats() {
-        let statPane = Paper.paperContainer("", "infoAreaContainer", statStrings.stats);
-        let stats = Paper.paperInfoContainer("attributes", "UIElement", "Skills");
+    public static Stats() {
+        const statPane = Paper.paperContainer("", "infoAreaContainer", statStrings.stats);
+        const stats = Paper.paperInfoContainer("attributes", "UIElement", "Skills");
         statPane.appendChild(stats);
-        Stats.map(stat => {
+        Stats.map((stat) => {
             stats.appendChild(Paper.paperStatCard(`${stat.name}:`, "", stat.description));
         });
         return statPane;
     }
 
-    static initMap() {
-        let map = State.playArea.canvas;
+    public static initMap() {
+        const map = State.playArea.canvas;
         let height = -(State.playArea.height / 2);
         let width = -(State.playArea.width / 2);
-        let linesY = State.playArea.height / 20;
-        let linesX = State.playArea.width / 20;
+        const linesY = State.playArea.height / 20;
+        const linesX = State.playArea.width / 20;
         for (let i = 0; i < linesY; i++) {
-            let ctx: CanvasRenderingContext2D = State.playArea.context!;
+            const ctx: CanvasRenderingContext2D = State.playArea.context!;
             ctx.strokeStyle = "#13120e";
             ctx.beginPath();
             ctx.moveTo(-(State.playArea.width / 2), height);
@@ -111,12 +111,12 @@ export class UI {
         _.l("infoAreaContainer")!.appendChild(map!);
     }
 
-    static changeInfoPane(contentID: string) {
-        let infoPane = document.getElementById("infoPane")!;
+    public static changeInfoPane(contentID: string) {
+        const infoPane = document.getElementById("infoPane")!;
         Array.from(document.getElementsByClassName("sideBar")[0]!.childNodes)
-            .filter(e => e.nodeName !== "#text")
-            .forEach(e => (e as HTMLElement).classList.remove("buttonActiveSelection"));
-        let pressedButton = document.getElementById(`${contentID}Button`)!;
+            .filter((e) => e.nodeName !== "#text")
+            .forEach((e) => (e as HTMLElement).classList.remove("buttonActiveSelection"));
+        const pressedButton = document.getElementById(`${contentID}Button`)!;
         pressedButton.classList.add("buttonActiveSelection");
         infoPane.innerHTML = "";
         switch (contentID) {
@@ -145,31 +145,31 @@ export class UI {
         }
     }
 
-    static Player(): HTMLElement {
-        let player: Player = State.player!;
-        let element = Paper.paperContainer("playerInfo_container", "infoAreaContainer", "Player");
-        let attributeContainer = function (): DocumentFragment {
-            let frag = document.createDocumentFragment();
-            let attributes = Paper.paperInfoContainer("attributes", "UIElement", "Info");
+    public static Player(): HTMLElement {
+        const player: Player = State.player!;
+        const element = Paper.paperContainer("playerInfo_container", "infoAreaContainer", "Player");
+        const attributeContainer = (): DocumentFragment => {
+            const frag = document.createDocumentFragment();
+            const attributes = Paper.paperInfoContainer("attributes", "UIElement", "Info");
             frag.appendChild(attributes);
-            let nameCard = Paper.paperStatCard(`${playerStrings.name}:`, player.name, "", "playerName");
-            let genderCard = Paper.paperStatCard(`${playerStrings.gender}:`, player.gender, "", "charGender");
-            let roleCard = Paper.paperStatCard(`${playerStrings.role}:`, player.role.name, "", "charRole");
-            let skillCard = Paper.paperStatCard(
+            const nameCard = Paper.paperStatCard(`${playerStrings.name}:`, player.name, "", "playerName");
+            const genderCard = Paper.paperStatCard(`${playerStrings.gender}:`, player.gender, "", "charGender");
+            const roleCard = Paper.paperStatCard(`${playerStrings.role}:`, player.role.name, "", "charRole");
+            const skillCard = Paper.paperStatCard(
                 `${playerStrings.skill}:`,
                 player.role.skill!,
                 player.role.skillDescription,
-                "charSkill"
+                "charSkill",
             );
-            let levelCard = Paper.paperStatCard(`${playerStrings.level}:`, player.level.toString(), "", "charLvl");
-            let expCard = Paper.paperStatCard(
+            const levelCard = Paper.paperStatCard(`${playerStrings.level}:`, player.level.toString(), "", "charLvl");
+            const expCard = Paper.paperStatCard(
                 `${playerStrings.exp}:`,
                 `${player.experience}/${player.maxExperience}`,
                 "",
-                "charExp"
+                "charExp",
             );
-            let hpCard = Paper.paperStatCard(`${playerStrings.hp}:`, player.health.toString(), "", "charHP");
-            let moneyCard = Paper.paperStatCard(`${playerStrings.money}:`, `${player.currency}¥`, "", "currency");
+            const hpCard = Paper.paperStatCard(`${playerStrings.hp}:`, player.health.toString(), "", "charHP");
+            const moneyCard = Paper.paperStatCard(`${playerStrings.money}:`, `${player.currency}¥`, "", "currency");
             attributes.appendChild(nameCard);
             attributes.appendChild(genderCard);
             attributes.appendChild(roleCard);
@@ -184,30 +184,30 @@ export class UI {
         return element;
     }
 
-    static Quests(): HTMLElement {
+    public static Quests(): HTMLElement {
         return Paper.paperContainer("quest_container", "infoAreaContainer", "Quests");
     }
 
-    static Inventory(): HTMLElement {
-        let player: Player = State.player!;
+    public static Inventory(): HTMLElement {
+        const player: Player = State.player!;
         const categories = Object.keys(player.inventory);
-        let element = Paper.paperContainer("inventory_container", "infoAreaContainer", "");
-        let itemContainer = Paper.paperElement("inventoryItemContainer", "");
-        let inventoryCategories = Paper.paperElement("inventoryCategories", "");
-        let inventoryItemContainer = Paper.paperElement("inventoryItems", "");
-        let itemInfoContainer = Paper.paperElement("itemInfoContainer", "");
-        let itemStatsContainer = Paper.paperElement("itemStatsContainer", "");
-        let itemExtraContainer = Paper.paperElement("itemExtraContainer", "");
-        categories.map(cat => {
-            let catItem = document.createElement("div");
-            let catTitle = document.createElement("span");
+        const element = Paper.paperContainer("inventory_container", "infoAreaContainer", "");
+        const itemContainer = Paper.paperElement("inventoryItemContainer", "");
+        const inventoryCategories = Paper.paperElement("inventoryCategories", "");
+        const inventoryItemContainer = Paper.paperElement("inventoryItems", "");
+        const itemInfoContainer = Paper.paperElement("itemInfoContainer", "");
+        const itemStatsContainer = Paper.paperElement("itemStatsContainer", "");
+        const itemExtraContainer = Paper.paperElement("itemExtraContainer", "");
+        categories.map((cat) => {
+            const catItem = document.createElement("div");
+            const catTitle = document.createElement("span");
             catTitle.classList.add("catTitle");
             catItem.setAttribute("class", "inventoryCategory");
             catItem.id = `${cat}Inventory`;
             catTitle.textContent = cat;
             inventoryCategories.appendChild(catItem);
             catItem.appendChild(catTitle);
-            catItem.onclick = function () {
+            catItem.onclick = () => {
                 State.UI.inventoryView = cat;
                 UI.changeInventoryView(cat);
                 UI.updateInventory();
@@ -222,48 +222,47 @@ export class UI {
         return element;
     }
 
-    static changeInventoryView(view: string) {
+    public static changeInventoryView(view: string) {
         State.UI.inventoryView = view;
-        Array.from(document.getElementsByClassName("inventoryCategory")).forEach(item => {
+        Array.from(document.getElementsByClassName("inventoryCategory")).forEach((item) => {
             item.classList.remove("activeInventoryCategory");
         });
         document.getElementById(`${view}Inventory`)!.classList.add("activeInventoryCategory");
     }
 
-    static updateInventory(): void {
+    public static updateInventory(): void {
         const player: Player = State.player!;
         const invArea = document.getElementById("inventoryItems");
         if (invArea) {
             while (invArea.firstChild) {
                 invArea.removeChild(invArea.firstChild);
             }
-            let inventoryViewItems = (player.inventory as any)[State.UI.inventoryView];
-            let unique = [...new Set(inventoryViewItems)];
+            const inventoryViewItems = (player.inventory as any)[State.UI.inventoryView];
+            const unique = [...new Set(inventoryViewItems)];
             unique.forEach((item: any) => {
-                let inventoryItem = Paper.paperInventoryItem(item),
-                    count = inventoryViewItems.reduce(function (n: number, val: number) {
-                        return n + (val === item ? 1 : 0);
-                    }, 0);
-                if (item.equipped === true)
+                const inventoryItem = Paper.paperInventoryItem(item);
+                const count = inventoryViewItems.reduce((n: number, val: number) => n + (val === item ? 1 : 0), 0);
+                if (item.equipped === true) {
                     inventoryItem.getElementsByClassName("itemEquipped")[0].textContent = "[Equipped]";
+                }
                 inventoryItem.getElementsByClassName("itemCount")[0].textContent = `${count}x`;
                 invArea.appendChild(inventoryItem);
             });
         }
     }
 
-    static addItemToInventory(): void {
+    public static addItemToInventory(): void {
     }
 
-    static Store(): HTMLElement {
+    public static Store(): HTMLElement {
         return Paper.paperContainer("store_container", "infoAreaContainer", "Store");
     }
 
-    static Raid(): HTMLElement {
+    public static Raid(): HTMLElement {
         return Paper.paperContainer("raid_container", "infoAreaContainer", "Raid");
     }
 
-    static Alliance(): HTMLElement {
+    public static Alliance(): HTMLElement {
         return Paper.paperContainer("alliance_container", "infoAreaContainer", "Alliance");
     }
 }

@@ -1,9 +1,9 @@
-import { Movement } from "../interact/Movement";
-import { Cover } from "./Cover";
-import { State } from "../utils/State";
+import {Movement} from "../interact/Movement";
+import {State} from "../utils/State";
+import {Cover} from "./Cover";
 
-let rpos = Movement.randomPosition(State.playArea, 100);
-let Covers = [
+const rpos = Movement.randomPosition(State.playArea, 100);
+const Covers = [
     new Cover("Sheetrock wall", rpos, 5),
     new Cover("Stone Wall", rpos, 30),
     new Cover("Large Tree", rpos, 30),
@@ -21,6 +21,6 @@ let Covers = [
     new Cover("Engine block", rpos, 35),
     new Cover("Mailbox", rpos, 25),
     new Cover("Hydrant", rpos, 35),
-    new Cover("Curb", rpos, 25)
+    new Cover("Curb", rpos, 25),
 ];
 export default Covers;

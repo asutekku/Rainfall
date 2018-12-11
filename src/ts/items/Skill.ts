@@ -6,9 +6,9 @@ export interface SkillInterface {
 
 export class Skill implements SkillInterface {
 
-    name: string;
-    description: string;
-    level: number;
+    public name: string;
+    public description: string;
+    public level: number;
 
     constructor(
         name: string,

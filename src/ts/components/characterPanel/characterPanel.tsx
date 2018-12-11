@@ -23,11 +23,11 @@ export class CharacterPanel extends React.Component<CharacterPanelProps, Charact
         this.state = {
             activeSelection: undefined,
             activeEnemy: undefined,
-            selected: ''
-        }
+            selected: '',
+        };
     }
 
-    getCharacter = (actor: Actor) => {
+    public getCharacter = (actor: Actor) => {
         if (!actor) {
             this.setState({activeSelection: this.props.party[0]});
             this.props.activeSelection(this.props.party[0]);
@@ -37,7 +37,7 @@ export class CharacterPanel extends React.Component<CharacterPanelProps, Charact
         }
     };
 
-    getEnemy = (actor: Actor) => {
+    public getEnemy = (actor: Actor) => {
         if (!actor) {
             this.setState({activeEnemy: this.props.enemies[0]});
             this.props.activeEnemy(this.props.enemies[0]);
@@ -47,11 +47,11 @@ export class CharacterPanel extends React.Component<CharacterPanelProps, Charact
         }
     };
 
-    render() {
+    public render() {
         return <div id='statpane'>
             <PrimaryTitle title={'Characters'} noMenus={true}/>
             <Party name={'Friendly'} party={this.props.party} activeSelection={this.getCharacter} friendly={true}/>
             <Party name={'Enemies'} party={this.props.enemies} activeSelection={this.getEnemy} friendly={false}/>
-        </div>
+        </div>;
     }
 }

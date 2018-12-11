@@ -18,24 +18,24 @@ export class CharacterComponent extends React.Component<CharCompProps, CharCompS
 
     constructor(props: any) {
         super(props);
-        this.state = {actor: this.props.actor, active: false, friendly: this.props.friendly}
+        this.state = {actor: this.props.actor, active: false, friendly: this.props.friendly};
     }
 
-    handleClick = () => {
+    public static getTarget(friendly: boolean, active: boolean) {
+        if (!friendly && active) {
+            return <span className={"itemContainer-bottom-right"}>{`Target`}</span>;
+        }
+    }
+
+    public handleClick = () => {
         const state = !this.state.active;
         this.setState({active: state});
     };
 
-    static getTarget(friendly: boolean, active: boolean) {
-        if (!friendly && active) {
-            return <span className={"itemContainer-bottom-right"}>{`Target`}</span>
-        }
-    }
-
-    render() {
+    public render() {
         return (
             <div
-                className={this.state.actor.name == this.props.selected ? 'itemContainer-100 itemContainer-active' : 'itemContainer-100'}
+                className={this.state.actor.name === this.props.selected ? 'itemContainer-100 itemContainer-active' : 'itemContainer-100'}
                 onClick={() => {
                     this.handleClick();
                     return this.props.update(this.props.actor);
@@ -49,9 +49,9 @@ export class CharacterComponent extends React.Component<CharCompProps, CharCompS
                 </div>
                 <div className={'itemContainerRow-bottom'}>
                     <span className={"itemContainer-bottom-left"}>{`Weapon: ${this.props.actor.weapon.name}`}</span>
-                    {CharacterComponent.getTarget(this.props.friendly, this.state.actor.name == this.props.selected)}
+                    {CharacterComponent.getTarget(this.props.friendly, this.state.actor.name === this.props.selected)}
                 </div>
             </div>
-        )
+        );
     }
 }

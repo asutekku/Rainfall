@@ -9,12 +9,12 @@ export interface QuestInterface {
 
 export class Quest implements QuestInterface {
 
-    name: string;
-    description: string;
-    level: number;
-    rewardItems: any;
-    rewardMoney: number;
-    active: boolean;
+    public name: string;
+    public description: string;
+    public level: number;
+    public rewardItems: any;
+    public rewardMoney: number;
+    public active: boolean;
 
     constructor(
         name: string,
@@ -22,7 +22,7 @@ export class Quest implements QuestInterface {
         level: number,
         rewardItems: any,
         rewardMoney: number,
-        active: boolean
+        active: boolean,
     ) {
         this.name = name;
         this.description = description;

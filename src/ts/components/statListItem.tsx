@@ -11,12 +11,12 @@ export interface StatListItemState {
 }
 
 export class StatListItem extends React.Component<StatListItemProps, StatListItemState> {
-    render() {
+    public render() {
         return (
             <div className={this.props.tooltip ? "statCard tooltip" : "statCard"}>
                 {this.props.tooltip ? <span className={"tooltiptext"}>{this.props.tooltip}</span> : ""}
                 <span className={"statTitle"}>{this.props.name}</span>
                 <span className={"statValue"}>{this.props.value}</span>
-            </div>)
+            </div>);
     }
 }

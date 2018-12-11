@@ -1,9 +1,9 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {DefaultMessage} from "../../interact/messageSchema";
-import {Message} from "./messageComponent";
-import {CombatMessage, DeathMessage} from "./combatMessage";
 import {PrimaryTitle} from "../general/primaryTitle";
+import {CombatMessage, DeathMessage} from "./combatMessage";
+import {Message} from "./messageComponent";
 
 export interface LogProps {
     actor: Actor;
@@ -16,7 +16,7 @@ interface LogState {
 }
 
 class Log extends React.Component<{ messages: JSX.Element[] }> {
-    render() {
+    public render() {
         return <div id="actions">{this.props.messages}</div>;
     }
 }
@@ -25,37 +25,37 @@ export class ActionLog extends React.Component<LogProps, LogState> {
 
     constructor(props: any) {
         super(props);
-        this.state = {selection: 'Skills', messages: []};
+        this.state = {selection: "Skills", messages: []};
     }
 
-    handleClick = (selection: string) => {
-        this.setState({selection: selection});
+    public handleClick = (selection: string) => {
+        this.setState({selection});
     };
 
-    getMessages = (): JSX.Element[] => {
+    public getMessages = (): JSX.Element[] => {
         return this.props.messages.map((m: any, i: number) => {
             switch (m.type) {
-                case 'combat' :
+                case "combat" :
                     return <CombatMessage key={i} message={m}/>;
-                case 'death' :
+                case "death" :
                     return <DeathMessage key={i} dead={m.dead} killer={m.killer}/>;
                 default:
-                    let msg = !m.playerName ? m.msg : m.playerName;
+                    const msg = !m.playerName ? m.msg : m.playerName;
                     return <Message text={msg} key={i}/>;
             }
-        })
+        });
     };
 
-    render() {
+    public render() {
         return (
-            <div id={'actionLog'}>
-                <PrimaryTitle title={'Action log'} noMenus={true}/>
+            <div id={"actionLog"}>
+                <PrimaryTitle title={"Action log"} noMenus={true}/>
                 <div id="gamearea" className="gridElement">
                     <div id="initLine">
                         <span className="actionMessage-first">></span>
                     </div>
                     <Log messages={this.getMessages()}/>
                 </div>
-            </div>)
+            </div>);
     }
 }

@@ -1,12 +1,12 @@
 import * as React from "react";
-import {Inventory} from "./inventory/inventory";
-import {CombatMenu} from "./combat/combatMenu";
+import {Actor} from "../actors/Actor";
 import {Player} from "../actors/player";
+import {Message} from "./actionLog/messageComponent";
+import {CombatMenu} from "./combat/combatMenu";
 import {PrimaryTitle} from "./general/primaryTitle";
+import {Inventory} from "./inventory/inventory";
 import {Quests} from "./quests/quests";
 import {Character} from "./stats/stats";
-import {Actor} from "../actors/Actor";
-import {Message} from "./actionLog/messageComponent";
 import {Store} from "./storePanel/store";
 
 interface MainProps {
@@ -25,7 +25,7 @@ export class MainPanel extends React.Component<MainProps, MainState> {
 
     constructor(props: any) {
         super(props);
-        this.state = {actor: this.props.currentActor, messages: []}
+        this.state = {actor: this.props.currentActor, messages: []};
     }
 
     /**
@@ -33,11 +33,11 @@ export class MainPanel extends React.Component<MainProps, MainState> {
      * Pops the oldest messages if it is longer than x
      * @param {Message} msg Messages to add into an array
      */
-    getMessage = (msg: Message) => {
+    public getMessage = (msg: Message) => {
         this.props.messages(msg);
     };
 
-    renderView(view: string): any {
+    public renderView(view: string): any {
         switch (view) {
             case "Inventory":
                 return <Inventory player={this.props.currentActor}/>;
@@ -51,11 +51,11 @@ export class MainPanel extends React.Component<MainProps, MainState> {
             case 'Store':
                 return <Store messages={this.getMessage}/>;
             default:
-                return <div>This is yet to be implemented</div>
+                return <div>This is yet to be implemented</div>;
         }
     }
 
-    render() {
+    public render() {
         return (
             <div id="playPane">
                 <div className="gridElement">
@@ -64,6 +64,6 @@ export class MainPanel extends React.Component<MainProps, MainState> {
                         {this.renderView(this.props.activeView)}
                     </div>
                 </div>
-            </div>)
+            </div>);
     }
 }

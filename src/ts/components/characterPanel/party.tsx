@@ -16,7 +16,7 @@ interface PartyStats {
 }
 
 class PartyContainer extends React.Component<{ party: any }> {
-    render() {
+    public render() {
         return <div className={"partyContainer"}>
             {this.props.party}
         </div>;
@@ -29,33 +29,33 @@ export class Party extends React.Component<PartyProps, PartyStats> {
         super(props);
         this.state = {
             activeSelection: undefined,
-            selected: ''
-        }
+            selected: '',
+        };
     }
 
-    handleClick = (actor: Actor) => {
+    public handleClick = (actor: Actor) => {
         this.setState({activeSelection: actor, selected: actor.name});
         this.props.activeSelection(actor);
     };
 
-    getSelected(): string {
+    public getSelected(): string {
         return this.state.selected !== null ? this.state.selected : '';
     }
 
-    getParty(): any {
+    public getParty(): any {
         return this.props.party.map((e: any, i: number) => {
                 return <CharacterComponent actor={e} friendly={this.props.friendly} key={i} update={this.handleClick}
                                            selected={this.getSelected()}/>;
-            }
-        )
+            },
+        );
     }
 
-    render() {
+    public render() {
         return <div id='partyComponent'>
             <PrimaryTitle title={this.props.name} noMenus={true}/>
             <div className='UIelement'>
                 <PartyContainer party={this.getParty()}/>
             </div>
-        </div>
+        </div>;
     }
 }

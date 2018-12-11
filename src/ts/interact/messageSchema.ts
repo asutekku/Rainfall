@@ -5,7 +5,7 @@ export interface DefaultMessage {
 }
 
 export class MessageStr implements DefaultMessage {
-    msg: string;
+    public msg: string;
 
     constructor(msg: string) {
         this.msg = msg;
@@ -13,10 +13,10 @@ export class MessageStr implements DefaultMessage {
 }
 
 export class DeathMessage implements DefaultMessage {
-    type = 'death';
-    msg: string;
-    dead: Actor;
-    killer: Actor;
+    public type = 'death';
+    public msg: string;
+    public dead: Actor;
+    public killer: Actor;
 
     constructor(dead: Actor, killer: Actor, msg?: string) {
         this.msg = msg ? msg : '';
@@ -26,17 +26,17 @@ export class DeathMessage implements DefaultMessage {
 }
 
 export class MessageCombat implements DefaultMessage {
-    type = "combat";
-    msg: string;
-    attacker: Actor;
-    defender: Actor;
-    attType: string;
-    critical: boolean;
-    damage: number;
-    prevHP: number;
+    public type = "combat";
+    public msg: string;
+    public attacker: Actor;
+    public defender: Actor;
+    public attType: string;
+    public critical: boolean;
+    public damage: number;
+    public prevHP: number;
 
     constructor(parameters: { msg: string, attacker: Actor, defender: Actor, attType: string, critical: boolean, damage: number, prevHP: number }) {
-        let {msg, attacker, defender, attType, critical, damage, prevHP} = parameters;
+        const {msg, attacker, defender, attType, critical, damage, prevHP} = parameters;
         this.msg = msg;
         this.attacker = attacker;
         this.defender = defender;

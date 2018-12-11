@@ -6,12 +6,12 @@ export interface InfoAreaTitleProps {
 }
 
 export class PrimaryTitle extends React.Component<InfoAreaTitleProps, {}> {
-    render() {
+    public render() {
         return (
             <div className={this.props.noMenus ? "title-main underline" : "title-main"}>
                 <div className={"infoAreaTitle"}>
                     <span className={"catTitle"}>{this.props.title}</span>
                 </div>
-            </div>)
+            </div>);
     }
 }

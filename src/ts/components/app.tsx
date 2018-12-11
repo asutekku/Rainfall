@@ -1,16 +1,16 @@
 import * as React from "react";
-import {Sidebar} from "./sidebar";
-import {MainPanel} from "./mainPanel";
-import {Player} from "../actors/player";
 import {Actor} from "../actors/Actor";
-import {CharacterPanel} from "./characterPanel/characterPanel";
 import {Goon} from "../actors/Enemies/Goon";
+import {Player} from "../actors/player";
+import {MessageCombat} from "../interact/messageSchema";
 import {ActionLog} from "./actionLog/actionLog";
 import {Message} from "./actionLog/messageComponent";
-import {MessageCombat} from "../interact/messageSchema";
+import {CharacterPanel} from "./characterPanel/characterPanel";
+import {MainPanel} from "./mainPanel";
+import {Sidebar} from "./sidebar";
 
 
-export interface AppState {
+export interface InterfaceAppState {
     activeMainPanel: string;
     activeChar: Actor | undefined;
     activeEnemy: Actor | undefined;
@@ -19,28 +19,28 @@ export interface AppState {
     messages: Message[];
 }
 
-export class App extends React.Component<{}, AppState> {
+export class App extends React.Component<{}, InterfaceAppState> {
     constructor(props: any) {
         super(props);
         this.state = {
-            activeMainPanel: 'Character',
+            activeMainPanel: "Character",
             activeChar: undefined,
             activeEnemy: undefined,
             party: [new Player(), new Player()],
             currentEnemies: [new Goon(), new Goon()],
-            messages: []
+            messages: [],
         };
     }
 
-    getMessage = (...messages: any) => {
+    public getMessage = (...messages: any) => {
         messages.flat().forEach((message: Message) => {
             console.log(message);
             if (message instanceof MessageCombat) {
                 if (message.defender.health <= 0) {
-                    const index: number = this.state.currentEnemies.findIndex((g) => g.name == message.defender.name);
+                    const index: number = this.state.currentEnemies.findIndex((g) => g.name === message.defender.name);
                     const newArr = this.state.currentEnemies;
                     newArr[index] = new Goon();
-                    this.setState({currentEnemies: newArr, activeEnemy: newArr[index]})
+                    this.setState({currentEnemies: newArr, activeEnemy: newArr[index]});
                 }
             }
             // const joined = [message, ...this.state.messages];
@@ -48,41 +48,43 @@ export class App extends React.Component<{}, AppState> {
             // this.setState({messages: joined})
         });
         const joined = [...messages.flat(), ...this.state.messages];
-        if (joined.length >= 20) joined.length = 20;
+        if (joined.length >= 20) {
+            joined.length = 20;
+        }
         console.log(joined);
-        this.setState({messages: joined})
+        this.setState({messages: joined});
     };
 
-    updateSelection = (selection: string) => {
+    public updateSelection = (selection: string) => {
         this.setState({activeMainPanel: selection});
     };
 
-    getCharacter = (actor: Actor) => {
+    public getCharacter = (actor: Actor) => {
         if (!actor) {
-            this.setState({activeChar: this.state.party[0]})
+            this.setState({activeChar: this.state.party[0]});
         } else {
-            this.setState({activeChar: actor})
+            this.setState({activeChar: actor});
         }
     };
 
-    getEnemy = (actor: Actor) => {
+    public getEnemy = (actor: Actor) => {
         console.log(actor);
         if (!actor) {
-            this.setState({activeEnemy: this.state.currentEnemies[0]})
+            this.setState({activeEnemy: this.state.currentEnemies[0]});
         } else {
-            this.setState({activeEnemy: actor})
+            this.setState({activeEnemy: actor});
         }
     };
 
-    getCurrentActor(): Actor {
+    public getCurrentActor(): Actor {
         return !this.state.activeChar ? this.state.party[0] : this.state.activeChar;
     }
 
-    getCurrentEnemy(): Actor {
+    public getCurrentEnemy(): Actor {
         return !this.state.activeEnemy ? this.state.currentEnemies[0] : this.state.activeEnemy;
     }
 
-    render() {
+    public render() {
         return (
             <div id={"mainpane"}>
                 <Sidebar activeSelection={this.updateSelection}/>
@@ -93,6 +95,6 @@ export class App extends React.Component<{}, AppState> {
                                 enemies={this.state.currentEnemies}
                                 activeSelection={this.getCharacter}
                                 activeEnemy={this.getEnemy}/>
-            </div>)
+            </div>);
     }
 }

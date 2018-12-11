@@ -1,7 +1,7 @@
 import * as React from "react";
+import {Actor} from "../../actors/Actor";
 import {Category} from "../general/category";
 import {CharacterAbout} from "./characterAbout";
-import {Actor} from "../../actors/Actor";
 import {CharacterStats} from "./characterStats";
 
 interface StatProps {
@@ -19,23 +19,23 @@ export class Character extends React.Component<StatProps, StatState> {
         super(props);
         this.state = {
             actor: this.props.actor,
-            selection: 'About'
-        }
+            selection: 'About',
+        };
     }
 
-    changeView(selection: string) {
+    public changeView(selection: string) {
         if (selection == 'About') {
-            return <CharacterAbout actor={this.props.actor}/>
+            return <CharacterAbout actor={this.props.actor}/>;
         } else {
-            return <CharacterStats actor={this.props.actor}/>
+            return <CharacterStats actor={this.props.actor}/>;
         }
     }
 
-    handleClick = (selection: string) => {
-        this.setState({selection: selection});
+    public handleClick = (selection: string) => {
+        this.setState({selection});
     };
 
-    render() {
+    public render() {
         return (
             <div className={"itemCollection"}>
                 <div className={"itemCollectionContainer"}>
@@ -47,6 +47,6 @@ export class Character extends React.Component<StatProps, StatState> {
                         {this.changeView(this.state.selection)}
                     </div>
                 </div>
-            </div>)
+            </div>);
     }
 }

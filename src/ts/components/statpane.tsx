@@ -1,7 +1,7 @@
 import * as React from 'react';
-import {StatListItem} from './statListItem';
-import {Player} from '../actors/player';
 import {Actor} from '../actors/Actor';
+import {Player} from '../actors/player';
+import {StatListItem} from './statListItem';
 
 interface StatpanelProps {
     actor: Player | undefined;
@@ -15,10 +15,10 @@ export class Statpane extends React.Component<StatpanelProps, StatpanelState> {
 
     constructor(props: any) {
         super(props);
-        this.state = {actor: this.props.actor}
+        this.state = {actor: this.props.actor};
     }
 
-    render() {
+    public render() {
         return <div id='statpane'>
             <div className='UIelement' id='attributes'>
                 <h2 className='statTitle vital'>Attributes</h2>
@@ -70,6 +70,6 @@ export class Statpane extends React.Component<StatpanelProps, StatpanelState> {
                     <span className='statValue' id='kills'>{this.state.actor!.kills.toString()}</span>
                 </div>
             </div>
-        </div>
+        </div>;
     }
 }

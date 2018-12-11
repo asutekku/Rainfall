@@ -1,6 +1,6 @@
 import * as React from "react";
-import {Quest} from "../../items/Quest";
 import {MessageStr} from "../../interact/messageSchema";
+import {Quest} from "../../items/Quest";
 
 export interface QuestProps {
     quest: Quest;
@@ -16,21 +16,21 @@ export class QuestComponent extends React.Component<QuestProps, QuestState> {
 
     constructor(props: any) {
         super(props);
-        this.state = {active: this.props.quest.active}
+        this.state = {active: this.props.quest.active};
     }
 
-    handleClick = () => {
+    public handleClick = () => {
         const state = !this.state.active;
         if (state) {
-            this.props.message(new MessageStr(`Started the quest: [${this.props.quest.name}].`))
+            this.props.message(new MessageStr(`Started the quest: [${this.props.quest.name}].`));
         } else {
-            this.props.message(new MessageStr(`Stopped the quest: [${this.props.quest.name}].`))
+            this.props.message(new MessageStr(`Stopped the quest: [${this.props.quest.name}].`));
         }
         this.setState({active: state});
         this.props.quest.active = state;
     };
 
-    render() {
+    public render() {
         return (
             <div className={this.props.quest.active ? "itemContainer-100 itemContainer-active" : 'itemContainer-100'}>
                 <div className={'itemContainerRow-top'}>
@@ -46,6 +46,6 @@ export class QuestComponent extends React.Component<QuestProps, QuestState> {
                         {this.state.active ? 'Stop tracking' : 'Track quest'}
                     </div>
                 </div>
-            </div>)
+            </div>);
     }
 }

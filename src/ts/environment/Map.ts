@@ -1,15 +1,22 @@
-import { Setting } from "./Setting";
+import {Setting} from "./Setting";
 
 export class Map {
-    name: string;
-    height: number;
-    width: number;
-    depth: number;
-    setting: Setting;
-    buildings: any[];
-    canvas: HTMLCanvasElement | null;
-    context: CanvasRenderingContext2D | null;
-    actors: any[];
+
+    public name: string;
+    public height: number;
+    public width: number;
+    public depth: number;
+    public setting: Setting;
+    public buildings: any[];
+    public canvas: HTMLCanvasElement | null;
+    public context: CanvasRenderingContext2D | null;
+    public actors: any[];
+
+    public static clear(): void {
+        this.prototype
+            .canvas!.getContext("2d")!
+            .clearRect(0, 0, this.prototype.canvas!.width, this.prototype.canvas!.height);
+    }
 
     constructor(name: string, height: number, width: number, depth: number, setting: Setting) {
         this.name = name;
@@ -25,11 +32,5 @@ export class Map {
         this.canvas.width = width;
         this.context = this.canvas.getContext("2d");
         this.context!.translate((width ? width : 100) * 0.5, (height ? height : 100) * 0.5);
-    }
-
-    static clear(): void {
-        this.prototype
-            .canvas!.getContext("2d")!
-            .clearRect(0, 0, this.prototype.canvas!.width, this.prototype.canvas!.height);
     }
 }

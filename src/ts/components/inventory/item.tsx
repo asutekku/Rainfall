@@ -25,19 +25,19 @@ export class InventoryItem extends React.Component<InventoryItemProps, ItemState
         this.handleClick = this.handleClick.bind(this);
     }
 
-    handleClick() {
+    public handleClick() {
         this.setState({selected: !this.props.selected});
         if (this.state.selected) {
             this.setState({classList: "inventoryItem activeSelection"});
         }
     }
 
-    render() {
+    public render() {
         return <div className={this.state.classList} id={this.props.id} onClick={this.handleClick}>
             <span className="itemType">{this.props.type}</span>
             <span className="itemTitle">{this.props.item.name}</span>
             <span className="itemEquipped">{this.props.equipped ? "[Equipped]" : ""}</span>
             <span className="itemCount">{this.props.count.toString() + "x"}</span>
-        </div>
+        </div>;
     }
 }

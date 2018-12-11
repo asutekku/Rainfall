@@ -1,6 +1,6 @@
 import * as React from 'react';
-import {Category} from '../general/category';
 import {Player} from '../../actors/player';
+import {Category} from '../general/category';
 
 export interface InventoryProps {
     player?: Player;
@@ -14,14 +14,14 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
 
     constructor(props: any) {
         super(props);
-        this.state = {activeInventory: 'Weapons'}
+        this.state = {activeInventory: 'Weapons'};
     }
 
-    handleClick = (selection: string) => {
+    public handleClick = (selection: string) => {
         this.setState({activeInventory: selection});
     };
 
-    render() {
+    public render() {
         return (
             <div className={'itemCollection'}>
                 <div className={'itemCollectionContainer'}>
@@ -43,6 +43,6 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
 
                     </div>
                 </div>
-            </div>)
+            </div>);
     }
 }

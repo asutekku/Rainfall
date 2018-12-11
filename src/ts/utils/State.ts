@@ -1,9 +1,9 @@
-import { mapGenerator } from "../environment/MapGenerator";
-import { Map } from "../environment/Map";
-import { Player } from "../actors/player";
-import { Enemy } from "../actors/Enemy";
+import {Enemy} from "../actors/Enemy";
+import {Player} from "../actors/player";
+import {Map} from "../environment/Map";
+import {MapGenerator} from "../environment/MapGenerator";
 
-interface gameState {
+interface GameState {
     player?: Player;
     playArea: Map;
     UI: {
@@ -12,9 +12,9 @@ interface gameState {
     currentEnemy?: Enemy;
 }
 
-export const State: gameState = {
-    playArea: new mapGenerator("Thrive", 50, 400, 400).map,
+export const State: GameState = {
+    playArea: new MapGenerator("Thrive", 50, 400, 400).map,
     UI: {
-        inventoryView: "weapons"
-    }
+        inventoryView: "weapons",
+    },
 };

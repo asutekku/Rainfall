@@ -1,14 +1,14 @@
-import { Item } from "./Item";
+import {Item} from "./Item";
 
 export class Scrap implements Item {
-    description: string;
-    type: string;
-    name: string;
-    rarity: number;
-    cost: number;
-    level: number;
-    specificType: string;
-    id: string;
+    public description: string;
+    public type: string;
+    public name: string;
+    public rarity: number;
+    public cost: number;
+    public level: number;
+    public specificType: string;
+    public id: string;
 
     constructor(type: string, specificType: string, name: string, cost: number, description: string, id: string) {
         this.type = type;
@@ -23,14 +23,14 @@ export class Scrap implements Item {
 }
 
 export class Medical implements Item {
-    description: string;
-    type: string;
-    name: string;
-    rarity: number;
-    cost: number;
-    restorePoints: number;
-    level: number;
-    id: string;
+    public description: string;
+    public type: string;
+    public name: string;
+    public rarity: number;
+    public cost: number;
+    public restorePoints: number;
+    public level: number;
+    public id: string;
 
     constructor(type: string, name: string, cost: number, restorePoints: number, description: string, id: string) {
         this.type = type;

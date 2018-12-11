@@ -1,7 +1,7 @@
 import * as React from 'react';
-import {Skill} from '../../items/Skill';
-import {Combat} from "../../interact/combat";
 import {Actor} from "../../actors/Actor";
+import {Combat} from "../../interact/combat";
+import {Skill} from '../../items/Skill';
 
 interface SkillState {
     active: boolean;
@@ -18,16 +18,10 @@ export class SkillComponent extends React.Component<SkillProps, SkillState> {
 
     constructor(props: any) {
         super(props);
-        this.state = {active: false}
+        this.state = {active: false};
     }
 
-    handleClick = () => {
-        const state = !this.state.active;
-        this.setState({active: state});
-        this.props.skillMSG(Combat.basicAction(this.props.actor, this.props.enemy));
-    };
-
-    render() {
+    public render() {
         return (
             <div className={'itemContainer-100'} onClick={this.handleClick}>
                 <div className={'itemContainerRow-top'}>
@@ -40,6 +34,12 @@ export class SkillComponent extends React.Component<SkillProps, SkillState> {
                 <div className={'itemContainerRow-bottom'}>
                     <span className={'itemContainer-bottom-left noSelect'}>{`Skill stats`}</span>
                 </div>
-            </div>)
+            </div>);
+    }
+
+    private handleClick = () => {
+        const state = !this.state.active;
+        this.setState({active: state});
+        this.props.skillMSG(Combat.basicAction(this.props.actor, this.props.enemy));
     }
 }

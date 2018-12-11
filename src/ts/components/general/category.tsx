@@ -9,11 +9,11 @@ export interface InventoryCategoryProps {
 // 'HelloProps' describes the shape of props.
 // State is never set so we use the '{}' type.
 export class Category extends React.Component<InventoryCategoryProps, {}> {
-    render() {
+    public render() {
         return <div
-            className={this.props.title == this.props.active ? "title-submenu title-submenu-active" : "title-submenu"}
+            className={this.props.title === this.props.active ? "title-submenu title-submenu-active" : "title-submenu"}
             onClick={() => this.props.update(this.props.title)}>
             <span className={"catTitle"}>{this.props.title}</span>
-        </div>
+        </div>;
     }
 }

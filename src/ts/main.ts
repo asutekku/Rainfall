@@ -1,12 +1,12 @@
-import { Utils } from "./utils/utils";
-import { Player } from "./actors/player";
-import { Enemy } from "./actors/Enemy";
-import { UI } from "./utils/UI";
-import { Combat } from "./interact/combat";
-import { Statistics } from "./actors/resources/Statistics";
-import { State } from "./utils/State";
-import { Messages } from "./interact/messages";
 import en_US from "../lang/en_US";
+import {Enemy} from "./actors/Enemy";
+import {Player} from "./actors/player";
+import {Statistics} from "./actors/resources/Statistics";
+import {Combat} from "./interact/combat";
+import {Messages} from "./interact/messages";
+import {State} from "./utils/State";
+import {UI} from "./utils/UI";
+import {Utils} from "./utils/utils";
 
 export class Rainfall {
     public static main(): void {
@@ -19,9 +19,9 @@ export class Rainfall {
         State.currentEnemy.updateAfter();
         State.playArea.actors.push(State.currentEnemy);
         let deadMessageSent = false;
-        //UI.initMap();
+        // UI.initMap();
 
-        Utils.l("hitButton")!.onclick = function() {
+        Utils.l("hitButton")!.onclick = () => {
             if (State.player!.isAlive()) {
                 Combat.basicAction(State.player!, State.currentEnemy!);
             } else if (deadMessageSent === false) {
@@ -30,38 +30,38 @@ export class Rainfall {
             }
         };
 
-        //For the people who are stuck
-        Utils.l("restartButton")!.onclick = function() {
+        // For the people who are stuck
+        Utils.l("restartButton")!.onclick = () => {
             window.localStorage.clear();
             location.reload();
         };
 
-        Utils.l("inventoryButton")!.onclick = function() {
+        Utils.l("inventoryButton")!.onclick = () => {
             UI.changeInfoPane("inventory");
             UI.updateInventory();
         };
-        Utils.l("questsButton")!.onclick = function() {
+        Utils.l("questsButton")!.onclick = () => {
             UI.changeInfoPane("quests");
         };
-        Utils.l("storeButton")!.onclick = function() {
+        Utils.l("storeButton")!.onclick = () => {
             UI.changeInfoPane("store");
         };
-        Utils.l("playerButton")!.onclick = function() {
+        Utils.l("playerButton")!.onclick = () => {
             UI.changeInfoPane("player");
         };
-        Utils.l("raidButton")!.onclick = function() {
+        Utils.l("raidButton")!.onclick = () => {
             UI.changeInfoPane("raid");
         };
-        Utils.l("allianceButton")!.onclick = function() {
+        Utils.l("allianceButton")!.onclick = () => {
             UI.changeInfoPane("alliance");
         };
-        Utils.l("statButton")!.onclick = function() {
+        Utils.l("statButton")!.onclick = () => {
             UI.changeInfoPane("stats");
             UI.updateStats();
         };
 
-        //Because respawning is so much more enjoyable than restarting
-        Utils.l("respawnButton")!.onclick = function() {
+        // Because respawning is so much more enjoyable than restarting
+        Utils.l("respawnButton")!.onclick = () => {
             if (!State.player!.isAlive()) {
                 State.player!.health = State.player!.maxHealth;
                 clearInterval();
@@ -72,13 +72,13 @@ export class Rainfall {
             }
         };
 
-        //Functionality for the autoplay (because no one likes to click away)
+        // Functionality for the autoplay (because no one likes to click away)
         let running = false;
-        Utils.l("autoButton")!.onclick = function() {
+        Utils.l("autoButton")!.onclick = () => {
             let int: any;
             if (!running) {
                 running = true;
-                int = setInterval(function() {
+                int = setInterval(() => {
                     if (State.player!.isAlive()) {
                         Combat.basicAction(State.player!, State.currentEnemy!);
                     } else {
