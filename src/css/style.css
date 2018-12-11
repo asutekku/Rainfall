@@ -8,6 +8,7 @@
     --buttonTextColor: #d1d1d1;
     --buttonColor: #070606;
     --inventoryItemSize: 60px;
+    --questItemSize: 80px;
     --selectionActive: #1c1818;
     --selectionActiveBorder: #934E41;
     --selectionHover: #0d0d0d;
@@ -34,12 +35,12 @@ body {
 }
 
 .containerInset {
-    padding:4px;
+    padding: 4px;
 }
 
 .gridElement {
     background: var(--background);
-    height:100%;
+    height: 100%;
 }
 
 #navbar {
@@ -62,7 +63,7 @@ body {
 }
 
 .infoAreaContainer {
-    display:grid;
+    display: grid;
     grid-template-columns: repeat(1, 1fr);
     grid-gap: 6px;
 }
@@ -90,9 +91,9 @@ body {
     float: left;
 }
 
-#playpane {
+#playPane {
     flex: 1;
-    display:grid;
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
     grid-gap: 6px;
     height: 100%;
@@ -107,7 +108,7 @@ body {
 #statpane {
     width: 300px;
     height: 900px;
-    /*margin-left: 5px;*/
+    margin-left: 5px;
     background: var(--background);
     float: right;
     right: 20px;
@@ -116,13 +117,11 @@ body {
 
 .statValue {
     padding: 0;
-    margin: 5px;
     float: right;
 }
 
 .statTitle {
     padding: 0;
-    margin: 5px;
     float: left;
 }
 
@@ -213,9 +212,9 @@ button.kill {
     transition: all 0.1s ease-in;
 }
 
-.inventoryButton{
-    width:50%;
-    position:absolute;
+.inventoryButton {
+    width: 50%;
+    position: absolute;
     bottom: 0;
     right: 0;
 }
@@ -236,7 +235,7 @@ button:hover {
 
 #gamearea {
     overflow: hidden;
-    height:800px;
+    height: 800px;
     background: var(--backgroundLight);
     padding: 4px;
 }
@@ -307,7 +306,7 @@ h3.statTitle {
     background-color: #f9f9f9;
     min-width: 160px;
     overflow: auto;
-    box-shadow: 0px 8px 16px 0px rgba(0, 0, 0, 0.2);
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
     right: 0;
     z-index: 1;
 }
@@ -335,7 +334,7 @@ h3.statTitle {
 }
 
 .UIelement {
-    border: 0px var(--borderStyle) var(--baseColor);
+    border: 0 var(--borderStyle) var(--baseColor);
 }
 
 #canvas {
@@ -347,22 +346,34 @@ h3.statTitle {
     width: 260px;
 }
 
-#inventoryCategories {
+#inventoryItemContainer {
+    width: 100%;
+    height: auto;
+}
+
+.itemCollectionCategories {
     width: 100%;
     display: flex;
     justify-content: space-between;
 }
 
-#inventoryItemContainer {
+.infoAreaTitleArea {
     width: 100%;
-    height: auto;
+    display: flex;
+    justify-content: space-between;
+}
+
+.infoAreaItem {
+    width: 100%;
+    height: 500px;
+    background: var(--backgroundLight);
 }
 
 #inventory_container {
     display: grid;
 }
 
-.inventoryCategory {
+.title-submenu {
     background: var(--backgroundLight);
     display: inline-block;
     width: 100%;
@@ -370,13 +381,25 @@ h3.statTitle {
     height: 32px;
     text-transform: uppercase;
     cursor: pointer;
+    border-style: solid;
+    border-width: 2px 0 0 0;
+    border-color: var(--backgroundLight);
 }
 
-.activeInventoryCategory {
+.title-submenu-active {
     border-style: solid;
     border-width: 2px 0 0 0;
     border-color: var(--selectionActiveBorder);
     color: var(--selectionActiveBorder);
+}
+
+.title-main {
+    background: var(--backgroundLight);
+    display: inline-block;
+    width: 100%;
+    text-align: center;
+    height: 32px;
+    text-transform: uppercase;
 }
 
 .catTitle {
@@ -386,6 +409,18 @@ h3.statTitle {
 }
 
 #inventoryItems {
+    display: grid;
+    font-size: 13px;
+    background: var(--backgroundLight);
+    grid-template-columns: repeat(2, 1fr);
+    grid-gap: 6px;
+    grid-auto-rows: minmax(var(--inventoryItemSize), var(--inventoryItemSize));
+    overflow-x: hidden;
+    height: 260px;
+    padding: 0 8px 8px 8px;
+}
+
+.combatCategroy {
     display: grid;
     font-size: 13px;
     background: var(--backgroundLight);
@@ -408,23 +443,27 @@ h3.statTitle {
     width: 2px;
 }
 
-#itemInfoContainer {
-    display:grid;
+.itemCollection-50 {
+    display: grid;
     grid-template-columns: repeat(2, 1fr);
     background: var(--backgroundLight);
-    height: 296px;
+    height: 300px;
+    padding: 10px;
+    font-size: 13px;
+}
+
+.itemCollection-100 {
+    display: block;
+    background: var(--backgroundLight);
+    height: 300px;
     padding: 10px;
     font-size: 13px;
 }
 
 #itemExtraContainer {
-    height:100%;
-    width:100%;
+    height: 100%;
+    width: 100%;
     position: relative;
-}
-
-#itemStatsContainer {
-
 }
 
 .inventoryItem {
@@ -500,6 +539,7 @@ h3 {
 
 .actionMessage {
     font-size: 13px;
+    padding-bottom: 1px;
 }
 
 #actions {
@@ -530,13 +570,14 @@ progress {
     height: 4px;
 }
 
+/*noinspection CssUnknownProperty*/
 progress[value] {
     -webkit-appearance: none;
     appearance: none;
 }
 
 .progressValue {
-    float:left;
+    float: left;
     position: relative;
     bottom: 5px;
 }
@@ -609,10 +650,111 @@ progress::-webkit-progress-value {
     color: #2ECC71;
 }
 
-.inventoryItemInfoContainer{
+.inventoryItemInfoContainer {
     margin-bottom: 6px;
 }
 
 .itemInfoSecondary {
     color: var(--textColorDim);
+}
+
+.itemContainer-100 {
+    background: #000000;
+    display:inline-block;
+    -webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+    -moz-box-sizing: border-box;    /* Firefox, other Gecko */
+    box-sizing: border-box;         /* Opera/IE 8+ */
+    width:100%;
+    overflow:auto;
+    border: 0 solid var(--borderColor);
+    border-left-width: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    padding: 5px 5px 10px 10px;
+    margin-bottom: 10px;
+}
+
+.itemContainer-100:hover{
+    background: var(--selectionActive);
+}
+
+.itemContainer-active {
+    border-color: var(--selectionActiveBorder);
+    background: var(--selectionActive);
+}
+
+.itemContainer-top-left {
+    float: left;
+    text-transform: capitalize;
+    grid-area: a;
+    color: var(--textColorDim)
+}
+
+.itemContainer-top-right {
+    float: right;
+}
+
+.itemContainer-middle {
+    float: left;
+    width:100%;
+    margin-bottom: 8px;
+}
+
+.questItems {
+    float: left;
+}
+
+.itemContainer-bottom-left {
+    float: left;
+    bottom: 0;
+}
+
+.itemContainerRow-top {
+    width: 100%;
+    height: 20px;
+    margin-bottom: 5px;
+}
+
+.itemContainerRow-middle {
+    width: 100%;
+    height: auto;
+    margin-bottom: 15px;
+}
+
+.itemContainerRow-bottom {
+    width: 100%;
+    height: 20px;
+    margin-bottom: 5px;
+}
+
+.itemContainer-bottom-right {
+    float:right;
+}
+
+.noSelect {
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none; /* Non-prefixed version, currently
+                                  supported by Chrome and Opera */
+}
+
+.characterPicture {
+    float:left;
+    margin-right: 10px;
+}
+
+.characterInfo {
+    display: flex;
+}
+
+.characterAbout {
+    float:left;
+}
+
+.underline {
+    border: 0 solid var(--borderColor);
+    border-bottom-width: 2px;
 }

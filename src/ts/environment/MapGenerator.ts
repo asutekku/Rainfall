@@ -2,7 +2,6 @@ import { Map } from "./Map";
 import { Settings } from "./Settings";
 import { Building } from "./Building";
 import { Utils } from "../utils/utils";
-import { State } from "../utils/State";
 
 export class mapGenerator {
     public map: Map;

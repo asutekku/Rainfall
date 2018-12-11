@@ -1,15 +1,14 @@
-import { Utils } from "../utils/utils";
-import { Actor } from "../actors/Actor";
-import { State } from "../utils/State";
-import { Player } from "../actors/player";
-import { Enemy } from "../actors/Enemy";
+import {Utils} from "../utils/utils";
+import {Actor} from "../actors/Actor";
+import {State} from "../utils/State";
+import {Player} from "../actors/player";
 
 export class Messages {
     static actorWeapon = (actor: Actor) => Utils.span(`[${actor.weapon.name}]`, "weaponBlue");
     static damageCrit = (actor: Actor, target: Actor): string =>
-        Utils.span(`(${target.health + actor.weapon.weaponDamage() * 2}=>${target.health})`, "damageGreen");
+        Utils.span(`(${target.health + actor.weapon.weaponDamage() * 2} => ${target.health})`, "damageGreen");
     static damageCrit0 = (actor: Actor, target: Actor): string =>
-        Utils.span(`(${target.health + actor.weapon.weaponDamage() * 2}=>0)`, "damageGreen");
+        Utils.span(`(${target.health + actor.weapon.weaponDamage() * 2} => 0)`, "damageGreen");
     static getHealth = (actor: Actor, target: Actor): string =>
         actor.health <= 0 ? Messages.damageCrit0(actor, target) : Messages.damageCrit(actor, target);
     static actorName = (actor: Actor): string => Utils.span(`[${actor.name}]`, `${actor.role.name.toLowerCase()}Color`);
@@ -57,16 +56,18 @@ export class Messages {
         }
     }
 
-    static logMessage = (msg: string, actor?: Actor, msgCase?: string) => {
+    static getStrings = (actor:Actor, target: Actor) => {
+        return Messages.getCombatStrings(actor, target);
+    };
+
+    static logMessage = (msg: string, actor ?: Actor, msgCase ?: string) => {
         let v: Object;
         if (!(actor instanceof Player)) {
             v = Messages.getCombatStrings(State.currentEnemy!, State.player!);
         } else {
             v = Messages.getCombatStrings(State.player!, State.currentEnemy!);
         }
-        if (!msgCase) {
-            Utils.printLine(Messages.fillTemplate(msg, v));
-        } else {
+        if (!msgCase) Utils.printLine(Messages.fillTemplate(msg, v)); else {
             switch (msgCase) {
                 case "combat":
                     v = Messages.getCombatStrings(State.player!, State.currentEnemy!);

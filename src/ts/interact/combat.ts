@@ -1,22 +1,22 @@
-import { Utils } from "../utils/utils";
-import { UI } from "../utils/UI";
-import { Messages } from "./messages";
-import { Movement } from "./Movement";
-import { Actor } from "../actors/Actor";
-import { getItem } from "./getItem";
-import { State } from "../utils/State";
+import {Utils} from "../utils/utils";
+import {UI} from "../utils/UI";
+import {Messages} from "./messages";
+import {Movement} from "./Movement";
+import {Actor} from "../actors/Actor";
+import {getItem} from "./getItem";
+import {State} from "../utils/State";
 import en_US from "./../../lang/en_US";
 
 const Log = en_US.Log;
 
 export class Combat {
     static basicAction(actor: Actor, target: Actor): void {
-        this.shoot(actor, target);
+        return this.shoot(actor, target);
         if (!target.isAlive()) {
-            Combat.killEnemy(actor, target);
+            //Combat.killEnemy(actor, target);
         } else {
-            this.shoot(target, actor);
-            this.isAlive(target);
+            return this.shoot(target, actor);
+            //this.isAlive(target);
         }
         console.log(actor.level);
         UI.updateUI();
@@ -29,7 +29,7 @@ export class Combat {
         }
     }
 
-    static shoot(actor: Actor, target: Actor): void {
+    static shoot(actor: Actor, target: Actor): any {
         const distance: number = Utils.distance(actor.position, target.position),
             dices: number = actor.stats.ref + Utils.dice(3, 10);
         let shotTarget: boolean = false;
@@ -39,10 +39,14 @@ export class Combat {
         else if (distance <= actor.weapon.range) shotTarget = dices >= 25;
         else if (distance <= actor.weapon.range * 2) shotTarget = dices >= 30;
         if (shotTarget) {
-            target.health -= actor.weapon.weaponDamage();
-            Messages.logMessage(Log.hit.normal, actor);
+            if (target.health <= actor.weapon.weaponDamage()) {
+                target.health = 0;
+            } else {
+                target.health -= actor.weapon.weaponDamage();
+            }
+            return Messages.getStrings(actor, target);
         } else {
-            this.dodgeAttack(actor, target);
+            //this.dodgeAttack(actor, target);
         }
     }
 
@@ -57,9 +61,11 @@ export class Combat {
     }
 
     //Melee only!
-    static parryAttack(actor: Actor, target: Actor) {}
+    static parryAttack(actor: Actor, target: Actor) {
+    }
 
-    static escapeFight(actor: Actor, target: Actor) {}
+    static escapeFight(actor: Actor, target: Actor) {
+    }
 
     //Increases accuracy
     static aimAttack(actor: Actor) {
@@ -69,9 +75,11 @@ export class Combat {
         }
     }
 
-    static mountVehicle(actor: Actor, target: Actor) {}
+    static mountVehicle(actor: Actor, target: Actor) {
+    }
 
-    static reloadWeapon(actor: Actor, target: Actor) {}
+    static reloadWeapon(actor: Actor, target: Actor) {
+    }
 
     static aidActor(actor: Actor, amount: number) {
         if (actor.health > actor.maxHealth) actor.health = actor.maxHealth;
@@ -86,8 +94,8 @@ export class Combat {
         if (actor.experience >= actor.maxExperience) Combat.gainLevel(actor, target);
         Combat.replaceEnemy(actor, target);
         Movement.moveRandomly(State.playArea, actor, 3);
-        //actor.draw(State.playArea.context);
-        //State.playArea.context.fillRect(actor.position[0],actor.position[1],3,3);
+        //currentActor.draw(State.playArea.context);
+        //State.playArea.context.fillRect(currentActor.position[0],currentActor.position[1],3,3);
     }
 
     static gainLevel(actor: Actor, target: Actor) {
@@ -110,7 +118,7 @@ export class Combat {
         Messages.logMessage(Log.loot.search1, actor);
         Messages.logMessage(Log.loot.find, actor);
         getItem.addItemToInventory(target.item, actor);
-        getItem.updateCurrency(target.currency, actor, target);
+        getItem.updateCurrency(target.currency, actor);
         actor.armor = UI.getStoppingPower();
     }
 }

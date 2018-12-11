@@ -1,5 +1,4 @@
 import { Setting } from "./Setting";
-import { Utils } from "../utils/utils";
 
 export class Map {
     name: string;

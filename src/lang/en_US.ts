@@ -1,5 +1,3 @@
-import { Utils } from "../ts/utils/utils";
-
 export default class en_US {
     static armor = {
         headwearCap: "Baseball Cap",

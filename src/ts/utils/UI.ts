@@ -1,11 +1,10 @@
-import { Utils } from "./utils";
+import {Utils} from "./utils";
 import Stats from "../actors/resources/Stats";
 import en_US from "../../lang/en_US";
-import { State } from "./State";
-import { Paper } from "./Paper";
-import { Armor } from "../items/Armor";
-import { Player } from "../actors/player";
-import { Item } from "../items/Item";
+import {State} from "./State";
+import {Paper} from "./Paper";
+import {Armor} from "../items/Armor";
+import {Player} from "../actors/player";
 
 const _ = Utils;
 const statStrings = en_US.stats;
@@ -22,8 +21,8 @@ export class UI {
         _.l("weaponDesc")!.textContent = actor.weapon.description;
         _.l("charWeaponDamage")!.textContent = `${actor.weapon.damage + actor.weapon.diceThrows} - ${actor.weapon
             .diceThrows *
-            6 +
-            actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
+        6 +
+        actor.weapon.damage} * ${actor.weapon.rateOfFire}`;
         _.l("charWeaponAccuracy")!.textContent = actor.weapon.accuracy + "%";
         _.l("charWeaponRange")!.textContent = actor.weapon.range + "m";
         _.l("charCRIT")!.textContent = `${actor.weapon.crit}%`;
@@ -149,7 +148,7 @@ export class UI {
     static Player(): HTMLElement {
         let player: Player = State.player!;
         let element = Paper.paperContainer("playerInfo_container", "infoAreaContainer", "Player");
-        let attributeContainer = function(): DocumentFragment {
+        let attributeContainer = function (): DocumentFragment {
             let frag = document.createDocumentFragment();
             let attributes = Paper.paperInfoContainer("attributes", "UIElement", "Info");
             frag.appendChild(attributes);
@@ -186,8 +185,7 @@ export class UI {
     }
 
     static Quests(): HTMLElement {
-        let element = Paper.paperContainer("quest_container", "infoAreaContainer", "Quests");
-        return element;
+        return Paper.paperContainer("quest_container", "infoAreaContainer", "Quests");
     }
 
     static Inventory(): HTMLElement {
@@ -209,7 +207,7 @@ export class UI {
             catTitle.textContent = cat;
             inventoryCategories.appendChild(catItem);
             catItem.appendChild(catTitle);
-            catItem.onclick = function() {
+            catItem.onclick = function () {
                 State.UI.inventoryView = cat;
                 UI.changeInventoryView(cat);
                 UI.updateInventory();
@@ -243,7 +241,7 @@ export class UI {
             let unique = [...new Set(inventoryViewItems)];
             unique.forEach((item: any) => {
                 let inventoryItem = Paper.paperInventoryItem(item),
-                    count = inventoryViewItems.reduce(function(n: number, val: number) {
+                    count = inventoryViewItems.reduce(function (n: number, val: number) {
                         return n + (val === item ? 1 : 0);
                     }, 0);
                 if (item.equipped === true)
@@ -254,20 +252,18 @@ export class UI {
         }
     }
 
-    static addItemToInventory(): void {}
+    static addItemToInventory(): void {
+    }
 
     static Store(): HTMLElement {
-        let element = Paper.paperContainer("store_container", "infoAreaContainer", "Store");
-        return element;
+        return Paper.paperContainer("store_container", "infoAreaContainer", "Store");
     }
 
     static Raid(): HTMLElement {
-        let element = Paper.paperContainer("raid_container", "infoAreaContainer", "Raid");
-        return element;
+        return Paper.paperContainer("raid_container", "infoAreaContainer", "Raid");
     }
 
     static Alliance(): HTMLElement {
-        let element = Paper.paperContainer("alliance_container", "infoAreaContainer", "Alliance");
-        return element;
+        return Paper.paperContainer("alliance_container", "infoAreaContainer", "Alliance");
     }
 }

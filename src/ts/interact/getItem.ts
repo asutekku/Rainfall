@@ -1,17 +1,17 @@
 import Equipment from "../items/Equipment";
 import items from "../items/items";
-import { Utils } from "../utils/utils";
+import {Utils} from "../utils/utils";
 import armors from "../items/armors";
-import { Messages } from "./messages";
-import { UI } from "../utils/UI";
-import { Paper } from "../utils/Paper";
-import { State } from "../utils/State";
-import { Weapon } from "../items/Weapon";
-import { Actor } from "../actors/Actor";
-import { Item } from "../items/Item";
-import { Player } from "../actors/player";
-import { Armor } from "../items/Armor";
-import { Medical } from "../items/Scrap";
+import {Messages} from "./messages";
+import {UI} from "../utils/UI";
+import {Paper} from "../utils/Paper";
+import {State} from "../utils/State";
+import {Weapon} from "../items/Weapon";
+import {Actor} from "../actors/Actor";
+import {Item} from "../items/Item";
+import {Player} from "../actors/player";
+import {Armor} from "../items/Armor";
+import {Medical} from "../items/Scrap";
 import en_US from "./../../lang/en_US";
 
 const Log = en_US.Log;
@@ -34,7 +34,7 @@ export class getItem {
         }
     }
 
-    static updateCurrency(money: number, actor: Actor, target: Actor) {
+    static updateCurrency(money: number, actor: Actor) {
         if (money >= 0) {
             Messages.logMessage(Log.findMoney, actor);
             actor.currency += money;
@@ -106,7 +106,7 @@ export class getItem {
             player.health =
                 player.health >= player.maxHealth ? player.maxHealth : (player.health += item.restorePoints!);
         } else {
-            //actor.inventory.misc.push(item);
+            //currentActor.inventory.misc.push(item);
         }
         UI.updateUI();
     }

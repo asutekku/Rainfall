@@ -1,21 +1,21 @@
-import { default as roles } from "./roles";
+import {default as roles} from "./roles";
 
-let randomProperty = function(obj: Object) {
-    let keys = Object.keys(obj);
-    return (obj as any)[keys[(keys.length * Math.random()) << 0]];
+const getRole: any = function (role?: string) {
+    const keys = Object.keys(roles);
+    return role ? (<any>roles)[role!] : (<any>roles)[keys[(keys.length * Math.random()) << 0]];
 };
 
 export class Role {
     name: any;
-    skill: string | null;
+    skill: string;
     skillDescription: string;
     color: any;
 
-    constructor() {
-        let theRole = randomProperty(roles);
-        this.name = theRole.name;
-        this.skill = theRole.skill;
-        this.skillDescription = theRole.skillDescription;
-        this.color = theRole.color;
+    constructor(role?: string) {
+        const actorRole: any = getRole(role);
+        this.name = actorRole.name;
+        this.skill = actorRole.skill;
+        this.skillDescription = actorRole.skillDescription;
+        this.color = actorRole.color;
     }
 }

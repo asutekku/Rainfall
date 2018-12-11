@@ -32,7 +32,7 @@ export class Movement {
         actor.position[1] += Math.floor(Sin);
     }
 
-    /*mountVehicle(actor:Actor, vehicle:Vehicle) {
+    /*mountVehicle(currentActor:Actor, vehicle:Vehicle) {
 
     }*/
 }
