@@ -25,7 +25,7 @@ export class CharacterStats extends React.Component<StatsProps, StatsState> {
     render() {
         return (
             <div className={'characterInfo'}>
-                <CharacterPortrait imgSource={'https://via.placeholder.com/150'}/>
+                <CharacterPortrait imgSource={this.props.actor.role.portrait}/>
                 <div className={'characterAbout'}>
                     <div className='statCard tooltip'>
                         <span className='statTitle' id='weapon'>Weapon:</span>

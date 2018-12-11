@@ -25,7 +25,7 @@ export class CharacterAbout extends React.Component<AboutProps, AboutState> {
     render() {
         return (
             <div className={'characterInfo'}>
-                <CharacterPortrait imgSource={'https://via.placeholder.com/150'}/>
+                <CharacterPortrait imgSource={this.props.actor.role.portrait}/>
                 <div className={'characterAbout'}>
                     <StatListItem name={'Name:'} value={this.props.actor.name}/>
                     <StatListItem name={'Gender:'} value={this.props.actor!.gender}/>

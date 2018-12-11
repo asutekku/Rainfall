@@ -27,11 +27,6 @@ export class CharacterPanel extends React.Component<CharacterPanelProps, Charact
         }
     }
 
-    handleClick = (actor: Actor) => {
-        this.setState({activeSelection: actor, selected: actor.name});
-        this.props.activeSelection(actor);
-    };
-
     getCharacter = (actor: Actor) => {
         if (!actor) {
             this.setState({activeSelection: this.props.party[0]});

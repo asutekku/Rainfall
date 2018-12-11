@@ -5,7 +5,7 @@ import {Role} from "../resources/Role";
 import {Statistics} from "../resources/Statistics";
 import {Utils} from "../../utils/utils";
 
-export class Grunt extends Actor {
+export class Goon extends Actor {
     constructor() {
         super();
         this.weapon = getItem.weapon();
@@ -18,10 +18,10 @@ export class Grunt extends Actor {
         this.weapon = getItem.weapon();
         this.level = Math.floor(Statistics.level + Utils.range(1, 3));
         this.currency = Math.floor(Utils.range(20, 50));
-        this.health = Utils.range(
+        this.health = Math.floor(Utils.range(
             Math.floor(Statistics.level ^ (2 / 0.09)) * 0.9,
             Math.floor(Statistics.level ^ (2 / 0.09)) * 1.1
-        );
+        ));
         this.experience = Math.floor(Statistics.level ^ (2 / 0.4));
     }
 }

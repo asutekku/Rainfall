@@ -4,6 +4,7 @@ import {Player} from '../../actors/player';
 
 export interface StoreProps {
     player?: Player;
+    messages: any;
 }
 
 interface StoreState {
@@ -41,8 +42,14 @@ export class Store extends React.Component<StoreProps, StoreState> {
                     <div className={'itemCollectionCategories'}>
                         <Category title={'Weapons'} update={this.handleClick} active={this.state.activeInventory}/>
                         <Category title={'Armor'} update={this.handleClick} active={this.state.activeInventory}/>
-                        <Category title={'Misc'} update={this.handleClick} active={this.state.activeInventory}/>
+                        <Category title={'Drugs'} update={this.handleClick} active={this.state.activeInventory}/>
                         <Category title={'Medical'} update={this.handleClick} active={this.state.activeInventory}/>
+                    </div>
+                    <div className={'itemCollectionCategories'}>
+                        <Category title={'Implants'} update={this.handleClick} active={this.state.activeInventory}/>
+                        <Category title={'Hackerware'} update={this.handleClick} active={this.state.activeInventory}/>
+                        <Category title={'Misc'} update={this.handleClick} active={this.state.activeInventory}/>
+                        <Category title={'Food'} update={this.handleClick} active={this.state.activeInventory}/>
                     </div>
                     <div className={'itemCollection-50'}>
 

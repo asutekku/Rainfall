@@ -2,6 +2,8 @@ import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {DefaultMessage} from "../../interact/messageSchema";
 import {Message} from "./messageComponent";
+import {CombatMessage, DeathMessage} from "./combatMessage";
+import {PrimaryTitle} from "../general/primaryTitle";
 
 export interface LogProps {
     actor: Actor;
@@ -11,6 +13,12 @@ export interface LogProps {
 interface LogState {
     selection: string;
     messages: DefaultMessage[];
+}
+
+class Log extends React.Component<{ messages: JSX.Element[] }> {
+    render() {
+        return <div id="actions">{this.props.messages}</div>;
+    }
 }
 
 export class ActionLog extends React.Component<LogProps, LogState> {
@@ -26,18 +34,28 @@ export class ActionLog extends React.Component<LogProps, LogState> {
 
     getMessages = (): JSX.Element[] => {
         return this.props.messages.map((m: any, i: number) => {
-            let msg = !m.playerName ? m.msg : m.playerName;
-            return <Message text={msg} key={i}/>;
+            switch (m.type) {
+                case 'combat' :
+                    return <CombatMessage key={i} message={m}/>;
+                case 'death' :
+                    return <DeathMessage key={i} dead={m.dead} killer={m.killer}/>;
+                default:
+                    let msg = !m.playerName ? m.msg : m.playerName;
+                    return <Message text={msg} key={i}/>;
+            }
         })
     };
 
     render() {
         return (
-            <div id="gamearea" className="gridElement">
-                <div id="initLine">
-                    <span id="initChar">></span>
+            <div id={'actionLog'}>
+                <PrimaryTitle title={'Action log'} noMenus={true}/>
+                <div id="gamearea" className="gridElement">
+                    <div id="initLine">
+                        <span className="actionMessage-first">></span>
+                    </div>
+                    <Log messages={this.getMessages()}/>
                 </div>
-                <div id="actions">{this.getMessages()}</div>
             </div>)
     }
 }

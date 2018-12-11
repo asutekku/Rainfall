@@ -10,6 +10,7 @@ export class Role {
     skill: string;
     skillDescription: string;
     color: any;
+    portrait: string;
 
     constructor(role?: string) {
         const actorRole: any = getRole(role);
@@ -17,5 +18,6 @@ export class Role {
         this.skill = actorRole.skill;
         this.skillDescription = actorRole.skillDescription;
         this.color = actorRole.color;
+        this.portrait = actorRole.portrait;
     }
 }

@@ -23,6 +23,12 @@ html {
     width: 100%;
     margin: 0;
     font-family: monospace;
+    -webkit-touch-callout: none; /* iOS Safari */
+    -webkit-user-select: none; /* Safari */
+    -khtml-user-select: none; /* Konqueror HTML */
+    -moz-user-select: none; /* Firefox */
+    -ms-user-select: none; /* Internet Explorer/Edge */
+    user-select: none;
 }
 
 body {
@@ -78,12 +84,12 @@ body {
 
 #mainpane {
     width: 100%;
-    height: 900px;
+    height: 100%;
     background: var(--background);
     display: flex;
 }
 
-.sideBar {
+#sidebar {
     width: 200px;
     height: 100%;
     background: var(--background);
@@ -91,28 +97,38 @@ body {
     float: left;
 }
 
+#actionLog {
+    flex: 1;
+    overflow: hidden;
+}
+
 #playPane {
     flex: 1;
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
     grid-gap: 6px;
     height: 100%;
     float: left;
-    /*position: relative;*/
+    width: 50%;
     z-index: 0;
-    opacity: 0.99;
+    margin-right: 5px;
     font-family: monospace;
     font-size: 15px;
 }
 
 #statpane {
     width: 300px;
-    height: 900px;
+    height: 100%;
     margin-left: 5px;
     background: var(--background);
     float: right;
     right: 20px;
     z-index: 1;
+}
+
+#gamearea {
+    overflow: hidden;
+    height: 100%;
+    background: var(--backgroundLight);
+    padding: 4px;
 }
 
 .statValue {
@@ -231,13 +247,6 @@ button:hover {
 .buttonActiveSelection {
     border-color: var(--selectionActiveBorder);
     color: var(--selectionActiveBorder);
-}
-
-#gamearea {
-    overflow: hidden;
-    height: 800px;
-    background: var(--backgroundLight);
-    padding: 4px;
 }
 
 .tooltip {
@@ -540,6 +549,13 @@ h3 {
 .actionMessage {
     font-size: 13px;
     padding-bottom: 1px;
+    margin-left: 1em;
+    text-indent: -1em;
+}
+
+.actionMessage-first {
+    font-size: 13px;
+    padding-bottom: 1px;
 }
 
 #actions {
@@ -660,12 +676,12 @@ progress::-webkit-progress-value {
 
 .itemContainer-100 {
     background: #000000;
-    display:inline-block;
+    display: inline-block;
     -webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
-    -moz-box-sizing: border-box;    /* Firefox, other Gecko */
-    box-sizing: border-box;         /* Opera/IE 8+ */
-    width:100%;
-    overflow:auto;
+    -moz-box-sizing: border-box; /* Firefox, other Gecko */
+    box-sizing: border-box; /* Opera/IE 8+ */
+    width: 100%;
+    overflow: auto;
     border: 0 solid var(--borderColor);
     border-left-width: 4px;
     cursor: pointer;
@@ -674,7 +690,7 @@ progress::-webkit-progress-value {
     margin-bottom: 10px;
 }
 
-.itemContainer-100:hover{
+.itemContainer-100:hover {
     background: var(--selectionActive);
 }
 
@@ -696,7 +712,7 @@ progress::-webkit-progress-value {
 
 .itemContainer-middle {
     float: left;
-    width:100%;
+    width: 100%;
     margin-bottom: 8px;
 }
 
@@ -728,7 +744,7 @@ progress::-webkit-progress-value {
 }
 
 .itemContainer-bottom-right {
-    float:right;
+    float: right;
 }
 
 .noSelect {
@@ -737,13 +753,21 @@ progress::-webkit-progress-value {
     -khtml-user-select: none; /* Konqueror HTML */
     -moz-user-select: none; /* Firefox */
     -ms-user-select: none; /* Internet Explorer/Edge */
-    user-select: none; /* Non-prefixed version, currently
-                                  supported by Chrome and Opera */
+    user-select: none;
+    /* Non-prefixed version, currently
+                                     supported by Chrome and Opera */
 }
 
-.characterPicture {
-    float:left;
+.charPortraitContainer {
+    float: left;
     margin-right: 10px;
+    height: 150px;
+    width: 150px;
+}
+
+.charPortrait {
+    height: 150px;
+    width: 150px;
 }
 
 .characterInfo {
@@ -751,7 +775,7 @@ progress::-webkit-progress-value {
 }
 
 .characterAbout {
-    float:left;
+    float: left;
 }
 
 .underline {

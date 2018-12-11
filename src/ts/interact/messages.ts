@@ -2,9 +2,10 @@ import {Utils} from "../utils/utils";
 import {Actor} from "../actors/Actor";
 import {State} from "../utils/State";
 import {Player} from "../actors/player";
+import {MessageCombat} from "./messageSchema";
 
 export class Messages {
-    static actorWeapon = (actor: Actor) => Utils.span(`[${actor.weapon.name}]`, "weaponBlue");
+    static actorWeapon = (actor: Actor) => Utils.span(`${actor.weapon.name}]`);
     static damageCrit = (actor: Actor, target: Actor): string =>
         Utils.span(`(${target.health + actor.weapon.weaponDamage() * 2} => ${target.health})`, "damageGreen");
     static damageCrit0 = (actor: Actor, target: Actor): string =>
@@ -43,6 +44,19 @@ export class Messages {
         currencyDrop: Messages.currencyDrop(target)
     });
 
+    static getCombatMessage = (actor: Actor, target: Actor, prevHP: number): MessageCombat => {
+        const params = {
+            msg: 'Hello',
+            attacker: actor,
+            defender: target,
+            attType: actor.weapon.type,
+            critical: false,
+            damage: actor.weapon.damage,
+            prevHP: prevHP
+        };
+        return new MessageCombat(params)
+    };
+
     static encounter(Case: string, actor: Actor, target: Actor) {
         const targetName: string = Utils.span(`[${target.name}]`, `${target.role.name.toLowerCase()}Color`);
         switch (Case) {
@@ -56,7 +70,7 @@ export class Messages {
         }
     }
 
-    static getStrings = (actor:Actor, target: Actor) => {
+    static getStrings = (actor: Actor, target: Actor) => {
         return Messages.getCombatStrings(actor, target);
     };
 

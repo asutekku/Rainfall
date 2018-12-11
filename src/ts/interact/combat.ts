@@ -6,16 +6,17 @@ import {Actor} from "../actors/Actor";
 import {getItem} from "./getItem";
 import {State} from "../utils/State";
 import en_US from "./../../lang/en_US";
+import {DeathMessage} from "./messageSchema";
 
 const Log = en_US.Log;
 
 export class Combat {
     static basicAction(actor: Actor, target: Actor): void {
-        return this.shoot(actor, target);
+        return this.attack(actor, target);
         if (!target.isAlive()) {
             //Combat.killEnemy(actor, target);
         } else {
-            return this.shoot(target, actor);
+            return this.attack(target, actor);
             //this.isAlive(target);
         }
         console.log(actor.level);
@@ -29,31 +30,47 @@ export class Combat {
         }
     }
 
-    static shoot(actor: Actor, target: Actor): any {
-        const distance: number = Utils.distance(actor.position, target.position),
-            dices: number = actor.stats.ref + Utils.dice(3, 10);
-        let shotTarget: boolean = false;
-        if (distance < 2000) shotTarget = dices >= 1;
-        else if (distance <= actor.weapon.range / 4) shotTarget = dices >= 15;
-        else if (distance <= actor.weapon.range / 2) shotTarget = dices >= 20;
-        else if (distance <= actor.weapon.range) shotTarget = dices >= 25;
-        else if (distance <= actor.weapon.range * 2) shotTarget = dices >= 30;
+    static attack(actor: Actor, target: Actor): any {
+        const distance: number = Utils.distance(actor.position, target.position);
+        const dices: number = actor.stats.ref + Utils.dice(3, 10);
+        const shotTarget: boolean = this.didAttackHit(distance, dices, actor);
+        const messages = [];
         if (shotTarget) {
+            const prevHP: number = target.health;
             if (target.health <= actor.weapon.weaponDamage()) {
                 target.health = 0;
+                messages.unshift(Messages.getCombatMessage(actor, target, prevHP));
+                messages.unshift(new DeathMessage(target, actor))
             } else {
                 target.health -= actor.weapon.weaponDamage();
+                return Messages.getCombatMessage(actor, target, prevHP);
             }
-            return Messages.getStrings(actor, target);
         } else {
             //this.dodgeAttack(actor, target);
         }
+        return messages;
     }
 
-    static attack(actor: Actor, target: Actor, multiplier: number): void {
-        const def = target.armor != 0 ? 1 - target.armor / 100 : 1;
-        target.health -= actor.weapon.weaponDamage() * def * multiplier;
+    private static didAttackHit(distance: number, dices: number, actor: Actor): boolean {
+        let shotTarget: boolean = false;
+        if (distance < 2000) {
+            shotTarget = dices >= 1;
+        } else if (distance <= actor.weapon.range / 4) {
+            shotTarget = dices >= 15;
+        } else if (distance <= actor.weapon.range / 2) {
+            shotTarget = dices >= 20;
+        } else if (distance <= actor.weapon.range) {
+            shotTarget = dices >= 25;
+        } else if (distance <= actor.weapon.range * 2) {
+            shotTarget = dices >= 30;
+        }
+        return shotTarget;
     }
+
+    // static attack(actor: Actor, target: Actor, multiplier: number): void {
+    //     const def = target.armor != 0 ? 1 - target.armor / 100 : 1;
+    //     target.health -= actor.weapon.weaponDamage() * def * multiplier;
+    // }
 
     static dodgeAttack(actor: Actor, target: Actor): void {
         Messages.logMessage(Log.hit.miss1, actor);

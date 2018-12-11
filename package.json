@@ -1,0 +1,38 @@
+{
+  "name": "rainfall",
+  "version": "1.0.0",
+  "description": "Turn based RPG game",
+  "main": "index.js",
+  "directories": {
+    "lib": "lib"
+  },
+  "scripts": {
+    "build": "webpack --config webpack.config.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/asutekku/Rainfall.git"
+  },
+  "author": "asutekku",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/asutekku/Rainfall/issues"
+  },
+  "homepage": "https://github.com/asutekku/Rainfall#readme",
+  "dependencies": {
+    "@types/react": "^16.7.13",
+    "@types/react-dom": "^16.0.11",
+    "prop-types": "^15.6.2",
+    "react": "^16.6.3",
+    "react-dom": "^16.6.3",
+    "react-redux": "^6.0.0",
+    "redux": "^4.0.1"
+  },
+  "devDependencies": {
+    "awesome-typescript-loader": "^5.2.1",
+    "source-map-loader": "^0.2.4",
+    "typescript": "^3.2.1",
+    "webpack": "^4.27.1",
+    "webpack-cli": "^3.1.2"
+  }
+}

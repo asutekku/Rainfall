@@ -1,7 +1,7 @@
 import {Actor} from "../actors/Actor";
 
 export interface DefaultMessage {
-    msg: string;
+    msg?: string;
 }
 
 export class MessageStr implements DefaultMessage {
@@ -12,23 +12,38 @@ export class MessageStr implements DefaultMessage {
     }
 }
 
+export class DeathMessage implements DefaultMessage {
+    type = 'death';
+    msg: string;
+    dead: Actor;
+    killer: Actor;
+
+    constructor(dead: Actor, killer: Actor, msg?: string) {
+        this.msg = msg ? msg : '';
+        this.dead = dead;
+        this.killer = killer;
+    }
+}
+
 export class MessageCombat implements DefaultMessage {
+    type = "combat";
     msg: string;
     attacker: Actor;
     defender: Actor;
     attType: string;
     critical: boolean;
     damage: number;
-    defHealth: number;
+    prevHP: number;
 
-    constructor(msg: string, attacker: Actor, defender: Actor, attType: string, critical: boolean, damage: number, defHealth: number) {
+    constructor(parameters: { msg: string, attacker: Actor, defender: Actor, attType: string, critical: boolean, damage: number, prevHP: number }) {
+        let {msg, attacker, defender, attType, critical, damage, prevHP} = parameters;
         this.msg = msg;
         this.attacker = attacker;
         this.defender = defender;
         this.attType = attType;
         this.critical = critical;
         this.damage = damage;
-        this.defHealth = defHealth;
+        this.prevHP = prevHP;
     }
 }
 

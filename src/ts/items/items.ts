@@ -1,4 +1,4 @@
-import { Medical, Scrap } from "./Scrap";
+import {Medical, Scrap} from "./Scrap";
 
 let items = [
     new Scrap("misc", "clothing", "Pants", 20, "something", "misc_pants"),
@@ -111,7 +111,7 @@ let items = [
         "misc",
         "Holo Generator",
         500,
-        "Small box (10cmx5cmx10cm) projects a holographic picture from a replacable chip. Generator is compatible with chips from most digital cameras. Can be linked with a digital Recorder/Player.",
+        "Small box (10cmx5cmx10cm) projects a holographic portrait from a replacable chip. Generator is compatible with chips from most digital cameras. Can be linked with a digital Recorder/Player.",
         "misc_holoGen"
     ),
     new Scrap("misc", "misc", "Laptop", 900, "Something", "misc_laptop"),

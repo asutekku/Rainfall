@@ -223,7 +223,7 @@ export default class en_US {
         levelUp: "You leveled up from ${actorLevelOld} to ${actorLevel}!",
         death: "You have been killed by ${targetName}",
         dead: "You are dead, try respawning!",
-        respawn: "${nanobots}from TraumaTeam revitalize you. You have been charged ${deathCharge} yens.",
+        respawn: "${nanobots} from TraumaTeam revitalize you. You have been charged ${deathCharge} yens.",
         loot: {
             search1:
                 "As the blood still flows from ${targetName}'s liquidated carcass, you search through ${pronounP} belongings.",

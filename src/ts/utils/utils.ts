@@ -42,7 +42,7 @@ export class Utils {
         }
     }
 
-    static span(line: string, spanClass: string): string {
+    static span(line: string, spanClass?: string): string {
         return `<span class="${spanClass}">${line}</span>`;
     }
 
