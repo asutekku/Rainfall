@@ -118,9 +118,9 @@ export class Paper {
     }
 
     public static paperInventoryItemInfo(item: Item): DocumentFragment {
-        const fragment: DocumentFragment = document.createDocumentFragment(),
-            itemTitleContainer: HTMLDivElement = document.createElement("div"),
-            itemTitle: HTMLSpanElement = document.createElement("span");
+        const fragment: DocumentFragment = document.createDocumentFragment();
+        const itemTitleContainer: HTMLDivElement = document.createElement("div");
+        const itemTitle: HTMLSpanElement = document.createElement("span");
         itemTitleContainer.classList.add("inventoryItemInfoTitle");
         itemTitle.textContent = item.name.toString();
         itemTitleContainer.appendChild(itemTitle);
@@ -139,10 +139,10 @@ export class Paper {
     }
 
     public static weaponStats(weapon: Weapon): DocumentFragment {
-        const fragment: DocumentFragment = document.createDocumentFragment(),
-            statContainer: HTMLDivElement = document.createElement("div"),
-            statsTitleContainer: HTMLHeadingElement = document.createElement("div"),
-            statsTitle: HTMLSpanElement = document.createElement("span");
+        const fragment: DocumentFragment = document.createDocumentFragment();
+        const statContainer: HTMLDivElement = document.createElement("div");
+        const statsTitleContainer: HTMLHeadingElement = document.createElement("div");
+        const statsTitle: HTMLSpanElement = document.createElement("span");
         statContainer.classList.add("weaponStatContainer");
         statsTitleContainer.classList.add("inventoryItemInfoTitle");
         statsTitle.textContent = "Weapon stats:";
@@ -159,10 +159,10 @@ export class Paper {
     }
 
     public static inventoryInfoItem(title: string, content: string): DocumentFragment {
-        const frag: DocumentFragment = document.createDocumentFragment(),
-            itemContainer: HTMLDivElement = document.createElement("div"),
-            itemTitle: HTMLDivElement = document.createElement("div"),
-            itemContent: HTMLSpanElement = document.createElement("span");
+        const frag: DocumentFragment = document.createDocumentFragment();
+        const itemContainer: HTMLDivElement = document.createElement("div");
+        const itemTitle: HTMLDivElement = document.createElement("div");
+        const itemContent: HTMLSpanElement = document.createElement("span");
         itemTitle.textContent = title;
         itemContent.textContent = content;
         itemContainer.classList.add("inventoryItemInfoContainer");
@@ -175,8 +175,8 @@ export class Paper {
     }
 
     public static equipButton(item: Item): DocumentFragment {
-        const frag = document.createDocumentFragment(),
-            equipButton = document.createElement("button");
+        const frag = document.createDocumentFragment();
+        const equipButton = document.createElement("button");
         equipButton.textContent = item.equipped ? "Unequip" : "Equip";
         equipButton.classList.add("button");
         equipButton.classList.add("inventoryButton");
@@ -195,19 +195,19 @@ export class Paper {
     }
 
     public static paperProgressBar(title: string, value: number, max: number, modifier?: string): DocumentFragment {
-        const frag: DocumentFragment = document.createDocumentFragment(),
-            progressContainer: HTMLDivElement = document.createElement("div"),
-            progressBar: HTMLProgressElement = document.createElement("progress"),
-            progressTitle: HTMLDivElement = document.createElement("div"),
-            progressbarContainer: HTMLDivElement = document.createElement("div"),
-            progressValue: HTMLDivElement = document.createElement("div");
+        const frag: DocumentFragment = document.createDocumentFragment();
+        const progressContainer: HTMLDivElement = document.createElement("div");
+        const progressBar: HTMLProgressElement = document.createElement("progress");
+        const progressTitle: HTMLDivElement = document.createElement("div");
+        const progressbarContainer: HTMLDivElement = document.createElement("div");
+        const progressValue: HTMLDivElement = document.createElement("div");
         progressTitle.textContent = `${title}:`;
         progressTitle.classList.add("progressTitle");
         progressBar.value = value;
         progressBar.classList.add("progressBar");
+        progressBar.max = max;
         progressValue.textContent = `${value.toString()}${modifier ? modifier : ""}`;
         progressValue.classList.add("progressValue");
-        progressBar.max = max;
         progressContainer.classList.add("progressContainer");
         progressbarContainer.classList.add("progressbarContainer");
         progressContainer.appendChild(progressTitle);

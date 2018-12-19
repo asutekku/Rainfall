@@ -1,10 +1,10 @@
 import {Actor} from "../actors/Actor";
 
-export interface DefaultMessage {
+export interface IDefaultMessage {
     msg?: string;
 }
 
-export class MessageStr implements DefaultMessage {
+export class MessageStr implements IDefaultMessage {
     public msg: string;
 
     constructor(msg: string) {
@@ -12,7 +12,7 @@ export class MessageStr implements DefaultMessage {
     }
 }
 
-export class DeathMessage implements DefaultMessage {
+export class DeathMessage implements IDefaultMessage {
     public type = 'death';
     public msg: string;
     public dead: Actor;
@@ -25,7 +25,20 @@ export class DeathMessage implements DefaultMessage {
     }
 }
 
-export class MessageCombat implements DefaultMessage {
+export class DodgeMessage implements IDefaultMessage {
+    public type = 'dodge';
+    public msg: string;
+    public attacker: Actor;
+    public defender: Actor;
+
+    constructor(dead: Actor, killer: Actor, msg?: string) {
+        this.msg = msg ? msg : '';
+        this.attacker = dead;
+        this.defender = killer;
+    }
+}
+
+export class MessageCombat implements IDefaultMessage {
     public type = "combat";
     public msg: string;
     public attacker: Actor;

@@ -1,6 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
-import {DefaultMessage} from "../../interact/messageSchema";
+import {IDefaultMessage} from "../../interact/messageSchema";
 import {PrimaryTitle} from "../general/primaryTitle";
 import {CombatMessage, DeathMessage} from "./combatMessage";
 import {Message} from "./messageComponent";
@@ -12,7 +12,7 @@ export interface LogProps {
 
 interface LogState {
     selection: string;
-    messages: DefaultMessage[];
+    messages: IDefaultMessage[];
 }
 
 class Log extends React.Component<{ messages: JSX.Element[] }> {
@@ -23,7 +23,7 @@ class Log extends React.Component<{ messages: JSX.Element[] }> {
 
 export class ActionLog extends React.Component<LogProps, LogState> {
 
-    constructor(props: any) {
+    constructor(props: LogProps) {
         super(props);
         this.state = {selection: "Skills", messages: []};
     }

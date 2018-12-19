@@ -67,7 +67,7 @@ export class Weapon implements Item {
         return (low + high) / 2;
     }
 
-    public weaponDamage(): number {
+    public getDamage(): number {
         let damage = 0;
         for (let i = 0; i <= this.rateOfFire; i++) {
             if (Utils.chance(this.accuracy)) {

@@ -5,13 +5,15 @@ import {Utils} from "../utils/utils";
 import en_US from "./../../lang/en_US";
 import {GetItem} from "./getItem";
 import {Messages} from "./messages";
-import {DeathMessage} from "./messageSchema";
+import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./messageSchema";
 import {Movement} from "./Movement";
 
 const Log = en_US.Log;
 
 export class Combat {
+
     public static basicAction(actor: Actor, target: Actor): void {
+        let message = new MessageStr('yo');
         return this.attack(actor, target);
         if (!target.isAlive()) {
             // Combat.killEnemy(actor, target);
@@ -19,8 +21,7 @@ export class Combat {
             return this.attack(target, actor);
             // this.isAlive(target);
         }
-        console.log(actor.level);
-        UI.updateUI();
+        //UI.updateUI();
     }
 
     public static isAlive(actor: Actor): void {
@@ -33,32 +34,46 @@ export class Combat {
     public static attack(actor: Actor, target: Actor): any {
         const distance: number = Utils.distance(actor.position, target.position);
         const dices: number = actor.stats.ref + Utils.dice(3, 10);
-        const shotTarget: boolean = this.didAttackHit(distance, dices, actor);
+        const hitSuccess: boolean = this.didAttackHit(distance, dices, actor);
         const messages = [];
-        if (shotTarget) {
-            const prevHP: number = target.health;
-            if (target.health <= actor.weapon.weaponDamage()) {
-                target.health = 0;
-                messages.unshift(Messages.getCombatMessage(actor, target, prevHP));
-                messages.unshift(new DeathMessage(target, actor));
+        const targetOldHP: number = target.health;
+        const damageCaused: number = this.getDamage(actor, target);
+        if (hitSuccess) {
+            if (targetOldHP > damageCaused) {
+                target.health -= damageCaused;
+                messages.unshift(Messages.getCombatMessage(actor, target, targetOldHP));
             } else {
-                target.health -= actor.weapon.weaponDamage();
-                return Messages.getCombatMessage(actor, target, prevHP);
+                target.health = 0;
+                messages.unshift(Messages.getCombatMessage(actor, target, targetOldHP));
+                messages.unshift(new DeathMessage(target, actor));
             }
         } else {
-            // this.dodgeAttack(actor, target);
+            messages.unshift(this.dodgeAttack(actor, target));
         }
         return messages;
     }
 
+    public static dodgeAttack(actor: Actor, target: Actor): IDefaultMessage {
+        return new DodgeMessage(actor, target);
+        //Movement.moveTo(actor, target.position, actor.stats.ma.ma);
+    }
+
     // static attack(actor: Actor, target: Actor, multiplier: number): void {
     //     const def = target.armor != 0 ? 1 - target.armor / 100 : 1;
-    //     target.health -= actor.weapon.weaponDamage() * def * multiplier;
+    //     target.health -= actor.weapon.getDamage() * def * multiplier;
     // }
 
-    public static dodgeAttack(actor: Actor, target: Actor): void {
-        Messages.logMessage(Log.hit.miss1, actor);
-        Movement.moveTo(actor, target.position, actor.stats.ma.ma);
+    private static getDamage(actor: Actor, target: Actor): number {
+        let damage: number = actor.weapon.getDamage();
+        const eq = target.equipment;
+        const headSP: number = eq.headgear ? eq.headgear.stoppingPower : 0;
+        const armsSP: number = eq.arms ? eq.arms.stoppingPower : 0;
+        const feetSP: number = eq.feet ? eq.feet.stoppingPower : 0;
+        const lowerSP: number = eq.lower ? eq.lower.stoppingPower : 0;
+        const upperSP: number = eq.upper ? eq.upper.stoppingPower : 0;
+        const SP: number[] = [headSP, armsSP, feetSP, lowerSP, upperSP];
+        damage -= SP.reduce((acc: number, c: number) => acc + c);
+        return damage;
     }
 
     // Melee only!
