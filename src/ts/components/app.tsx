@@ -67,8 +67,21 @@ export class App extends React.Component<{}, InterfaceAppState> {
         }
     };
 
-    public getEnemy = (actor: Actor) => {
-        console.log(actor);
+    public render() {
+        // @ts-ignore
+        return <div id={"mainpane"}>
+            <Sidebar activeSelection={this.updateSelection}/>
+            <MainPanel activeView={this.state.activeMainPanel} currentActor={this.getCurrentActor()}
+                       currentEnemy={this.getCurrentEnemy()} messages={this.getMessage}/>
+            <ActionLog actor={this.getCurrentActor()} messages={this.state.messages}/>
+            <CharacterPanel party={this.state.party}
+                            enemies={this.state.currentEnemies}
+                            activeSelection={this.getCharacter}
+                            activeEnemy={this.getEnemy}/>
+        </div>;
+    }
+
+    private getEnemy = (actor: Actor) => {
         if (!actor) {
             this.setState({activeEnemy: this.state.currentEnemies[0]});
         } else {
@@ -76,25 +89,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
         }
     };
 
-    public getCurrentActor(): Actor {
+    private getCurrentActor(): Actor {
         return !this.state.activeChar ? this.state.party[0] : this.state.activeChar;
     }
 
-    public getCurrentEnemy(): Actor {
+    private getCurrentEnemy(): Actor {
         return !this.state.activeEnemy ? this.state.currentEnemies[0] : this.state.activeEnemy;
-    }
-
-    public render() {
-        return (
-            <div id={"mainpane"}>
-                <Sidebar activeSelection={this.updateSelection}/>
-                <MainPanel activeView={this.state.activeMainPanel} currentActor={this.getCurrentActor()}
-                           currentEnemy={this.getCurrentEnemy()} messages={this.getMessage}/>
-                <ActionLog actor={this.getCurrentActor()} messages={this.state.messages}/>
-                <CharacterPanel party={this.state.party}
-                                enemies={this.state.currentEnemies}
-                                activeSelection={this.getCharacter}
-                                activeEnemy={this.getEnemy}/>
-            </div>);
     }
 }

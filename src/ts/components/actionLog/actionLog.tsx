@@ -23,7 +23,7 @@ class Log extends React.Component<{ messages: JSX.Element[] }> {
 
 export class ActionLog extends React.Component<LogProps, LogState> {
 
-    constructor(props: any) {
+    constructor(props: LogProps) {
         super(props);
         this.state = {selection: "Skills", messages: []};
     }

@@ -18,7 +18,7 @@ interface CharacterPanelState {
 
 export class CharacterPanel extends React.Component<CharacterPanelProps, CharacterPanelState> {
 
-    constructor(props: any) {
+    constructor(props: CharacterPanelProps) {
         super(props);
         this.state = {
             activeSelection: undefined,
@@ -40,9 +40,11 @@ export class CharacterPanel extends React.Component<CharacterPanelProps, Charact
     public getEnemy = (actor: Actor) => {
         if (!actor) {
             this.setState({activeEnemy: this.props.enemies[0]});
+            // @ts-ignore
             this.props.activeEnemy(this.props.enemies[0]);
         } else {
             this.setState({activeEnemy: actor});
+            // @ts-ignore
             this.props.activeEnemy(actor);
         }
     };
