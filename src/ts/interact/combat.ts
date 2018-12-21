@@ -7,50 +7,50 @@ import {GetItem} from "./getItem";
 import {Messages} from "./messages";
 import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./messageSchema";
 import {Movement} from "./Movement";
+import {Skill} from "../items/Skill";
 
 const Log = en_US.Log;
 
 export class Combat {
+    private static messages: any = [];
 
-    public static basicAction(actor: Actor, target: Actor): void {
-        let message = new MessageStr('yo');
-        return this.attack(actor, target);
-        if (!target.isAlive()) {
-            // Combat.killEnemy(actor, target);
+    public static basicAction(actor: Actor, target: Actor, skill: Skill): any {
+        this.messages = [];
+        if (actor.isAlive()) {
+            // Actor attacks the target
+            this.attack(actor, target);
+            //Checks if the target is alive to initiate target's turn
+            if (target.isAlive()) {
+                //Target attacks the attacker
+                this.attack(target, actor);
+            }
         } else {
-            return this.attack(target, actor);
-            // this.isAlive(target);
+            // Inform the player that the character is dead
+            // Player can't do anything with a dead character
+            this.messages.unshift(new MessageStr('That character is dead.'));
         }
-        //UI.updateUI();
-    }
-
-    public static isAlive(actor: Actor): void {
-        if (!actor.isAlive()) {
-            actor.health = 0;
-            Messages.logMessage(Log.death, actor);
-        }
+        // Returns messages to the react component
+        return this.messages.flat().reverse();
     }
 
     public static attack(actor: Actor, target: Actor): any {
         const distance: number = Utils.distance(actor.position, target.position);
         const dices: number = actor.stats.ref + Utils.dice(3, 10);
         const hitSuccess: boolean = this.didAttackHit(distance, dices, actor);
-        const messages = [];
         const targetOldHP: number = target.health;
-        const damageCaused: number = this.getDamage(actor, target);
+        const weaponDamage: number = actor.weapon.getDamage();
         if (hitSuccess) {
-            if (targetOldHP > damageCaused) {
-                target.health -= damageCaused;
-                messages.unshift(Messages.getCombatMessage(actor, target, targetOldHP));
-            } else {
-                target.health = 0;
-                messages.unshift(Messages.getCombatMessage(actor, target, targetOldHP));
-                messages.unshift(new DeathMessage(target, actor));
+            const damageCaused: number = target.receiveDamage(weaponDamage);
+            const combatMessage = Messages.getCombatMessage(actor, target, targetOldHP, damageCaused);
+            this.messages.push(combatMessage);
+            if (!target.isAlive()) {
+                const deathMessage = new DeathMessage(target, actor);
+                this.messages.push(deathMessage);
             }
         } else {
-            messages.unshift(this.dodgeAttack(actor, target));
+            const messageMiss = new MessageStr('MISS!');
+            this.messages.push(messageMiss);
         }
-        return messages;
     }
 
     public static dodgeAttack(actor: Actor, target: Actor): IDefaultMessage {
@@ -62,19 +62,6 @@ export class Combat {
     //     const def = target.armor != 0 ? 1 - target.armor / 100 : 1;
     //     target.health -= actor.weapon.getDamage() * def * multiplier;
     // }
-
-    private static getDamage(actor: Actor, target: Actor): number {
-        let damage: number = actor.weapon.getDamage();
-        const eq = target.equipment;
-        const headSP: number = eq.headgear ? eq.headgear.stoppingPower : 0;
-        const armsSP: number = eq.arms ? eq.arms.stoppingPower : 0;
-        const feetSP: number = eq.feet ? eq.feet.stoppingPower : 0;
-        const lowerSP: number = eq.lower ? eq.lower.stoppingPower : 0;
-        const upperSP: number = eq.upper ? eq.upper.stoppingPower : 0;
-        const SP: number[] = [headSP, armsSP, feetSP, lowerSP, upperSP];
-        damage -= SP.reduce((acc: number, c: number) => acc + c);
-        return damage;
-    }
 
     // Melee only!
     public static parryAttack(actor: Actor, target: Actor) {

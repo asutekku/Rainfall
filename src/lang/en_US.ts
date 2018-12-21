@@ -205,16 +205,16 @@ export default class en_US {
     public static Log = {
         hit: {
             normal:
-                "${playerName} ${damageType} ${targetName} with ${playerWeapon} and caused ${playerDamage} damage. ${enemyHealth}",
+                "${actorName} ${damageType} ${targetName} with ${weaponName} and caused ${playerDamage} damage. ${enemyHealth}",
             critical:
-                "${str_Critical} ${playerName} ${damageType} ${targetName} with ${playerWeapon} and caused ${playerDamage} damage. ${enemyHealthCrit}",
+                "${str_Critical} ${actorName} ${damageType} ${targetName} with ${playerWeapon} and caused ${playerDamage} damage. ${enemyHealthCrit}",
             criticalKill:
-                "${str_Critical} ${playerName} ${damageType} ${targetName} with ${playerWeapon} and caused ${playerDamage} damage. ${str_damageIndicatorCrit0}",
-            kill: "${playerName} killed ${targetName}",
+                "${str_Critical} ${actorName} ${damageType} ${targetName} with ${playerWeapon} and caused ${playerDamage} damage. ${str_damageIndicatorCrit0}",
+            kill: "${actorName} killed ${targetName}",
             miss1:
-                "${hitMiss} ${playerName} tried to attack ${targetName} but ${pronounS} was able to dodge the ${damageType}!",
-            miss2: "${hitMiss} ${playerName} tried to attack ${targetName} but missed!",
-            miss3: "${hitMiss} ${targetName} was able to jump away from ${playerName}'s ${damageType}!",
+                "${hitMiss} ${actorName} tried to attack ${targetName} but ${pronounS} was able to dodge the ${damageType}!",
+            miss2: "${hitMiss} ${actorName} tried to attack ${targetName} but missed!",
+            miss3: "${hitMiss} ${targetName} was able to jump away from ${actorName}'s ${damageType}!",
         },
         encounter:
             "You encountered ${targetName}. Just by looking at ${pronounP} attire you can see ${pronounS} is a ${targetRole}",

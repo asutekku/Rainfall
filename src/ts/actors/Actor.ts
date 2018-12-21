@@ -10,6 +10,7 @@ import {Role} from "./resources/Role";
 import {Statistics} from "./resources/Statistics";
 
 export class Actor {
+    private static id: number;
     public item: any;
     public name: string;
     public role: Role;
@@ -19,6 +20,7 @@ export class Actor {
     public health: number;
     public weapon: Weapon;
     public armor: number;
+    public alive: boolean;
     public equipment: {
         headgear: Armor | null;
         upper: Armor | null;
@@ -205,11 +207,13 @@ export class Actor {
         this.role = new Role();
         this.skill = null;
         this.level = 1;
+        Actor.id = this.getID();
         this.experience = 0;
+        this.alive = true;
         this.maxExperience = 100;
         this.health = 100;
         this.maxHealth = 100;
-        this.weapon = GetItem.getWeapon("weapon_fists");
+        this.weapon = GetItem.weapon("weapon_fists");
         this.armor = 0;
         this.equipment = {
             headgear: null,
@@ -409,6 +413,7 @@ export class Actor {
         );
         this.maxHealth = this.health;
         this.armor = 0;
+        this.alive = true;
         this.equipment = {
             headgear: null,
             upper: null,
@@ -615,7 +620,32 @@ export class Actor {
     }
 
     public isAlive(): boolean {
-        return this.health > 0;
+        return (this.health > 0 && this.alive);
+    }
+
+    public receiveDamage(amount: number): number {
+        const eq = this.equipment;
+        const headSP: number = eq.headgear ? eq.headgear.stoppingPower : 0;
+        const armsSP: number = eq.arms ? eq.arms.stoppingPower : 0;
+        const feetSP: number = eq.feet ? eq.feet.stoppingPower : 0;
+        const lowerSP: number = eq.lower ? eq.lower.stoppingPower : 0;
+        const upperSP: number = eq.upper ? eq.upper.stoppingPower : 0;
+        const SP: number[] = [headSP, armsSP, feetSP, lowerSP, upperSP];
+        const damage = amount - SP.reduce((acc: number, c: number) => acc + c);
+        if (this.health < damage) {
+            this.health = 0;
+            this.health = 0;
+            this.alive = false;
+        } else {
+            this.health -= damage;
+        }
+        return damage;
+    }
+
+    private getID(): number {
+        const oldID = Actor.id;
+        const newID = oldID + 1;
+        return newID;
     }
 
     /*draw(context) {

@@ -12,6 +12,7 @@ export class Player extends Actor {
         this.role = new Role();
         this.color = this.role.color;
         this.item = GetItem.item();
-        this.weapon = GetItem.getWeapon("weapon_fists");
+        this.weapon = GetItem.weapon("weapon_fists");
+        //this.weapon = GetItem.weapon("weapon_stakeout");
     }
 }

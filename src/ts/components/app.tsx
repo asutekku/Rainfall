@@ -2,12 +2,13 @@ import * as React from "react";
 import {Actor} from "../actors/Actor";
 import {Goon} from "../actors/Enemies/Goon";
 import {Player} from "../actors/player";
-import {MessageCombat} from "../interact/messageSchema";
 import {ActionLog} from "./actionLog/actionLog";
 import {Message} from "./actionLog/messageComponent";
 import {CharacterPanel} from "./characterPanel/characterPanel";
 import {MainPanel} from "./mainPanel";
 import {Sidebar} from "./sidebar";
+import {ActorController} from "../actors/actorController";
+import {Utils} from "../utils/utils";
 
 
 export interface InterfaceAppState {
@@ -20,6 +21,9 @@ export interface InterfaceAppState {
 }
 
 export class App extends React.Component<{}, InterfaceAppState> {
+
+    private logLength = 20;
+
     constructor(props: any) {
         super(props);
         this.state = {
@@ -32,47 +36,12 @@ export class App extends React.Component<{}, InterfaceAppState> {
         };
     }
 
-    public getMessage = (...messages: any) => {
-        messages.flat().forEach((message: Message) => {
-            console.log(message);
-            if (message instanceof MessageCombat) {
-                if (message.defender.health <= 0) {
-                    const index: number = this.state.currentEnemies.findIndex((g) => g.name === message.defender.name);
-                    const newArr = this.state.currentEnemies;
-                    newArr[index] = new Goon();
-                    this.setState({currentEnemies: newArr, activeEnemy: newArr[index]});
-                }
-            }
-            // const joined = [message, ...this.state.messages];
-            // if (joined.length >= 20) joined.pop();
-            // this.setState({messages: joined})
-        });
-        const joined = [...messages.flat(), ...this.state.messages];
-        if (joined.length >= 20) {
-            joined.length = 20;
-        }
-        console.log(joined);
-        this.setState({messages: joined});
-    };
-
-    public updateSelection = (selection: string) => {
-        this.setState({activeMainPanel: selection});
-    };
-
-    public getCharacter = (actor: Actor) => {
-        if (!actor) {
-            this.setState({activeChar: this.state.party[0]});
-        } else {
-            this.setState({activeChar: actor});
-        }
-    };
-
     public render() {
         // @ts-ignore
         return <div id={"mainpane"}>
             <Sidebar activeSelection={this.updateSelection}/>
             <MainPanel activeView={this.state.activeMainPanel} currentActor={this.getCurrentActor()}
-                       currentEnemy={this.getCurrentEnemy()} messages={this.getMessage}/>
+                       currentEnemy={this.getCurrentEnemy()} messages={this.combatController}/>
             <ActionLog actor={this.getCurrentActor()} messages={this.state.messages}/>
             <CharacterPanel party={this.state.party}
                             enemies={this.state.currentEnemies}
@@ -80,6 +49,43 @@ export class App extends React.Component<{}, InterfaceAppState> {
                             activeEnemy={this.getEnemy}/>
         </div>;
     }
+
+    private combatController = (...messages: any): void => {
+        let enemies = this.state.currentEnemies;
+
+        // Removes dead enemies from the array
+        enemies = enemies.filter((e: Actor) => e.health > 0);
+
+        // If there are no Goons alive spawn one to three new goons
+        if (enemies.length <= 0) {
+            enemies = ActorController.getGoons(Utils.range(1, 3));
+        }
+
+        // Joins all the messages together to form a single array
+        const joined = [...messages.flat(), ...this.state.messages];
+
+        // Sets the max amount of messages shown in the view
+        if (joined.length >= this.logLength) joined.length = this.logLength;
+
+        // Updates the state with new enemies and messages
+        this.setState({
+                currentEnemies: enemies, activeEnemy: enemies[0], messages: joined
+            }
+        );
+
+    };
+
+    private updateSelection = (selection: string) => {
+        this.setState({activeMainPanel: selection});
+    };
+
+    private getCharacter = (actor: Actor) => {
+        if (!actor) {
+            this.setState({activeChar: this.state.party[0]});
+        } else {
+            this.setState({activeChar: actor});
+        }
+    };
 
     private getEnemy = (actor: Actor) => {
         if (!actor) {

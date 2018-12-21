@@ -2,7 +2,6 @@ import en_US from "../lang/en_US";
 import {Enemy} from "./actors/Enemy";
 import {Player} from "./actors/player";
 import {Statistics} from "./actors/resources/Statistics";
-import {Combat} from "./interact/combat";
 import {Messages} from "./interact/messages";
 import {State} from "./utils/State";
 import {UI} from "./utils/UI";
@@ -23,7 +22,7 @@ export class Rainfall {
 
         Utils.l("hitButton")!.onclick = () => {
             if (State.player!.isAlive()) {
-                Combat.basicAction(State.player!, State.currentEnemy!);
+                //Combat.basicAction(State.player!, State.currentEnemy!);
             } else if (deadMessageSent === false) {
                 Messages.logMessage(en_US.Log.dead);
                 deadMessageSent = true;
@@ -80,7 +79,7 @@ export class Rainfall {
                 running = true;
                 int = setInterval(() => {
                     if (State.player!.isAlive()) {
-                        Combat.basicAction(State.player!, State.currentEnemy!);
+                        //Combat.basicAction(State.player!, State.currentEnemy!);
                     } else {
                         clearInterval(int);
                         running = false;

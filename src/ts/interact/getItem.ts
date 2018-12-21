@@ -19,7 +19,10 @@ const Log = en_US.Log;
 const weapons = Equipment.weapons;
 
 export class GetItem {
-    public static weapon() {
+    public static weapon(id?: string): Weapon {
+        if (id) {
+            return weapons.find((e) => e.id === id)!;
+        }
         return Utils.pickRandom(weapons);
     }
 
@@ -63,10 +66,6 @@ export class GetItem {
         }
     }
 
-    public static getWeapon(toGet: string): Weapon {
-        return weapons.find((e) => e.id === toGet)!;
-    }
-
     public static clearEquips(item: Item): void {
         if (item instanceof Armor) {
             Array.from(document.getElementsByClassName("inventoryItem")).forEach((e) => {
@@ -88,7 +87,7 @@ export class GetItem {
             const equipDiv = document.getElementById(item.id)!.getElementsByClassName("itemEquipped")[0];
             const equipWeapon = !item.equipped;
             equipDiv.textContent = !item.equipped ? "[Equipped]" : "";
-            player.weapon = equipWeapon ? (item as Weapon) : GetItem.getWeapon("weapon_fists");
+            player.weapon = equipWeapon ? (item as Weapon) : GetItem.weapon("weapon_fists");
             player.inventory.weapons.forEach((w) => (w.equipped = false));
             item.equipped = equipWeapon;
         }

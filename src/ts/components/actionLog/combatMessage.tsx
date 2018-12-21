@@ -2,6 +2,7 @@ import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {MessageCombat} from "../../interact/messageSchema";
 import {Weapon} from "../../items/Weapon";
+import en_US from "../../../lang/en_US";
 
 export interface MessageProps {
     message: MessageCombat;
@@ -12,35 +13,47 @@ interface MessageState {
 }
 
 export class CombatMessage extends React.Component<MessageProps, MessageState> {
+
+    damageCaused = `<span class='hitRed'>[${this.props.message.prevHP} -> ${this.props.message.prevHP - this.props.message.damage <= 0 ? 0 : this.props.message.prevHP - this.props.message.damage}]</span>`;
+    damageType = 'hit';
+
+    actorName = (actor: Actor): string => {
+        return `<span style='color: ${actor.color}'>[${actor.name}]</span>`;
+    };
+
+    weaponName = (weapon: Weapon): string => {
+        return `<span class='weaponBlue'>[${weapon.name}]</span>`;
+    };
+
+    damage = (dmg: number): string => {
+        return `<span class='hitRed'>[${dmg}]</span>`;
+    };
+
+    combatStrings = {
+        actorName: this.actorName(this.props.message.attacker).toString(),
+        targetName: this.actorName(this.props.message.defender),
+        damageType: 'hit',
+        weaponName: this.weaponName(this.props.message.attacker.weapon),
+        playerDamage: this.damage(this.props.message.damage),
+        enemyHealth: this.damageCaused
+    };
+
     public render(): any {
-        const m = this.props.message;
-        return <div className={'actionMessage'}>
-            ><ActorName actor={m.attacker}/>
-            {' hit '}
-            <ActorName actor={m.defender}/>
-            {' with '}
-            <WeaponName weapon={m.attacker.weapon}/>
-            {' causing '}
-            <Damage dmg={m.damage}/>
-            {' damage. '}
-            <DmgResult oldHP={m.prevHP} dmg={m.damage}/>
-        </div>;
+        return <div className={'actionMessage'} dangerouslySetInnerHTML={{__html: this.fillTemplate(en_US.Log.hit.normal, this.combatStrings)}}/>;
     }
+
+    //>{this.actorName(m.attacker)} hit {this.actorName(m.defender)} with {this.weaponName(m.attacker.weapon)} causing {this.damage(m.damage)} damage. {this.damageCaused}
+    //>{this.fillTemplate(en_US.Log.hit.normal, this.combatStrings)}
+
+    private fillTemplate = (template: string, templateVars: Object) => {
+        template = template.replace(/\${/g, '${this.');
+        return new Function(`return \`${template}\`;`).call(templateVars);
+    };
 }
 
 export class DeathMessage extends React.Component<{ dead: Actor, killer: Actor }> {
-    public render(): any {
-        return <div className={'actionMessage'}>
-            ><ActorName actor={this.props.dead}/>
-            {' was killed by '}
-            <ActorName actor={this.props.killer}/>.
-        </div>;
-    }
-}
-
-
-export class ActorName extends React.Component<{ actor: Actor; }> {
-    public render = (): any => <span style={{color: this.props.actor.color}}>[{this.props.actor.name}]</span>;
+    actorName = (actor: Actor) => <span style={{color: actor.color}}>[{actor.name}]</span>;
+    public render = (): any => <div className={'actionMessage'}>>{this.actorName(this.props.killer)} killed {this.actorName(this.props.dead)}.</div>;
 }
 
 export class WeaponName extends React.Component<{ weapon: Weapon }> {
@@ -75,5 +88,5 @@ export class DmgResult extends React.Component<{ oldHP: number, dmg: number }> {
     public render = (): any => {
         const newHP: number = this.props.oldHP - this.props.dmg <= 0 ? 0 : -this.props.oldHP - this.props.dmg;
         return <span className={'hitRed'}>[{this.props.oldHP} -> {newHP}]</span>;
-    }
+    };
 }
