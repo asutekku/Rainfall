@@ -10,9 +10,8 @@ export class Player extends Actor {
         this.level = 1;
         this.name = `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
         this.role = new Role();
-        this.color = this.role.color;
         this.item = GetItem.item();
-        this.weapon = GetItem.weapon("weapon_fists");
+        this.weapon = GetItem.weapon("Fists");
         //this.weapon = GetItem.weapon("weapon_stakeout");
     }
 }

@@ -1,3 +1,5 @@
+import {ObjectPosition} from "./ObjectPosition";
+
 let spanId: number = 0;
 let spanIdToRemove: number = 1;
 
@@ -59,7 +61,11 @@ export class Utils {
         return Math.random() * (max - min) + min;
     }
 
-    public static distance(p1: number[], p2: number[]): any {
-        return Math.sqrt(Math.pow(p1[1] - p1[0], 2) + Math.pow(p2[1] - p2[0], 2));
+    public static distance(p1: ObjectPosition, p2: ObjectPosition): any {
+        const dx = p1.x - p2.x;
+        const dy = p1.y - p2.y;
+        const dz = p1.z - p2.z;
+
+        return Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 }

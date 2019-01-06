@@ -1,8 +1,7 @@
-import {Movement} from "../interact/Movement";
-import {State} from "../utils/State";
 import {Cover} from "./Cover";
+import {ObjectPosition} from "../utils/ObjectPosition";
 
-const rpos = Movement.randomPosition(State.playArea, 100);
+const rpos = new ObjectPosition(0, 0, 0);
 const Covers = [
     new Cover("Sheetrock wall", rpos, 5),
     new Cover("Stone Wall", rpos, 30),

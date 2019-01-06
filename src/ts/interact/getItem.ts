@@ -7,9 +7,7 @@ import {Item} from "../items/Item";
 import items from "../items/items";
 import {Medical} from "../items/Scrap";
 import {Weapon} from "../items/Weapon";
-import {Paper} from "../utils/Paper";
 import {State} from "../utils/State";
-import {UI} from "../utils/UI";
 import {Utils} from "../utils/utils";
 import en_US from "./../../lang/en_US";
 import {Messages} from "./messages";
@@ -19,11 +17,12 @@ const Log = en_US.Log;
 const weapons = Equipment.weapons;
 
 export class GetItem {
-    public static weapon(id?: string): Weapon {
-        if (id) {
-            return weapons.find((e) => e.id === id)!;
+    public static weapon(name?: string): Weapon {
+        if (name) {
+            return weapons.find((e) => e.name === name)!;
+        } else {
+            return Utils.pickRandom(weapons);
         }
-        return Utils.pickRandom(weapons);
     }
 
     public static item() {
@@ -48,13 +47,13 @@ export class GetItem {
 
     public static addItemToInventory(item: Item | Armor | Weapon | Medical, actor: Actor) {
         const multiple: boolean = !!actor.inventory[item.type!.toString()].find(
-            (i) => i.id.toString() === item.id!.toString(),
+            (i) => i.name.toString() === item.name!.toString(),
         );
         actor.inventory[item.type.toString()].push(item);
         const inventoryContainer: HTMLElement = document.getElementById("inventoryItems")!;
         if (inventoryContainer) {
-            const invItemCount = document.getElementById(item.id.toString());
-            if (!multiple) {
+            const invItemCount = document.getElementById(item.name.toString());
+            /*if (!multiple) {
                 const inventoryItem: HTMLElement = Paper.paperInventoryItem(item);
                 if (inventoryContainer && State.UI.inventoryView === item.type) {
                     inventoryContainer.appendChild(inventoryItem);
@@ -62,14 +61,14 @@ export class GetItem {
             } else if (invItemCount) {
                 const itemCount = parseInt(invItemCount!.querySelector(".itemCount")!.textContent!, 10);
                 invItemCount.querySelector(".itemCount")!.textContent = `${itemCount + 1}x`;
-            }
+            }*/
         }
     }
 
     public static clearEquips(item: Item): void {
         if (item instanceof Armor) {
             Array.from(document.getElementsByClassName("inventoryItem")).forEach((e) => {
-                if (e.classList.contains(`${item.bodypart}_node`)) {
+                if (e.classList.contains(`${item.bodyPart}_node`)) {
                     e.getElementsByClassName("itemEquipped")[0].textContent = "";
                 }
             });
@@ -84,7 +83,7 @@ export class GetItem {
         const player: Player = State.player!;
         if (item instanceof Weapon) {
             GetItem.clearEquips(item);
-            const equipDiv = document.getElementById(item.id)!.getElementsByClassName("itemEquipped")[0];
+            const equipDiv = document.getElementById(item.name)!.getElementsByClassName("itemEquipped")[0];
             const equipWeapon = !item.equipped;
             equipDiv.textContent = !item.equipped ? "[Equipped]" : "";
             player.weapon = equipWeapon ? (item as Weapon) : GetItem.weapon("weapon_fists");
@@ -92,21 +91,19 @@ export class GetItem {
             item.equipped = equipWeapon;
         }
         if (item instanceof Armor) {
-            const equipDiv = document.getElementById(item.id)!.getElementsByClassName("itemEquipped")[0];
+            const equipDiv = document.getElementById(item.name)!.getElementsByClassName("itemEquipped")[0];
             const equipArmor = !item.equipped;
             GetItem.clearEquips(item);
             equipDiv.textContent = !item.equipped ? "[Equipped]" : "";
-            player.equipment[item.bodypart!] = equipArmor ? item : null;
-            player.inventory.armor.filter((w) => w.bodypart === item.bodypart).forEach((e) => (e.equipped = false));
+            player.equipment[item.bodyPart!] = equipArmor ? item : null;
+            player.inventory.armor.filter((w) => w.bodyPart === item.bodyPart).forEach((e) => (e.equipped = false));
             item.equipped = equipArmor;
-            UI.updateEquipment(item as Armor);
         }
-        if (item.type === "medical") {
+        if (item instanceof Medical) {
             player.health =
                 player.health >= player.maxHealth ? player.maxHealth : (player.health += item.restorePoints!);
         } else {
             // currentActor.inventory.misc.push(item);
         }
-        UI.updateUI();
     }
 }

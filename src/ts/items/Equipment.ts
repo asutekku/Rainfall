@@ -18,7 +18,6 @@ export default class Equipment {
             e.cost,
             e.desc,
             e.brand,
-            e.id,
             e.ammo,
         );
     });

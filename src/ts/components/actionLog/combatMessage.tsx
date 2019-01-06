@@ -4,21 +4,14 @@ import {MessageCombat} from "../../interact/messageSchema";
 import {Weapon} from "../../items/Weapon";
 import en_US from "../../../lang/en_US";
 
-export interface MessageProps {
-    message: MessageCombat;
-}
-
-interface MessageState {
-    selected?: boolean;
-}
-
-export class CombatMessage extends React.Component<MessageProps, MessageState> {
+export class CombatMessage extends React.Component<{ message: MessageCombat }> {
 
     damageCaused = `<span class='hitRed'>[${this.props.message.prevHP} -> ${this.props.message.prevHP - this.props.message.damage <= 0 ? 0 : this.props.message.prevHP - this.props.message.damage}]</span>`;
     damageType = 'hit';
 
     actorName = (actor: Actor): string => {
-        return `<span style='color: ${actor.color}'>[${actor.name}]</span>`;
+        console.log('ActorName(): ' + actor.name);
+        return `<span style='color: ${actor.skill.color}'>[${actor.name}]</span>`;
     };
 
     weaponName = (weapon: Weapon): string => {
@@ -31,7 +24,7 @@ export class CombatMessage extends React.Component<MessageProps, MessageState> {
 
     combatStrings = {
         actorName: this.actorName(this.props.message.attacker).toString(),
-        targetName: this.actorName(this.props.message.defender),
+        targetName: this.actorName(this.props.message.defender).toString(),
         damageType: 'hit',
         weaponName: this.weaponName(this.props.message.attacker.weapon),
         playerDamage: this.damage(this.props.message.damage),
@@ -39,6 +32,8 @@ export class CombatMessage extends React.Component<MessageProps, MessageState> {
     };
 
     public render(): any {
+        console.log(this.props.message.defender.name);
+        console.log(this.combatStrings.targetName);
         return <div className={'actionMessage'} dangerouslySetInnerHTML={{__html: this.fillTemplate(en_US.Log.hit.normal, this.combatStrings)}}/>;
     }
 
@@ -47,12 +42,12 @@ export class CombatMessage extends React.Component<MessageProps, MessageState> {
 
     private fillTemplate = (template: string, templateVars: Object) => {
         template = template.replace(/\${/g, '${this.');
-        return new Function(`return \`${template}\`;`).call(templateVars);
+        return new Function(`return \`>${template}\`;`).call(templateVars);
     };
 }
 
 export class DeathMessage extends React.Component<{ dead: Actor, killer: Actor }> {
-    actorName = (actor: Actor) => <span style={{color: actor.color}}>[{actor.name}]</span>;
+    actorName = (actor: Actor) => <span style={{color: actor.skill.color}}>[{actor.name}]</span>;
     public render = (): any => <div className={'actionMessage'}>>{this.actorName(this.props.killer)} killed {this.actorName(this.props.dead)}.</div>;
 }
 

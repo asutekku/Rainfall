@@ -1,16 +1,14 @@
 import {GetItem} from "../interact/getItem";
-import {Movement} from "../interact/Movement";
 import {Armor} from "../items/Armor";
 import {Item} from "../items/Item";
 import {Weapon} from "../items/Weapon";
-import {State} from "../utils/State";
-import {Utils} from "../utils/utils";
 import {Name} from "./resources/Name";
 import {Role} from "./resources/Role";
 import {Statistics} from "./resources/Statistics";
+import {ObjectPosition} from "../utils/ObjectPosition";
+import {GameObject} from "../items/GameObject";
 
-export class Actor {
-    private static id: number;
+export class Actor extends GameObject {
     public item: any;
     public name: string;
     public role: Role;
@@ -21,6 +19,7 @@ export class Actor {
     public weapon: Weapon;
     public armor: number;
     public alive: boolean;
+    public position: ObjectPosition;
     public equipment: {
         headgear: Armor | null;
         upper: Armor | null;
@@ -31,11 +30,9 @@ export class Actor {
         [key: string]: Item | null;
     };
     public weapons: any[];
-    public color: string;
     public gender: string;
     public items: Item[];
     public currency: number;
-    public position: number[];
     public kills: number;
     public inventory: {
         weapons: Weapon[];
@@ -202,18 +199,19 @@ export class Actor {
     private cybernetics: any[];
 
     constructor() {
+        const role = new Role();
+        super(new ObjectPosition(0, 0, 0));
         this.gender = Name.getGender();
         this.name = `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
-        this.role = new Role();
-        this.skill = null;
+        this.role = role;
+        this.skill = role.skill;
         this.level = 1;
-        Actor.id = this.getID();
         this.experience = 0;
         this.alive = true;
         this.maxExperience = 100;
         this.health = 100;
         this.maxHealth = 100;
-        this.weapon = GetItem.weapon("weapon_fists");
+        this.weapon = GetItem.weapon("Fists");
         this.armor = 0;
         this.equipment = {
             headgear: null,
@@ -224,7 +222,6 @@ export class Actor {
             accessories: null,
         };
         this.weapons = [];
-        this.color = "";
         this.items = [];
         this.inventory = {
             weapons: [],
@@ -233,7 +230,7 @@ export class Actor {
             medical: [],
         };
         this.currency = 0;
-        this.position = [0, 0];
+        this.position = new ObjectPosition(0, 0, 0);
         this.kills = 0;
         this.stats = {
             int: 1,
@@ -401,207 +398,6 @@ export class Actor {
         };
     }
 
-    public update() {
-        this.gender = Name.getGender();
-        this.name = `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
-        this.role = new Role();
-        this.skill = this.role.skill;
-        this.level = State.player!.level;
-        this.experience = Math.floor(Math.pow(State.player!.level, (2 / 1.6)));
-        this.health = Math.floor(
-            Utils.range((Statistics.level ^ (2 / 0.09)) * 0.9, (Statistics.level ^ (2 / 0.09)) * 1.1),
-        );
-        this.maxHealth = this.health;
-        this.armor = 0;
-        this.alive = true;
-        this.equipment = {
-            headgear: null,
-            upper: null,
-            lower: null,
-            arms: null,
-            feet: null,
-            accessories: null,
-        };
-        this.weapons = [];
-        this.color = this.role.color;
-        this.items = [GetItem.item()];
-        this.item = GetItem.item();
-        this.currency = Math.floor(Utils.range(20, 100));
-        this.position = Movement.randomPosition(State.playArea, 50);
-        this.kills = 0;
-        this.stats = {
-            int: Utils.dice(1, 10),
-            ref: Utils.dice(1, 10),
-            tech: Utils.dice(1, 10),
-            cl: Utils.dice(1, 10),
-            att: Utils.dice(1, 10),
-            lk: Utils.dice(1, 10),
-            ma: {
-                ma: Utils.dice(1, 10),
-                run: this.stats.ma.ma * 3,
-                leap: this.stats.ma.ma / 4,
-            },
-            bt: Utils.dice(1, 11) - 1, // 2-10
-            btm: Math.ceil(this.stats.bt / 2),
-            emp: Utils.dice(1, 10),
-            lift: Utils.dice(1, 10),
-            hm: this.stats.emp * 10,
-            sn: this.stats.bt,
-        };
-        this.skills = {
-            special: {
-                authority: Utils.dice(1, 5),
-                charismaticLeadership: Utils.dice(1, 5),
-                combatSense: Utils.dice(1, 5),
-                credibility: Utils.dice(1, 5),
-                family: Utils.dice(1, 5),
-                interface: Utils.dice(1, 5),
-                juryRig: Utils.dice(1, 5),
-                medicalTech: Utils.dice(1, 5),
-                resources: Utils.dice(1, 5),
-                streetDeal: Utils.dice(1, 5),
-            },
-            att: {
-                personalGrooming: Utils.dice(1, 5),
-                wardrobeAndStyle: Utils.dice(1, 5),
-            },
-            body: {
-                endurance: Utils.dice(1, 5),
-                strength: Utils.dice(1, 5),
-                swimming: Utils.dice(1, 5),
-            },
-            cool: {
-                interrogation: Utils.dice(1, 5),
-                intimidate: Utils.dice(1, 5),
-                oratory: Utils.dice(1, 5),
-                resistTorture: Utils.dice(1, 5),
-                streetwise: Utils.dice(1, 5),
-            },
-            emp: {
-                humanPerception: Utils.dice(1, 5),
-                interview: Utils.dice(1, 5),
-                leadership: Utils.dice(1, 5),
-                seduction: Utils.dice(1, 5),
-                social: Utils.dice(1, 5),
-                persuasion: Utils.dice(1, 5),
-                perform: Utils.dice(1, 5),
-            },
-            int: {
-                accounting: Utils.dice(1, 5),
-                anthropology: Utils.dice(1, 5),
-                awareness: Utils.dice(1, 5),
-                biology: Utils.dice(1, 5),
-                botany: Utils.dice(1, 5),
-                chemistry: Utils.dice(1, 5),
-                composition: Utils.dice(1, 5),
-                diagnosis: Utils.dice(1, 5),
-                education: Utils.dice(1, 5),
-                evade: Utils.dice(1, 5),
-                expert: Utils.dice(1, 5),
-                gamble: Utils.dice(1, 5),
-                geology: Utils.dice(1, 5),
-                history: Utils.dice(1, 5),
-                librarySearch: Utils.dice(1, 5),
-                math: Utils.dice(1, 5),
-                physics: Utils.dice(1, 5),
-                programming: Utils.dice(1, 5),
-                stockMarket: Utils.dice(1, 5),
-                systemKnowledge: Utils.dice(1, 5),
-                teaching: Utils.dice(1, 5),
-                tracking: Utils.dice(1, 5),
-                wilderness: Utils.dice(1, 5),
-                zoology: Utils.dice(1, 5),
-            },
-            language: {
-                english: Utils.dice(1, 5),
-                japanese: Utils.dice(1, 5),
-                chinese: Utils.dice(1, 5),
-                german: Utils.dice(1, 5),
-                korean: Utils.dice(1, 5),
-                french: Utils.dice(1, 5),
-            },
-            ref: {
-                archery: Utils.dice(1, 5),
-                athletics: Utils.dice(1, 5),
-                brawling: Utils.dice(1, 5),
-                dance: Utils.dice(1, 5),
-                dodge: Utils.dice(1, 5),
-                driving: Utils.dice(1, 5),
-                fencing: Utils.dice(1, 5),
-                handgun: Utils.dice(1, 5),
-                heavyWeapons: Utils.dice(1, 5),
-                martialJudo: Utils.dice(1, 5),
-                martialKungfu: Utils.dice(1, 5),
-                martialKarate: Utils.dice(1, 5),
-                melee: Utils.dice(1, 5),
-                motorcycle: Utils.dice(1, 5),
-                heavyMachinery: Utils.dice(1, 5),
-                pilotGyro: Utils.dice(1, 5),
-                pilotFixedwing: Utils.dice(1, 5),
-                pilotDirigible: Utils.dice(1, 5),
-                pilotVect: Utils.dice(1, 5),
-                rifle: Utils.dice(1, 5),
-                stealth: Utils.dice(1, 5),
-                submachinegun: Utils.dice(1, 5),
-            },
-            tech: {
-                aero: Utils.dice(1, 5),
-                AV: Utils.dice(1, 5),
-                basic: Utils.dice(1, 5),
-                cryotankOperation: Utils.dice(1, 5),
-                cyberdeckDesign: Utils.dice(1, 5),
-                cyberTech: Utils.dice(1, 5),
-                demolitions: Utils.dice(1, 5),
-                disguise: Utils.dice(1, 5),
-                electronics: Utils.dice(1, 5),
-                electronicSecurity: Utils.dice(1, 5),
-                firstAid: Utils.dice(1, 5),
-                forgery: Utils.dice(1, 5),
-                gyroTech: Utils.dice(1, 5),
-                painting: Utils.dice(1, 5),
-                photography: Utils.dice(1, 5),
-                pharmatics: Utils.dice(1, 5),
-                lockPick: Utils.dice(1, 5),
-                pickPocket: Utils.dice(1, 5),
-                instrument: Utils.dice(1, 5),
-                weaponSmith: Utils.dice(1, 5),
-            },
-        };
-        this.cybernetics = [];
-        this.lifepath = {
-            style: {
-                clothes: {
-                    headgear: null,
-                    upper: null,
-                    jacket: null,
-                    bottom: null,
-                    shoes: null,
-                    accessories: null,
-                },
-                hair: null,
-                affectations: null,
-                ethnicity: null,
-                language: null,
-            },
-            familyBackground: null,
-            motivations: {
-                traits: null,
-                valuedPerson: null,
-                valueMost: null,
-                feelAboutPeople: null,
-                valuedPossession: null,
-            },
-            lifeEvents: [],
-        };
-    }
-
-    public reposition(): void {
-        this.position = [
-            this.position[0] + Math.floor(Utils.range(-50, 50)),
-            this.position[1] + Math.floor(Utils.range(-50, 50)),
-        ];
-    }
-
     public updateAfter() {
         this.stats.ma.run = this.stats.ma.ma * 3;
         this.stats.ma.leap = this.stats.ma.ma / 4;
@@ -640,12 +436,6 @@ export class Actor {
             this.health -= damage;
         }
         return damage;
-    }
-
-    private getID(): number {
-        const oldID = Actor.id;
-        const newID = oldID + 1;
-        return newID;
     }
 
     /*draw(context) {
