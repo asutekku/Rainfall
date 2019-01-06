@@ -34,7 +34,7 @@ export class CombatMenu extends React.Component<CombatMenuProps, CombatMenuState
 
     public getSkills() {
         return skills.combat.map((e: Skill, i) => {
-            return <SkillComponent skill={e} key={i} actor={this.props.actor} enemy={this.props.enemy} skillMSG={this.getMessage}/>;
+            return <SkillComponent skill={e} key={i} actor={this.props.actor} enemy={this.props.enemy} update={this.getMessage}/>;
         });
     }
 

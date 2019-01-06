@@ -11,7 +11,7 @@ interface SkillProps {
     skill: Skill;
     actor: Actor;
     enemy: Actor;
-    skillMSG: any;
+    update: any;
 }
 
 export class SkillComponent extends React.Component<SkillProps, SkillState> {
@@ -40,6 +40,7 @@ export class SkillComponent extends React.Component<SkillProps, SkillState> {
     private handleClick = () => {
         const state = !this.state.active;
         this.setState({active: state});
-        this.props.skillMSG(Combat.basicAction(this.props.actor, this.props.enemy));
-    }
+        const message = Combat.basicAction(this.props.actor, this.props.enemy, this.props.skill);
+        this.props.update(message);
+    };
 }

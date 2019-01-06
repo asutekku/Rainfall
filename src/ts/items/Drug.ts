@@ -1,15 +1,11 @@
 import {Item} from "./Item";
+import {ObjectPosition} from "../utils/ObjectPosition";
 
-export class Drug implements Item {
-    public description: string;
-    public type: string;
+export class Drug extends Item {
     public drugType: string;
-    public name: string;
-    public cost: number;
     public strength: number;
     public diff: number;
     public duration: number; // minutes
-    public id: string;
 
     constructor(
         name: string,
@@ -20,14 +16,10 @@ export class Drug implements Item {
         diff: number,
         duration: number,
     ) {
-        this.type = "drug";
+        super("drug", name, cost, description, new ObjectPosition(0));
         this.drugType = drugType;
-        this.name = name;
-        this.cost = cost;
-        this.description = description;
         this.strength = strength;
         this.diff = diff;
         this.duration = duration;
-        this.id = `drug_${this.name.replace(" ", "").toLowerCase()}`;
     }
 }

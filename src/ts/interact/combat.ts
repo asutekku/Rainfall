@@ -1,65 +1,70 @@
 import {Actor} from "../actors/Actor";
-import {State} from "../utils/State";
-import {UI} from "../utils/UI";
 import {Utils} from "../utils/utils";
 import en_US from "./../../lang/en_US";
 import {GetItem} from "./getItem";
 import {Messages} from "./messages";
-import {DeathMessage} from "./messageSchema";
-import {Movement} from "./Movement";
+import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./messageSchema";
+import {Skill} from "../items/Skill";
 
 const Log = en_US.Log;
 
 export class Combat {
-    public static basicAction(actor: Actor, target: Actor): void {
-        return this.attack(actor, target);
-        if (!target.isAlive()) {
-            // Combat.killEnemy(actor, target);
-        } else {
-            return this.attack(target, actor);
-            // this.isAlive(target);
-        }
-        console.log(actor.level);
-        UI.updateUI();
-    }
+    private static messages: any = [];
 
-    public static isAlive(actor: Actor): void {
-        if (!actor.isAlive()) {
-            actor.health = 0;
-            Messages.logMessage(Log.death, actor);
+    public static basicAction(actor: Actor, target: Actor, skill: Skill): any {
+        this.messages = [];
+        if (actor.isAlive()) {
+            // Actor attacks the target
+            this.attack(actor, target);
+            //Checks if the target is alive to initiate target's turn
+            if (target.isAlive()) {
+                //Target attacks the attacker
+                this.attack(target, actor);
+            }
+        } else {
+            // Inform the player that the character is dead
+            // Player can't do anything with a dead character
+            this.messages.unshift(new MessageStr('That character is dead.'));
         }
+        // Returns messages to the react component
+        return this.messages.flat().reverse();
     }
 
     public static attack(actor: Actor, target: Actor): any {
         const distance: number = Utils.distance(actor.position, target.position);
         const dices: number = actor.stats.ref + Utils.dice(3, 10);
-        const shotTarget: boolean = this.didAttackHit(distance, dices, actor);
-        const messages = [];
-        if (shotTarget) {
-            const prevHP: number = target.health;
-            if (target.health <= actor.weapon.weaponDamage()) {
-                target.health = 0;
-                messages.unshift(Messages.getCombatMessage(actor, target, prevHP));
-                messages.unshift(new DeathMessage(target, actor));
-            } else {
-                target.health -= actor.weapon.weaponDamage();
-                return Messages.getCombatMessage(actor, target, prevHP);
+        const hitSuccess: boolean = this.didAttackHit(distance, dices, actor);
+        const targetOldHP: number = target.health;
+        const weaponDamage: number = actor.weapon.getDamage();
+
+        if (hitSuccess) {
+            const damageCaused: number = target.receiveDamage(weaponDamage);
+            const combatMessage = Messages.getCombatMessage(actor, target, targetOldHP, damageCaused);
+            this.messages.push(combatMessage);
+            if (!target.isAlive()) {
+                actor.kills += 1;
+                actor.experience += target.experience;
+                if (actor.experience >= actor.maxExperience) {
+                    Combat.gainLevel(actor, target);
+                }
+                const deathMessage = new DeathMessage(target, actor);
+                this.messages.push(deathMessage);
             }
         } else {
-            // this.dodgeAttack(actor, target);
+            const messageMiss = new MessageStr('MISS!');
+            this.messages.push(messageMiss);
         }
-        return messages;
+    }
+
+    public static dodgeAttack(actor: Actor, target: Actor): IDefaultMessage {
+        return new DodgeMessage(actor, target);
+        //Movement.moveTo(actor, target.position, actor.stats.ma.ma);
     }
 
     // static attack(actor: Actor, target: Actor, multiplier: number): void {
     //     const def = target.armor != 0 ? 1 - target.armor / 100 : 1;
-    //     target.health -= actor.weapon.weaponDamage() * def * multiplier;
+    //     target.health -= actor.weapon.getDamage() * def * multiplier;
     // }
-
-    public static dodgeAttack(actor: Actor, target: Actor): void {
-        Messages.logMessage(Log.hit.miss1, actor);
-        Movement.moveTo(actor, target.position, actor.stats.ma.ma);
-    }
 
     // Melee only!
     public static parryAttack(actor: Actor, target: Actor) {
@@ -72,7 +77,6 @@ export class Combat {
     public static aimAttack(actor: Actor) {
         if (actor.weapon.accuracy < 100) {
             actor.weapon.accuracy += 10;
-            UI.updateUI();
         }
     }
 
@@ -90,34 +94,9 @@ export class Combat {
         }
     }
 
-    public static killEnemy(actor: Actor, target: Actor) {
-        actor.kills += 1;
-        actor.experience += target.experience;
-        Messages.logMessage(Log.hit.kill, actor);
-        Combat.lootEnemy(actor, target);
-        if (actor.experience >= actor.maxExperience) {
-            Combat.gainLevel(actor, target);
-        }
-        Combat.replaceEnemy(actor, target);
-        Movement.moveRandomly(State.playArea, actor, 3);
-        // currentActor.draw(State.playArea.context);
-        // State.playArea.context.fillRect(currentActor.position[0],currentActor.position[1],3,3);
-    }
-
     public static gainLevel(actor: Actor, target: Actor) {
         actor.gainLevel();
         Messages.logMessage(Log.levelUp, actor);
-    }
-
-    public static replaceEnemy(actor: Actor, target: Actor) {
-        target.update();
-        Movement.moveRandomly(State.playArea, target, State.playArea.width / 3);
-        if (actor.role.name === target.role.name) {
-            Messages.logMessage(Log.encounterSame, actor);
-            Combat.replaceEnemy(actor, target);
-        } else {
-            Messages.encounter("distance", actor, target);
-        }
     }
 
     public static lootEnemy(actor: Actor, target: Actor) {
@@ -125,7 +104,6 @@ export class Combat {
         Messages.logMessage(Log.loot.find, actor);
         GetItem.addItemToInventory(target.item, actor);
         GetItem.updateCurrency(target.currency, actor);
-        actor.armor = UI.getStoppingPower();
     }
 
     private static didAttackHit(distance: number, dices: number, actor: Actor): boolean {

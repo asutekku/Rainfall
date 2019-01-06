@@ -1,4 +1,5 @@
+import {ObjectPosition} from "../utils/ObjectPosition";
+
 export interface EnvironmentObject {
-    name: any;
-    position: number[];
+    position: ObjectPosition;
 }

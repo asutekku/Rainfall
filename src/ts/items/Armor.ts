@@ -1,17 +1,14 @@
 import {Item} from "./Item";
+import {ObjectPosition} from "../utils/ObjectPosition";
 
-export class Armor implements Item {
-    public description: string;
-    public type: string;
-    public bodypart: string;
-    public name: string;
+export class Armor extends Item {
+    public bodyPart: string;
     public set: string;
     public level: number;
     public stoppingPower: number;
     public rarity: number;
-    public cost: number;
     public equipped: boolean;
-    public id: string;
+    public position: ObjectPosition;
 
     constructor(
         bodypart: string,
@@ -21,18 +18,14 @@ export class Armor implements Item {
         stoppingPower: number,
         cost: number,
         description: string,
-        id: string,
     ) {
-        this.bodypart = bodypart;
-        this.type = "armor";
-        this.name = name;
+        super("armor", name, cost, description, new ObjectPosition(0, 0, 0));
+        this.position = new ObjectPosition(0, 0, 0);
+        this.bodyPart = bodypart;
         this.set = set;
         this.level = level;
         this.stoppingPower = stoppingPower;
-        this.cost = cost;
-        this.description = description;
         this.rarity = 0;
         this.equipped = false;
-        this.id = id;
     }
 }
