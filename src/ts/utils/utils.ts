@@ -8,25 +8,34 @@ export class Utils {
         return document.getElementById(what);
     }
 
-    public static create(what: string): HTMLElement | null {
-        return document.createElement(what);
-    }
-
+    /**
+     * Picks random item from an array
+     * @param arr The array to pick the item from
+     */
     public static pickRandom(arr: any[]): any {
         return arr[Math.floor(Math.random() * arr.length)];
     }
 
+    /**
+     * Saves something to the local storage
+     * @param what
+     * @param string
+     */
     public static save(what: string, string: string): void {
         return localStorage.setItem(what, string);
     }
 
-    public static colorize(what: string): string {
+    /**
+     * Returns a span element with random colour assigned to it
+     * @param content Text to be inserted in to the span
+     */
+    public static colorize(content: string): string {
         const randomColor =
             "#" +
             Math.random()
                 .toString(16)
                 .substr(-3);
-        return `<span style="color:${randomColor}">${what}</span>`;
+        return `<span style="color:${randomColor}">${content}</span>`;
     }
 
     public static printLine(line: string): void {
@@ -44,28 +53,94 @@ export class Utils {
         }
     }
 
-    public static span(line: string, spanClass?: string): string {
-        return `<span class="${spanClass}">${line}</span>`;
+    /**
+     * Creates a new span with optional class assigned to it
+     * @param content Text to be inserted in to the span
+     * @param spanClass Optional class for the span
+     */
+    public static span(content: string, spanClass?: string): string {
+        return `<span class="${spanClass}">${content}</span>`;
     }
 
+    /**
+     * Throw n sided dice m times and return the sum
+     * @param times How many times to throw the dice
+     * @param sides How many sides does the dice have
+     */
     public static dice(times: number, sides: number): number {
         return (Math.floor(Math.random() * sides) + 1) * times;
     }
 
-    public static chance(what: number): boolean {
+    /** Checks if random value is less or equals to chance (in percentages)
+     * @param chance Percentage value for the chance to but true
+     */
+    public static chance(chance: number): boolean {
         const value = Math.ceil(Math.random() * 100);
-        return value <= what;
+        return value <= chance;
     }
 
-    public static range(min: number, max: number): number {
-        return Math.random() * (max - min) + min;
+    /**
+     * Returns random int inside a given range
+     * @param min Minimum value for the int
+     * @param max Maximum value for the int
+     */
+    public static getRandomInt(min: number, max: number): number {
+        return Math.floor(Math.random() * (max - min)) + min;
     }
 
+    /**
+     * Return a distance between two objects in a 3D space
+     * @param p1 Position of the first object
+     * @param p2 Position of the second object
+     */
     public static distance(p1: ObjectPosition, p2: ObjectPosition): any {
         const dx = p1.x - p2.x;
         const dy = p1.y - p2.y;
         const dz = p1.z - p2.z;
-
         return Math.sqrt(dx * dx + dy * dy + dz * dz);
+    }
+
+    /**
+     * Returns n ints in the given range that amount to be between minSum and maxSum
+     * @param n Amount of ints the return
+     * @param min Minimum value for returned int
+     * @param max Maximum value for returned int
+     * @param minSum Minimum sum returned for all ints
+     * @param maxSum Maximum sum returned for all ints
+     */
+    public static randomInts(n: number, min: number, max: number, minSum: number, maxSum: number): number[] {
+        if (min * n > maxSum || max * n < minSum) {
+            throw 'Impossible';
+        }
+        let values: number[] = [];
+        while (n--) {
+            const thisMin: number = Math.max(min, minSum - n * max);
+            const thisMax: number = Math.min(max, maxSum - n * min);
+            const int: number = Utils.getRandomInt(thisMin, thisMax);
+            minSum -= int;
+            maxSum -= int;
+            values.push(int);
+        }
+        return values;
+    }
+
+    /**
+     * Returns the largest value in and array and then deletes it from the array
+     * @param array The array to get the value from
+     */
+    static maxRemove(array: number[]) {
+        const max: number = Math.max(...array);
+        array.splice(max);
+        return max;
+    }
+
+    /**
+     * Returns the smallest value in and array and then deletes it from the array
+     * @param array The array to get the value from
+     */
+    static minRemove(array: number[]) {
+        const min: number = Math.min(...array);
+        array.splice(min);
+        return min;
     }
 }

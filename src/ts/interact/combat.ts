@@ -5,20 +5,22 @@ import {GetItem} from "./getItem";
 import {Messages} from "./messages";
 import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./messageSchema";
 import {Skill} from "../items/Skill";
+import {GameObject} from "../items/GameObject";
 
 const Log = en_US.Log;
 
 export class Combat {
     private static messages: any = [];
 
-    public static basicAction(actor: Actor, target: Actor, skill: Skill): any {
+    public static basicAction(actor: Actor, target: GameObject, skill: Skill): any {
         this.messages = [];
-        if (actor.isAlive()) {
+
+        if (actor.health > 0) {
             // Actor attacks the target
             this.attack(actor, target);
             //Checks if the target is alive to initiate target's turn
-            if (target.isAlive()) {
-                //Target attacks the attacker
+            if (target.health > 0 && target instanceof Actor && target.hostile) {
+                //Target attacks the actor
                 this.attack(target, actor);
             }
         } else {
@@ -30,7 +32,7 @@ export class Combat {
         return this.messages.flat().reverse();
     }
 
-    public static attack(actor: Actor, target: Actor): any {
+    public static attack(actor: Actor, target: GameObject): any {
         const distance: number = Utils.distance(actor.position, target.position);
         const dices: number = actor.stats.ref + Utils.dice(3, 10);
         const hitSuccess: boolean = this.didAttackHit(distance, dices, actor);
@@ -38,17 +40,23 @@ export class Combat {
         const weaponDamage: number = actor.weapon.getDamage();
 
         if (hitSuccess) {
-            const damageCaused: number = target.receiveDamage(weaponDamage);
-            const combatMessage = Messages.getCombatMessage(actor, target, targetOldHP, damageCaused);
-            this.messages.push(combatMessage);
-            if (!target.isAlive()) {
-                actor.kills += 1;
-                actor.experience += target.experience;
-                if (actor.experience >= actor.maxExperience) {
-                    Combat.gainLevel(actor, target);
+            if (target instanceof Actor) {
+                const damageCaused: number = target.receiveDamage(weaponDamage);
+                const combatMessage = Messages.getCombatMessage(actor, target, targetOldHP, damageCaused);
+                this.messages.push(combatMessage);
+                if (!target.isAlive()) {
+                    actor.kills += 1;
+                    actor.experience += target.experience;
+                    if (actor.experience >= actor.maxExperience) {
+                        Combat.gainLevel(actor, target);
+                    }
+                    const deathMessage = new DeathMessage(target, actor);
+                    this.messages.push(deathMessage);
                 }
-                const deathMessage = new DeathMessage(target, actor);
-                this.messages.push(deathMessage);
+            } else {
+                const damageCaused: number = target.receiveDamage(weaponDamage);
+                const combatMessage = Messages.getCombatMessage(actor, target, targetOldHP, damageCaused);
+                this.messages.push(combatMessage);
             }
         } else {
             const messageMiss = new MessageStr('MISS!');

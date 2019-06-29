@@ -1,4 +1,5 @@
 import {Actor} from "../actors/Actor";
+import {GameObject} from "../items/GameObject";
 
 export interface IDefaultMessage {
     msg?: string;
@@ -42,17 +43,17 @@ export class MessageCombat implements IDefaultMessage {
     public type = "combat";
     public msg: string;
     public attacker: Actor;
-    public defender: Actor;
+    public defender: GameObject;
     public attType: string;
     public critical: boolean;
     public damage: number;
     public prevHP: number;
 
-    constructor(parameters: { msg: string, attacker: Actor, defender: Actor, attType: string, critical: boolean, damage: number, prevHP: number }) {
-        const {msg, attacker, defender, attType, critical, damage, prevHP} = parameters;
+    constructor(parameters: { msg: string, actor: Actor, target: GameObject, attType: string, critical: boolean, damage: number, prevHP: number }) {
+        const {msg, actor, target, attType, critical, damage, prevHP} = parameters;
         this.msg = msg;
-        this.attacker = attacker;
-        this.defender = defender;
+        this.attacker = actor;
+        this.defender = target;
         this.attType = attType;
         this.critical = critical;
         this.damage = damage;

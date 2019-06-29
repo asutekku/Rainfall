@@ -1,20 +1,26 @@
 {
   "compilerOptions": {
-    "outDir": "./build",
-    "module": "amd",
-    "lib": [
-      "es2017",
-      "dom"
-    ],
-    "allowJs": true,
-    "target": "es6",
-    "strict": true,
+    "outDir": "./dist/",
+    "sourceMap": true,
+    "noImplicitAny": false,
+    "module": "commonjs",
+    "target": "es5",
     "jsx": "react",
-    "moduleResolution": "node",
-    "noImplicitAny": true
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "lib": [
+      "es5",
+      "es6",
+      "dom"
+    ]
   },
   "include": [
     "./src/**/*",
-    "typings/**/*"
-  ]
+    "node_modules/konva/types/Core.d.ts"
+  ],
+  "awesomeTypescriptLoaderOptions": {
+    "reportFiles": [
+      "./src/**/*"
+    ]
+  }
 }

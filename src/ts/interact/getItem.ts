@@ -6,11 +6,12 @@ import Equipment from "../items/Equipment";
 import {Item} from "../items/Item";
 import items from "../items/items";
 import {Medical} from "../items/Scrap";
-import {Weapon} from "../items/Weapon";
+import {Weapon} from "../items/weapons/Weapon";
 import {State} from "../utils/State";
 import {Utils} from "../utils/utils";
 import en_US from "./../../lang/en_US";
 import {Messages} from "./messages";
+import {GeneratedWeapon} from "../items/weapons/GeneratedWeapon";
 
 const Log = en_US.Log;
 
@@ -86,7 +87,7 @@ export class GetItem {
             const equipDiv = document.getElementById(item.name)!.getElementsByClassName("itemEquipped")[0];
             const equipWeapon = !item.equipped;
             equipDiv.textContent = !item.equipped ? "[Equipped]" : "";
-            player.weapon = equipWeapon ? (item as Weapon) : GetItem.weapon("weapon_fists");
+            player.weapon = item as unknown as GeneratedWeapon;
             player.inventory.weapons.forEach((w) => (w.equipped = false));
             item.equipped = equipWeapon;
         }

@@ -1,5 +1,10 @@
 import {Utils} from "./utils";
 
+class IObjectPosition {
+    x: number;
+    y: number;
+}
+
 export class ObjectPosition {
     constructor(x?: number, y?: number, z?: number) {
         this._x = x ? x : 0;
@@ -45,9 +50,9 @@ export class ObjectPosition {
 
     public random(range?: number): void {
         const r: number = range ? range : 50;
-        this.x = Math.floor(Utils.range(-r, r));
-        this.y = Math.floor(Utils.range(-r, r));
-        this.z = Math.floor(Utils.range(-r, r));
+        this.x = Math.floor(Utils.getRandomInt(-r, r));
+        this.y = Math.floor(Utils.getRandomInt(-r, r));
+        this.z = Math.floor(Utils.getRandomInt(-r, r));
     }
 
     public get(): Object {

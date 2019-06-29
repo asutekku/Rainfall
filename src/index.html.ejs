@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <title>Rainfall</title>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+</head>
+<body>
+<div id="canvas">
+    <div class="UIelement" id="navbar">
+        <h1 id="title">Rainfall</h1>
+    </div>
+    <div id="root"></div>
+</div>
+
+<!-- Dependencies -->
+<% if (webpackConfig.mode == 'production') { %>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/16.8.4/umd/react.production.min.js"
+            integrity="sha256-ctUamuIgSCQg1wsh8Iw0QbDXScmyXhjJ6lxYUscC3FA=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/16.8.4/umd/react-dom.production.min.js"
+            integrity="sha256-8uWWG/7CB3OS89Cw67+B++t6w0EMGfQE9C6OGps+Wd8=" crossorigin="anonymous"></script>
+<% } else { %>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react/16.8.4/umd/react.development.js"
+            integrity="sha256-5qXzTpCme2glpjIMD82N9CvHzot7DsNj+J81wNBYCs8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/16.8.4/umd/react-dom.development.js"
+            integrity="sha256-zaBIa6kuwEspzOIU5TeB5bATnxmvJFmht9smi5jLH/Q=" crossorigin="anonymous"></script>
+<% } %>
+</body>
+</html>

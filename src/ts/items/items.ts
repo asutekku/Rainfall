@@ -42,7 +42,7 @@ const items = [
     new Scrap(
         "Flashlight",
         2,
-        "You all know what this is. Beam range 100‘-120' Can buy smaller pocket lights (114 range) for half the normal cost,",
+        "You all know what this is. Beam getRandomInt 100‘-120' Can buy smaller pocket lights (114 getRandomInt) for half the normal cost,",
     ),
     new Scrap(
         "Glowstick",

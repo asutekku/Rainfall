@@ -1,23 +1,35 @@
-import {default as roles} from "./roles";
+let roles: any = require("./roles.json");
 
-const getRole: any = (role?: string) => {
+interface IRole {
+    name: string;
+    skill: string;
+    skillDescription: string;
+    color: string;
+    colorString: string
+    portrait: string;
+}
+
+const getRole = (role?: string): IRole => {
     const keys = Object.keys(roles);
-    return role ? (roles as any)[role!] : (roles as any)[keys[(keys.length * Math.random()) << 0]];
+    return role ? <IRole>roles[role] : <IRole>roles[keys[(keys.length * Math.random()) << 0]];
 };
 
 export class Role {
-    public name: any;
+    public name: string;
     public skill: string;
     public skillDescription: string;
-    public color: any;
+    public color: string;
+    public colorString: string;
     public portrait: string;
 
     constructor(role?: string) {
-        const actorRole: any = getRole(role);
+        const actorRole: IRole = getRole(role);
+        console.log('Role');
         this.name = actorRole.name;
         this.skill = actorRole.skill;
         this.skillDescription = actorRole.skillDescription;
         this.color = actorRole.color;
-        this.portrait = actorRole.portrait;
+        this.colorString = actorRole.colorString;
+        this.portrait = "src/assets/img/portraits/" + actorRole.portrait;
     }
 }

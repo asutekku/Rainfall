@@ -3,9 +3,9 @@ import {GameObject} from "./GameObject";
 import {ObjectPosition} from "../utils/ObjectPosition";
 
 export class Vehicle extends GameObject {
-    private name: string;
+    name: string;
     private price: number;
-    private health: number;
+    health: number;
     private maxSpeed: number;
     private driver?: Actor;
     private passengers: Actor[];

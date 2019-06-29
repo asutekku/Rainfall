@@ -54,7 +54,7 @@ export default {
         type: "Pistol",
         brand: "Militech",
         name: "Arms Avenger",
-        desc: "A well-made autopistol with good range and accuracy. A professional's gun.",
+        desc: "A well-made autopistol with good getRandomInt and accuracy. A professional's gun.",
         ammo: "9mm",
         reliability: 1,
         accuracy: 50,

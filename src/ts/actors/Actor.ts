@@ -1,24 +1,27 @@
-import {GetItem} from "../interact/getItem";
 import {Armor} from "../items/Armor";
 import {Item} from "../items/Item";
-import {Weapon} from "../items/Weapon";
+import {Weapon} from "../items/weapons/Weapon";
 import {Name} from "./resources/Name";
 import {Role} from "./resources/Role";
 import {Statistics} from "./resources/Statistics";
 import {ObjectPosition} from "../utils/ObjectPosition";
 import {GameObject} from "../items/GameObject";
+import {GeneratedWeapon} from "../items/weapons/GeneratedWeapon";
 
 export class Actor extends GameObject {
     public item: any;
+    public identifier: string;
     public name: string;
     public role: Role;
     public skill: any;
     public level: number;
     public experience: number;
     public health: number;
-    public weapon: Weapon;
+    public weapon: GeneratedWeapon;
     public armor: number;
     public alive: boolean;
+    public hostile: boolean;
+    public selected: boolean;
     public position: ObjectPosition;
     public equipment: {
         headgear: Armor | null;
@@ -41,7 +44,6 @@ export class Actor extends GameObject {
         medical: Item[];
         [key: string]: Item[];
     };
-
     public stats: {
         int: number;
         ref: number;
@@ -84,6 +86,7 @@ export class Actor extends GameObject {
     };
     public maxHealth: number;
     public maxExperience: number;
+    toSsds;
     private skills: {
         special: {
             authority: number;
@@ -198,20 +201,24 @@ export class Actor extends GameObject {
     };
     private cybernetics: any[];
 
-    constructor() {
+    constructor(position?: ObjectPosition) {
+        const gender = Name.getGender();
+        let name = `${Name.getFirstname(gender)} ${Name.getSurname()}`;
         const role = new Role();
-        super(new ObjectPosition(0, 0, 0));
-        this.gender = Name.getGender();
-        this.name = `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
+        super(position ? position : new ObjectPosition(0, 0, 0));
+        this.gender = gender;
+        this.name = name;
+        this.identifier = name.toLowerCase().replace(/[^\w]+/g, '_') + '_' + this.id;
         this.role = role;
-        this.skill = role.skill;
         this.level = 1;
+        this.hostile = false;
+        this.selected = false;
         this.experience = 0;
         this.alive = true;
         this.maxExperience = 100;
         this.health = 100;
         this.maxHealth = 100;
-        this.weapon = GetItem.weapon("Fists");
+        this.weapon = new GeneratedWeapon();
         this.armor = 0;
         this.equipment = {
             headgear: null,
@@ -230,7 +237,6 @@ export class Actor extends GameObject {
             medical: [],
         };
         this.currency = 0;
-        this.position = new ObjectPosition(0, 0, 0);
         this.kills = 0;
         this.stats = {
             int: 1,
@@ -415,27 +421,50 @@ export class Actor extends GameObject {
         this.health = this.maxHealth;
     }
 
+    public toString(): string {
+        return this.name.toString();
+    }
+
     public isAlive(): boolean {
         return (this.health > 0 && this.alive);
     }
 
+    /**
+     * Deals damage and then returns the amount dealt
+     * @param amount
+     */
     public receiveDamage(amount: number): number {
-        const eq = this.equipment;
-        const headSP: number = eq.headgear ? eq.headgear.stoppingPower : 0;
-        const armsSP: number = eq.arms ? eq.arms.stoppingPower : 0;
-        const feetSP: number = eq.feet ? eq.feet.stoppingPower : 0;
-        const lowerSP: number = eq.lower ? eq.lower.stoppingPower : 0;
-        const upperSP: number = eq.upper ? eq.upper.stoppingPower : 0;
-        const SP: number[] = [headSP, armsSP, feetSP, lowerSP, upperSP];
-        const damage = amount - SP.reduce((acc: number, c: number) => acc + c);
+        const stoppingPower: number = this.getStoppingPower();
+        const damage = amount - stoppingPower <= 0 ? 0 : amount - stoppingPower;
         if (this.health < damage) {
-            this.health = 0;
             this.health = 0;
             this.alive = false;
         } else {
             this.health -= damage;
         }
         return damage;
+    }
+
+    /**
+     * If player actor has weapon, does damage. If not, doesn't do damage.
+     */
+    public getDamage(): number {
+        return this.weapon ? this.weapon.getDamage() : 0;
+    }
+
+    /**
+     * Usage = (damage - stopping power)
+     * Result should always be more than 0
+     */
+    public getStoppingPower(): number {
+        const eq = this.equipment;
+        const headSP: number = eq.headgear ? eq.headgear.stoppingPower : 0;
+        const armsSP: number = eq.arms ? eq.arms.stoppingPower : 0;
+        const feetSP: number = eq.feet ? eq.feet.stoppingPower : 0;
+        const lowerSP: number = eq.lower ? eq.lower.stoppingPower : 0;
+        const upperSP: number = eq.upper ? eq.upper.stoppingPower : 0;
+        const StoppingPower: number[] = [headSP, armsSP, feetSP, lowerSP, upperSP];
+        return StoppingPower.reduce((acc: number, c: number) => acc + c);
     }
 
     /*draw(context) {

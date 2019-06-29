@@ -1,0 +1,791 @@
+$baseColor: #D2FEFD;
+$titleColor: #934E41;
+$background: #0e0e0e;
+$backgroundLight: #090909;
+$playColor: #070606;
+$borderStyle: none;
+$buttonTextColor: #d1d1d1;
+$buttonColor: #070606;
+$inventoryItemSize: 60px;
+$questItemSize: 80px;
+$selectionActive: #1c1818;
+$selectionActiveBorder: #934E41;
+$selectionHover: #0d0d0d;
+$selectionHoverBorder: #3c3c3c;
+$borderColor: #292929;
+$textColor: #e8e8e8;
+$textColorDim: #9e9e9e;
+
+
+html {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  font-family: monospace;
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none;
+}
+
+body {
+  height: 100%;
+  width: 100%;
+  background: $background;
+  color: $textColor;
+  margin: 0;
+  padding: 0;
+}
+
+.containerInset {
+  padding: 4px;
+}
+
+.gridElement {
+  background: $background;
+  height: 100%;
+}
+
+#navbar {
+  width: 100%;
+  background: $background;
+  height: 60px;
+  margin: 0;
+}
+
+#statFrame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  margin: 0;
+  background: $background;
+}
+
+#infoPane {
+  width: 100%;
+}
+
+.infoAreaContainer {
+  display: grid;
+  grid-template-columns: repeat(1, 1fr);
+  grid-gap: 6px;
+}
+
+#title {
+  margin: 0;
+  padding: 12px;
+  color: $titleColor;
+  font-family: monospace;
+  font-size: 35px;
+}
+
+#mainpane {
+  width: 100%;
+  height: 100%;
+  background: $background;
+  display: flex;
+}
+
+#sidebar {
+  width: 200px;
+  height: 100%;
+  background: $background;
+  margin-right: 5px;
+  float: left;
+}
+
+#actionLog {
+  flex: 1;
+  overflow: hidden;
+}
+
+#playPane {
+  flex: 1;
+  grid-gap: 6px;
+  height: 100%;
+  float: left;
+  width: 50%;
+  z-index: 0;
+  margin-right: 5px;
+  font-family: monospace;
+  font-size: 15px;
+}
+
+#statpane {
+  width: 300px;
+  height: 100%;
+  margin-left: 5px;
+  background: $background;
+  float: right;
+  right: 20px;
+  z-index: 1;
+}
+
+#gamearea {
+  overflow: hidden;
+  height: 100%;
+  background: $backgroundLight;
+  padding: 4px;
+}
+
+.statValue {
+  padding: 0;
+  float: right;
+}
+
+.statTitle {
+  padding: 0;
+  float: left;
+}
+
+.containerHeader {
+  color: $selectionActiveBorder;
+  padding: 0;
+  margin: 5px;
+  float: left;
+}
+
+#attributes,
+#stats,
+#inventory,
+#equipment {
+  padding: 10px;
+}
+
+.statCard {
+  width: 100%;
+  height: 20px;
+  float: left;
+  font-size: 13px;
+}
+
+.statColumn {
+  width: 200px;
+}
+
+#map {
+  background: #29241d;
+  height: 100%;
+  width: auto;
+  float: right;
+}
+
+.vital {
+  color: $selectionActiveBorder;
+}
+
+h2.statTitle {
+  font-size: 16px;
+  width: 280px;
+}
+
+#stats {
+  width: 280px;
+  height: 175px;
+}
+
+#attributes {
+  width: 280px;
+  height: 200px;
+  z-index: 5;
+}
+
+#equipment {
+  width: 280px;
+  height: 280px;
+}
+
+#inventory {
+  width: 280px;
+  height: 160px;
+}
+
+button.kill {
+  z-index: 100;
+  position: relative;
+}
+
+.button {
+  position: relative;
+  font-family: monospace;
+  padding: 5px;
+  height: 40px;
+  width: 100%;
+  align-content: center;
+  cursor: pointer;
+  text-transform: uppercase;
+  border: 0 solid $borderColor;
+  border-left-width: 4px;
+  font-weight: 500;
+  color: $buttonTextColor;
+  background: $buttonColor;
+  -moz-transition: all 0.2s ease-in;
+  -o-transition: all 0.2s ease-in;
+  -webkit-transition: all 0.2s ease-in;
+  transition: all 0.1s ease-in;
+}
+
+.inventoryButton {
+  width: 50%;
+  position: absolute;
+  bottom: 0;
+  right: 0;
+}
+
+button:focus {
+  outline: 0;
+}
+
+button:hover {
+  background: $selectionActive;
+  border-color: $selectionHoverBorder;
+}
+
+.buttonActiveSelection {
+  border-color: $selectionActiveBorder;
+  color: $selectionActiveBorder;
+}
+
+.tooltip {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 200px;
+  background-color: $selectionActive;
+  color: #d1d1d1;
+  text-align: center;
+  border-width: 0 4px 0 0;
+  border-style: solid;
+  border-color: $selectionActiveBorder;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 40;
+  top: 100%;
+  left: 50%;
+  margin-left: -60px;
+  pointer-events: none;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  z-index: 40;
+}
+
+h3.statTitle {
+  color: #aed581;
+  font-size: 16px;
+}
+
+.inset {
+  padding-left: 10px;
+  width: 96%;
+  height: 50%;
+}
+
+.dropdown {
+  top: 10px;
+  float: left;
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: #f9f9f9;
+  min-width: 160px;
+  overflow: auto;
+  box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2);
+  right: 0;
+  z-index: 1;
+}
+
+.dropdown-content a {
+  color: black;
+  padding: 12px 16px;
+  text-decoration: none;
+  display: block;
+  z-index: 5;
+}
+
+.dropdown a:hover {
+  background-color: #f1f1f1;
+}
+
+.show {
+  display: block;
+}
+
+#statpane2 {
+  width: 280px;
+  height: 900px;
+  float: right;
+}
+
+.UIelement {
+  border: 0 $borderStyle $baseColor;
+}
+
+#canvas {
+  width: 100%;
+  height: 100%;
+}
+
+#placeholderImage {
+  width: 260px;
+}
+
+#inventoryItemContainer {
+  width: 100%;
+  height: auto;
+}
+
+.itemCollectionCategories {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+
+.infoAreaTitleArea {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+}
+
+.infoAreaItem {
+  width: 100%;
+  height: 500px;
+  background: $backgroundLight;
+}
+
+#inventory_container {
+  display: grid;
+}
+
+.title-submenu {
+  background: $backgroundLight;
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  height: 32px;
+  text-transform: uppercase;
+  cursor: pointer;
+  border-style: solid;
+  border-width: 2px 0 0 0;
+  border-color: $backgroundLight;
+}
+
+.title-submenu-active {
+  border-style: solid;
+  border-width: 2px 0 0 0;
+  border-color: $selectionActiveBorder;
+  color: $selectionActiveBorder;
+}
+
+.title-main {
+  background: $backgroundLight;
+  display: inline-block;
+  width: 100%;
+  text-align: center;
+  height: 32px;
+  text-transform: uppercase;
+}
+
+.catTitle {
+  position: relative;
+  top: 6px;
+  vertical-align: middle;
+}
+
+#inventoryItems {
+  display: grid;
+  font-size: 13px;
+  background: $backgroundLight;
+  grid-template-columns: repeat(2, 1fr);
+  grid-gap: 6px;
+  grid-auto-rows: minmax($inventoryItemSize, $inventoryItemSize);
+  overflow-x: hidden;
+  height: 260px;
+  padding: 0 8px 8px 8px;
+}
+
+.combatCategroy {
+  display: grid;
+  font-size: 13px;
+  background: $backgroundLight;
+  grid-template-columns: repeat(2, 1fr);
+  grid-gap: 6px;
+  grid-auto-rows: minmax($inventoryItemSize, $inventoryItemSize);
+  overflow-x: hidden;
+  height: 260px;
+  padding: 0 8px 8px 8px;
+}
+
+#inventoryItems::-webkit-scrollbar {
+  background-color: $borderColor;
+  width: 5px;
+}
+
+#inventoryItems::-webkit-scrollbar-thumb {
+  background-color: #6A6A6A;
+  border-radius: 5px;
+  width: 2px;
+}
+
+.itemCollection-50 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  background: $backgroundLight;
+  height: 300px;
+  padding: 10px;
+  font-size: 13px;
+}
+
+.itemCollection-100 {
+  display: block;
+  background: $backgroundLight;
+  height: 300px;
+  padding: 10px;
+  font-size: 13px;
+}
+
+#itemExtraContainer {
+  height: 100%;
+  width: 100%;
+  position: relative;
+}
+
+.inventoryItem {
+  display: grid;
+  background: #000000;
+  grid-template-columns: repeat(2, 1fr);
+  grid-template-areas: "a b" "c d";
+  height: $inventoryItemSize;
+  border-width: 0 0 0 4px;
+  border-style: solid;
+  border-color: $borderColor;
+  cursor: pointer;
+}
+
+.inventoryItem:hover {
+  border-color: $selectionHoverBorder;
+  background: $selectionHover;;
+}
+
+.activeSelection {
+  background: $selectionActive;
+  border-color: $selectionActiveBorder;
+}
+
+.activeSelection:hover {
+  background: $selectionActive;
+  border-color: $selectionActiveBorder;
+}
+
+h3 {
+  font-size: 16px;
+}
+
+.itemType {
+  float: left;
+  text-transform: capitalize;
+  margin-top: 4px;
+  margin-left: 6px;
+  grid-area: a;
+  color: $textColorDim;
+}
+
+.itemTitle {
+  float: right;
+  margin-top: 4px;
+  margin-right: 8px;
+  grid-area: b;
+  justify-self: end;
+  color: $textColor;
+}
+
+.itemEquipped {
+  display: table-cell;
+  vertical-align: bottom;
+  margin-bottom: 4px;
+  margin-left: 4px;
+  justify-self: start;
+  align-self: end;
+  grid-area: c;
+  color: $textColorDim;
+}
+
+.itemCount {
+  display: table-cell;
+  vertical-align: bottom;
+  margin-bottom: 4px;
+  margin-right: 8px;
+  justify-self: end;
+  align-self: end;
+  grid-area: d;
+  color: $textColorDim;
+}
+
+.actionMessage {
+  font-size: 13px;
+  padding-bottom: 1px;
+  margin-left: 1em;
+  text-indent: -1em;
+}
+
+.actionMessage-first {
+  font-size: 13px;
+  padding-bottom: 1px;
+}
+
+#actions {
+  overflow: auto;
+}
+
+.progressContainer {
+  margin-bottom: 2px;
+  width: 100%;
+  float: left;
+}
+
+.progressbarContainer {
+  display: flex;
+}
+
+.inventoryItemInfoTitle {
+  font-size: 18px;
+  height: 20px;
+  margin-bottom: 8px;
+}
+
+.inventoryItemInfoDescription {
+  height: 90px;
+}
+
+progress {
+  width: 90%;
+  height: 4px;
+}
+
+/*noinspection CssUnknownProperty*/
+progress[value] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.progressValue {
+  float: left;
+  position: relative;
+}
+
+.progressBar {
+  margin-top: 6px;
+  margin-left: 5px;
+  margin-right: 5px;
+}
+
+.progressTitle {
+  margin-bottom: 2px;
+}
+
+progress::-webkit-progress-bar {
+  background: transparent;
+}
+
+progress::-webkit-progress-value {
+  background: $selectionActiveBorder;
+}
+
+.hitRed {
+  color: #d95050;
+}
+
+.damageGreen {
+  color: #48dd48;
+}
+
+.weaponBlue {
+  color: #346be6;
+}
+
+.itemYellow {
+  color: #ddb01d;
+}
+
+.playerColor {
+  color: #5dd65d;
+}
+
+.rockerboyColor {
+  color: #A93226;
+}
+
+.soloColor {
+  color: #27AE60;
+}
+
+.netrunnerColor {
+  color: #2E86C1;
+}
+
+.techieColor {
+  color: #A2D9CE;
+}
+
+.mediaColor {
+  color: #f8a912;
+}
+
+.copColor {
+  color: #2980B9;
+}
+
+.corporateColor {
+  color: #fff145;
+}
+
+.fixerColor {
+  color: #ed9b51;
+}
+
+.nomadColor {
+  color: #2ECC71;
+}
+
+.inventoryItemInfoContainer {
+  margin-bottom: 6px;
+}
+
+.itemInfoSecondary {
+  color: $textColorDim;
+}
+
+.itemContainer-100 {
+  background: #000000;
+  display: inline-block;
+  -webkit-box-sizing: border-box; /* Safari/Chrome, other WebKit */
+  -moz-box-sizing: border-box; /* Firefox, other Gecko */
+  box-sizing: border-box; /* Opera/IE 8+ */
+  width: 100%;
+  overflow: auto;
+  border: 0 solid $borderColor;
+  border-left-width: 4px;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 5px 5px 10px 10px;
+  margin-bottom: 10px;
+}
+
+.itemContainer-100:hover {
+  background: $selectionActive;
+}
+
+.itemContainer-active {
+  border-color: $selectionActiveBorder;
+  background: $selectionActive;
+}
+
+.itemContainer-top-left {
+  float: left;
+  text-transform: capitalize;
+  grid-area: a;
+  color: $textColorDim;
+}
+
+.itemContainer-top-right {
+  float: right;
+}
+
+.itemContainer-middle {
+  float: left;
+  width: 100%;
+  margin-bottom: 8px;
+}
+
+.questItems {
+  float: left;
+}
+
+.itemContainer-bottom-left {
+  float: left;
+  bottom: 0;
+}
+
+.itemContainerRow-top {
+  width: 100%;
+  height: 20px;
+  margin-bottom: 5px;
+}
+
+.itemContainerRow-middle {
+  width: 100%;
+  height: auto;
+  margin-bottom: 15px;
+}
+
+.itemContainerRow-bottom {
+  width: 100%;
+  height: 20px;
+  margin-bottom: 15px;
+}
+
+.itemContainer-bottom-right {
+  float: right;
+}
+
+.noSelect {
+  -webkit-touch-callout: none; /* iOS Safari */
+  -webkit-user-select: none; /* Safari */
+  -khtml-user-select: none; /* Konqueror HTML */
+  -moz-user-select: none; /* Firefox */
+  -ms-user-select: none; /* Internet Explorer/Edge */
+  user-select: none;
+  /* Non-prefixed version, currently
+                                   supported by Chrome and Opera */
+}
+
+.charPortraitContainer {
+  float: left;
+  margin-right: 10px;
+  height: 150px;
+  width: 150px;
+}
+
+.charPortrait {
+  height: 150px;
+  width: 150px;
+}
+
+.characterInfo {
+  display: flex;
+}
+
+.characterAbout {
+  float: left;
+}
+
+.underline {
+  border: 0 solid $borderColor;
+  border-bottom-width: 2px;
+}
+
+.map-container {
+  #game-area {
+    width: 300px;
+    height: 300px;
+    background: $baseColor;
+  }
+}
+
+.game-action-container {
+  flex: 1;
+
+  canvas {
+    background: #f2f2f2;
+  }
+}

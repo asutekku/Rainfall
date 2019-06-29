@@ -3,6 +3,7 @@ import {Player} from '../actors/player';
 import {State} from '../utils/State';
 import {Utils} from '../utils/utils';
 import {MessageCombat} from './messageSchema';
+import {GameObject} from "../items/GameObject";
 
 export class Messages {
     public static nanobots = Utils.span(`[Nanobots]`, 'weaponBlue');
@@ -44,11 +45,11 @@ export class Messages {
         currencyDrop: Messages.currencyDrop(target),
     });
 
-    public static getCombatMessage = (actor: Actor, target: Actor, prevHP: number, damage: number): MessageCombat => {
+    public static getCombatMessage = (actor: Actor, target: GameObject, prevHP: number, damage: number): MessageCombat => {
         const params = {
             msg: 'Hello',
-            attacker: actor,
-            defender: target,
+            actor: actor,
+            target: target,
             attType: actor.weapon.type,
             critical: false,
             damage: damage,
