@@ -34,7 +34,7 @@ export class GeneratedWeapon {
         this.type = body.type;
         this.magazine = new weaponMagazine('Teddi', body.manufacturer, '8mm', 30);
         this.sights = new weaponSights('Glaz', body.manufacturer, 0.1, 0.05);
-        this.barrel = new weaponBarrel('Palka', body.manufacturer, 0.1, 0.3, 0.1, 0.02);
+        this.barrel = Utils.pickRandom(Parts.barrels);
         this.stock = Utils.pickRandom(Parts.stocks);
         this.name = GeneratedWeapon.getName(this.body, this.magazine, this.sights, this.barrel, this.stock);
         this.stats = new StatGenerator(this.body.type);
