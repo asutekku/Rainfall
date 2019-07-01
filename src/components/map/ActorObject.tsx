@@ -5,6 +5,7 @@ import {ObjectPosition} from "../../ts/utils/ObjectPosition";
 import {getCell, gridify, MapConfig, PositionHolder} from "./MapUtils";
 import {MapLayer} from "./MapLayer";
 import {Player} from "../../ts/actors/player";
+import {GameObject} from "../../ts/items/GameObject";
 
 interface ActorComponentProps {
     actor: Actor;
@@ -50,21 +51,20 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
         </>);
     }
 
-    //TODO: Make check so the helpers don't go through walls and enemies
-    getMoveHelper(baseX: number, baseY: number) {
+    //TODO: Make it ignore player
+    getMoveHelper(e) {
         //this.props.grid.clear();
         const cs = this.props.mapConfig.cellSize;
-        const playerX = getCell(baseX, cs);
-        const playerY = getCell(baseY, cs);
+        const playerX = getCell(e.target.x(), cs);
+        const playerY = getCell(e.target.y(), cs);
         let width = this.props.grid.grid.length;
         let height = this.props.grid.grid[0].length;
-        //console.log(hoverX, hoverY);
         let cells = [];
         let grid = this.props.grid.grid;
         let nth = 0;
 
         for (let i = playerX; i >= 0; i--) {
-            if (typeof grid[playerY][i] == 'undefined') {
+            if (this.compareCell(grid[playerY][i], e)) {
                 cells.push(<Helper x={i * cs} y={playerY * cs} key={'left' + i + '-' + playerY} opacity={nth * 0.05}/>);
                 nth++;
             } else {
@@ -73,7 +73,7 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
         }
         nth = 0;
         for (let i = playerX; i < width; i++) {
-            if (typeof grid[playerY][i] == 'undefined' || (grid[playerY][i] as Actor).hostile == false) {
+            if (this.compareCell(grid[playerY][i], e)) {
                 cells.push(<Helper x={i * cs} y={playerY * cs} key={'right' + i + '-' + playerY} opacity={nth * 0.05}/>);
                 nth++;
             } else {
@@ -82,7 +82,7 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
         }
         nth = 0;
         for (let i = playerY; i >= 0; i--) {
-            if (typeof grid[i][playerX] == 'undefined') {
+            if (this.compareCell(grid[i][playerX], e)) {
                 cells.push(<Helper x={playerX * cs} y={i * cs} key={'above' + playerX + '-' + i} opacity={nth * 0.05}/>);
                 nth++;
             } else {
@@ -91,7 +91,7 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
         }
         nth = 0;
         for (let i = playerY; i < height; i++) {
-            if (typeof grid[i][playerX] == 'undefined') {
+            if (this.compareCell(grid[i][playerX], e)) {
                 cells.push(<Helper x={playerX * cs} y={i * cs} key={'below' + playerX + '-' + i} opacity={nth * 0.05}/>);
                 nth++;
             } else {
@@ -105,20 +105,15 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
         </>;
     }
 
-    getGridPosition(x: number, y: number, cellSize: number): ObjectPosition {
-        let newX = Math.floor(x / cellSize) * cellSize;
-        let newY = Math.floor(y / cellSize) * cellSize;
-        return new ObjectPosition(newX, newY);
+    private compareCell(a: GameObject, e: any): boolean {
+        return (typeof a == 'undefined') || (a as Actor).identifier === e.target.name();
     }
 
     private updateHelper = e => {
-        this.getMoveHelper(e.target.x(), e.target.y());
+        this.getMoveHelper(e);
     };
 
     private handleDragStart = e => {
-        let startX = getCell(e.target.x(), this.props.mapConfig.cellSize);
-        let startY = getCell(e.target.y(), this.props.mapConfig.cellSize);
-        this.props.grid.remove(startX, startY);
         e.target.setAttrs({
             scaleX: 1.1,
             scaleY: 1.1

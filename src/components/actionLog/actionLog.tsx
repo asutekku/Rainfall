@@ -31,7 +31,6 @@ export class ActionLog extends React.Component<LogProps, LogState> {
         return this.props.messages.map((m: IDefaultMessage, i: number) => {
             switch (m.type) {
                 case 'combat' :
-                    console.log(m.target.name);
                     return <CombatMessage key={i} message={m as MessageCombat}/>;
                 case 'death' :
                     return <DeathMessage key={i} target={m.target as Actor} actor={m.actor}/>;
