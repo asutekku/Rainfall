@@ -32,7 +32,7 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
     render() {
         return (<>
             {
-                this.props.actor.selected && (this.props.actor instanceof Player) ? this.state.helpers : null
+                this.props.actor.selected && (this.props.actor instanceof Player) && this.props.actor.alive() ? this.state.helpers : null
             }
             <Rect
                 x={this.props.actor.position.x}
@@ -40,7 +40,7 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
                 numPoints={4}
                 height={this.props.mapConfig.cellSize}
                 width={this.props.mapConfig.cellSize}
-                fill={!this.props.actor.hostile ? (this.props.actor.selected ? "#4d5eff" : "#85abff") : (this.props.actor.selected ? "#ff2d7e" : "#ff6686")}
+                fill={this.getColor(this.props.actor)}
                 stroke={this.props.actor.role.colorString}
                 strokeWidth={3}
                 opacity={0.8}
@@ -49,10 +49,36 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
                 onDragStart={this.handleDragStart}
                 onDragEnd={this.handleDragEnd}
                 onDragMove={this.updateHelper}
+                onMouseOver={this.hover}
+                onMouseOut={this.hoverEnd}
                 onClick={this.handleClick}
                 key={this.props.actor.identifier}
             />
         </>);
+    }
+
+    getColor(actor): string {
+        if (!actor.hostile) {
+            if (actor.selected) {
+                if (actor.alive()) {
+                    return "#4d5eff";
+                } else {
+                    return "#676868";
+                }
+            } else {
+                if (actor.alive()) {
+                    return "#85abff";
+                } else {
+                    return "#888989";
+                }
+            }
+        } else {
+            if (actor.selected) {
+                return "#ff2d7e";
+            } else {
+                return "#ff6686";
+            }
+        }
     }
 
     getMoveHelper(event?: any) {
@@ -71,36 +97,28 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
             if (this.compareCell(grid.grid[playerY][i], event)) {
                 cells.push(<Helper x={i * cs} y={playerY * cs} key={'left' + i + '-' + playerY} opacity={nth * 0.05}/>);
                 nth++;
-            } else {
-                break;
-            }
+            } else break;
         }
         nth = 0;
         for (let i = playerX; i < grid.width; i++) {
             if (this.compareCell(grid.grid[playerY][i], event)) {
                 cells.push(<Helper x={i * cs} y={playerY * cs} key={'right' + i + '-' + playerY} opacity={nth * 0.05}/>);
                 nth++;
-            } else {
-                break;
-            }
+            } else break;
         }
         nth = 0;
         for (let i = playerY; i >= 0; i--) {
             if (this.compareCell(grid.grid[i][playerX], event)) {
                 cells.push(<Helper x={playerX * cs} y={i * cs} key={'above' + playerX + '-' + i} opacity={nth * 0.05}/>);
                 nth++;
-            } else {
-                break;
-            }
+            } else break;
         }
         nth = 0;
         for (let i = playerY; i < grid.height; i++) {
             if (this.compareCell(grid.grid[i][playerX], event)) {
                 cells.push(<Helper x={playerX * cs} y={i * cs} key={'below' + playerX + '-' + i} opacity={nth * 0.05}/>);
                 nth++;
-            } else {
-                break;
-            }
+            } else break;
         }
         this.setState({helpers: cells});
         return <>
@@ -108,11 +126,24 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
         </>;
     }
 
+    private hover = e => {
+        e.target.to({
+            duration: 0.05,
+            scale: 1.1,
+            fill: !this.props.actor.hostile ? '#4d5eff' : '#ff2d7e'
+        });
+    };
+
+    private hoverEnd = e => {
+        e.target.to({
+            duration: 0.05,
+            scale: 1.1,
+            fill: !this.props.actor.hostile ? (this.props.actor.selected ? '#4d5eff' : "#85abff") : (this.props.actor.selected ? '#ff2d7e' : "#ff6686")
+        });
+    };
+
     private compareCell(a: GameObject, e: any): boolean {
-        console.log(a);
-        let b = (typeof a === 'undefined') || (a as Actor).identifier === (e ? e.target.name() : this.props.actor.identifier);
-        console.log(b);
-        return b;
+        return (typeof a === 'undefined') || (a as Actor).identifier === (e ? e.target.name() : this.props.actor.identifier);
     }
 
     private updateHelper = e => {

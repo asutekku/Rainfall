@@ -1,5 +1,5 @@
 $baseColor: #D2FEFD;
-$titleColor: #934E41;
+$titleColor: #933032;
 $background: #0e0e0e;
 $backgroundLight: #090909;
 $playColor: #070606;
@@ -9,7 +9,7 @@ $buttonColor: #070606;
 $inventoryItemSize: 60px;
 $questItemSize: 80px;
 $selectionActive: #1c1818;
-$selectionActiveBorder: #934E41;
+$selectionActiveBorder: #933032;
 $selectionHover: #0d0d0d;
 $selectionHoverBorder: #3c3c3c;
 $borderColor: #292929;
@@ -787,5 +787,23 @@ progress::-webkit-progress-value {
 
   canvas {
     background: #f2f2f2;
+  }
+}
+
+.gameOverScreen {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #000;
+  z-index: 100000000;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  h1 {
+    color: #fff;
   }
 }

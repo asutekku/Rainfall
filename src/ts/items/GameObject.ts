@@ -15,6 +15,7 @@ export interface IGameObject {
 
 export class GameObject implements IGameObject {
     id: number;
+    type: gameObjectType;
     identifier: string;
     name: string;
     color: string;
@@ -27,6 +28,7 @@ export class GameObject implements IGameObject {
         this.health = health ? health : 100;
         this.color = color ? color : 'weaponBlue';
         this.name = name ? name : 'unnamed';
+        this.type = gameObjectType.misc;
         this.identifier = `${this.name}_${this.id}`;
     };
 
@@ -39,10 +41,22 @@ export class GameObject implements IGameObject {
         return damage;
     }
 
+    public alive = () => {
+        return this.health > 0;
+    };
+
     /**
      * Should always return the name of the object
      */
     toString() {
         return this.name;
     }
+}
+
+export enum gameObjectType {
+    actor = 'actor',
+    vehicle = 'vehicle',
+    env = 'env',
+    item = 'item',
+    misc = 'misc'
 }

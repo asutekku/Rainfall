@@ -8,7 +8,7 @@ let barrels: any = require("../../objects/weapons/weapon_barrels.json");
 export default class Equipment {
     public static weapons: Weapon[] = Array.from(Object.keys(w as Object)).map((e: any) => {
         return new Weapon(
-            e.type,
+            e.category,
             e.name,
             e.rarity,
             e.crit,

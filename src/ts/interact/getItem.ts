@@ -56,7 +56,7 @@ export class GetItem {
             const invItemCount = document.getElementById(item.name.toString());
             /*if (!multiple) {
                 const inventoryItem: HTMLElement = Paper.paperInventoryItem(item);
-                if (inventoryContainer && State.UI.inventoryView === item.type) {
+                if (inventoryContainer && State.UI.inventoryView === item.category) {
                     inventoryContainer.appendChild(inventoryItem);
                 }
             } else if (invItemCount) {

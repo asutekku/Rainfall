@@ -9,6 +9,8 @@ import Projectile from "../../objects/Projectile";
 import MapGrid from "./MapGrid";
 import {MapLayer} from "./MapLayer";
 import {MapConfig} from "./MapUtils";
+import {Environmental} from "../../ts/items/environmental";
+import Env from "./Env";
 
 
 interface MapProps {
@@ -57,6 +59,9 @@ class Map extends React.Component<MapProps, MapState> {
             } else if (o instanceof Projectile) {
                 return <ProjectileObject start={o.start} end={o.end} cellSize={this.props.cellSize}
                                          key={'proj' + i}/>;
+            } else if (o instanceof Environmental) {
+                this.state.actorLayer.addObject(o, x, y);
+                return <Env object={o} mapConfig={this.state.mapConfig}/>;
             }
         });
         return objects;

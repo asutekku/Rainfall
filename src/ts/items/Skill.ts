@@ -1,6 +1,8 @@
+import {weaponMode} from "./weapons/GeneratedWeapon";
+
 export interface ISkill {
     name: string;
-    type: SkillType;
+    category: SkillType;
     description: string;
     level: number;
 }
@@ -10,19 +12,22 @@ export class Skill implements ISkill {
     public name: string;
     public description: string;
     public level: number;
-    public type: SkillType;
+    public category: SkillType;
+    public type: weaponMode | string;
     public key: string;
 
     constructor(
         name: string,
         description: string,
         level: number,
-        type: SkillType,
+        category: SkillType,
+        type: weaponMode | string,
         key: string
     ) {
         this.name = name;
         this.description = description;
         this.level = level;
+        this.category = category;
         this.type = type;
         this.key = key;
     }

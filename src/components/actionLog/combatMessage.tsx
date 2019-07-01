@@ -7,6 +7,8 @@ import {MessageCombat} from "../../ts/interact/messageSchema";
 import en_US from "../../lang/en_US";
 
 class LogStrings {
+    public static hitMiss: string = Utils.span('[MISS!]', 'hitRed');
+
     public static damageCaused = (damage, prevHP): string => `<span class='hitRed'>[${prevHP} -> ${prevHP - damage <= 0 ? 0 : prevHP - damage}]</span>`;
 
     public static damageType = (actor: Actor): string => (actor.weapon.weaponType === 'Melee' ? 'hit' : 'shot');
@@ -43,12 +45,12 @@ class LogStrings {
 
     public static currencyDrop = (actor: Actor): string => Utils.span(`<${actor.currency}¥>`, 'itemYellow');
 
-    private static Brackets = (string: string | number, className: string): string => `<span class='${className}'>[${string.toString()}]</span>`;
+    static Brackets = (string: string | number, className: string): string => `<span class='${className}'>[${string.toString()}]</span>`;
 
-    public static nanobots = LogStrings.Brackets('Nanobots', 'weaponBlue');
+    public static nanobots: string = LogStrings.Brackets('Nanobots', 'weaponBlue');
 }
 
-export const CombatMessage = (props: { template: string, message: MessageCombat }) => {
+export const CombatMessage = (props: { message: MessageCombat }) => {
     const strings = {
         actorName: LogStrings.gameObjectName(props.message.actor),
         targetName: LogStrings.gameObjectName(props.message.target),
@@ -61,13 +63,17 @@ export const CombatMessage = (props: { template: string, message: MessageCombat 
         pronounO: LogStrings.getPronoun(props.message.target as Actor).pronounO,
         actorLevel: LogStrings.level(props.message.actor),
         actorLevelOld: LogStrings.levelOld(props.message.actor),
+        hitMiss: LogStrings.hitMiss,
         nanobots: LogStrings.nanobots,
         deathCharge: props.message.actor.currency * 0.45,
+        weaponMode: LogStrings.Brackets(props.message.actor.weapon.mode, 'itemYellow'),
         //lootDrop: Messages.lootDrop(target),
         currencyDrop: LogStrings.currencyDrop(props.message.target as Actor),
     };
 
-    return <TemplateMessage template={props.template} strings={strings}/>;
+    let template = props.message.damage <= 0 ? en_US.Log.hit.miss1 : en_US.Log.hit.normal;
+
+    return <TemplateMessage template={template} strings={strings}/>;
 };
 
 export const DeathMessage = (props: { target: Actor, actor: Actor }) => {
@@ -85,6 +91,7 @@ export const LVLUPMessage = (props: { actor: Actor }) => {
         actorName: LogStrings.gameObjectName(props.actor),
         actorLevelOld: LogStrings.levelOld(props.actor),
         actorLevel: LogStrings.level(props.actor),
+        congrats: LogStrings.Brackets('Level up!', 'itemYellow'),
     };
     return <TemplateMessage strings={strings} template={en_US.Log.levelUp}/>;
 };

@@ -17,7 +17,7 @@ const items = [
     new Scrap(
         "Cutting Torch",
         40,
-        "Common oxy/acetalyne type out of bottle. Hand held, about a foot long. More powerful models are available up to thermite lances.",
+        "Common oxy/acetalyne category out of bottle. Hand held, about a foot long. More powerful models are available up to thermite lances.",
     ),
     new Scrap(
         "Tech Toolkit",

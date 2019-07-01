@@ -15,6 +15,8 @@ import {ObjectPosition} from "../ts/utils/ObjectPosition";
 import {getRandomPositionOnMap, PositionHolder} from "./map/MapUtils";
 import Projectile from "../objects/Projectile";
 import {IDefaultMessage} from "../ts/interact/messageSchema";
+import {Wall} from "../ts/environment/Wall";
+import GameOver from "./GameOver";
 
 export interface InterfaceAppState {
     activeMainPanel: string;
@@ -40,14 +42,22 @@ class App extends React.Component<{}, InterfaceAppState> {
             activeMainPanel: "Character",
             activeChar: null,
             activeEnemy: null,
-            party: [new Player(new ObjectPosition(150, 150, 1)),
+            party: [new Player(new ObjectPosition(60, 90, 1)),
                 new Player(new ObjectPosition(60, 150, 1))],
             currentEnemies: [
                 new Goon(getRandomPositionOnMap(this.mapHeight, this.mapWidth, this.cellSize)),
                 new Goon(getRandomPositionOnMap(this.mapHeight, this.mapWidth, this.cellSize))
             ],
             messages: [],
-            objects: [],
+            objects: [
+                new Wall(new ObjectPosition(120, 60)),
+                new Wall(new ObjectPosition(120, 90)),
+                new Wall(new ObjectPosition(120, 120)),
+                new Wall(new ObjectPosition(120, 150)),
+                new Wall(new ObjectPosition(120, 180)),
+                new Wall(new ObjectPosition(150, 180)),
+                new Wall(new ObjectPosition(180, 180)),
+            ],
             effects: []
         };
     }
@@ -88,29 +98,42 @@ class App extends React.Component<{}, InterfaceAppState> {
         }
     }
 
+    everyoneDead() {
+        let dead = true;
+        for (let i = 0; i < this.state.party.length; i++) {
+            if (this.state.party[i].alive()) {
+                dead = false;
+            }
+        }
+        return dead;
+    }
+
     render() {
-        return <div id={"mainpane"}>
-            <Sidebar activeSelection={this.updateSelection}/>
-            <MainPanel activeView={this.state.activeMainPanel}
-                       currentActor={this.getCurrentActor()}
-                       currentEnemy={this.getCurrentEnemy()}
-                       messages={this.combatController}
-                       addObjectToMap={e => this.addObject(e)}/>
-            <div className={'game-action-container'}>
-                <Map objects={this.getObjects()}
-                     updatePosition={e => this.updatePosition(e)}
-                     makeActive={e => this.setActive(e)}
-                     width={this.mapWidth}
-                     height={this.mapHeight}
-                     cellSize={this.cellSize}
-                />
-                <ActionLog messages={this.state.messages}/>
+        return <>
+            {this.everyoneDead() ? <GameOver/> : null}
+            <div id={"mainpane"}>
+                <Sidebar activeSelection={this.updateSelection}/>
+                <MainPanel activeView={this.state.activeMainPanel}
+                           currentActor={this.getCurrentActor()}
+                           currentEnemy={this.getCurrentEnemy()}
+                           messages={this.combatController}
+                           addObjectToMap={e => this.addObject(e)}/>
+                <div className={'game-action-container'}>
+                    <Map objects={this.getObjects()}
+                         updatePosition={e => this.updatePosition(e)}
+                         makeActive={e => this.setActive(e)}
+                         width={this.mapWidth}
+                         height={this.mapHeight}
+                         cellSize={this.cellSize}
+                    />
+                    <ActionLog messages={this.state.messages}/>
+                </div>
+                <CharacterPanel party={this.state.party}
+                                enemies={this.state.currentEnemies}
+                                activeSelection={this.getCharacter}
+                                activeEnemy={this.getEnemy}/>
             </div>
-            <CharacterPanel party={this.state.party}
-                            enemies={this.state.currentEnemies}
-                            activeSelection={this.getCharacter}
-                            activeEnemy={this.getEnemy}/>
-        </div>;
+        </>;
     }
 
     getSelection(): Actor {

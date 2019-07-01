@@ -54,7 +54,7 @@ export class SkillComponent extends React.Component<SkillProps, SkillState> {
         const state = !this.state.active;
         this.setState({active: state});
         let message;
-        if (this.props.skill.type === SkillType.combat) {
+        if (this.props.skill.category === SkillType.combat) {
             message = Combat.basicAction(this.props.actor, this.props.enemy, this.props.skill);
             this.props.addObjectToMap(new Projectile(this.props.actor.position, this.props.enemy.position));
         }

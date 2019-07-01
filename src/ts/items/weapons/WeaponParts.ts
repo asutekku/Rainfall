@@ -59,19 +59,25 @@ export class weaponSights extends WeaponPart {
 }
 
 export class weaponMagazine extends WeaponPart {
-    ammoType: string;
+    ammoType: ammoType;
     maxCapacity: number;
     ammoCount: number;
 
-    constructor(name: string, manufacturer: string, type: string, cap: number) {
+    constructor(name: string, manufacturer: string, type: ammoType, cap: number) {
         super({
             name: name,
             manufacturer: manufacturer
         });
         this.ammoType = type;
         this.maxCapacity = cap;
-        this.ammoCount = this.maxCapacity;
+        this.ammoCount = cap;
     }
+}
+
+export enum ammoType {
+    small = '8mm',
+    medium = '12mm',
+    large = '16mm'
 }
 
 export class weaponBody extends WeaponPart {
@@ -93,50 +99,50 @@ export class StatGenerator {
     recoilModifier: number;
     rangeModifier: number;
 
-    constructor(weapontype?: string) {
-        const modifiers: number[] = Utils.randomInts(5, 10, 100, 150, 250);
-        switch (weapontype) {
+    constructor(weaponType?: string) {
+        const modifiers: number[] = Utils.randomInts(5, 30, 100, 150, 300).sort((a, b) => b - a);
+        switch (weaponType) {
             case 'Pistol':
-                this.damageModifier = Utils.maxRemove(modifiers);
-                this.recoilModifier = Utils.maxRemove(modifiers);
-                this.rangeModifier = Utils.maxRemove(modifiers);
-                this.accuracyModifier = Utils.maxRemove(modifiers);
-                this.fireRateModifier = Utils.maxRemove(modifiers);
+                this.damageModifier = modifiers[0];
+                this.recoilModifier = modifiers[1];
+                this.rangeModifier = modifiers[2];
+                this.accuracyModifier = modifiers[3];
+                this.fireRateModifier = modifiers[4];
                 break;
             case 'sniper_rifle':
-                this.damageModifier = Utils.maxRemove(modifiers);
-                this.rangeModifier = Utils.maxRemove(modifiers);
-                this.accuracyModifier = Utils.maxRemove(modifiers);
-                this.recoilModifier = Utils.maxRemove(modifiers);
-                this.fireRateModifier = Utils.maxRemove(modifiers);
+                this.damageModifier = modifiers[0];
+                this.rangeModifier = modifiers[1];
+                this.accuracyModifier = modifiers[2];
+                this.recoilModifier = modifiers[3];
+                this.fireRateModifier = modifiers[4];
                 break;
             case 'Assault Rifle':
-                this.fireRateModifier = Utils.maxRemove(modifiers);
-                this.damageModifier = Utils.maxRemove(modifiers);
-                this.rangeModifier = Utils.maxRemove(modifiers);
-                this.accuracyModifier = Utils.maxRemove(modifiers);
-                this.recoilModifier = Utils.maxRemove(modifiers);
+                this.fireRateModifier = modifiers[0];
+                this.damageModifier = modifiers[1];
+                this.rangeModifier = modifiers[2];
+                this.accuracyModifier = modifiers[3];
+                this.recoilModifier = modifiers[4];
                 break;
             case 'Submachine Gun':
-                this.fireRateModifier = Utils.maxRemove(modifiers);
-                this.recoilModifier = Utils.maxRemove(modifiers);
-                this.rangeModifier = Utils.maxRemove(modifiers);
-                this.damageModifier = Utils.maxRemove(modifiers);
-                this.accuracyModifier = Utils.maxRemove(modifiers);
+                this.fireRateModifier = modifiers[0];
+                this.recoilModifier = modifiers[1];
+                this.rangeModifier = modifiers[2];
+                this.damageModifier = modifiers[3];
+                this.accuracyModifier = modifiers[4];
                 break;
             case 'Shotgun':
-                this.damageModifier = Utils.maxRemove(modifiers);
-                this.recoilModifier = Utils.maxRemove(modifiers);
-                this.accuracyModifier = Utils.maxRemove(modifiers);
-                this.rangeModifier = Utils.maxRemove(modifiers);
-                this.fireRateModifier = Utils.maxRemove(modifiers);
+                this.damageModifier = modifiers[0];
+                this.recoilModifier = modifiers[1];
+                this.accuracyModifier = modifiers[2];
+                this.rangeModifier = modifiers[3];
+                this.fireRateModifier = modifiers[4];
                 break;
             default:
                 this.damageModifier = modifiers[0];
                 this.fireRateModifier = modifiers[1];
                 this.accuracyModifier = modifiers[2];
                 this.recoilModifier = modifiers[3];
-                this.rangeModifier = modifiers[5];
+                this.rangeModifier = modifiers[4];
                 break;
         }
     }

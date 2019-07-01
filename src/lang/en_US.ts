@@ -11,7 +11,7 @@ export default class en_US {
             name: "Intelligence",
             short: "INT",
             description:
-                "This is a measure of your problem solving ability; figuring out problems, noticing things, remembering information. Almost every character type will need a high intelligence, with Netrunnes and Corporates requiring the highest of all.",
+                "This is a measure of your problem solving ability; figuring out problems, noticing things, remembering information. Almost every character category will need a high intelligence, with Netrunnes and Corporates requiring the highest of all.",
         },
         ref: {
             name: "Reflexes",
@@ -81,7 +81,7 @@ export default class en_US {
             name: "Body Type Modifier",
             short: "BTM",
             description:
-                "Not all people take damage the same way. For example, it takes a lot more damage to stop Arnold The Terminator than it does Arnold The Nerd. This is reflected by the Body Type Modifier, a special bonus used by your character to reduce the effects of damage. The Body type modifier is subtracted from any damage your character takes in combat.",
+                "Not all people take damage the same way. For example, it takes a lot more damage to stop Arnold The Terminator than it does Arnold The Nerd. This is reflected by the Body Type Modifier, a special bonus used by your character to reduce the effects of damage. The Body category modifier is subtracted from any damage your character takes in combat.",
         },
         sn: {
             name: "Save Number",
@@ -205,22 +205,22 @@ export default class en_US {
     public static Log = {
         hit: {
             normal:
-                "${actorName} ${damageType} ${targetName} with ${weaponName} and caused ${damageCaused} damage. ${targetHealth}",
+                "${actorName} ${damageType} ${targetName} with ${weaponName} using ${weaponMode} and caused ${damageCaused} damage. ${targetHealth}",
             critical:
                 "${str_Critical} ${actor} ${damageType} ${target} with ${playerWeapon} and caused ${playerDamage} damage. ${enemyHealthCrit}",
             criticalKill:
                 "${str_Critical} ${actor} ${damageType} ${target} with ${playerWeapon} and caused ${playerDamage} damage. ${str_damageIndicatorCrit0}",
             kill: "${actorName} killed ${targetName}",
             miss1:
-                "${hitMiss} ${actor} tried to attack ${target} but they were able to dodge the ${damageType}!",
-            miss2: "${hitMiss} ${actor} tried to attack ${target} but missed!",
-            miss3: "${hitMiss} ${target} was able to jump away from ${actor}'s ${damageType}!",
+                "${hitMiss} ${actorName} tried to attack ${targetName} but they managed to evade the ${damageType}!",
+            miss2: "${hitMiss} ${actorName} tried to attack ${targetName} but missed!",
+            miss3: "${hitMiss} ${targetName} was able to jump away from ${actorName}'s ${damageType}!",
         },
         encounter:
             "You encountered ${target}. Just by looking at their attire you can see they are a ${targetRole}",
         encounterSame:
             "You encountered ${target}. However you see they are also a ${enemyRole} so you just greet them and venture forward.",
-        levelUp: "Congrats! ${actorName} leveled up from ${actorLevelOld} to ${actorLevel}!",
+        levelUp: "${congrats} ${actorName} leveled up from ${actorLevelOld} to ${actorLevel}!",
         death: "You have been killed by ${target}",
         dead: "You are dead, try respawning!",
         respawn: "${nanobots} from TraumaTeam revitalize you. You have been charged ${deathCharge} yens.",

@@ -4,8 +4,9 @@ import en_US from "./../../lang/en_US";
 import {GetItem} from "./getItem";
 import {Messages} from "./messages";
 import {DeathMessage, DodgeMessage, IDefaultMessage, LvlUpMessage, MessageStr} from "./messageSchema";
-import {Skill} from "../items/Skill";
+import {Skill, SkillType} from "../items/Skill";
 import {GameObject} from "../items/GameObject";
+import {weaponMode} from "../items/weapons/GeneratedWeapon";
 
 const Log = en_US.Log;
 
@@ -15,13 +16,17 @@ export class Combat {
     public static basicAction(actor: Actor, target: GameObject, skill: Skill): any {
         this.messages = [];
 
-        if (actor.health > 0) {
-            // Actor attacks the target
-            this.attack(actor, target);
-            //Checks if the target is alive to initiate target's turn
-            if (target.health > 0 && target instanceof Actor && target.hostile) {
-                //Target attacks the actor
-                this.attack(target, actor);
+        if (actor.alive()) {
+            if (skill.category === SkillType.combat) {
+                // Actor attacks the target
+                this.attack(actor, target, skill);
+                //Checks if the target is alive to initiate target's turn
+                if (target.health > 0 && target instanceof Actor && target.hostile) {
+                    //Target attacks the actor
+                    this.attack(target, actor, skill);
+                }
+            } else {
+
             }
         } else {
             // Inform the player that the character is dead
@@ -32,11 +37,15 @@ export class Combat {
         return this.messages.flat().reverse();
     }
 
-    public static attack(actor: Actor, target: GameObject): any {
+    public static attack(actor: Actor, target: GameObject, skill: Skill): any {
         const distance: number = Utils.distance(actor.position, target.position);
         const dices: number = actor.stats.ref + Utils.dice(3, 10);
         const hitSuccess: boolean = this.didAttackHit(distance, dices, actor);
         const targetOldHP: number = target.health;
+        if (skill.type in weaponMode) {
+            actor.weapon.setMode(<weaponMode>skill.type);
+        }
+
         const weaponDamage: number = actor.weapon.getDamage();
 
         if (hitSuccess) {
@@ -44,7 +53,7 @@ export class Combat {
                 const damageCaused: number = target.receiveDamage(weaponDamage);
                 const combatMessage = Messages.getCombatMessage(actor, target, targetOldHP, damageCaused);
                 this.messages.push(combatMessage);
-                if (!target.isAlive()) {
+                if (!target.alive) {
                     actor.kills += 1;
                     actor.experience += target.experience;
                     if (actor.experience >= actor.maxExperience) {

@@ -19,7 +19,6 @@ export class Actor extends GameObject {
     public health: number;
     public weapon: GeneratedWeapon;
     public armor: number;
-    public alive: boolean;
     public hostile: boolean;
     public selected: boolean;
     public position: ObjectPosition;
@@ -214,7 +213,6 @@ export class Actor extends GameObject {
         this.hostile = false;
         this.selected = false;
         this.experience = 0;
-        this.alive = true;
         this.maxExperience = 100;
         this.health = 100;
         this.maxHealth = 100;
@@ -425,10 +423,6 @@ export class Actor extends GameObject {
         return this.name.toString();
     }
 
-    public isAlive(): boolean {
-        return (this.health > 0 && this.alive);
-    }
-
     /**
      * Deals damage and then returns the amount dealt
      * @param amount
@@ -438,7 +432,6 @@ export class Actor extends GameObject {
         const damage = amount - stoppingPower <= 0 ? 0 : amount - stoppingPower;
         if (this.health < damage) {
             this.health = 0;
-            this.alive = false;
         } else {
             this.health -= damage;
         }

@@ -34,24 +34,26 @@ export class CharacterComponent extends React.Component<CharCompProps> {
     }
 
     public render() {
+        let actor = this.props.actor;
         return (
             <div
-                className={this.props.actor.selected ? 'itemContainer-100 itemContainer-active' : 'itemContainer-100'}
+                className={actor.selected ? 'itemContainer-100 itemContainer-active' : 'itemContainer-100'}
                 onClick={() => {
                     this.handleClick();
                 }}>
                 <div className={'itemContainerRow-top'}>
-                    <span className={"itemContainer-top-left"}>{this.props.actor.name}</span>
-                    <span className={"itemContainer-top-right"}>{`Lvl: ${this.props.actor.level}`}</span>
+                    <span className={"itemContainer-top-left"}>{actor.name}</span>
+                    <span className={"itemContainer-top-right"}>{`Lvl: ${actor.level}`}</span>
                 </div>
                 <div className={"itemContainerRow-middle"}>
-                    <span className={"itemContainer-middle"}>{`Role: ${this.props.actor.role.name}`}</span>
+                    <span className={"itemContainer-middle"}>{`Role: ${actor.role.name}`}</span>
                 </div>
                 <div className={'itemContainerRow-bottom'}>
-                    <span className={"itemContainer-bottom-left"}>{`Weapon: ${this.props.actor.weapon.name}`}</span>
-                    {CharacterComponent.getTarget(this.props.friendly, this.props.actor.selected)}
+                    <span className={"itemContainer-bottom-left"}>{`Weapon: ${actor.weapon.name}`}</span>
+                    <span
+                        className={"itemContainer-bottom-right"}>{`${actor.weapon.magazine.ammoCount}/${actor.weapon.magazine.maxCapacity} [${actor.weapon.clips}]`}</span>
                 </div>
-                <ProgressBar title={'Health'} value={this.props.actor.health} max={this.props.actor.maxHealth}/>
+                <ProgressBar title={'Health'} value={actor.health} max={actor.maxHealth}/>
             </div>
         );
     }

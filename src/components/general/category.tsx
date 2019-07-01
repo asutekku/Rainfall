@@ -7,7 +7,7 @@ export interface InventoryCategoryProps {
 }
 
 // 'HelloProps' describes the shape of props.
-// State is never set so we use the '{}' type.
+// State is never set so we use the '{}' category.
 export class Category extends React.Component<InventoryCategoryProps, {}> {
     public render() {
         return <div
