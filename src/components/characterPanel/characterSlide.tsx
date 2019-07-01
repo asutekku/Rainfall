@@ -6,9 +6,15 @@ export interface CharCompProps {
     actor: Actor;
     friendly: boolean;
     update: any;
+    index: number;
 }
 
 export class CharacterComponent extends React.Component<CharCompProps> {
+
+    constructor(props: CharCompProps) {
+        super(props);
+        this.state = {actor: this.props.actor, active: false, friendly: this.props.friendly};
+    }
 
     public static getTarget(friendly: boolean, active: boolean) {
         if (!friendly && active) {
@@ -16,15 +22,16 @@ export class CharacterComponent extends React.Component<CharCompProps> {
         }
     }
 
-    constructor(props: CharCompProps) {
-        super(props);
-        this.state = {actor: this.props.actor, active: false, friendly: this.props.friendly};
-    }
-
     public handleClick = () => {
         //const state = !this.state.active;
         this.props.update(this.props.actor);
     };
+
+    componentDidMount() {
+        if (!this.props.actor.hostile) {
+            document.addEventListener("keydown", this._handleKeyDown);
+        }
+    }
 
     public render() {
         return (
@@ -48,4 +55,10 @@ export class CharacterComponent extends React.Component<CharCompProps> {
             </div>
         );
     }
+
+    private _handleKeyDown = (event: any) => {
+        if (event.key === (this.props.index + 1).toString()) {
+            this.handleClick();
+        }
+    };
 }

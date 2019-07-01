@@ -25,6 +25,10 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
         this.state = {helpers: []};
     }
 
+    componentDidMount(): void {
+        this.getMoveHelper();
+    }
+
     render() {
         return (<>
             {
@@ -51,20 +55,20 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
         </>);
     }
 
-    //TODO: Make it ignore player
-    getMoveHelper(e) {
+    getMoveHelper(event?: any) {
         //this.props.grid.clear();
+        let x = event ? event.target.x() : this.props.actor.position.x;
+        let y = event ? event.target.y() : this.props.actor.position.y;
+        console.log(x, y);
         const cs = this.props.mapConfig.cellSize;
-        const playerX = getCell(e.target.x(), cs);
-        const playerY = getCell(e.target.y(), cs);
-        let width = this.props.grid.grid.length;
-        let height = this.props.grid.grid[0].length;
+        const playerX = getCell(x, cs);
+        const playerY = getCell(y, cs);
+        let grid = this.props.grid;
         let cells = [];
-        let grid = this.props.grid.grid;
         let nth = 0;
 
         for (let i = playerX; i >= 0; i--) {
-            if (this.compareCell(grid[playerY][i], e)) {
+            if (this.compareCell(grid.grid[playerY][i], event)) {
                 cells.push(<Helper x={i * cs} y={playerY * cs} key={'left' + i + '-' + playerY} opacity={nth * 0.05}/>);
                 nth++;
             } else {
@@ -72,8 +76,8 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
             }
         }
         nth = 0;
-        for (let i = playerX; i < width; i++) {
-            if (this.compareCell(grid[playerY][i], e)) {
+        for (let i = playerX; i < grid.width; i++) {
+            if (this.compareCell(grid.grid[playerY][i], event)) {
                 cells.push(<Helper x={i * cs} y={playerY * cs} key={'right' + i + '-' + playerY} opacity={nth * 0.05}/>);
                 nth++;
             } else {
@@ -82,7 +86,7 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
         }
         nth = 0;
         for (let i = playerY; i >= 0; i--) {
-            if (this.compareCell(grid[i][playerX], e)) {
+            if (this.compareCell(grid.grid[i][playerX], event)) {
                 cells.push(<Helper x={playerX * cs} y={i * cs} key={'above' + playerX + '-' + i} opacity={nth * 0.05}/>);
                 nth++;
             } else {
@@ -90,15 +94,14 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
             }
         }
         nth = 0;
-        for (let i = playerY; i < height; i++) {
-            if (this.compareCell(grid[i][playerX], e)) {
+        for (let i = playerY; i < grid.height; i++) {
+            if (this.compareCell(grid.grid[i][playerX], event)) {
                 cells.push(<Helper x={playerX * cs} y={i * cs} key={'below' + playerX + '-' + i} opacity={nth * 0.05}/>);
                 nth++;
             } else {
                 break;
             }
         }
-        nth = 0;
         this.setState({helpers: cells});
         return <>
             {cells}
@@ -106,7 +109,10 @@ class ActorComponent extends React.Component<ActorComponentProps, ActorComponent
     }
 
     private compareCell(a: GameObject, e: any): boolean {
-        return (typeof a == 'undefined') || (a as Actor).identifier === e.target.name();
+        console.log(a);
+        let b = (typeof a === 'undefined') || (a as Actor).identifier === (e ? e.target.name() : this.props.actor.identifier);
+        console.log(b);
+        return b;
     }
 
     private updateHelper = e => {

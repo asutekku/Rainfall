@@ -33,7 +33,7 @@ export class Party extends React.Component<PartyProps> {
 
     public getParty(): any {
         return this.props.party.map((e: Actor, i: number) =>
-            <CharacterComponent actor={e} friendly={this.props.friendly} key={i} update={this.handleClick}/>,
+            <CharacterComponent actor={e} friendly={this.props.friendly} key={i} index={i} update={this.handleClick}/>,
         );
     }
 
