@@ -39,6 +39,9 @@ export class GameObject implements IGameObject {
         return damage;
     }
 
+    /**
+     * Should always return the name of the object
+     */
     toString() {
         return this.name;
     }

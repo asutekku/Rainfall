@@ -3,7 +3,7 @@ import {Utils} from "../utils/utils";
 import en_US from "./../../lang/en_US";
 import {GetItem} from "./getItem";
 import {Messages} from "./messages";
-import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./messageSchema";
+import {DeathMessage, DodgeMessage, IDefaultMessage, LvlUpMessage, MessageStr} from "./messageSchema";
 import {Skill} from "../items/Skill";
 import {GameObject} from "../items/GameObject";
 
@@ -104,7 +104,8 @@ export class Combat {
 
     public static gainLevel(actor: Actor, target: Actor) {
         actor.gainLevel();
-        Messages.logMessage(Log.levelUp, actor);
+        const lvlUPMessage = new LvlUpMessage(target, actor);
+        this.messages.push(lvlUPMessage);
     }
 
     public static lootEnemy(actor: Actor, target: Actor) {

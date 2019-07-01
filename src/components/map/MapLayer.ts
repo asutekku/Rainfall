@@ -2,6 +2,8 @@ import {GameObject} from "../../ts/items/GameObject";
 
 export class MapLayer {
     grid: GameObject[][];
+    width: number;
+    height: number;
 
     /**
      * Create the grid layer for the map.
@@ -9,6 +11,8 @@ export class MapLayer {
      * @param width Width in cells
      */
     constructor(height: number, width: number) {
+        this.width = width;
+        this.height = height;
         let x = new Array(width);
 
         for (let i = 0; i < x.length; i++) {

@@ -2,7 +2,11 @@ import {Utils} from "../../utils/utils";
 import {Parts} from "../Equipment";
 import {StatGenerator, weaponBarrel, weaponBody, weaponMagazine, weaponSights, weaponStock} from "./WeaponParts";
 
-export class GeneratedWeapon {
+export interface IWeapon {
+    name: string;
+}
+
+export class GeneratedWeapon implements IWeapon {
 
     public weaponType: string;
     public reliability: number;

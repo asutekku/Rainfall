@@ -205,31 +205,31 @@ export default class en_US {
     public static Log = {
         hit: {
             normal:
-                "${actorName} ${damageType} ${targetName} with ${weaponName} and caused ${playerDamage} damage. ${enemyHealth}",
+                "${actorName} ${damageType} ${targetName} with ${weaponName} and caused ${damageCaused} damage. ${targetHealth}",
             critical:
-                "${str_Critical} ${actorName} ${damageType} ${targetName} with ${playerWeapon} and caused ${playerDamage} damage. ${enemyHealthCrit}",
+                "${str_Critical} ${actor} ${damageType} ${target} with ${playerWeapon} and caused ${playerDamage} damage. ${enemyHealthCrit}",
             criticalKill:
-                "${str_Critical} ${actorName} ${damageType} ${targetName} with ${playerWeapon} and caused ${playerDamage} damage. ${str_damageIndicatorCrit0}",
+                "${str_Critical} ${actor} ${damageType} ${target} with ${playerWeapon} and caused ${playerDamage} damage. ${str_damageIndicatorCrit0}",
             kill: "${actorName} killed ${targetName}",
             miss1:
-                "${hitMiss} ${actorName} tried to attack ${targetName} but ${pronounS} was able to dodge the ${damageType}!",
-            miss2: "${hitMiss} ${actorName} tried to attack ${targetName} but missed!",
-            miss3: "${hitMiss} ${targetName} was able to jump away from ${actorName}'s ${damageType}!",
+                "${hitMiss} ${actor} tried to attack ${target} but they were able to dodge the ${damageType}!",
+            miss2: "${hitMiss} ${actor} tried to attack ${target} but missed!",
+            miss3: "${hitMiss} ${target} was able to jump away from ${actor}'s ${damageType}!",
         },
         encounter:
-            "You encountered ${targetName}. Just by looking at ${pronounP} attire you can see ${pronounS} is a ${targetRole}",
+            "You encountered ${target}. Just by looking at their attire you can see they are a ${targetRole}",
         encounterSame:
-            "You encountered ${targetName}. However you see ${pronounP} is also ${enemyRole} so you just greet ${pronounO} and venture forward.",
-        levelUp: "You leveled up from ${actorLevelOld} to ${actorLevel}!",
-        death: "You have been killed by ${targetName}",
+            "You encountered ${target}. However you see they are also a ${enemyRole} so you just greet them and venture forward.",
+        levelUp: "Congrats! ${actorName} leveled up from ${actorLevelOld} to ${actorLevel}!",
+        death: "You have been killed by ${target}",
         dead: "You are dead, try respawning!",
         respawn: "${nanobots} from TraumaTeam revitalize you. You have been charged ${deathCharge} yens.",
         loot: {
             search1:
-                "As the blood still flows from ${targetName}'s liquidated carcass, you search through ${pronounP} belongings.",
-            search2: "You search through ${targetName}'s belongings.",
+                "As the blood still flows from ${target}'s liquidated carcass, you search through ${pronounP} belongings.",
+            search2: "You search through ${target}'s belongings.",
             search3:
-                "As you advance towards ${targetName}'s dead body you look around if ${pronounS} has anything valuable with ${pronounO}.",
+                "As you advance towards ${target}'s dead body you look around if ${pronounS} has anything valuable with ${pronounO}.",
             find: "You found ${lootDrop}.",
             finsSame: "You found ${lootDrop} but as you already have it, you let it be.",
         },

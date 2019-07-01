@@ -44,19 +44,9 @@ export class SkillComponent extends React.Component<SkillProps, SkillState> {
     }
 
     private _handleKeyDown = (event: any) => {
-        enum KEYS {
-            q = 81,
-            w = 87,
-            a = 65,
-            s = 83
-        }
-
-        switch (event.keyCode) {
-            case KEYS[this.props.skill.key]:
-                this.handleClick();
-                break;
-            default:
-                break;
+        2;
+        if (this.props.skill.key === event.key) {
+            this.handleClick();
         }
     };
 

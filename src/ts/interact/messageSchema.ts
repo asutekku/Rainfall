@@ -35,6 +35,19 @@ export class DeathMessage implements ICombatMessage {
     }
 }
 
+export class LvlUpMessage implements ICombatMessage {
+    public type = 'levelUp';
+    public msg: string;
+    public target: Actor;
+    public actor: Actor;
+
+    constructor(killed: Actor, killer: Actor, msg?: string) {
+        this.msg = msg ? msg : '';
+        this.target = killed;
+        this.actor = killer;
+    }
+}
+
 export class DodgeMessage implements ICombatMessage {
     public type = 'dodge';
     public msg: string;

@@ -17,7 +17,7 @@ export class Messages {
     public static actorName = (actor: Actor): string => Utils.span(`[${actor.name}]`, `${actor.role.name.toLowerCase()}Color`);
     public static damageType = (actor: Actor): string => (actor.weapon.weaponType === 'Melee' ? 'hit' : 'shot');
     public static causedDamage = (actor: Actor): string => Utils.span(actor.weapon.getDamage().toString(), 'hitRed');
-    public static getPron = (actor: Actor) => ({
+    public static getPronoun = (actor: Actor) => ({
         pronounP: actor.gender === 'Female' ? 'her' : 'his',
         pronounS: actor.gender === 'Female' ? 'she' : 'he',
         pronounO: actor.gender === 'Female' ? 'her' : 'him',
@@ -28,15 +28,15 @@ export class Messages {
     public static currencyDrop = (actor: Actor) => Utils.span(`<${actor.currency}¥>`, 'itemYellow');
 
     public static getCombatStrings = (actor: Actor, target: Actor) => ({
-        playerName: Messages.actorName(actor),
-        targetName: Messages.actorName(target),
+        actor: Messages.actorName(actor),
+        target: Messages.actorName(target),
         playerWeapon: Messages.actorWeapon(actor),
         playerDamage: Messages.causedDamage(actor),
         enemyHealth: Messages.getHealth(actor, target),
         damageType: Messages.damageType(actor),
-        pronounP: Messages.getPron(target).pronounP,
-        pronounS: Messages.getPron(target).pronounS,
-        pronounO: Messages.getPron(target).pronounO,
+        pronounP: Messages.getPronoun(target).pronounP,
+        pronounS: Messages.getPronoun(target).pronounS,
+        pronounO: Messages.getPronoun(target).pronounO,
         actorLevel: Messages.level(actor),
         actorLevelOld: Messages.levelOld(actor),
         nanobots: Messages.nanobots,

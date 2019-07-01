@@ -1,9 +1,10 @@
 import * as React from "react";
 import {IDefaultMessage, MessageCombat} from "../../ts/interact/messageSchema";
 import {PrimaryTitle} from "../general/primaryTitle";
-import {CombatMessage, DeathMessage} from "./combatMessage";
+import {CombatMessage, DeathMessage, LVLUPMessage} from "./combatMessage";
 import {Message} from "./messageComponent";
 import {Actor} from "../../ts/actors/Actor";
+import en_US from "../../lang/en_US";
 
 export interface LogProps {
     messages: IDefaultMessage[];
@@ -28,16 +29,15 @@ export class ActionLog extends React.Component<LogProps, LogState> {
     }
 
     public getMessages = (): JSX.Element[] => {
+        const messageTypes = {
+            combat: (i: number, m: IDefaultMessage) => <CombatMessage key={i} message={m as MessageCombat} template={en_US.Log.hit.normal}/>,
+            death: (i: number, m: IDefaultMessage) => <DeathMessage key={i} target={m.target as Actor} actor={m.actor}/>,
+            levelUp: (i: number, m: IDefaultMessage) => <LVLUPMessage key={i} actor={m.actor}/>,
+            default: (i: number, m: IDefaultMessage) => <Message text={!m.actor ? m.msg : m.actor.name} key={i}/>
+        };
+
         return this.props.messages.map((m: IDefaultMessage, i: number) => {
-            switch (m.type) {
-                case 'combat' :
-                    return <CombatMessage key={i} message={m as MessageCombat}/>;
-                case 'death' :
-                    return <DeathMessage key={i} target={m.target as Actor} actor={m.actor}/>;
-                default:
-                    const msg = !m.actor ? m.msg : m.actor.name;
-                    return <Message text={msg} key={i}/>;
-            }
+            return messageTypes[m.type](i, m) || messageTypes['default'];
         });
     };
 

@@ -55,11 +55,11 @@ export class Utils {
 
     /**
      * Creates a new span with optional class assigned to it
-     * @param content Text to be inserted in to the span
-     * @param spanClass Optional class for the span
+     * @param string Text to be inserted in to the span
+     * @param className Optional class for the span
      */
-    public static span(content: string, spanClass?: string): string {
-        return `<span class="${spanClass}">${content}</span>`;
+    public static span(string: string, className?: string): string {
+        return `<span class="${className}">${string}</span>`;
     }
 
     /**

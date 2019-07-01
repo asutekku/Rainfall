@@ -1,79 +1,99 @@
 import * as React from "react";
 import {Actor} from "../../ts/actors/Actor";
-import {MessageCombat} from "../../ts/interact/messageSchema";
-import {Weapon} from "../../ts/items/weapons/Weapon";
-import en_US from "../../lang/en_US";
-import {GeneratedWeapon} from "../../ts/items/weapons/GeneratedWeapon";
+import {IWeapon} from "../../ts/items/weapons/GeneratedWeapon";
 import {GameObject} from "../../ts/items/GameObject";
+import {Utils} from "../../ts/utils/utils";
+import {MessageCombat} from "../../ts/interact/messageSchema";
+import en_US from "../../lang/en_US";
 
-export const CombatMessage = (props: { message: MessageCombat }) => {
+class LogStrings {
+    public static damageCaused = (damage, prevHP): string => `<span class='hitRed'>[${prevHP} -> ${prevHP - damage <= 0 ? 0 : prevHP - damage}]</span>`;
 
-    let damageCaused = `<span class='hitRed'>[${props.message.prevHP} -> ${props.message.prevHP - props.message.damage <= 0 ? 0 : props.message.prevHP - props.message.damage}]</span>`;
-    let damageType = 'hit';
+    public static damageType = (actor: Actor): string => (actor.weapon.weaponType === 'Melee' ? 'hit' : 'shot');
 
-    let actorName = (actor: Actor) => <span className={actor.skill.color}>[${actor.name}]</span>;
+    public static weaponName = (weapon: IWeapon): string => LogStrings.Brackets(weapon.name, 'weaponBlue');
 
-    let weaponName = (weapon: GeneratedWeapon): string => {
-        return `<span class='weaponBlue'>[${weapon.name}]</span>`;
+    public static gameObjectName = (obj: GameObject) => {
+        return LogStrings.Brackets(obj.toString(), (obj instanceof Actor) ? obj.role.color : obj.color);
     };
 
-    let gameObjectName = (obj: GameObject) => {
-        let name;
-        if (obj instanceof Actor) {
-            name = `<span class=${obj.role.color}>[${obj.toString()}]</span>`;
-        } else {
-            name = `<span class=${obj.color}>[${obj.toString()}]</span>`;
-        }
-        return name;
+    public static damage = (dmg: number): string => LogStrings.Brackets(dmg, 'hitRed');
+
+    public static damageCrit = (actor: Actor, target: Actor): string =>
+        Utils.span(`(${target.health + actor.weapon.getDamage() * 2} => ${target.health})`, 'damageGreen');
+
+    public static damageCrit0 = (actor: Actor, target: Actor): string =>
+        Utils.span(`(${target.health + actor.weapon.getDamage() * 2} => 0)`, 'damageGreen');
+
+    /*public static getHealth = (actor: Actor, target: Actor): string =>
+        actor.health <= 0 ? Messages.damageCrit0(actor, target) : Messages.damageCrit(actor, target);*/
+    public static causedDamage = (actor: Actor): string => Utils.span(actor.weapon.getDamage().toString(), 'hitRed');
+
+    public static getPronoun = (actor: Actor) => ({
+        pronounP: actor.gender === 'Female' ? 'her' : 'his',
+        pronounS: actor.gender === 'Female' ? 'she' : 'he',
+        pronounO: actor.gender === 'Female' ? 'her' : 'him',
+    });
+
+    public static level = (actor: Actor): string => Utils.span(actor.level.toString(), 'damageGreen');
+
+    public static levelOld = (actor: Actor): string => Utils.span((actor.level - 1).toString(), 'damageGreen');
+
+    public static lootDrop = (actor: Actor): string => Utils.span(`[${actor.item.name}]`, 'itemYellow');
+
+    public static currencyDrop = (actor: Actor): string => Utils.span(`<${actor.currency}¥>`, 'itemYellow');
+
+    private static Brackets = (string: string | number, className: string): string => `<span class='${className}'>[${string.toString()}]</span>`;
+
+    public static nanobots = LogStrings.Brackets('Nanobots', 'weaponBlue');
+}
+
+export const CombatMessage = (props: { template: string, message: MessageCombat }) => {
+    const strings = {
+        actorName: LogStrings.gameObjectName(props.message.actor),
+        targetName: LogStrings.gameObjectName(props.message.target),
+        damageType: LogStrings.damageType(props.message.actor),
+        weaponName: LogStrings.weaponName(props.message.actor.weapon),
+        damageCaused: LogStrings.damage(props.message.damage),
+        targetHealth: LogStrings.damageCaused(props.message.damage, props.message.prevHP),
+        pronounP: LogStrings.getPronoun(props.message.target as Actor).pronounP,
+        pronounS: LogStrings.getPronoun(props.message.target as Actor).pronounS,
+        pronounO: LogStrings.getPronoun(props.message.target as Actor).pronounO,
+        actorLevel: LogStrings.level(props.message.actor),
+        actorLevelOld: LogStrings.levelOld(props.message.actor),
+        nanobots: LogStrings.nanobots,
+        deathCharge: props.message.actor.currency * 0.45,
+        //lootDrop: Messages.lootDrop(target),
+        currencyDrop: LogStrings.currencyDrop(props.message.target as Actor),
     };
 
-    let damage = (dmg: number): string => {
-        return `<span class='hitRed'>[${dmg}]</span>`;
+    return <TemplateMessage template={props.template} strings={strings}/>;
+};
+
+export const DeathMessage = (props: { target: Actor, actor: Actor }) => {
+
+    const strings = {
+        actorName: LogStrings.gameObjectName(props.actor),
+        targetName: LogStrings.gameObjectName(props.target),
     };
 
-    let combatStrings = {
-        actorName: gameObjectName(props.message.actor),
-        targetName: gameObjectName(props.message.target),
-        damageType: 'hit',
-        weaponName: weaponName(props.message.actor.weapon),
-        playerDamage: damage(props.message.damage),
-        enemyHealth: damageCaused
-    };
+    return <TemplateMessage strings={strings} template={en_US.Log.hit.kill}/>;
+};
 
+export const LVLUPMessage = (props: { actor: Actor }) => {
+    const strings = {
+        actorName: LogStrings.gameObjectName(props.actor),
+        actorLevelOld: LogStrings.levelOld(props.actor),
+        actorLevel: LogStrings.level(props.actor),
+    };
+    return <TemplateMessage strings={strings} template={en_US.Log.levelUp}/>;
+};
+
+export const TemplateMessage = (props: { template: string, strings: object }) => {
     let fillTemplate = (template: string, templateVars: Object) => {
         template = template.replace(/\${/g, '${this.');
-        return new Function(`return \`>${template}\`;`).call(templateVars);
+        return new Function(`return \`> ${template}\`;`).call(templateVars);
     };
 
-    return <div className={'actionMessage'} dangerouslySetInnerHTML={{__html: fillTemplate(en_US.Log.hit.normal, combatStrings)}}/>;
+    return <div className={'actionMessage'} dangerouslySetInnerHTML={{__html: fillTemplate(props.template, props.strings)}}/>;
 };
-
-export class DeathMessage extends React.Component<{ target: Actor, actor: Actor }> {
-
-    actorName = (a: Actor) => <span className={a.role.color}>[{a.name}]</span>;
-
-    public render = (): any => <div className={'actionMessage'}>>{this.actorName(this.props.actor)} killed {this.actorName(this.props.target)}.</div>;
-}
-
-export const WeaponName = (weapon: Weapon) => <span className={'weaponBlue'}>[{weapon.name}]</span>;
-
-export const HitType = (type: string) => <span className={'hitRed'}>[{type}]</span>;
-
-export const LootItems = (name: string) => <span className={'itemYellow'}>[{name}]</span>;
-
-export const Level = (lvl: number) => <span className={'damageGreen'}>[{lvl}]</span>;
-
-export const LootMoney = (amount: number) => <span className={'itemYellow'}>[{amount}]</span>;
-
-export const NanoBots = (charge: number) => {
-    return <span><span className={'weaponBlue'}>[Nanobots]</span> from TraumaTeam revitalize you. You have been charged {charge}¥.</span>;
-};
-
-export const Damage = (dmg: number) => <span className={'hitRed'}>[{dmg}]</span>;
-
-export class DmgResult extends React.Component<{ oldHP: number, dmg: number }> {
-    public render = (): any => {
-        const newHP: number = this.props.oldHP - this.props.dmg <= 0 ? 0 : -this.props.oldHP - this.props.dmg;
-        return <span className={'hitRed'}>[{this.props.oldHP} -> {newHP}]</span>;
-    };
-}
