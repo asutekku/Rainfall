@@ -24,7 +24,6 @@ export class Role {
 
     constructor(role?: string) {
         const actorRole: IRole = getRole(role);
-        console.log('Role');
         this.name = actorRole.name;
         this.skill = actorRole.skill;
         this.skillDescription = actorRole.skillDescription;

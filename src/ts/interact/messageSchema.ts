@@ -3,47 +3,56 @@ import {GameObject} from "../items/GameObject";
 
 export interface IDefaultMessage {
     msg?: string;
+    type: string;
+    actor?: Actor;
+    target?: GameObject;
 }
 
 export class MessageStr implements IDefaultMessage {
     public msg: string;
+    public type: string = 'default';
 
     constructor(msg: string) {
         this.msg = msg;
     }
 }
 
-export class DeathMessage implements IDefaultMessage {
+export interface ICombatMessage extends IDefaultMessage {
+    actor: Actor;
+    target: GameObject;
+}
+
+export class DeathMessage implements ICombatMessage {
     public type = 'death';
     public msg: string;
-    public dead: Actor;
-    public killer: Actor;
+    public target: Actor;
+    public actor: Actor;
 
-    constructor(dead: Actor, killer: Actor, msg?: string) {
+    constructor(killed: Actor, killer: Actor, msg?: string) {
         this.msg = msg ? msg : '';
-        this.dead = dead;
-        this.killer = killer;
+        this.target = killed;
+        this.actor = killer;
     }
 }
 
-export class DodgeMessage implements IDefaultMessage {
+export class DodgeMessage implements ICombatMessage {
     public type = 'dodge';
     public msg: string;
-    public attacker: Actor;
-    public defender: Actor;
+    public actor: Actor;
+    public target: Actor;
 
-    constructor(dead: Actor, killer: Actor, msg?: string) {
+    constructor(actor: Actor, target: Actor, msg?: string) {
         this.msg = msg ? msg : '';
-        this.attacker = dead;
-        this.defender = killer;
+        this.actor = actor;
+        this.target = target;
     }
 }
 
-export class MessageCombat implements IDefaultMessage {
+export class MessageCombat implements ICombatMessage {
     public type = "combat";
     public msg: string;
-    public attacker: Actor;
-    public defender: GameObject;
+    public actor: Actor;
+    public target: GameObject;
     public attType: string;
     public critical: boolean;
     public damage: number;
@@ -52,8 +61,8 @@ export class MessageCombat implements IDefaultMessage {
     constructor(parameters: { msg: string, actor: Actor, target: GameObject, attType: string, critical: boolean, damage: number, prevHP: number }) {
         const {msg, actor, target, attType, critical, damage, prevHP} = parameters;
         this.msg = msg;
-        this.attacker = actor;
-        this.defender = target;
+        this.actor = actor;
+        this.target = target;
         this.attType = attType;
         this.critical = critical;
         this.damage = damage;

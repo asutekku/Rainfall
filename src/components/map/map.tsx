@@ -7,6 +7,8 @@ import ActorComponent from "./ActorObject";
 import ProjectileObject from "./ProjectileObject";
 import Projectile from "../../objects/Projectile";
 import MapGrid from "./MapGrid";
+import {MapLayer} from "./MapLayer";
+import {MapConfig} from "./MapUtils";
 
 
 interface MapProps {
@@ -20,21 +22,41 @@ interface MapProps {
 
 interface MapState {
     objects: any[];
+    actorLayer: MapLayer;
+    mapConfig: MapConfig;
 }
 
 class Map extends React.Component<MapProps, MapState> {
+
+    constructor(props: MapProps) {
+        super(props);
+        this.state = {
+            actorLayer: new MapLayer(this.props.height / this.props.cellSize, this.props.width / this.props.cellSize),
+            objects: [],
+            mapConfig: new MapConfig(this.props.width, this.props.height, this.props.cellSize)
+        };
+    }
 
     public addObject(object: any) {
         this.state.objects;
     }
 
     drawObjects() {
+        this.state.actorLayer.clear();
         let objects = this.props.objects.map((o: GameObject, i: number) => {
+            let x = o.position.x / this.state.mapConfig.cellSize;
+            let y = o.position.y / this.state.mapConfig.cellSize;
             if (o instanceof Actor) {
-                return <ActorComponent actor={o} cellSize={this.props.cellSize} updatePosition={e => this.props.updatePosition(e)}
-                                       makeActive={e => this.props.makeActive(e)}/>;
+                this.state.actorLayer.addObject(o, x, y);
+                return <ActorComponent actor={o}
+                                       mapConfig={this.state.mapConfig}
+                                       grid={this.state.actorLayer}
+                                       updatePosition={e => this.props.updatePosition(e)}
+                                       makeActive={e => this.props.makeActive(e)}
+                                       key={'act' + i}/>;
             } else if (o instanceof Projectile) {
-                return <ProjectileObject start={o.start} end={o.end} cellSize={this.props.cellSize}/>;
+                return <ProjectileObject start={o.start} end={o.end} cellSize={this.props.cellSize}
+                                         key={'proj' + i}/>;
             }
         });
         return objects;

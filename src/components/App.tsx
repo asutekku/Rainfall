@@ -1,7 +1,6 @@
 import * as React from "react";
 import "../assets/scss/style.scss";
 import {ActionLog} from "./actionLog/actionLog";
-import {Message} from "./actionLog/messageComponent";
 import {CharacterPanel} from "./characterPanel/characterPanel";
 import {MainPanel} from "./mainPanel";
 import {Sidebar} from "./sidebar";
@@ -13,9 +12,9 @@ import {Utils} from "../ts/utils/utils";
 import {ActorController} from "../ts/actors/actorController";
 import {GameObject} from "../ts/items/GameObject";
 import {ObjectPosition} from "../ts/utils/ObjectPosition";
-import {createStore} from '@spyna/react-store';
 import {getRandomPositionOnMap, PositionHolder} from "./map/MapUtils";
 import Projectile from "../objects/Projectile";
+import {IDefaultMessage} from "../ts/interact/messageSchema";
 
 export interface InterfaceAppState {
     activeMainPanel: string;
@@ -23,7 +22,7 @@ export interface InterfaceAppState {
     activeEnemy: Actor | undefined;
     party: Actor[];
     currentEnemies: Actor[];
-    messages: Message[];
+    messages: IDefaultMessage[];
     objects: GameObject[];
     effects: GameObject[];
 }
@@ -74,8 +73,6 @@ class App extends React.Component<{}, InterfaceAppState> {
         let objects = this.getObjects();
         let object = this.findObject(pos.id);
         object.move(pos.position);
-        console.log(object);
-        console.log(pos.position);
     }
 
     findObject(id: string): GameObject {
@@ -149,7 +146,7 @@ class App extends React.Component<{}, InterfaceAppState> {
         this.setState({activeMainPanel: selection});
     };
 
-    private getCharacter = (actor: Actor) => {
+    private getCharacter = (actor: Actor): void => {
         let previousSelection = this.state.activeChar;
         if (previousSelection) previousSelection.selected = false;
         if (!actor) {
@@ -162,7 +159,7 @@ class App extends React.Component<{}, InterfaceAppState> {
         }
     };
 
-    private getEnemy = (actor: Actor) => {
+    private getEnemy = (actor: Actor): void => {
         let previousSelection = this.state.activeEnemy;
         if (previousSelection) previousSelection.selected = false;
         if (!actor) {
@@ -184,12 +181,5 @@ class App extends React.Component<{}, InterfaceAppState> {
     }
 }
 
-const initialValue = {
-    amount: 15,
-    username: {
-        name: 'spyna',
-        url: 'https://spyna.it'
-    }
-};
 
-export default createStore(App, initialValue);
+export default App;

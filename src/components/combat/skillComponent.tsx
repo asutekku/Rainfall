@@ -17,10 +17,13 @@ interface SkillProps {
 }
 
 export class SkillComponent extends React.Component<SkillProps, SkillState> {
-
     constructor(props: any) {
         super(props);
         this.state = {active: false};
+    }
+
+    componentDidMount() {
+        document.addEventListener("keydown", this._handleKeyDown);
     }
 
     public render() {
@@ -35,9 +38,27 @@ export class SkillComponent extends React.Component<SkillProps, SkillState> {
                 </div>
                 <div className={'itemContainerRow-bottom'}>
                     <span className={'itemContainer-bottom-left noSelect'}>{`Skill stats`}</span>
+                    <span className={'itemContainer-bottom-right noSelect'}>{`Key [${this.props.skill.key}]`}</span>
                 </div>
             </div>);
     }
+
+    private _handleKeyDown = (event: any) => {
+        enum KEYS {
+            q = 81,
+            w = 87,
+            a = 65,
+            s = 83
+        }
+
+        switch (event.keyCode) {
+            case KEYS[this.props.skill.key]:
+                this.handleClick();
+                break;
+            default:
+                break;
+        }
+    };
 
     private handleClick = () => {
         const state = !this.state.active;

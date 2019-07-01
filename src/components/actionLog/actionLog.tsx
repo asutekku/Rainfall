@@ -1,11 +1,12 @@
 import * as React from "react";
-import {IDefaultMessage} from "../../ts/interact/messageSchema";
+import {IDefaultMessage, MessageCombat} from "../../ts/interact/messageSchema";
 import {PrimaryTitle} from "../general/primaryTitle";
 import {CombatMessage, DeathMessage} from "./combatMessage";
 import {Message} from "./messageComponent";
+import {Actor} from "../../ts/actors/Actor";
 
 export interface LogProps {
-    messages: Message[];
+    messages: IDefaultMessage[];
 }
 
 interface LogState {
@@ -13,10 +14,10 @@ interface LogState {
     messages: IDefaultMessage[];
 }
 
-class Log extends React.Component<{ messages: JSX.Element[] }> {
-    public render() {
-        return <div id="actions">{this.props.messages}</div>;
-    }
+function Log(props: { children: any }) {
+    return <div id="actions">
+        {props.children}
+    </div>;
 }
 
 export class ActionLog extends React.Component<LogProps, LogState> {
@@ -27,14 +28,15 @@ export class ActionLog extends React.Component<LogProps, LogState> {
     }
 
     public getMessages = (): JSX.Element[] => {
-        return this.props.messages.map((m: any, i: number) => {
+        return this.props.messages.map((m: IDefaultMessage, i: number) => {
             switch (m.type) {
-                case "combat" :
-                    return <CombatMessage key={i} message={m}/>;
-                case "death" :
-                    return <DeathMessage key={i} dead={m.dead} killer={m.killer}/>;
+                case 'combat' :
+                    console.log(m.target.name);
+                    return <CombatMessage key={i} message={m as MessageCombat}/>;
+                case 'death' :
+                    return <DeathMessage key={i} target={m.target as Actor} actor={m.actor}/>;
                 default:
-                    const msg = !m.playerName ? m.msg : m.playerName;
+                    const msg = !m.actor ? m.msg : m.actor.name;
                     return <Message text={msg} key={i}/>;
             }
         });
@@ -48,7 +50,9 @@ export class ActionLog extends React.Component<LogProps, LogState> {
                     <div id="initLine">
                         <span className="actionMessage-first">></span>
                     </div>
-                    <Log messages={this.getMessages()}/>
+                    <Log>
+                        {this.getMessages()}
+                    </Log>
                 </div>
             </div>);
     }

@@ -6,18 +6,18 @@ import en_US from "../../lang/en_US";
 import {GeneratedWeapon} from "../../ts/items/weapons/GeneratedWeapon";
 import {GameObject} from "../../ts/items/GameObject";
 
-export class CombatMessage extends React.Component<{ message: MessageCombat }> {
+export const CombatMessage = (props: { message: MessageCombat }) => {
 
-    damageCaused = `<span class='hitRed'>[${this.props.message.prevHP} -> ${this.props.message.prevHP - this.props.message.damage <= 0 ? 0 : this.props.message.prevHP - this.props.message.damage}]</span>`;
-    damageType = 'hit';
+    let damageCaused = `<span class='hitRed'>[${props.message.prevHP} -> ${props.message.prevHP - props.message.damage <= 0 ? 0 : props.message.prevHP - props.message.damage}]</span>`;
+    let damageType = 'hit';
 
-    actorName = (actor: Actor) => <span className={actor.skill.color}>[${actor.name}]</span>;
+    let actorName = (actor: Actor) => <span className={actor.skill.color}>[${actor.name}]</span>;
 
-    weaponName = (weapon: GeneratedWeapon): string => {
+    let weaponName = (weapon: GeneratedWeapon): string => {
         return `<span class='weaponBlue'>[${weapon.name}]</span>`;
     };
 
-    gameObjectName = (obj: GameObject) => {
+    let gameObjectName = (obj: GameObject) => {
         let name;
         if (obj instanceof Actor) {
             name = `<span class=${obj.role.color}>[${obj.toString()}]</span>`;
@@ -27,40 +27,35 @@ export class CombatMessage extends React.Component<{ message: MessageCombat }> {
         return name;
     };
 
-    damage = (dmg: number): string => {
+    let damage = (dmg: number): string => {
         return `<span class='hitRed'>[${dmg}]</span>`;
     };
 
-    combatStrings = {
-        actorName: this.gameObjectName(this.props.message.attacker),
-        targetName: this.gameObjectName(this.props.message.defender),
+    let combatStrings = {
+        actorName: gameObjectName(props.message.actor),
+        targetName: gameObjectName(props.message.target),
         damageType: 'hit',
-        weaponName: this.weaponName(this.props.message.attacker.weapon),
-        playerDamage: this.damage(this.props.message.damage),
-        enemyHealth: this.damageCaused
+        weaponName: weaponName(props.message.actor.weapon),
+        playerDamage: damage(props.message.damage),
+        enemyHealth: damageCaused
     };
 
-    public render(): any {
-        return <div className={'actionMessage'} dangerouslySetInnerHTML={{__html: this.fillTemplate(en_US.Log.hit.normal, this.combatStrings)}}/>;
-    }
-
-    //>{this.actorName(m.actor)} hit {this.actorName(m.target)} with {this.weaponName(m.actor.weapon)} causing {this.damage(m.damage)} damage. {this.damageCaused}
-    //>{this.fillTemplate(en_US.Log.hit.normal, this.combatStrings)}
-
-    private fillTemplate = (template: string, templateVars: Object) => {
+    let fillTemplate = (template: string, templateVars: Object) => {
         template = template.replace(/\${/g, '${this.');
         return new Function(`return \`>${template}\`;`).call(templateVars);
     };
+
+    return <div className={'actionMessage'} dangerouslySetInnerHTML={{__html: fillTemplate(en_US.Log.hit.normal, combatStrings)}}/>;
+};
+
+export class DeathMessage extends React.Component<{ target: Actor, actor: Actor }> {
+
+    actorName = (a: Actor) => <span className={a.role.color}>[{a.name}]</span>;
+
+    public render = (): any => <div className={'actionMessage'}>>{this.actorName(this.props.actor)} killed {this.actorName(this.props.target)}.</div>;
 }
 
-export class DeathMessage extends React.Component<{ dead: Actor, killer: Actor }> {
-    actorName = (actor: Actor) => <span className={actor.role.color}>[{actor.name}]</span>;
-    public render = (): any => <div className={'actionMessage'}>>{this.actorName(this.props.killer)} killed {this.actorName(this.props.dead)}.</div>;
-}
-
-export class WeaponName extends React.Component<{ weapon: Weapon }> {
-    public render = (): any => <span className={'weaponBlue'}>[{this.props.weapon.name}]</span>;
-}
+export const WeaponName = (weapon: Weapon) => <span className={'weaponBlue'}>[{weapon.name}]</span>;
 
 export const HitType = (type: string) => <span className={'hitRed'}>[{type}]</span>;
 

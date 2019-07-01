@@ -11,17 +11,20 @@ export class Skill implements ISkill {
     public description: string;
     public level: number;
     public type: SkillType;
+    public key: string;
 
     constructor(
         name: string,
         description: string,
         level: number,
-        type: SkillType
+        type: SkillType,
+        key: string
     ) {
         this.name = name;
         this.description = description;
         this.level = level;
         this.type = type;
+        this.key = key;
     }
 }
 

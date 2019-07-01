@@ -20,6 +20,7 @@ class MapGrid extends React.Component<MapGridProps> {
                 points={[i * this.props.cellSize, 0, i * this.props.cellSize, this.props.height]}
                 tension={0.5}
                 stroke={this.props.color}
+                key={'hor' + i}
             />);
         }
         return lines;
@@ -35,6 +36,7 @@ class MapGrid extends React.Component<MapGridProps> {
                 points={[0, i * this.props.cellSize, this.props.width, i * this.props.cellSize]}
                 tension={0.5}
                 stroke={this.props.color}
+                key={'ver' + i}
             />);
         }
         return lines;
