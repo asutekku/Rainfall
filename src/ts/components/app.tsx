@@ -9,6 +9,7 @@ import {MainPanel} from "./mainPanel";
 import {Sidebar} from "./sidebar";
 import {Hud} from "./hud";
 import {ActorController} from "../actors/actorController";
+import {Combat} from "../interact/combat";
 import {Utils} from "../utils/utils";
 
 
@@ -19,11 +20,13 @@ export interface InterfaceAppState {
     party: Actor[];
     currentEnemies: Actor[];
     messages: Message[];
+    auto: boolean;
 }
 
 export class App extends React.Component<{}, InterfaceAppState> {
 
     private logLength = 20;
+    private autoTimer: any = null;
 
     constructor(props: any) {
         super(props);
@@ -34,16 +37,27 @@ export class App extends React.Component<{}, InterfaceAppState> {
             party: [new Player(), new Player()],
             currentEnemies: [new Goon(), new Goon()],
             messages: [],
+            auto: false,
         };
+    }
+
+    public componentWillUnmount() {
+        this.stopAuto();
     }
 
     public render() {
         // Ops Console shell: topbar (Hud) / nav rail (Sidebar) / center (MainPanel) / side rail.
         return <div id={"app"} className={"ops"}>
             <Hud actor={this.getCurrentActor()}/>
-            <Sidebar activeSelection={this.updateSelection} active={this.state.activeMainPanel}/>
+            <Sidebar active={this.state.activeMainPanel}
+                     auto={this.state.auto}
+                     activeSelection={this.updateSelection}
+                     onAuto={this.toggleAuto}
+                     onRestart={this.restart}
+                     onRespawn={this.respawn}/>
             <MainPanel activeView={this.state.activeMainPanel} currentActor={this.getCurrentActor()}
-                       currentEnemy={this.getCurrentEnemy()} messages={this.combatController}/>
+                       currentEnemy={this.getCurrentEnemy()} party={this.state.party}
+                       messages={this.combatController}/>
             <aside id={"rail"}>
                 <CharacterPanel party={this.state.party}
                                 enemies={this.state.currentEnemies}
@@ -81,6 +95,48 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     private updateSelection = (selection: string) => {
         this.setState({activeMainPanel: selection});
+    };
+
+    /** Auto-combat: repeatedly resolve a full exchange between the active pair. */
+    private toggleAuto = () => {
+        if (this.state.auto) { this.stopAuto(); return; }
+        this.setState({auto: true, activeMainPanel: "Combat"});
+        this.autoTimer = setInterval(this.autoTick, 1200);
+    };
+
+    private stopAuto = () => {
+        if (this.autoTimer) { clearInterval(this.autoTimer); this.autoTimer = null; }
+        if (this.state.auto) { this.setState({auto: false}); }
+    };
+
+    private autoTick = () => {
+        const player = this.getCurrentActor();
+        const enemy = this.getCurrentEnemy();
+        if (!player || !enemy) { return; }
+        // A downed player auto-stabilises the run instead of trading blows.
+        if (!player.canFight() && !player.mortallyWounded) { this.stopAuto(); return; }
+        const msgs = Combat.basicAction(player, enemy, null as any);
+        this.combatController(msgs);
+    };
+
+    /** Fresh run: new party, new hostiles, cleared feed. */
+    private restart = () => {
+        this.stopAuto();
+        this.setState({
+            party: [new Player(), new Player()],
+            currentEnemies: [new Goon(), new Goon()],
+            activeChar: undefined,
+            activeEnemy: undefined,
+            messages: [{msg: "— run restarted —"} as any, ...this.state.messages].slice(0, this.logLength),
+        });
+    };
+
+    /** Trauma Team pickup: fully revive and heal every squad member. */
+    private respawn = () => {
+        this.state.party.forEach((p) => p.revive());
+        this.setState({
+            messages: [{msg: "— squad revived (Trauma Team) —"} as any, ...this.state.messages].slice(0, this.logLength),
+        });
     };
 
     private getCharacter = (actor: Actor) => {

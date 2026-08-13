@@ -88,6 +88,9 @@ nav button {
 }
 nav button:hover { color:var(--mid); background:var(--hover); }
 nav button.on { color:var(--cyan); border-left-color:var(--rust); background:var(--hover); }
+nav button.act-on { color:var(--good); border-left-color:var(--good); background:var(--hover); }
+/* action cluster pinned to the foot of the rail */
+.navSep { flex:none; width:22px; height:1px; margin:auto 0 4px; background:var(--line2); }
 
 /* center + side rail */
 main { grid-column:2; grid-row:2; min-width:0; }
@@ -144,7 +147,9 @@ main.panel > .panelBody { flex:1; min-height:0; overflow-y:auto; padding:12px; }
 /* ---------------------------------------------------------------------
    Combat — hostile panel + action grid
    --------------------------------------------------------------------- */
-.combatUi { display:flex; flex-direction:column; gap:8px; }
+.combatUi { display:flex; flex-direction:column; gap:8px; height:100%; }
+/* the action panel grows to fill the console, so no void hangs below it */
+.combatUi .panel:last-child { flex:1; }
 
 .enemy { position:relative; display:flex; gap:12px; padding:12px; }
 .enemy .pf { width:88px; height:88px; }

@@ -473,6 +473,14 @@ export class Actor extends GameObject {
         }
     }
 
+    /** Full recovery, including from death: clears wounds and restores HP to max. */
+    public revive(): void {
+        this.alive = true;
+        this.mortallyWounded = false;
+        this.deathSavePenalty = 0;
+        this.health = this.maxHealth;
+    }
+
     /** Restore HP up to max. No effect while Mortally Wounded (stabilise first). */
     public heal(amount: number): number {
         if (this.mortallyWounded || !this.alive) {

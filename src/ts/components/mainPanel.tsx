@@ -9,11 +9,13 @@ import {Character} from "./stats/stats";
 import {Store} from "./storePanel/store";
 import {Netrun} from "./net/netrun";
 import {Downtime} from "./downtime/downtime";
+import {CareerStats} from "./stats/careerStats";
 
 interface MainProps {
     activeView: string;
     currentActor: Actor;
     currentEnemy: Actor;
+    party: Actor[];
     messages: any;
 }
 
@@ -55,6 +57,8 @@ export class MainPanel extends React.Component<MainProps, MainState> {
                 return <Netrun actor={this.props.currentActor}/>;
             case 'Downtime':
                 return <Downtime actor={this.props.currentActor}/>;
+            case 'Stats':
+                return <CareerStats party={this.props.party} enemy={this.props.currentEnemy}/>;
             default:
                 return <div className={"redEmpty"}>This is yet to be implemented.</div>;
         }
