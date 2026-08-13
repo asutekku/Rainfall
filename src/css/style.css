@@ -1183,3 +1183,92 @@ h2.statTitle,
 .badge-wounded { color: var(--warn); border-color: var(--warn); }
 .badge-down, .badge-psycho { color: var(--crit); border-color: var(--crit); }
 .badge-target { color: var(--neon); border-color: var(--neon); text-shadow: var(--glowCyan); }
+
+/* ============================================================
+   Combat interface — enemy card, action bar, floating damage
+   ============================================================ */
+.combatUi { display: flex; flex-direction: column; gap: 12px; }
+
+.enemyCard {
+    position: relative;
+    display: flex;
+    gap: 14px;
+    background: var(--backgroundLight);
+    border: 1px solid var(--borderColor);
+    border-top: 1px solid var(--rust);
+    box-shadow: inset 0 1px 0 rgba(184, 92, 73, 0.18), 0 2px 8px rgba(0, 0, 0, 0.6);
+    padding: 14px;
+}
+.enemyPortrait {
+    width: 76px; height: 76px;
+    object-fit: cover;
+    border: 1px solid var(--borderColor);
+    filter: grayscale(0.15) contrast(1.08);
+    flex-shrink: 0;
+}
+.enemyInfo { flex: 1; display: flex; flex-direction: column; gap: 8px; justify-content: center; min-width: 0; }
+.enemyTop { display: flex; justify-content: space-between; align-items: baseline; }
+.enemyName { color: var(--textColor); font-size: 1.05rem; font-weight: bold; letter-spacing: 0.02em; }
+.enemyLvl { color: var(--textColorDim); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; }
+.enemyStats { display: flex; gap: 16px; color: var(--textColorMid); font-size: 0.76rem; }
+
+/* floating damage numbers */
+.floaterLayer { position: absolute; top: 0; left: 60px; right: 0; height: 0; pointer-events: none; }
+@keyframes floatUp {
+    0% { opacity: 0; transform: translateY(6px) scale(0.9); }
+    18% { opacity: 1; transform: translateY(0) scale(1.05); }
+    100% { opacity: 0; transform: translateY(-46px) scale(1); }
+}
+.floater {
+    position: absolute;
+    left: 50%;
+    top: 20px;
+    font-family: monospace;
+    font-weight: bold;
+    font-size: 1.4rem;
+    animation: floatUp 0.85s ease-out forwards;
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.8);
+}
+.floater-dmg { color: var(--crit); }
+.floater-dmg-big { color: #ff6a4a; font-size: 1.9rem; text-shadow: 0 0 12px rgba(224, 83, 63, 0.7); }
+.floater-miss { color: var(--textColorDim); font-size: 1.1rem; }
+.floater-buff { color: var(--neon); text-shadow: var(--glowCyan); }
+
+/* player weapon line */
+.combatWeapon {
+    display: flex;
+    align-items: baseline;
+    gap: 14px;
+    padding: 8px 12px;
+    background: #000;
+    border-left: 3px solid var(--rust);
+}
+.combatWeaponName { color: var(--baseColor); font-size: 0.9rem; font-weight: bold; }
+.combatWeaponStat { color: var(--textColorMid); font-size: 0.76rem; }
+
+/* action bar */
+.actionBar { display: flex; gap: 8px; flex-wrap: wrap; }
+.actionBtn {
+    font-family: monospace;
+    font-size: 0.86rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--buttonTextColor);
+    background: var(--buttonColor);
+    border: 1px solid var(--borderColor);
+    border-left: 3px solid var(--rust);
+    padding: 12px 20px;
+    cursor: pointer;
+    clip-path: var(--bevel);
+    transition: background var(--t-fast) ease, box-shadow var(--t-fast) ease, color var(--t-fast) ease;
+}
+.actionBtn:hover { background: var(--selectionActive); color: var(--baseColor); }
+.actionBtn-primary {
+    color: var(--baseColor);
+    border-left-color: var(--rustHot);
+    background: var(--selectionActive);
+    flex: 1;
+    min-width: 160px;
+}
+.actionBtn-primary:hover { box-shadow: var(--glowRust); }
+.combatNote { color: var(--baseColor); font-size: 0.84rem; padding: 6px 2px; border-left: 3px solid var(--rust); padding-left: 12px; }
