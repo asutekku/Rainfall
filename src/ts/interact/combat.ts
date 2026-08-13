@@ -87,11 +87,7 @@ export class Combat {
     }
 
     public static aidActor(actor: Actor, amount: number) {
-        if (actor.health > actor.maxHealth) {
-            actor.health = actor.maxHealth;
-        } else {
-            actor.health += amount;
-        }
+        actor.health = Math.min(actor.maxHealth, actor.health + amount);
     }
 
     public static gainLevel(actor: Actor, target: Actor) {

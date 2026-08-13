@@ -46,7 +46,26 @@ export class GetItem {
     }
 
     public static addItemToInventory(item: Item | Armor | Weapon | Medical, actor: Actor) {
-        actor.inventory[item.type.toString()].push(item);
+        actor.inventory[GetItem.inventoryBucket(item)].push(item);
+    }
+
+    /**
+     * Maps an item's `type` to its inventory bucket. Item types are singular
+     * ("weapon", "drug", ...) while the inventory is keyed "weapons", "armor",
+     * "misc", "medical"; without this mapping, looting a weapon or drug indexes
+     * a non-existent bucket and throws.
+     */
+    private static inventoryBucket(item: Item): string {
+        switch (item.type) {
+            case "weapon":
+                return "weapons";
+            case "armor":
+                return "armor";
+            case "medical":
+                return "medical";
+            default:
+                return "misc";
+        }
     }
 
     /**
@@ -71,8 +90,7 @@ export class GetItem {
             item.equipped = equipArmor;
         }
         if (item instanceof Medical) {
-            player.health =
-                player.health >= player.maxHealth ? player.maxHealth : (player.health += item.restorePoints!);
+            player.health = Math.min(player.maxHealth, player.health + item.restorePoints!);
         } else {
             // currentActor.inventory.misc.push(item);
         }

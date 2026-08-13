@@ -427,9 +427,10 @@ export class Actor extends GameObject {
         const lowerSP: number = eq.lower ? eq.lower.stoppingPower : 0;
         const upperSP: number = eq.upper ? eq.upper.stoppingPower : 0;
         const SP: number[] = [headSP, armsSP, feetSP, lowerSP, upperSP];
-        const damage = amount - SP.reduce((acc: number, c: number) => acc + c);
-        if (this.health < damage) {
-            this.health = 0;
+        // Floor at 0 so armor that exceeds the incoming hit blocks it entirely
+        // instead of subtracting a negative (which would heal the target).
+        const damage = Math.max(0, amount - SP.reduce((acc: number, c: number) => acc + c));
+        if (this.health <= damage) {
             this.health = 0;
             this.alive = false;
         } else {
