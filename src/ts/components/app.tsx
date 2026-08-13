@@ -7,6 +7,7 @@ import {Message} from "./actionLog/messageComponent";
 import {CharacterPanel} from "./characterPanel/characterPanel";
 import {MainPanel} from "./mainPanel";
 import {Sidebar} from "./sidebar";
+import {Hud} from "./hud";
 import {ActorController} from "../actors/actorController";
 import {Utils} from "../utils/utils";
 
@@ -39,6 +40,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     public render() {
         // @ts-ignore
         return <div id={"mainpane"}>
+            <Hud actor={this.getCurrentActor()}/>
             <Sidebar activeSelection={this.updateSelection}/>
             <MainPanel activeView={this.state.activeMainPanel} currentActor={this.getCurrentActor()}
                        currentEnemy={this.getCurrentEnemy()} messages={this.combatController}/>

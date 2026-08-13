@@ -1,6 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
-import {ProgressBar} from "../general/progressBar";
+import {Bar} from "../general/bar";
 
 export interface CharCompProps {
     actor: Actor;
@@ -33,26 +33,37 @@ export class CharacterComponent extends React.Component<CharCompProps, CharCompS
         this.setState({active: state});
     };
 
+    private statusBadge(a: Actor) {
+        if (!a.canFight() || a.mortallyWounded) { return <span className={"slideBadge badge-down"}>DOWN</span>; }
+        if (a.isSeriouslyWounded()) { return <span className={"slideBadge badge-wounded"}>WOUNDED</span>; }
+        if (a.isCyberpsycho && a.isCyberpsycho()) { return <span className={"slideBadge badge-psycho"}>PSYCHO</span>; }
+        return null;
+    }
+
     public render() {
+        const a = this.props.actor;
+        const selected = a.name === this.props.selected;
         return (
             <div
-                className={this.state.actor.name === this.props.selected ? 'itemContainer-100 itemContainer-active' : 'itemContainer-100'}
+                className={selected ? 'slideCard slideCard-active' : 'slideCard'}
                 onClick={() => {
                     this.handleClick();
-                    return this.props.update(this.props.actor);
+                    return this.props.update(a);
                 }}>
-                <div className={'itemContainerRow-top'}>
-                    <span className={"itemContainer-top-left"}>{this.props.actor.name}</span>
-                    <span className={"itemContainer-top-right"}>{`Lvl: ${this.props.actor.level}`}</span>
+                <img src={a.role.portrait} className={"slidePortrait"} alt={a.role.name}/>
+                <div className={"slideInfo"}>
+                    <div className={"slideTop"}>
+                        <span className={"slideName"}>{a.name}</span>
+                        <span className={"slideLvl"}>Lvl {a.level}</span>
+                    </div>
+                    <div className={"slideMeta"}>
+                        <span>{a.role.name}</span>
+                        {this.statusBadge(a)}
+                        {!this.props.friendly && selected && <span className={"slideBadge badge-target"}>TARGET</span>}
+                    </div>
+                    <div className={"slideWeapon"}>{a.weapon.name}</div>
+                    <Bar value={a.health} max={a.maxHealth} kind={"hp"}/>
                 </div>
-                <div className={"itemContainerRow-middle"}>
-                    <span className={"itemContainer-middle"}>{`Role: ${this.props.actor.role.name}`}</span>
-                </div>
-                <div className={'itemContainerRow-bottom'}>
-                    <span className={"itemContainer-bottom-left"}>{`Weapon: ${this.props.actor.weapon.name}`}</span>
-                    {CharacterComponent.getTarget(this.props.friendly, this.state.actor.name === this.props.selected)}
-                </div>
-                <ProgressBar title={'Health'} value={this.props.actor.health} max={this.props.actor.maxHealth}/>
             </div>
         );
     }

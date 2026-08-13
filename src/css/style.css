@@ -1096,3 +1096,90 @@ h2.statTitle,
     animation: blink 1.1s steps(1) infinite;
     padding-bottom: 2px;
 }
+
+/* ============================================================
+   Components — bars, persistent HUD, party cards
+   ============================================================ */
+
+/* --- reusable bars --- */
+.barWrap { display: flex; align-items: center; gap: 8px; width: 100%; }
+.barLabel { color: var(--textColorDim); font-size: 0.66rem; letter-spacing: 0.08em; min-width: 30px; text-transform: uppercase; }
+.barTrack {
+    flex: 1;
+    height: 9px;
+    background: #0b0b10;
+    border: 1px solid var(--borderColor);
+    position: relative;
+    overflow: hidden;
+}
+.barFill { height: 100%; transition: width var(--t-med) ease; }
+.bar-good { background: linear-gradient(90deg, #4f9a4f, #7fd67f); box-shadow: 0 0 8px rgba(127, 214, 127, 0.35); }
+.bar-warn { background: linear-gradient(90deg, #c1841f, #f0a830); box-shadow: 0 0 8px rgba(240, 168, 48, 0.3); }
+.bar-crit { background: linear-gradient(90deg, #a3382b, #e0533f); box-shadow: 0 0 8px rgba(224, 83, 63, 0.35); }
+.bar-hum  { background: linear-gradient(90deg, #6a37a0, #b06fe0); box-shadow: 0 0 8px rgba(176, 111, 224, 0.3); }
+.bar-xp   { background: linear-gradient(90deg, #268a8e, #35e0e6); box-shadow: 0 0 8px rgba(53, 224, 230, 0.3); }
+.bar-rep  { background: linear-gradient(90deg, #8a5427, #c9634c); }
+.bar-rez  { background: linear-gradient(90deg, #a3382b, #e0533f); }
+.bar-generic { background: linear-gradient(90deg, #33333f, #6b7178); }
+.barText { color: var(--textColorMid); font-size: 0.66rem; min-width: 54px; text-align: right; }
+
+/* --- persistent HUD (top bar, over the empty navbar space) --- */
+.hud {
+    position: fixed;
+    top: 0; right: 0;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    gap: 22px;
+    padding: 0 22px 0 26px;
+    z-index: 50;
+}
+.hudId { display: flex; flex-direction: column; align-items: flex-end; }
+.hudName { color: var(--textColor); font-size: 0.9rem; font-weight: bold; letter-spacing: 0.04em; }
+.hudRole { color: var(--textColorDim); font-size: 0.66rem; text-transform: uppercase; letter-spacing: 0.07em; }
+.hudBars { display: flex; flex-direction: column; gap: 3px; width: 260px; }
+.hudChips { display: flex; gap: 8px; }
+.hudChip {
+    font-family: monospace;
+    font-size: 0.72rem;
+    color: var(--textColorMid);
+    background: var(--backgroundLight);
+    border: 1px solid var(--borderColor);
+    border-left: 2px solid var(--rust);
+    padding: 4px 8px;
+    clip-path: polygon(0 4px, 4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%);
+}
+.hudEddies { color: var(--good); font-weight: bold; border-left-color: var(--good); }
+
+/* --- party / enemy cards with portraits --- */
+.slideCard {
+    display: flex;
+    gap: 10px;
+    background: #000;
+    border: 1px solid var(--borderColor);
+    border-left: 3px solid var(--borderColor);
+    padding: 8px 10px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: border-color var(--t-fast) ease, background var(--t-fast) ease;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+.slideCard:hover { border-left-color: var(--selectionHoverBorder); }
+.slideCard-active { border-left-color: var(--selectionActiveBorder); background: var(--selectionActive); }
+.slidePortrait {
+    width: 48px; height: 48px;
+    object-fit: cover;
+    border: 1px solid var(--borderColor);
+    filter: grayscale(0.15) contrast(1.05);
+    flex-shrink: 0;
+}
+.slideInfo { flex: 1; display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.slideTop { display: flex; justify-content: space-between; align-items: baseline; }
+.slideName { color: var(--textColor); font-size: 0.86rem; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slideLvl { color: var(--textColorDim); font-size: 0.7rem; }
+.slideMeta { display: flex; align-items: center; gap: 6px; color: var(--textColorDim); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+.slideWeapon { color: var(--textColorMid); font-size: 0.74rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.slideBadge { font-size: 0.6rem; padding: 1px 5px; border: 1px solid; letter-spacing: 0.05em; }
+.badge-wounded { color: var(--warn); border-color: var(--warn); }
+.badge-down, .badge-psycho { color: var(--crit); border-color: var(--crit); }
+.badge-target { color: var(--neon); border-color: var(--neon); text-shadow: var(--glowCyan); }
