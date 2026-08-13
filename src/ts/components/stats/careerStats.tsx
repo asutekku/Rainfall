@@ -4,7 +4,7 @@ import {Bar} from "../general/bar";
 
 export interface CareerStatsProps {
     party: Actor[];
-    enemy: Actor;
+    enemy?: Actor;
 }
 
 /** Career telemetry: squad totals up top, then a per-member breakdown. */

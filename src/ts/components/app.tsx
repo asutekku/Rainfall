@@ -4,8 +4,8 @@ import {Goon} from "../actors/Enemies/Goon";
 import {Player} from "../actors/player";
 import {ActionLog} from "./actionLog/actionLog";
 import {Message} from "./actionLog/messageComponent";
-import {CharacterPanel} from "./characterPanel/characterPanel";
-import {MainPanel} from "./mainPanel";
+import {Party} from "./characterPanel/party";
+import {Stage} from "./combat/stage";
 import {Sidebar} from "./sidebar";
 import {Hud} from "./hud";
 import {ActorController} from "../actors/actorController";
@@ -46,7 +46,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     }
 
     public render() {
-        // Ops Console shell: topbar (Hud) / nav rail (Sidebar) / center (MainPanel) / side rail.
+        // Battle Stage shell: topbar (Hud) / nav rail / feed column (squad + feed) / stage (game).
         return <div id={"app"} className={"ops"}>
             <Hud actor={this.getCurrentActor()}/>
             <Sidebar active={this.state.activeMainPanel}
@@ -55,18 +55,19 @@ export class App extends React.Component<{}, InterfaceAppState> {
                      onAuto={this.toggleAuto}
                      onRestart={this.restart}
                      onRespawn={this.respawn}/>
-            <MainPanel activeView={this.state.activeMainPanel} currentActor={this.getCurrentActor()}
-                       currentEnemy={this.getCurrentEnemy()} party={this.state.party}
-                       messages={this.combatController}/>
-            <aside id={"rail"}>
-                <CharacterPanel party={this.state.party}
-                                enemies={this.state.currentEnemies}
-                                activeSelection={this.getCharacter}
-                                activeEnemy={this.getEnemy}/>
+            <section id={"feedcol"}>
+                <Party name={"Squad"} party={this.state.party} activeSelection={this.getCharacter} friendly={true}/>
                 <ActionLog actor={this.getCurrentActor()} messages={this.state.messages}/>
-            </aside>
+            </section>
+            <Stage actor={this.getCurrentActor()} enemy={this.getCurrentEnemy()}
+                   party={this.state.party} enemies={this.state.currentEnemies}
+                   view={this.state.activeMainPanel} messages={this.combatController}
+                   onSelectAlly={this.getCharacter} onSelectEnemy={this.getEnemy}
+                   onGotoCombat={this.gotoCombat}/>
         </div>;
     }
+
+    private gotoCombat = () => this.setState({activeMainPanel: "Combat"});
 
     private combatController = (...messages: any): void => {
         let enemies = this.state.currentEnemies;

@@ -2,7 +2,6 @@ import * as React from "react";
 import {Actor} from "../actors/Actor";
 import {Player} from "../actors/player";
 import {Message} from "./actionLog/messageComponent";
-import {CombatMenu} from "./combat/combatMenu";
 import {Inventory} from "./inventory/inventory";
 import {Quests} from "./quests/quests";
 import {Character} from "./stats/stats";
@@ -14,7 +13,7 @@ import {CareerStats} from "./stats/careerStats";
 interface MainProps {
     activeView: string;
     currentActor: Actor;
-    currentEnemy: Actor;
+    currentEnemy?: Actor;
     party: Actor[];
     messages: any;
 }
@@ -44,9 +43,6 @@ export class MainPanel extends React.Component<MainProps, MainState> {
         switch (view) {
             case "Inventory":
                 return <Inventory player={this.props.currentActor}/>;
-            case 'Combat':
-                return <CombatMenu actor={this.props.currentActor} enemy={this.props.currentEnemy}
-                                   messages={this.getMessage}/>;
             case 'Quests':
                 return <Quests messages={this.getMessage}/>;
             case 'Character':
