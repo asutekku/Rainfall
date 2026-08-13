@@ -1,6 +1,5 @@
 import * as React from 'react';
 import {Actor} from '../../actors/Actor';
-import {PrimaryTitle} from "../general/primaryTitle";
 import {Party} from "./party";
 
 interface CharacterPanelProps {
@@ -50,10 +49,9 @@ export class CharacterPanel extends React.Component<CharacterPanelProps, Charact
     };
 
     public render() {
-        return <div id='statpane'>
-            <PrimaryTitle title={'Characters'} noMenus={true}/>
-            <Party name={'Friendly'} party={this.props.party} activeSelection={this.getCharacter} friendly={true}/>
-            <Party name={'Enemies'} party={this.props.enemies} activeSelection={this.getEnemy} friendly={false}/>
-        </div>;
+        return <React.Fragment>
+            <Party name={'Squad'} party={this.props.party} activeSelection={this.getCharacter} friendly={true}/>
+            <Party name={'Hostiles'} party={this.props.enemies} activeSelection={this.getEnemy} friendly={false}/>
+        </React.Fragment>;
     }
 }

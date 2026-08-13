@@ -76,42 +76,49 @@ export class CombatMenu extends React.Component<CombatMenuProps, CombatMenuState
         const w = this.props.actor.weapon;
         return (
             <div className={"combatUi"}>
-                <div className={"enemyCard"}>
-                    <div className={"floaterLayer"}>
-                        {this.state.floaters.map((f) => (
-                            <span key={f.id} className={"floater floater-" + f.kind}>{f.text}</span>
-                        ))}
-                    </div>
-                    <img src={e.role.portrait} className={"enemyPortrait"} alt={e.role.name}/>
-                    <div className={"enemyInfo"}>
-                        <div className={"enemyTop"}>
-                            <span className={"enemyName"}>{e.name}</span>
-                            <span className={"enemyLvl"}>{e.role.name} · Lvl {e.level}</span>
+                <div className={"panel"}>
+                    <h3>Hostile</h3>
+                    <div className={"enemy"}>
+                        <div className={"floaterLayer"}>
+                            {this.state.floaters.map((f) => (
+                                <span key={f.id} className={"floater floater-" + f.kind}>{f.text}</span>
+                            ))}
                         </div>
-                        <Bar value={e.health} max={e.maxHealth} kind={"hp"}/>
-                        <div className={"enemyStats"}>
-                            <span>SP {this.enemyArmor(e)}</span>
-                            <span>{e.weapon.name}</span>
-                            <span>{e.weapon.diceThrows}d6{e.weapon.damage ? "+" + e.weapon.damage : ""}</span>
+                        <img src={e.role.portrait} className={"pf"} alt={e.role.name}/>
+                        <div className={"ei"}>
+                            <div className={"en"}>
+                                <b>{e.name}</b>
+                                <span>{e.role.name} · Lvl {e.level}</span>
+                            </div>
+                            <Bar value={e.health} max={e.maxHealth} kind={"hp"}/>
+                            <div className={"est"}>
+                                <span><u>SP</u> {this.enemyArmor(e)}</span>
+                                <span><u>ARM</u> {e.weapon.name}</span>
+                                <span>{e.weapon.diceThrows}d6{e.weapon.damage ? "+" + e.weapon.damage : ""}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
 
-                <div className={"combatWeapon"}>
-                    <span className={"combatWeaponName"}>{w.name}</span>
-                    <span className={"combatWeaponStat"}>{w.diceThrows}d6{w.damage ? "+" + w.damage : ""}{w.ap ? " AP" : ""}{w.autofire ? " · AUTO" : ""}</span>
-                    <span className={"combatWeaponStat"}>acc {w.accuracyBonus >= 0 ? "+" : ""}{w.accuracyBonus} · {w.range}m</span>
+                <div className={"panel"}>
+                    <h3>Actions</h3>
+                    <div className={"acts"}>
+                        <button className={"act prim"} onClick={this.attack}>
+                            {w.autofire ? "Open Fire" : "Attack"}
+                            <small>{w.autofire ? "Autofire · 2d6 × margin" : "single shot"}</small>
+                        </button>
+                        <button className={"act"} onClick={this.intimidate}>Facedown</button>
+                        <button className={"act"} onClick={this.flee}>Flee</button>
+                    </div>
+                    <div className={"wpn"}>
+                        <b>{w.name}</b>
+                        <span>{w.diceThrows}d6{w.damage ? "+" + w.damage : ""}</span>
+                        {w.ap ? <span>AP</span> : null}
+                        {w.autofire ? <span>AUTO</span> : null}
+                        <span>acc {w.accuracyBonus >= 0 ? "+" : ""}{w.accuracyBonus} · {w.range}m</span>
+                    </div>
+                    {this.state.note && <div className={"note"}>{this.state.note}</div>}
                 </div>
-
-                <div className={"actionBar"}>
-                    <button className={"actionBtn actionBtn-primary"} onClick={this.attack}>
-                        {w.autofire ? "Open Fire" : "Attack"}
-                    </button>
-                    <button className={"actionBtn"} onClick={this.intimidate}>Intimidate</button>
-                    <button className={"actionBtn"} onClick={this.flee}>Flee</button>
-                </div>
-
-                {this.state.note && <div className={"combatNote"}>{this.state.note}</div>}
             </div>);
     }
 }

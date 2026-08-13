@@ -3,7 +3,6 @@ import {Actor} from "../actors/Actor";
 import {Player} from "../actors/player";
 import {Message} from "./actionLog/messageComponent";
 import {CombatMenu} from "./combat/combatMenu";
-import {PrimaryTitle} from "./general/primaryTitle";
 import {Inventory} from "./inventory/inventory";
 import {Quests} from "./quests/quests";
 import {Character} from "./stats/stats";
@@ -57,19 +56,17 @@ export class MainPanel extends React.Component<MainProps, MainState> {
             case 'Downtime':
                 return <Downtime actor={this.props.currentActor}/>;
             default:
-                return <div>This is yet to be implemented</div>;
+                return <div className={"redEmpty"}>This is yet to be implemented.</div>;
         }
     }
 
     public render() {
         return (
-            <div id="playPane">
-                <div className="gridElement">
-                    <PrimaryTitle title={this.props.activeView} noMenus={true}/>
-                    <div className="infoAreaItem">
-                        {this.renderView(this.props.activeView)}
-                    </div>
+            <main className={"panel"}>
+                <h3>{this.props.activeView}</h3>
+                <div className={"panelBody"}>
+                    {this.renderView(this.props.activeView)}
                 </div>
-            </div>);
+            </main>);
     }
 }

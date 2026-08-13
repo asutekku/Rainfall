@@ -38,17 +38,19 @@ export class App extends React.Component<{}, InterfaceAppState> {
     }
 
     public render() {
-        // @ts-ignore
-        return <div id={"mainpane"}>
+        // Ops Console shell: topbar (Hud) / nav rail (Sidebar) / center (MainPanel) / side rail.
+        return <div id={"app"} className={"ops"}>
             <Hud actor={this.getCurrentActor()}/>
-            <Sidebar activeSelection={this.updateSelection}/>
+            <Sidebar activeSelection={this.updateSelection} active={this.state.activeMainPanel}/>
             <MainPanel activeView={this.state.activeMainPanel} currentActor={this.getCurrentActor()}
                        currentEnemy={this.getCurrentEnemy()} messages={this.combatController}/>
-            <ActionLog actor={this.getCurrentActor()} messages={this.state.messages}/>
-            <CharacterPanel party={this.state.party}
-                            enemies={this.state.currentEnemies}
-                            activeSelection={this.getCharacter}
-                            activeEnemy={this.getEnemy}/>
+            <aside id={"rail"}>
+                <CharacterPanel party={this.state.party}
+                                enemies={this.state.currentEnemies}
+                                activeSelection={this.getCharacter}
+                                activeEnemy={this.getEnemy}/>
+                <ActionLog actor={this.getCurrentActor()} messages={this.state.messages}/>
+            </aside>
         </div>;
     }
 

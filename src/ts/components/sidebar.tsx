@@ -1,41 +1,38 @@
 import * as React from 'react';
-import {MenuButton} from './general/button';
-import {PrimaryTitle} from "./general/primaryTitle";
 
 interface SidebarProps {
     activeSelection: any;
+    active: string;
 }
 
-interface SidebarState {
-    activeSelection: string;
-}
+// Icon glyph + label for each view. Label doubles as tooltip and accessible name.
+const ITEMS: Array<[string, string]> = [
+    ["Character", "◈"],
+    ["Quests", "❖"],
+    ["Store", "▤"],
+    ["Inventory", "▦"],
+    ["Combat", "✦"],
+    ["Netrun", "⌁"],
+    ["Downtime", "☾"],
+    ["Auto", "▸"],
+    ["Restart", "⟳"],
+    ["Respawn", "✚"],
+    ["Stats", "▥"],
+];
 
-export class Sidebar extends React.Component<SidebarProps, SidebarState> {
-
-    public state: Readonly<SidebarState> = {
-        activeSelection: "Character",
-    };
-
-    public handleClick = (selection: string) => {
-        this.setState({activeSelection: selection});
-        this.props.activeSelection(selection);
-    };
-
+export class Sidebar extends React.Component<SidebarProps, {}> {
     public render() {
         return (
-            <div id='sidebar'>
-                <PrimaryTitle title={'Menu'} noMenus={true}/>
-                <MenuButton text='Character' update={this.handleClick} active={this.state.activeSelection}/>
-                <MenuButton text='Quests' update={this.handleClick} active={this.state.activeSelection}/>
-                <MenuButton text='Store' update={this.handleClick} active={this.state.activeSelection}/>
-                <MenuButton text='Inventory' update={this.handleClick} active={this.state.activeSelection}/>
-                <MenuButton text='Combat' update={this.handleClick} active={this.state.activeSelection}/>
-                <MenuButton text='Netrun' update={this.handleClick} active={this.state.activeSelection}/>
-                <MenuButton text='Downtime' update={this.handleClick} active={this.state.activeSelection}/>
-                <MenuButton text='Auto' update={this.handleClick} active={this.state.activeSelection}/>
-                <MenuButton text='Restart' update={this.handleClick} active={this.state.activeSelection}/>
-                <MenuButton text='Respawn' update={this.handleClick} active={this.state.activeSelection}/>
-                <MenuButton text='Stats' update={this.handleClick} active={this.state.activeSelection}/>
-            </div>);
+            <nav>
+                {ITEMS.map(([name, icon]) => (
+                    <button
+                        key={name}
+                        title={name}
+                        className={this.props.active === name ? "on" : ""}
+                        onClick={() => this.props.activeSelection(name)}>
+                        {icon}
+                    </button>
+                ))}
+            </nav>);
     }
 }

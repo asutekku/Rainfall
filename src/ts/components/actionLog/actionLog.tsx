@@ -1,7 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {IDefaultMessage} from "../../interact/messageSchema";
-import {PrimaryTitle} from "../general/primaryTitle";
 import {CombatMessage, DeathMessage} from "./combatMessage";
 import {Message} from "./messageComponent";
 
@@ -15,11 +14,6 @@ interface LogState {
     messages: IDefaultMessage[];
 }
 
-class Log extends React.Component<{ messages: JSX.Element[] }> {
-    public render() {
-        return <div id="actions">{this.props.messages}</div>;
-    }
-}
 
 export class ActionLog extends React.Component<LogProps, LogState> {
 
@@ -48,13 +42,10 @@ export class ActionLog extends React.Component<LogProps, LogState> {
 
     public render() {
         return (
-            <div id={"actionLog"}>
-                <PrimaryTitle title={"Action log"} noMenus={true}/>
-                <div id="gamearea" className="gridElement">
-                    <div id="initLine">
-                        <span className="actionMessage-first">></span>
-                    </div>
-                    <Log messages={this.getMessages()}/>
+            <div className={"panel feed"}>
+                <h3>Feed</h3>
+                <div className={"log"}>
+                    {this.getMessages()}
                 </div>
             </div>);
     }
