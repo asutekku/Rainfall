@@ -445,9 +445,12 @@ export class Actor extends GameObject {
         this.level += 1;
         Statistics.level += 1;
         this.experience = 0;
-        this.maxExperience += (this.level ^ (3 / 2)) * 5;
-        this.maxHealth += (this.level ^ (3 / 2));
-        this.health = this.maxHealth;
+        // `level ^ 1.5` was a bitwise XOR (1.5 truncates to 1), so growth was a
+        // meaningless sawtooth. Use a real power for smooth, monotonic scaling.
+        this.maxExperience += Math.floor(Math.pow(this.level, 1.5) * 5);
+        this.maxHealth += Math.floor(Math.pow(this.level, 1.5));
+        // Only the ceiling rises; current HP is recovered by resting. This keeps a
+        // mid-fight level-up from restoring a combatant (no more enemy self-heals).
     }
 
     /** Truly dead (a failed Death Save or an instant kill). */

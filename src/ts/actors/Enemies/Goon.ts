@@ -19,6 +19,7 @@ export class Goon extends Actor {
         this.equipment.upper = GetItem.armor("Kevlar Vest"); // street-thug body armour (SP 6)
         this.level = Math.floor(Statistics.level + Utils.range(1, 3));
         this.currency = Math.floor(Utils.range(20, 50));
-        this.experience = Math.floor(Statistics.level ^ (2 / 0.4));
+        // XP reward for killing this goon, scaled by its level (was a XOR).
+        this.experience = Math.floor(this.level * 15);
     }
 }
