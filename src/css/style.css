@@ -917,3 +917,44 @@ progress::-webkit-progress-value {
 .vital-good { color: #aed581; }
 .vital-warn { color: #f0a830; }
 .vital-critical { color: #e0533f; }
+
+/* ============================================================
+   Visual polish pass — subtle refinements to the existing UI,
+   keeping the dark monospace / rust-cyan terminal style.
+   (Appended so these override earlier rules via the cascade.)
+   ============================================================ */
+#navbar { border-bottom: 1px solid var(--borderColor); box-shadow: 0 1px 0 #000; }
+#title { letter-spacing: 0.08em; text-shadow: 0 0 14px rgba(147, 78, 65, 0.55); }
+
+/* stat cards: dim the label so the value reads first, add a hairline divider */
+.statCard {
+    height: auto;
+    min-height: 22px;
+    padding: 5px 3px;
+    border-bottom: 1px dotted #191919;
+    box-sizing: border-box;
+    line-height: 1.4;
+}
+.statTitle { color: var(--textColorDim); letter-spacing: 0.02em; }
+.statValue { color: var(--baseColor); }
+/* keep the wound/humanity state colours winning over the base value colour */
+.statValue.vital-good { color: #aed581; }
+.statValue.vital-warn { color: #f0a830; }
+.statValue.vital-critical { color: #e0533f; }
+
+/* action log: more legible lines with a rust prompt arrow */
+.actionMessage, .actionMessage-first { line-height: 1.55; color: var(--textColor); }
+.messageArrow { color: var(--selectionActiveBorder); margin-right: 6px; font-weight: bold; }
+
+/* list rows: smooth accent on hover */
+.itemContainer-100 { transition: background 0.12s ease, border-color 0.12s ease; }
+.itemContainer-100:hover { border-left-color: var(--selectionHoverBorder); }
+
+/* section headers */
+.containerHeader { text-transform: uppercase; letter-spacing: 0.06em; font-size: 0.8rem; }
+
+/* thin, on-theme scrollbars */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: var(--backgroundLight); }
+::-webkit-scrollbar-thumb { background: #262626; border: 1px solid #111; }
+::-webkit-scrollbar-thumb:hover { background: var(--selectionActiveBorder); }
