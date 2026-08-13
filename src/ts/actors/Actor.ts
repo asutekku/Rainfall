@@ -210,6 +210,7 @@ export class Actor extends GameObject {
     public humanity: number;
     public maxHumanity: number;
     public cyberpsychosis: boolean;
+    public traumaTeam: boolean;
 
     constructor() {
         const role = new Role();
@@ -395,6 +396,7 @@ export class Actor extends GameObject {
         this.humanity = this.stats.emp * 10;
         this.maxHumanity = this.stats.emp * 10;
         this.cyberpsychosis = false;
+        this.traumaTeam = false;
         this.lifepath = {
             style: {
                 clothes: {
@@ -481,6 +483,33 @@ export class Actor extends GameObject {
             this.alive = false;
         }
         return survived;
+    }
+
+    /** RED First Aid / Paramedic skill level. */
+    public firstAidSkill(): number {
+        return this.skills.tech.firstAid;
+    }
+
+    /**
+     * Stabilise a Mortally Wounded character: Death Saves stop and, if they were
+     * at 0 HP, they cling to 1. They are conscious but still badly hurt.
+     */
+    public stabilize(): void {
+        this.mortallyWounded = false;
+        this.deathSavePenalty = 0;
+        if (this.alive && this.health <= 0) {
+            this.health = 1;
+        }
+    }
+
+    /** Restore HP up to max. No effect while Mortally Wounded (stabilise first). */
+    public heal(amount: number): number {
+        if (this.mortallyWounded || !this.alive) {
+            return 0;
+        }
+        const before: number = this.health;
+        this.health = Math.min(this.maxHealth, this.health + amount);
+        return this.health - before;
     }
 
     /** Spend up to `amount` Luck points from the pool; returns how many were spent. */
@@ -587,8 +616,9 @@ export class Actor extends GameObject {
     /** Configure RED combat-relevant stats and derive HP and Humanity. */
     public setCombatProfile(cfg: {
         ref?: number; dex?: number; body?: number; will?: number; emp?: number;
-        skill?: number; luck?: number; roleRank?: number;
+        skill?: number; luck?: number; roleRank?: number; firstAid?: number;
     }): void {
+        if (cfg.firstAid !== undefined) { this.skills.tech.firstAid = cfg.firstAid; }
         if (cfg.ref !== undefined) { this.stats.ref = cfg.ref; }
         if (cfg.dex !== undefined) { this.stats.dex = cfg.dex; }
         if (cfg.body !== undefined) { this.stats.bt = cfg.body; }

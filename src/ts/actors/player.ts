@@ -16,7 +16,8 @@ export class Player extends Actor {
         this.inventory.weapons.push(GetItem.weapon("Fists"));
         // A capable RED merc: good REF/DEX/BODY/WILL, trained combat skills, a
         // full Luck pool and a rank-6 Role Ability (Combat Awareness if a Solo).
-        this.setCombatProfile({ref: 7, dex: 6, body: 7, will: 6, emp: 8, skill: 4, luck: 7, roleRank: 6});
+        this.setCombatProfile({ref: 7, dex: 6, body: 7, will: 6, emp: 8, skill: 4, luck: 7, roleRank: 6, firstAid: 4});
+        this.traumaTeam = true; // carries a Trauma Team subscription
         // RED: everyone runs armour. Start in a Light Armor Jacket (SP ~ RED Light Armorjack).
         this.equipment.upper = GetItem.armor("Light Armor Jacket");
         this.equipment.headgear = GetItem.armor("Kevlar Helmet");
