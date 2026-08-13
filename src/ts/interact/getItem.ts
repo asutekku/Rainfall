@@ -18,11 +18,8 @@ const weapons = Equipment.weapons;
 
 export class GetItem {
     public static weapon(name?: string): Weapon {
-        if (name) {
-            return weapons.find((e) => e.name === name)!;
-        } else {
-            return Utils.pickRandom(weapons);
-        }
+        const found: Weapon = name ? weapons.find((e) => e.name === name)! : Utils.pickRandom(weapons);
+        return found.clone(); // per-owner instance (independent equipped/level state)
     }
 
     /**
@@ -34,15 +31,25 @@ export class GetItem {
         const street = weapons.filter((w) =>
             ["pistol", "smg", "melee", "shotgun"].indexOf(w.weaponClass) !== -1 &&
             w.damageType === "kinetic" && w.rarity <= 3);
-        return Utils.pickRandom(street);
+        return Utils.pickRandom(street).clone();
+    }
+
+    /**
+     * Returns a fresh Armor instance (a clone of the template). Armor ablates
+     * as it takes hits, so each wearer needs its own object — handing out the
+     * shared template would degrade it globally.
+     */
+    public static armor(name?: string): Armor {
+        const t: Armor = name ? armors.find((a) => a.name === name)! : Utils.pickRandom(armors);
+        return new Armor(t.bodyPart, t.name, t.set, t.level, t.stoppingPower, t.cost, t.description);
     }
 
     public static item() {
         const randomItem = Math.floor(Math.random() * 3);
         if (randomItem === 0) {
-            return Utils.pickRandom(armors);
+            return GetItem.armor();
         } else if (randomItem === 1) {
-            return Utils.pickRandom(weapons);
+            return Utils.pickRandom(weapons).clone();
         } else if (randomItem === 2) {
             return Utils.pickRandom(items);
         }

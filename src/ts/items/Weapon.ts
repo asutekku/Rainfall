@@ -75,6 +75,22 @@ export class Weapon extends Item {
         this.equipped = false;
     }
 
+    /**
+     * A fresh, independent copy. Weapons carry per-owner mutable state
+     * (`equipped`, `level`), so actors and loot drops each need their own
+     * instance rather than sharing the catalog template.
+     */
+    public clone(): Weapon {
+        return new Weapon({
+            weaponType: this.weaponType, weaponClass: this.weaponClass, manufacturer: this.manufacturer,
+            name: this.name, skill: this.skill, diceThrows: this.diceThrows, damage: this.damage,
+            ap: this.ap, damageType: this.damageType, accuracyBonus: this.accuracyBonus, shots: this.shots,
+            rateOfFire: this.rateOfFire, autofire: this.autofire, hands: this.hands, rarity: this.rarity,
+            concealment: this.concealment, reliability: this.reliability, quality: this.quality,
+            cost: this.cost, range: this.range, description: this.description,
+        });
+    }
+
     /** Mean damage of a single hit (Cyberpunk RED: each d6 averages 3.5). */
     public averageDamage(): number {
         if (this.damageType !== "kinetic" || this.diceThrows <= 0) {

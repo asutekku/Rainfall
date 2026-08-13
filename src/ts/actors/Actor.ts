@@ -45,10 +45,12 @@ export class Actor extends GameObject {
     public stats: {
         int: number;
         ref: number;
+        dex: number;   // Cyberpunk RED: melee/evasion stat
         tech: number;
         cl: number;
         att: number;
         lk: number;
+        will: number;  // Cyberpunk RED: HP and resolve
         ma: { ma: number; run: number; leap: number };
         bt: number;
         btm: number;
@@ -57,6 +59,11 @@ export class Actor extends GameObject {
         emp: number;
         lift: number;
     };
+    public luck: number;
+    public maxLuck: number;
+    public roleRank: number;
+    public mortallyWounded: boolean;
+    public deathSavePenalty: number;
     public lifepath: {
         style: {
             clothes: {
@@ -235,10 +242,12 @@ export class Actor extends GameObject {
         this.stats = {
             int: 1,
             ref: 1,
+            dex: 1,
             tech: 1,
             cl: 1,
             att: 1,
             lk: 1,
+            will: 1,
             ma: {
                 ma: 1,
                 run: 1, // this.stats.movementAllowance.stamina * 3,
@@ -251,6 +260,11 @@ export class Actor extends GameObject {
             sn: 1,
             lift: 1,
         };
+        this.luck = 1;
+        this.maxLuck = 1;
+        this.roleRank = 4;
+        this.mortallyWounded = false;
+        this.deathSavePenalty = 0;
         this.skills = {
             special: {
                 authority: 0,
@@ -415,31 +429,84 @@ export class Actor extends GameObject {
         this.health = this.maxHealth;
     }
 
+    /** Truly dead (a failed Death Save or an instant kill). */
     public isAlive(): boolean {
-        return (this.health > 0 && this.alive);
+        return this.alive;
     }
 
-    public receiveDamage(amount: number, ap: boolean = false): number {
-        const eq = this.equipment;
-        const headSP: number = eq.headgear ? eq.headgear.stoppingPower : 0;
-        const armsSP: number = eq.arms ? eq.arms.stoppingPower : 0;
-        const feetSP: number = eq.feet ? eq.feet.stoppingPower : 0;
-        const lowerSP: number = eq.lower ? eq.lower.stoppingPower : 0;
-        const upperSP: number = eq.upper ? eq.upper.stoppingPower : 0;
-        const SP: number[] = [headSP, armsSP, feetSP, lowerSP, upperSP];
-        // Cyberpunk RED: armour-piercing rounds halve the target's stopping power.
-        let sp: number = SP.reduce((acc: number, c: number) => acc + c);
-        if (ap) {
-            sp = Math.floor(sp / 2);
-        }
-        // Floor at 0 so armor that exceeds the incoming hit blocks it entirely
-        // instead of subtracting a negative (which would heal the target).
-        const damage = Math.max(0, amount - sp);
-        if (this.health <= damage) {
-            this.health = 0;
+    /** Can still take combat actions: alive, conscious, and not Mortally Wounded. */
+    public canFight(): boolean {
+        return this.alive && !this.mortallyWounded && this.health > 0;
+    }
+
+    /** RED: at or below half HP the character is Seriously Wounded (-2 to Actions). */
+    public isSeriouslyWounded(): boolean {
+        return this.health > 0 && this.health <= this.maxHealth / 2;
+    }
+
+    /** RED: -2 to all Actions while Seriously Wounded. */
+    public woundPenalty(): number {
+        return this.isSeriouslyWounded() ? -2 : 0;
+    }
+
+    /** RED HP = 10 + 5 x ceil((BODY + WILL) / 2). Resets wound state. */
+    public recalculateHealth(): void {
+        this.maxHealth = 10 + 5 * Math.ceil((this.stats.bt + this.stats.will) / 2);
+        this.health = this.maxHealth;
+        this.mortallyWounded = false;
+        this.deathSavePenalty = 0;
+    }
+
+    /**
+     * RED Death Save, made at the start of a Mortally Wounded character's turn.
+     * Roll 1d10: a natural 10 always fails, otherwise survive if the roll (plus
+     * the cumulative penalty from previous rounds) is under BODY. A failure is
+     * permanent death.
+     */
+    public deathSave(): boolean {
+        const roll: number = Math.floor(Math.random() * 10) + 1;
+        const survived: boolean = roll !== 10 && (roll + this.deathSavePenalty) < this.stats.bt;
+        this.deathSavePenalty += 1;
+        if (!survived) {
             this.alive = false;
-        } else {
+        }
+        return survived;
+    }
+
+    /** Spend up to `amount` Luck points from the pool; returns how many were spent. */
+    public spendLuck(amount: number): number {
+        const spent: number = Math.max(0, Math.min(amount, this.luck));
+        this.luck -= spent;
+        return spent;
+    }
+
+    /** RED Luck refreshes fully at the start of a new encounter/session. */
+    public refreshLuck(): void {
+        this.luck = this.maxLuck;
+    }
+
+    public receiveDamage(amount: number, ap: boolean = false, aimedAtHead: boolean = false): number {
+        // RED uses body armour SP for normal hits and head armour SP for aimed
+        // head shots; limbs are not separately armoured in the core rules.
+        const piece: Armor | null = aimedAtHead ? this.equipment.headgear : this.equipment.upper;
+        let sp: number = piece ? piece.stoppingPower : 0;
+        if (ap) {
+            sp = Math.floor(sp / 2); // armour-piercing halves SP
+        }
+        let damage: number = Math.max(0, amount - sp);
+        if (aimedAtHead) {
+            damage *= 2; // head shots double the damage that gets through
+        }
+        if (damage > 0) {
+            if (piece) {
+                // RED ablation: armour loses 1 SP whenever a hit penetrates it.
+                piece.stoppingPower = Math.max(0, piece.stoppingPower - 1);
+            }
             this.health -= damage;
+            if (this.health <= 0) {
+                this.health = 0;
+                this.mortallyWounded = true;
+            }
         }
         return damage;
     }
@@ -459,22 +526,67 @@ export class Actor extends GameObject {
         }
     }
 
-    /** RED attack modifier: STAT (REF) + weapon skill + weapon accuracy. */
+    /**
+     * RED attack modifier: DEX (melee) or REF (ranged) + weapon skill + weapon
+     * accuracy, minus the Seriously Wounded penalty, plus a Solo's Precision
+     * Attack bonus.
+     */
     public attackBonus(weapon: Weapon): number {
-        return this.stats.ref + this.skillFor(weapon) + weapon.accuracyBonus;
+        const stat: number = weapon.weaponClass === "melee" ? this.stats.dex : this.stats.ref;
+        return stat + this.skillFor(weapon) + weapon.accuracyBonus
+            + this.woundPenalty() + this.precisionAttackBonus();
     }
 
-    /** RED melee defence: REF + Evasion (Dodge). */
+    /** RED melee/ranged defence: DEX + Evasion (Dodge), minus the wound penalty. */
     public evasion(): number {
-        return this.stats.ref + this.skills.ref.dodge;
+        return this.stats.dex + this.skills.ref.dodge + this.woundPenalty();
     }
 
-    /** Sets a base REF and a shared level across the combat skills (playability tuning). */
-    public setBaseCombatStats(ref: number, skill: number): void {
-        this.stats.ref = ref;
-        const r = this.skills.ref;
-        r.handgun = r.rifle = r.submachinegun = r.melee = r.brawling =
-            r.archery = r.heavyWeapons = r.martialKarate = r.athletics = skill;
+    /** RED Initiative: 1d10 + REF (+ a Solo's Initiative Reaction). */
+    public rollInitiative(): number {
+        return Math.floor(Math.random() * 10) + 1 + this.stats.ref + this.initiativeBonus();
+    }
+
+    public isSolo(): boolean {
+        return this.role.name === "Solo";
+    }
+
+    /**
+     * Solo "Combat Awareness" Role Ability (RED). The full ability is a pool the
+     * player divides each round; here a Solo auto-allocates its rank between
+     * Precision Attack (+1 to hit per 3 points) and Initiative Reaction (+1 per
+     * point). Non-Solo role abilities are non-combat and handled elsewhere.
+     */
+    public precisionAttackBonus(): number {
+        return this.isSolo() ? Math.floor(this.roleRank / 3) : 0;
+    }
+
+    public initiativeBonus(): number {
+        return this.isSolo() ? Math.ceil(this.roleRank / 2) : 0;
+    }
+
+    /** RED Combat Awareness "Spot Weakness": +1 damage on a Solo's first hit. */
+    public damageBonus(): number {
+        return this.isSolo() ? 1 : 0;
+    }
+
+    /** Configure RED combat-relevant stats and derive HP. */
+    public setCombatProfile(cfg: {
+        ref?: number; dex?: number; body?: number; will?: number;
+        skill?: number; luck?: number; roleRank?: number;
+    }): void {
+        if (cfg.ref !== undefined) { this.stats.ref = cfg.ref; }
+        if (cfg.dex !== undefined) { this.stats.dex = cfg.dex; }
+        if (cfg.body !== undefined) { this.stats.bt = cfg.body; }
+        if (cfg.will !== undefined) { this.stats.will = cfg.will; }
+        if (cfg.roleRank !== undefined) { this.roleRank = cfg.roleRank; }
+        if (cfg.luck !== undefined) { this.maxLuck = cfg.luck; this.luck = cfg.luck; }
+        if (cfg.skill !== undefined) {
+            const r = this.skills.ref;
+            r.handgun = r.rifle = r.submachinegun = r.melee = r.brawling =
+                r.archery = r.heavyWeapons = r.martialKarate = r.athletics = cfg.skill;
+        }
+        this.recalculateHealth();
     }
 
     /*draw(context) {

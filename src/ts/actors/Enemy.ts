@@ -14,13 +14,11 @@ export class Enemy extends Actor {
         this.item = GetItem.item();
         this.role = new Role();
         this.weapon = GetItem.streetWeapon();
-        this.setBaseCombatStats(5, 2);
+        // RED street-thug profile; HP is derived from BODY/WILL in setCombatProfile.
+        this.setCombatProfile({ref: 5, dex: 5, body: 6, will: 5, skill: 2, luck: 3, roleRank: 3});
+        this.equipment.upper = GetItem.armor("Kevlar Vest"); // street-thug body armour (SP 6)
         this.level = Math.floor(Statistics.level + Utils.range(1, 3));
         this.currency = Math.floor(Utils.range(20, 50));
-        this.health = Utils.range(
-            Math.floor(Statistics.level ^ (2 / 0.09)) * 0.9,
-            Math.floor(Statistics.level ^ (2 / 0.09)) * 1.1,
-        );
         this.experience = Math.floor(Statistics.level ^ (2 / 0.4));
     }
 }

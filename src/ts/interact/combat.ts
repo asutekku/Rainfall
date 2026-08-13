@@ -6,65 +6,105 @@ import {Messages} from "./messages";
 import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./messageSchema";
 import {Skill} from "../items/Skill";
 import {rangeDV} from "./rangeTable";
+import {Check} from "./check";
 
 const Log = en_US.Log;
 
 export class Combat {
     private static messages: any = [];
 
+    /**
+     * One exchange between two combatants, resolved by Cyberpunk RED order:
+     * Initiative decides who acts first; a Mortally Wounded combatant makes a
+     * Death Save instead of acting; otherwise it attacks its foe.
+     */
     public static basicAction(actor: Actor, target: Actor, skill: Skill): any {
         this.messages = [];
-        if (actor.isAlive()) {
-            // Actor attacks the target
-            this.attack(actor, target);
-            //Checks if the target is alive to initiate target's turn
-            if (target.isAlive()) {
-                //Target attacks the attacker
-                this.attack(target, actor);
-            }
-        } else {
-            // Inform the player that the character is dead
-            // Player can't do anything with a dead character
-            this.messages.unshift(new MessageStr('That character is dead.'));
+        if (!actor.canFight() && !actor.mortallyWounded) {
+            this.messages.unshift(new MessageStr('That character is out of the fight.'));
+            return this.messages.flat().reverse();
         }
-        // Returns messages to the react component
+        const order: Actor[] = actor.rollInitiative() >= target.rollInitiative()
+            ? [actor, target] : [target, actor];
+        for (const combatant of order) {
+            const foe: Actor = combatant === actor ? target : actor;
+            if (combatant.mortallyWounded) {
+                this.resolveDeathSave(combatant);
+                continue;
+            }
+            if (combatant.canFight() && foe.canFight()) {
+                this.attack(combatant, foe);
+            }
+        }
         return this.messages.flat().reverse();
     }
 
     public static attack(actor: Actor, target: Actor): any {
+        const weapon = actor.weapon;
         const distance: number = Utils.distance(actor.position, target.position);
-        const hitSuccess: boolean = this.didAttackHit(actor, target, distance);
-        const targetOldHP: number = target.health;
-        const weaponDamage: number = actor.weapon.getDamage();
-
-        if (hitSuccess) {
-            const damageCaused: number = target.receiveDamage(weaponDamage, actor.weapon.ap);
-            const combatMessage = Messages.getCombatMessage(actor, target, targetOldHP, damageCaused);
-            this.messages.push(combatMessage);
-            if (!target.isAlive()) {
-                actor.kills += 1;
-                actor.experience += target.experience;
-                if (actor.experience >= actor.maxExperience) {
-                    Combat.gainLevel(actor, target);
-                }
-                const deathMessage = new DeathMessage(target, actor);
-                this.messages.push(deathMessage);
-            }
-        } else {
-            const messageMiss = new MessageStr('MISS!');
-            this.messages.push(messageMiss);
+        if (weapon.autofire && weapon.weaponClass !== "melee") {
+            this.autofireAttack(actor, target, distance);
+            return;
         }
+        const targetOldHP: number = target.health;
+        if (!this.didAttackHit(actor, target, distance)) {
+            this.messages.push(new MessageStr('MISS!'));
+            return;
+        }
+        let damage: number = weapon.getDamage();
+        if (damage > 0) {
+            damage += actor.damageBonus(); // Solo "Spot Weakness"
+        }
+        const dealt: number = target.receiveDamage(damage, weapon.ap);
+        this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
+        this.registerIfDefeated(actor, target);
+    }
+
+    /**
+     * RED autofire: a single Autofire check; on a hit, damage is 2d6 multiplied
+     * by the amount the check beat the DV, capped by the weapon's autofire
+     * rating (x3 for SMGs, x4 for assault rifles). Both dice reading 6 is a
+     * Critical Injury (+5 damage).
+     */
+    private static autofireAttack(actor: Actor, target: Actor, distance: number): void {
+        const dv: number | null = rangeDV(actor.weapon.weaponClass, distance);
+        if (dv === null) {
+            this.messages.push(new MessageStr('OUT OF RANGE'));
+            return;
+        }
+        const check = Check.resolve(actor, actor.attackBonus(actor.weapon), dv);
+        if (!check.success) {
+            this.messages.push(new MessageStr('MISS!'));
+            return;
+        }
+        const maxMultiplier: number = actor.weapon.weaponClass === "rifle" ? 4 : 3;
+        const multiplier: number = Math.max(1, Math.min(check.margin, maxMultiplier));
+        const d1: number = Math.floor(Math.random() * 6) + 1;
+        const d2: number = Math.floor(Math.random() * 6) + 1;
+        let damage: number = (d1 + d2) * multiplier + actor.damageBonus();
+        if (d1 === 6 && d2 === 6) {
+            damage += 5; // Critical Injury
+        }
+        const targetOldHP: number = target.health;
+        const dealt: number = target.receiveDamage(damage, actor.weapon.ap);
+        this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
+        this.registerIfDefeated(actor, target);
+    }
+
+    /**
+     * RED Suppressive Fire: spend an action and 10 rounds; every target rolls
+     * WILL + Concentration against the shooter's REF + Autofire. Failures are
+     * pinned (must take cover). Returns the pinned targets. Provided for the
+     * action system; the 1v1 auto-battle doesn't use it (needs positioning).
+     */
+    public static suppressiveFire(actor: Actor, targets: Actor[]): Actor[] {
+        const atkMod: number = actor.stats.ref + actor.skillFor(actor.weapon);
+        return targets.filter((t) => Check.opposed(actor, atkMod, t.stats.will).success);
     }
 
     public static dodgeAttack(actor: Actor, target: Actor): IDefaultMessage {
         return new DodgeMessage(actor, target);
-        //Movement.moveTo(actor, target.position, actor.stats.ma.ma);
     }
-
-    // static attack(actor: Actor, target: Actor, multiplier: number): void {
-    //     const def = target.armor != 0 ? 1 - target.armor / 100 : 1;
-    //     target.health -= actor.weapon.getDamage() * def * multiplier;
-    // }
 
     // Melee only!
     public static parryAttack(actor: Actor, target: Actor) {
@@ -95,19 +135,24 @@ export class Combat {
         GetItem.updateCurrency(target.currency, actor);
     }
 
-    /**
-     * Cyberpunk RED d10: on a natural 10 roll again and add; on a natural 1
-     * roll again and subtract.
-     */
-    private static critRoll(): number {
-        const first: number = Math.floor(Math.random() * 10) + 1;
-        if (first === 10) {
-            return 10 + (Math.floor(Math.random() * 10) + 1);
+    /** Award the kill/XP/loot when an attack takes the target out of the fight. */
+    private static registerIfDefeated(actor: Actor, target: Actor): void {
+        if (!target.canFight()) {
+            actor.kills += 1;
+            actor.experience += target.experience;
+            if (actor.experience >= actor.maxExperience) {
+                Combat.gainLevel(actor, target);
+            }
+            this.messages.push(new DeathMessage(target, actor));
         }
-        if (first === 1) {
-            return 1 - (Math.floor(Math.random() * 10) + 1);
+    }
+
+    private static resolveDeathSave(actor: Actor): void {
+        if (actor.deathSave()) {
+            this.messages.push(new MessageStr(`${actor.name} clings to life.`));
+        } else {
+            this.messages.push(new DeathMessage(actor, actor));
         }
-        return first;
     }
 
     /**
@@ -117,14 +162,14 @@ export class Combat {
      */
     private static didAttackHit(actor: Actor, target: Actor, distance: number): boolean {
         const weapon = actor.weapon;
-        const attack: number = this.critRoll() + actor.attackBonus(weapon);
+        const atkMod: number = actor.attackBonus(weapon);
         if (weapon.weaponClass === "melee") {
-            return attack >= this.critRoll() + target.evasion();
+            return Check.opposed(actor, atkMod, target.evasion()).success;
         }
         const dv: number | null = rangeDV(weapon.weaponClass, distance);
         if (dv === null) {
             return false; // target beyond the weapon's effective range
         }
-        return attack >= dv;
+        return Check.resolve(actor, atkMod, dv).success;
     }
 }
