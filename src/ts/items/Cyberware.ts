@@ -6,7 +6,7 @@ export interface CyberwareEffects {
     sp?: number;               // subdermal/skinweave body armour (SP)
     initiative?: number;       // reflex boosters (Sandevistan, Kerenzikov)
     attackBonus?: number;      // targeting scope / smartgun link
-    meleeDamageDice?: number;  // cyberlimb melee weapons (Wolvers, Rippers)
+    grantsWeapon?: string;     // cyberweapons (Wolvers, Rippers): a real equippable weapon
     body?: number;             // grafted muscle & bone lace (raises BODY -> HP)
     ignoreWoundPenalty?: boolean; // Pain Editor
 }

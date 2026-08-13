@@ -216,6 +216,9 @@ export class Actor extends GameObject {
     public fearPenalty: number;
     public housing: string;
     public vehicle: Vehicle | null;
+    public combatAwareness: { precision: number; initiative: number; spotWeakness: number; deflection: number };
+    public firstHitDone: boolean;
+    public deflectionUsed: boolean;
 
     constructor() {
         const role = new Role();
@@ -406,6 +409,9 @@ export class Actor extends GameObject {
         this.fearPenalty = 0;
         this.housing = "Streets";
         this.vehicle = null;
+        this.combatAwareness = {precision: 0, initiative: 0, spotWeakness: 0, deflection: 0};
+        this.firstHitDone = false;
+        this.deflectionUsed = false;
         this.lifepath = {
             style: {
                 clothes: {
@@ -550,9 +556,20 @@ export class Actor extends GameObject {
         if (aimedAtHead) {
             damage *= 2; // head shots double the damage that gets through
         }
+        // Combat Awareness "Damage Deflection": block the first pierced damage of the round.
+        if (damage > 0 && !this.deflectionUsed && this.deflection() > 0) {
+            damage = Math.max(0, damage - this.deflection());
+            this.deflectionUsed = true;
+        }
         if (damage > 0) {
-            if (piece) {
-                // RED ablation: armour loses 1 SP whenever a hit penetrates it.
+            // RED ablation: whichever armour actually stopped part of the hit loses 1 SP.
+            const usingSubdermal: boolean = !aimedAtHead && this.cyberSP() > wornSP;
+            if (usingSubdermal) {
+                const sub = this.subdermalPiece();
+                if (sub && sub.effects.sp) {
+                    sub.effects.sp = Math.max(0, sub.effects.sp - 1);
+                }
+            } else if (piece) {
                 piece.stoppingPower = Math.max(0, piece.stoppingPower - 1);
             }
             this.health -= damage;
@@ -562,6 +579,17 @@ export class Actor extends GameObject {
             }
         }
         return damage;
+    }
+
+    /** The installed cyberware providing the most subdermal SP, if any. */
+    private subdermalPiece(): Cyberware | null {
+        let best: Cyberware | null = null;
+        let bestSP = 0;
+        for (const c of this.cybernetics) {
+            const cSP = c.effects.sp || 0;
+            if (cSP > bestSP) { bestSP = cSP; best = c; }
+        }
+        return best;
     }
 
     /** RED weapon-skill level for the given weapon (all combat skills share a base). */
@@ -617,22 +645,47 @@ export class Actor extends GameObject {
     }
 
     /**
-     * Solo "Combat Awareness" Role Ability (RED). The full ability is a pool the
-     * player divides each round; here a Solo auto-allocates its rank between
-     * Precision Attack (+1 to hit per 3 points) and Initiative Reaction (+1 per
-     * point). Non-Solo role abilities are non-combat and handled elsewhere.
+     * Solo "Combat Awareness" Role Ability (RED): a pool of `roleRank` points the
+     * Solo divides each round among sub-abilities. Set it with setCombatAwareness()
+     * (a UI/AI choice); allocateCombatAwareness() fills a sensible default.
      */
+    public allocateCombatAwareness(): void {
+        const r = this.roleRank;
+        this.combatAwareness = {
+            precision: Math.ceil(r / 2),                 // +1 to hit per 3 points
+            initiative: Math.floor(r / 3),               // +1 Initiative per point
+            spotWeakness: r - Math.ceil(r / 2) - Math.floor(r / 3), // +1 dmg first hit / point
+            deflection: 0,                               // block 1 pierced dmg per 2 points
+        };
+    }
+
+    /** Manually divide the Combat Awareness pool (must total <= roleRank). */
+    public setCombatAwareness(a: { precision: number; initiative: number; spotWeakness: number; deflection: number }): boolean {
+        if (a.precision + a.initiative + a.spotWeakness + a.deflection > this.roleRank) {
+            return false;
+        }
+        this.combatAwareness = a;
+        return true;
+    }
+
+    /** Combat Awareness "Precision Attack": +1 to hit per 3 allocated points. */
     public precisionAttackBonus(): number {
-        return this.isSolo() ? Math.floor(this.roleRank / 3) : 0;
+        return this.isSolo() ? Math.floor(this.combatAwareness.precision / 3) : 0;
     }
 
+    /** Combat Awareness "Initiative Reaction": +1 Initiative per allocated point. */
     public initiativeBonus(): number {
-        return this.isSolo() ? Math.ceil(this.roleRank / 2) : 0;
+        return this.isSolo() ? this.combatAwareness.initiative : 0;
     }
 
-    /** RED Combat Awareness "Spot Weakness": +1 damage on a Solo's first hit. */
-    public damageBonus(): number {
-        return this.isSolo() ? 1 : 0;
+    /** Combat Awareness "Spot Weakness": +1 damage per point on the first hit of the round. */
+    public spotWeaknessBonus(): number {
+        return this.isSolo() ? this.combatAwareness.spotWeakness : 0;
+    }
+
+    /** Combat Awareness "Damage Deflection": block 1 pierced damage per 2 points, once per round. */
+    public deflection(): number {
+        return this.isSolo() ? Math.floor(this.combatAwareness.deflection / 2) : 0;
     }
 
     /** Configure RED combat-relevant stats and derive HP and Humanity. */
@@ -651,7 +704,7 @@ export class Actor extends GameObject {
             this.humanity = this.maxHumanity;
             this.stats.hm = this.humanity;
         }
-        if (cfg.roleRank !== undefined) { this.roleRank = cfg.roleRank; }
+        if (cfg.roleRank !== undefined) { this.roleRank = cfg.roleRank; this.allocateCombatAwareness(); }
         if (cfg.luck !== undefined) { this.maxLuck = cfg.luck; this.luck = cfg.luck; }
         if (cfg.skill !== undefined) {
             const r = this.skills.ref;
@@ -678,6 +731,10 @@ export class Actor extends GameObject {
             this.stats.bt += cw.effects.body;
             this.recalculateHealth();
         }
+        if (cw.effects.grantsWeapon) {
+            // Cyberweapons (Wolvers, Rippers, ...) are real weapons the wielder can equip.
+            this.inventory.weapons.push(GetItem.weapon(cw.effects.grantsWeapon));
+        }
     }
 
     public isCyberpsycho(): boolean {
@@ -695,10 +752,6 @@ export class Actor extends GameObject {
 
     public cyberAttackBonus(): number {
         return this.cybernetics.reduce((n, c) => n + (c.effects.attackBonus || 0), 0);
-    }
-
-    public cyberMeleeDice(): number {
-        return this.cybernetics.reduce((n, c) => n + (c.effects.meleeDamageDice || 0), 0);
     }
 
     public hasPainEditor(): boolean {

@@ -8788,6 +8788,29 @@ const weapons: WeaponConfig[] = [
     "cost": 0,
     "range": 2,
     "description": "So many eyes have been gouged out with this."
+  },
+  {
+    "weaponType": "Very Heavy Melee Weapon",
+    "weaponClass": "melee",
+    "manufacturer": "",
+    "name": "Wolvers",
+    "skill": "Melee Weapon",
+    "diceThrows": 3,
+    "damage": 0,
+    "ap": false,
+    "damageType": "kinetic",
+    "accuracyBonus": 0,
+    "shots": 0,
+    "rateOfFire": 2,
+    "autofire": false,
+    "hands": 1,
+    "rarity": 1,
+    "concealment": true,
+    "reliability": 2,
+    "quality": "Standard",
+    "cost": 500,
+    "range": 2,
+    "description": "Retractable monofilament claws (cyberware): 3d6 in close combat."
   }
 ];
 

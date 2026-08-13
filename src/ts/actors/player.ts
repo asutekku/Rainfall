@@ -26,6 +26,7 @@ export class Player extends Actor {
         this.installCyberware(GetItem.cyberware("Cybereye w/ Targeting Scope"));
         this.installCyberware(GetItem.cyberware("Sandevistan"));
         this.installCyberware(GetItem.cyberware("Subdermal Armor"));
+        this.installCyberware(GetItem.cyberware("Wolvers")); // grants a 3d6 melee cyberweapon
         // A basic cyberdeck loadout for jacking into the NET.
         this.cyberdeck.push(GetItem.program("Zap"));
         this.cyberdeck.push(GetItem.program("Sword"));

@@ -24,6 +24,9 @@ export class Combat {
             this.messages.unshift(new MessageStr('That character is out of the fight.'));
             return this.messages.flat().reverse();
         }
+        // Reset per-round Combat Awareness trackers (first hit, deflection).
+        actor.firstHitDone = false; actor.deflectionUsed = false;
+        target.firstHitDone = false; target.deflectionUsed = false;
         const order: Actor[] = actor.rollInitiative() >= target.rollInitiative()
             ? [actor, target] : [target, actor];
         for (const combatant of order) {
@@ -53,17 +56,20 @@ export class Combat {
         }
         let damage: number = weapon.getDamage();
         if (damage > 0) {
-            damage += actor.damageBonus(); // Solo "Spot Weakness"
-            if (weapon.weaponClass === "melee") {
-                // Cyberlimb melee weapons (Wolvers etc.) add extra d6.
-                for (let i = 0; i < actor.cyberMeleeDice(); i++) {
-                    damage += Math.floor(Math.random() * 6) + 1;
-                }
-            }
+            damage += this.spotWeakness(actor); // Solo "Spot Weakness" (first hit only)
         }
         const dealt: number = target.receiveDamage(damage, weapon.ap);
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
         this.registerIfDefeated(actor, target);
+    }
+
+    /** RED Combat Awareness "Spot Weakness": bonus damage on the round's first hit. */
+    private static spotWeakness(actor: Actor): number {
+        if (actor.firstHitDone) {
+            return 0;
+        }
+        actor.firstHitDone = true;
+        return actor.spotWeaknessBonus();
     }
 
     /**
@@ -87,7 +93,7 @@ export class Combat {
         const multiplier: number = Math.max(1, Math.min(check.margin, maxMultiplier));
         const d1: number = Math.floor(Math.random() * 6) + 1;
         const d2: number = Math.floor(Math.random() * 6) + 1;
-        let damage: number = (d1 + d2) * multiplier + actor.damageBonus();
+        let damage: number = (d1 + d2) * multiplier + this.spotWeakness(actor);
         if (d1 === 6 && d2 === 6) {
             damage += 5; // Critical Injury
         }

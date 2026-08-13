@@ -49,8 +49,8 @@ const cyberware: CyberwareConfig[] = [
         slot: "cyberarm",
         humanityLoss: 3,
         cost: 500,
-        description: "Retractable monofilament claws mounted in a cyberarm (adds 3d6 to melee).",
-        effects: {meleeDamageDice: 3},
+        description: "Retractable monofilament claws mounted in a cyberarm (a 3d6 melee weapon).",
+        effects: {grantsWeapon: "Wolvers"},
     },
     {
         name: "Grafted Muscle and Bone Lace",

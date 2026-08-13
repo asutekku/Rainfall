@@ -94,6 +94,9 @@ out.append(mk('Fists', 'Very Heavy Melee Weapon', 'melee', 'Brawling', 1, 0, 2, 
               "Ready to beat the shit out of your enemies? Of course you are."))
 out.append(mk('Spoon', 'Light Melee Weapon', 'melee', 'Melee Weapon', 1, 0, 2, 0,
               "So many eyes have been gouged out with this."))
+# Cyberweapon granted by the Wolvers cyberware.
+out.append(mk('Wolvers', 'Very Heavy Melee Weapon', 'melee', 'Melee Weapon', 3, 0, 2, 500,
+              "Retractable monofilament claws (cyberware): 3d6 in close combat."))
 
 # sanity: no NaN-producing fields
 for w in out:
