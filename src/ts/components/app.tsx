@@ -10,6 +10,7 @@ import {Sidebar} from "./sidebar";
 import {Hud} from "./hud";
 import {ActorController} from "../actors/actorController";
 import {Combat} from "../interact/combat";
+import {Battlefield} from "../interact/battlefield";
 import {Utils} from "../utils/utils";
 
 
@@ -30,12 +31,15 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     constructor(props: any) {
         super(props);
+        const party = [new Player(), new Player()];
+        const enemies = [new Goon(), new Goon()];
+        Battlefield.deploy(party, enemies);
         this.state = {
             activeMainPanel: "Character",
             activeChar: undefined,
             activeEnemy: undefined,
-            party: [new Player(), new Player()],
-            currentEnemies: [new Goon(), new Goon()],
+            party,
+            currentEnemies: enemies,
             messages: [],
             auto: false,
         };
@@ -75,9 +79,10 @@ export class App extends React.Component<{}, InterfaceAppState> {
         // Removes dead enemies from the array
         enemies = enemies.filter((e: Actor) => e.health > 0);
 
-        // If there are no Goons alive spawn one to three new goons
+        // If there are no Goons alive spawn one to three new goons, deployed on the far line
         if (enemies.length <= 0) {
             enemies = ActorController.getGoons(Utils.range(1, 3));
+            Battlefield.deployEnemies(enemies);
         }
 
         // Joins all the messages together to form a single array
@@ -123,9 +128,12 @@ export class App extends React.Component<{}, InterfaceAppState> {
     /** Fresh run: new party, new hostiles, cleared feed. */
     private restart = () => {
         this.stopAuto();
+        const party = [new Player(), new Player()];
+        const enemies = [new Goon(), new Goon()];
+        Battlefield.deploy(party, enemies);
         this.setState({
-            party: [new Player(), new Player()],
-            currentEnemies: [new Goon(), new Goon()],
+            party,
+            currentEnemies: enemies,
             activeChar: undefined,
             activeEnemy: undefined,
             messages: [{msg: "— run restarted —"} as any, ...this.state.messages].slice(0, this.logLength),

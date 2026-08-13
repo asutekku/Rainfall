@@ -121,6 +121,8 @@ nav button.act-on { color:var(--good); border-left-color:var(--good); background
 .es .bar { flex:1; height:8px; background:#0b0b10; border:1px solid var(--line); overflow:hidden; }
 .es .bar i { display:block; height:100%; }
 .es .bar.hp i { background:linear-gradient(90deg,#a3382b,var(--crit)); }
+.es .rng { color:var(--cyanDim); white-space:nowrap; font-variant-numeric:tabular-nums; }
+.es .rng.oor { color:var(--crit); }
 .es .sp { color:var(--dim); white-space:nowrap; }
 
 /* stage action bar (combat only) */

@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {Battlefield} from "../../interact/battlefield";
 
 export interface Floater { id: number; text: string; kind: string; }
 
@@ -13,41 +14,32 @@ export interface IsoMapProps {
     floaters?: Floater[];      // shown over the active enemy token (full map only)
 }
 
-interface Unit { actor: Actor; kind: string; c: number; r: number; }
+interface Unit { actor: Actor; kind: string; }
 
 /**
- * Isometric tactical arena. Units are placed on a board (col,row) and projected
- * to iso screen space. Board cells are display-only for now — swap the layout()
- * assignment for `actor.position` once real map distance/positioning lands.
+ * Isometric tactical arena. Units render at their real battlefield position
+ * (metres), projected to iso screen space by Battlefield.project — the same
+ * coordinates the RED range maths uses, so the picture matches the dice.
  */
 export class IsoMap extends React.Component<IsoMapProps, {}> {
 
     /** Near edge = squad, far edge = hostiles. */
     private layout(): Unit[] {
         const out: Unit[] = [];
-        this.props.party.forEach((a, i) => {
-            out.push({actor: a, kind: i === 0 ? "you" : "ally", c: 2 + i * 2, r: 6 - (i % 2)});
-        });
-        this.props.enemies.forEach((a, i) => {
-            out.push({actor: a, kind: "foe", c: 3 + (i % 5), r: 1 + (i % 2)});
-        });
+        this.props.party.forEach((a, i) => out.push({actor: a, kind: i === 0 ? "you" : "ally"}));
+        this.props.enemies.forEach((a) => out.push({actor: a, kind: "foe"}));
         return out;
     }
 
-    /** Board (col,row) -> percentage position inside the arena, iso-projected. */
-    private proj(c: number, r: number): { x: number; y: number } {
-        return {x: 50 + (c - r) * 6, y: 26 + (c + r) * 5};
-    }
-
     private token(u: Unit) {
-        const p = this.proj(u.c, u.r);
+        const p = Battlefield.project(u.actor.position);
         const a = u.actor;
         const foe = u.kind === "foe";
         const active = foe ? a.name === this.props.activeEnemy : a.name === this.props.activeAlly;
         const hpPct = Math.max(0, Math.min(100, (a.health / Math.max(1, a.maxHealth)) * 100));
         const glyph = foe ? "✦" : u.kind === "you" ? "◈" : "◇";
         return (
-            <button key={u.kind + a.name + u.c + u.r}
+            <button key={u.kind + a.name}
                     className={"u " + u.kind + (active ? " on" : "") + (a.canFight() ? "" : " down")}
                     style={{left: p.x + "%", top: p.y + "%"}}
                     onClick={() => this.props.onSelect && this.props.onSelect(a)}>
@@ -64,7 +56,7 @@ export class IsoMap extends React.Component<IsoMapProps, {}> {
         const foe = this.layout().filter((u) => u.kind === "foe")
             .find((u) => u.actor.name === this.props.activeEnemy);
         if (!foe) { return null; }
-        const p = this.proj(foe.c, foe.r);
+        const p = Battlefield.project(foe.actor.position);
         return (
             <div className={"isoFloat"} style={{left: p.x + "%", top: p.y + "%"}}>
                 {list.map((f) => <span key={f.id} className={"floater floater-" + f.kind}>{f.text}</span>)}
