@@ -45,7 +45,8 @@ export class Stage extends React.Component<StageProps, StageState> {
     private attack = () => {
         const enemy = this.props.enemy;
         const before = enemy.health;
-        const msgs = Combat.basicAction(this.props.actor, enemy, null as any);
+        // Manual: the selected fighter attacks; squadmates and enemies play the AI round.
+        const msgs = Combat.round(this.props.party, this.props.enemies, this.props.actor, {target: enemy});
         const dealt = Math.round(before - enemy.health);
         this.addFloater(dealt > 0 ? "-" + dealt : "MISS", dealt > 0 ? (dealt >= 20 ? "dmg-big" : "dmg") : "miss");
         this.setState({note: !enemy.canFight() ? `${enemy.name} is down.` : ""});

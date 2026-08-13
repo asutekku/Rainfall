@@ -116,12 +116,13 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     private autoTick = () => {
-        const player = this.getCurrentActor();
-        const enemy = this.getCurrentEnemy();
-        if (!player || !enemy) { return; }
-        // A downed player auto-stabilises the run instead of trading blows.
-        if (!player.canFight() && !player.mortallyWounded) { this.stopAuto(); return; }
-        const msgs = Combat.basicAction(player, enemy, null as any);
+        const party = this.state.party;
+        const enemies = this.state.currentEnemies;
+        if (!party.length || !enemies.length) { return; }
+        // Whole squad down? Nothing left to auto-play.
+        if (party.every((p) => !p.canFight())) { this.stopAuto(); return; }
+        // Full smart round: both sides move + act via the tactical AI.
+        const msgs = Combat.autoRound(party, enemies);
         this.combatController(msgs);
     };
 

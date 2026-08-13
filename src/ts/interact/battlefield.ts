@@ -18,9 +18,20 @@ const Y_MAX = 44;
 const SQUAD_Y = 5;   // near line
 const ENEMY_Y = 30;  // far line (staggered per unit)
 
+const COVER_RADIUS = 3;  // metres: how close you must be to a cover point to benefit
+const COVER_DV = 4;      // extra DV to hit a target that is behind cover
+
 const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
+const dist2 = (ax: number, ay: number, bx: number, by: number): number => Math.hypot(ax - bx, ay - by);
+
+export interface Point { x: number; y: number; }
 
 export class Battlefield {
+
+    /** Mid-field cover (crates, pillars). Advancing to one both closes range and shields you. */
+    public static readonly COVER: Point[] = [
+        {x: -8, y: 16}, {x: 7, y: 18}, {x: -2, y: 21}, {x: 13, y: 14}, {x: -15, y: 20},
+    ];
 
     /** Open a fresh engagement: squad near, hostiles far. */
     public static deploy(party: Actor[], enemies: Actor[]): void {
@@ -52,6 +63,49 @@ export class Battlefield {
         const c = 1.5 + nx * 5;
         const r = 1 + (1 - ny) * 5.5;
         return {x: 50 + (c - r) * 6, y: 26 + (c + r) * 5};
+    }
+
+    /** Distance in metres between two raw points. */
+    public static gap(a: Point, b: Point): number {
+        return dist2(a.x, a.y, b.x, b.y);
+    }
+
+    /**
+     * Extra DV to hit a target at `targetPos` from `fromPos`: partial cover when
+     * a cover point sits close to the target and between it and the attacker.
+     */
+    public static coverPenaltyAt(targetPos: Point, fromPos: Point): number {
+        for (const c of this.COVER) {
+            if (dist2(c.x, c.y, targetPos.x, targetPos.y) <= COVER_RADIUS
+                && dist2(c.x, c.y, fromPos.x, fromPos.y) < dist2(targetPos.x, targetPos.y, fromPos.x, fromPos.y)) {
+                return COVER_DV;
+            }
+        }
+        return 0;
+    }
+
+    /** Is a position tucked next to any cover point (regardless of angle)? */
+    public static nearCover(pos: Point): boolean {
+        return this.COVER.some((c) => dist2(c.x, c.y, pos.x, pos.y) <= COVER_RADIUS);
+    }
+
+    /** Keep a point inside the arena bounds. */
+    public static clamp(p: Point): Point {
+        return {x: Math.max(X_MIN, Math.min(X_MAX, p.x)), y: Math.max(Y_MIN, Math.min(Y_MAX, p.y))};
+    }
+
+    /** Move an actor up to `maxMeters` toward a destination; returns metres moved. */
+    public static stepToward(self: Actor, dest: Point, maxMeters: number): number {
+        const d = this.clamp(dest);
+        const gap = dist2(self.position.x, self.position.y, d.x, d.y);
+        if (gap <= maxMeters || gap === 0) {
+            self.position.x = d.x; self.position.y = d.y;
+            return gap;
+        }
+        const t = maxMeters / gap;
+        self.position.x += (d.x - self.position.x) * t;
+        self.position.y += (d.y - self.position.y) * t;
+        return maxMeters;
     }
 
     private static place(a: Actor, x: number, y: number): void {

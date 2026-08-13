@@ -1,4 +1,5 @@
 import {GetItem} from "../interact/getItem";
+import {TacticalAI} from "../interact/tacticalAI";
 import {Utils} from "../utils/utils";
 import {Actor} from "./Actor";
 import {Name} from "./resources/Name";
@@ -14,6 +15,7 @@ export class Enemy extends Actor {
         this.item = GetItem.item();
         this.role = new Role();
         this.weapon = GetItem.streetWeapon();
+        this.temperament = TacticalAI.rollTemperament(this.weapon.weaponClass);
         // RED street-thug profile; HP is derived from BODY/WILL in setCombatProfile.
         this.setCombatProfile({ref: 5, dex: 5, body: 6, will: 5, skill: 2, luck: 3, roleRank: 3});
         this.equipment.upper = GetItem.armor("Kevlar Vest"); // street-thug body armour (SP 6)

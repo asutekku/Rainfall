@@ -7,6 +7,8 @@ import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./message
 import {Skill} from "../items/Skill";
 import {rangeDV} from "./rangeTable";
 import {Check} from "./check";
+import {Battlefield} from "./battlefield";
+import {TacticalAI, Plan} from "./tacticalAI";
 
 const Log = en_US.Log;
 
@@ -85,7 +87,8 @@ export class Combat {
             this.messages.push(new MessageStr('OUT OF RANGE'));
             return;
         }
-        const check = Check.resolve(actor, actor.attackBonus(actor.weapon), dv);
+        const cover: number = Battlefield.coverPenaltyAt(target.position, actor.position);
+        const check = Check.resolve(actor, actor.attackBonus(actor.weapon), dv + cover);
         if (!check.success) {
             this.messages.push(new MessageStr('MISS!'));
             return;
@@ -138,7 +141,10 @@ export class Combat {
 
     public static gainLevel(actor: Actor, target: Actor) {
         actor.gainLevel();
-        Messages.logMessage(Log.levelUp, actor);
+        // Push straight to the combat feed. The legacy Messages.logMessage path
+        // reads global State.player/currentEnemy singletons that the React app
+        // never sets, so calling it mid-round would throw.
+        this.messages.push(new MessageStr(`${actor.name} reaches level ${actor.level}.`));
     }
 
     public static lootEnemy(actor: Actor, target: Actor) {
@@ -183,6 +189,69 @@ export class Combat {
         if (dv === null) {
             return false; // target beyond the weapon's effective range
         }
-        return Check.resolve(actor, atkMod, dv).success;
+        const cover: number = Battlefield.coverPenaltyAt(target.position, actor.position);
+        return Check.resolve(actor, atkMod, dv + cover).success;
+    }
+
+    // =====================================================================
+    // Turn engine: movement + AI. A round advances every combatant in
+    // initiative order; each moves (via TacticalAI) then acts.
+    // =====================================================================
+
+    /** One full round with both sides played by the tactical AI. */
+    public static autoRound(party: Actor[], enemies: Actor[]): any {
+        return this.round(party, enemies);
+    }
+
+    /**
+     * One full round. If `controlled`/`action` are given, that unit performs the
+     * supplied action on its turn (manual play); every other combatant — allies
+     * and enemies alike — is driven by the tactical AI.
+     */
+    public static round(party: Actor[], enemies: Actor[], controlled?: Actor, action?: any): any {
+        this.messages = [];
+        const all: Actor[] = [...party, ...enemies].filter((a) => a.canFight() || a.mortallyWounded);
+        all.forEach((a) => { a.firstHitDone = false; a.deflectionUsed = false; });
+
+        const order: Actor[] = all
+            .map((a) => ({a, init: a.rollInitiative()}))
+            .sort((x, y) => y.init - x.init)
+            .map((o) => o.a);
+
+        for (const c of order) {
+            if (!c.alive) { continue; }
+            if (c.mortallyWounded) { this.resolveDeathSave(c); continue; }
+            if (!c.canFight()) { continue; }
+            const foes: Actor[] = party.indexOf(c) >= 0 ? enemies : party;
+            const allies: Actor[] = party.indexOf(c) >= 0 ? party : enemies;
+            if (c === controlled && action) {
+                if (action.target && action.target.canFight()) { this.attack(c, action.target); }
+                continue;
+            }
+            this.applyPlan(c, TacticalAI.plan(c, allies, foes), foes);
+        }
+        return this.messages.flat().reverse();
+    }
+
+    /** Apply a tactical plan: move (if any), then attack the chosen target. */
+    private static applyPlan(self: Actor, plan: Plan, foes: Actor[]): void {
+        if (plan.moveTo) {
+            const before: number = this.nearestFoeGap(self, foes);
+            const moved: number = Battlefield.stepToward(self, plan.moveTo, self.runMeters());
+            if (moved >= 1) {
+                const after: number = this.nearestFoeGap(self, foes);
+                const verb: string = Battlefield.nearCover(self.position) ? "takes cover"
+                    : after < before - 0.5 ? "advances" : after > before + 0.5 ? "falls back" : "repositions";
+                this.messages.push(new MessageStr(`${self.name} ${verb} (${Math.round(after)}m).`));
+            }
+        }
+        if (plan.target && plan.target.canFight()) {
+            this.attack(self, plan.target);
+        }
+    }
+
+    private static nearestFoeGap(self: Actor, foes: Actor[]): number {
+        return foes.filter((f) => f.canFight())
+            .reduce((m, f) => Math.min(m, Battlefield.distance(self, f)), Infinity);
     }
 }

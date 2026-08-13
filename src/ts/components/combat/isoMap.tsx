@@ -63,10 +63,18 @@ export class IsoMap extends React.Component<IsoMapProps, {}> {
             </div>);
     }
 
+    private cover() {
+        return Battlefield.COVER.map((c, i) => {
+            const p = Battlefield.project(c);
+            return <span key={"cov" + i} className={"cover"} style={{left: p.x + "%", top: p.y + "%"}}/>;
+        });
+    }
+
     public render() {
         return (
             <div className={"iso" + (this.props.mini ? " mini" : " full")}>
                 <div className={"floor"}/>
+                {this.cover()}
                 {this.layout().map((u) => this.token(u))}
                 {!this.props.mini && this.floaters()}
             </div>);

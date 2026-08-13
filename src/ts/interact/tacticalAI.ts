@@ -1,0 +1,262 @@
+import {Actor} from "../actors/Actor";
+import {Weapon} from "../items/Weapon";
+import {Battlefield, Point} from "./battlefield";
+import {rangeDV} from "./rangeTable";
+
+/**
+ * Tactical combat AI.
+ *
+ * Each turn the acting unit enumerates a handful of candidate destinations
+ * (hold, advance to its weapon's best range, duck to cover, flank, retreat),
+ * then scores each one with a small Monte-Carlo rollout: it samples the real
+ * Cyberpunk RED resolution — exploding d10 to-hit against the range/cover DV,
+ * d6 damage with crits, autofire multipliers, armour — to estimate the damage
+ * it would deal from there and the damage it would take in return. It picks the
+ * position with the best expected trade, weighting survival higher as its own
+ * HP drops. This is deliberately a "mini Monte Carlo": cheap, stochastic, and
+ * good enough to play smart without a full game-tree search.
+ */
+
+export interface Plan {
+    moveTo?: Point;
+    target?: Actor;
+    label: string;
+}
+
+const SAMPLES = 20;        // rollouts per (attacker,target) estimate
+const MELEE_REACH = 2;     // metres you must be within to land a melee hit
+
+const W_MOVE = 0.02;       // tiny cost per metre moved (prefer standing when equal)
+
+/**
+ * Per-temperament weight profiles. `camp` is the penalty for ending a turn
+ * stationary without a real shot — it keeps units from turtling into a mutual
+ * standoff. Aggressors carry a big camp penalty (they always push); campers
+ * carry none (holding cover is their whole plan).
+ */
+interface Profile { off: number; def: number; kill: number; cover: number; risk: number; progress: number; camp: number; }
+
+const PROFILES: { [k: string]: Profile } = {
+    //          offense defense kill cover risk progress camp
+    balanced:   {off: 1.2, def: 0.80, kill: 10, cover: 2.5, risk: 0.9, progress: 0.32, camp: 1.5},
+    aggressive: {off: 1.5, def: 0.50, kill: 12, cover: 1.0, risk: 0.5, progress: 0.60, camp: 4.0},
+    flanker:    {off: 1.3, def: 0.70, kill: 11, cover: 2.0, risk: 0.7, progress: 0.45, camp: 2.5},
+    camper:     {off: 1.1, def: 1.00, kill: 10, cover: 4.5, risk: 1.1, progress: 0.12, camp: 0.0},
+    berserker:  {off: 1.7, def: 0.35, kill: 14, cover: 0.5, risk: 0.3, progress: 0.90, camp: 5.0},
+};
+
+const profileFor = (a: Actor): Profile => PROFILES[a.temperament] || PROFILES.balanced;
+
+const d6 = (): number => Math.floor(Math.random() * 6) + 1;
+
+/** RED d10: explodes on a natural 10, fumbles on a natural 1. */
+function redRoll(): number {
+    const first = Math.floor(Math.random() * 10) + 1;
+    if (first === 10) { return 10 + (Math.floor(Math.random() * 10) + 1); }
+    if (first === 1) { return 1 - (Math.floor(Math.random() * 10) + 1); }
+    return first;
+}
+
+/** Effective stopping power the RED way: best of worn/subdermal, halved by AP. */
+function effectiveSP(target: Actor, ap: boolean): number {
+    const worn = target.equipment.upper ? target.equipment.upper.stoppingPower : 0;
+    let sp = Math.max(worn, target.cyberSP());
+    if (ap) { sp = Math.floor(sp / 2); }
+    return sp;
+}
+
+function sampleKineticDamage(w: Weapon): number {
+    let total = w.damage;
+    let sixes = 0;
+    for (let i = 0; i < w.diceThrows; i++) {
+        const roll = d6();
+        total += roll;
+        if (roll === 6) { sixes += 1; }
+    }
+    if (sixes >= 2) { total += 5; }
+    return total;
+}
+
+/** One simulated attack: net HP damage dealt (0 on miss / out of range / non-kinetic). */
+function sampleNet(attacker: Actor, target: Actor, distance: number, coverDV: number): number {
+    const w = attacker.weapon;
+    if (w.damageType !== "kinetic" || w.diceThrows <= 0) { return 0; }
+
+    if (w.weaponClass === "melee") {
+        if (distance > MELEE_REACH) { return 0; }
+        if (redRoll() + attacker.attackBonus(w) < redRoll() + target.evasion()) { return 0; }
+        return Math.max(0, sampleKineticDamage(w) - effectiveSP(target, w.ap));
+    }
+
+    const dv = rangeDV(w.weaponClass, distance);
+    if (dv === null) { return 0; }
+    const total = redRoll() + attacker.attackBonus(w);
+    const need = dv + coverDV;
+    if (total < need) { return 0; }
+
+    if (w.autofire) {
+        const maxMult = w.weaponClass === "rifle" ? 4 : 3;
+        const mult = Math.max(1, Math.min(total - need, maxMult));
+        const a = d6(); const b = d6();
+        let dmg = (a + b) * mult;
+        if (a === 6 && b === 6) { dmg += 5; }
+        return Math.max(0, dmg - effectiveSP(target, w.ap));
+    }
+    return Math.max(0, sampleKineticDamage(w) - effectiveSP(target, w.ap));
+}
+
+/** Mean net damage of `attacker` hitting `target` across the given distance + cover. */
+function expectedNet(attacker: Actor, target: Actor, distance: number, coverDV: number): number {
+    let sum = 0;
+    for (let i = 0; i < SAMPLES; i++) { sum += sampleNet(attacker, target, distance, coverDV); }
+    return sum / SAMPLES;
+}
+
+const pos = (a: Actor): Point => ({x: a.position.x, y: a.position.y});
+
+/** A point at most `maxDist` metres from `from` in the direction of `to`. */
+function pointToward(from: Point, to: Point, maxDist: number): Point {
+    const gap = Battlefield.gap(from, to);
+    if (gap <= maxDist || gap === 0) { return {x: to.x, y: to.y}; }
+    const t = maxDist / gap;
+    return {x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t};
+}
+
+/** The range this weapon wants to fight at (its low-DV band, kept off point-blank). */
+function preferredGap(w: Weapon): number {
+    if (w.weaponClass === "melee") { return 1.5; }
+    switch (w.weaponClass) {
+        case "shotgun": return 10;
+        case "pistol": return 14;
+        case "smg": return 16;
+        case "bow": return 16;
+        case "rifle": return 30;
+        case "sniper": return 60;
+        default: return 14;
+    }
+}
+
+export class TacticalAI {
+
+    /** Roll a combat temperament for a spawned enemy (melee thugs rush by nature). */
+    public static rollTemperament(weaponClass: string): string {
+        if (weaponClass === "melee") { return Math.random() < 0.6 ? "berserker" : "aggressive"; }
+        const r = Math.random();
+        if (r < 0.38) { return "aggressive"; }
+        if (r < 0.63) { return "balanced"; }
+        if (r < 0.85) { return "flanker"; }
+        return "camper";
+    }
+
+    /** Choose this turn's move + attack for `self`. */
+    public static plan(self: Actor, allies: Actor[], enemies: Actor[]): Plan {
+        const foes = enemies.filter((e) => e.canFight());
+        if (!foes.length) { return {label: "hold"}; }
+
+        const prof = profileFor(self);
+        const run = self.runMeters();
+        const here = pos(self);
+        const nearest = foes.reduce((a, b) => Battlefield.gap(here, pos(b)) < Battlefield.gap(here, pos(a)) ? b : a);
+        const primary = pos(nearest);
+
+        const candidates = this.candidates(self, here, primary, foes, run);
+
+        let best = candidates[0];
+        let bestScore = -Infinity;
+        let bestTarget: Actor | undefined;
+        for (const spot of candidates) {
+            const evalResult = this.score(self, spot, foes, prof);
+            if (evalResult.score > bestScore) {
+                bestScore = evalResult.score;
+                best = spot;
+                bestTarget = evalResult.target;
+            }
+        }
+
+        const moved = Battlefield.gap(here, best) > 0.5;
+        return {
+            moveTo: moved ? best : undefined,
+            target: bestTarget,
+            label: moved ? (Battlefield.nearCover(best) ? "cover" : "reposition") : "attack",
+        };
+    }
+
+    /** Candidate destinations reachable this turn. */
+    private static candidates(self: Actor, here: Point, primary: Point, foes: Actor[], run: number): Point[] {
+        const want = preferredGap(self.weapon);
+        const gapToPrimary = Battlefield.gap(here, primary);
+
+        // advance/retreat to the weapon's preferred range along the current bearing
+        const targetGap = Math.max(want, gapToPrimary - run);
+        const dir = gapToPrimary > 0
+            ? {x: (here.x - primary.x) / gapToPrimary, y: (here.y - primary.y) / gapToPrimary}
+            : {x: 0, y: 1};
+        const advance: Point = {x: primary.x + dir.x * targetGap, y: primary.y + dir.y * targetGap};
+
+        // lateral flanks off the advance point
+        const perp = {x: -dir.y, y: dir.x};
+        const flankL: Point = {x: advance.x + perp.x * 6, y: advance.y + perp.y * 6};
+        const flankR: Point = {x: advance.x - perp.x * 6, y: advance.y - perp.y * 6};
+
+        // nearest cover, stepped to within run
+        const cover = Battlefield.COVER
+            .reduce((a, b) => Battlefield.gap(here, b) < Battlefield.gap(here, a) ? b : a);
+        const coverStep = pointToward(here, cover, run);
+
+        // retreat away from the foe centroid (matters most when hurt)
+        const cx = foes.reduce((s, f) => s + f.position.x, 0) / foes.length;
+        const cy = foes.reduce((s, f) => s + f.position.y, 0) / foes.length;
+        const away = Battlefield.gap(here, {x: cx, y: cy});
+        const retreat: Point = away > 0
+            ? {x: here.x + (here.x - cx) / away * run, y: here.y + (here.y - cy) / away * run}
+            : here;
+
+        return [here, advance, flankL, flankR, coverStep, retreat].map((p) => Battlefield.clamp(p));
+    }
+
+    /** Score a destination: expected damage dealt minus damage taken, plus positional value. */
+    private static score(self: Actor, spot: Point, foes: Actor[], prof: Profile): { score: number; target?: Actor } {
+        // best target reachable from this spot
+        let offense = 0;
+        let target: Actor | undefined;
+        let killBonus = 0;
+        for (const foe of foes) {
+            const dist = Battlefield.gap(spot, pos(foe));
+            const cover = Battlefield.coverPenaltyAt(pos(foe), spot);
+            const dmg = expectedNet(self, foe, dist, cover);
+            if (dmg > offense) {
+                offense = dmg;
+                target = foe;
+                killBonus = dmg * 1.3 >= foe.health ? 1 : 0;
+            }
+        }
+
+        // incoming threat from every foe if we stand here
+        let threat = 0;
+        for (const foe of foes) {
+            const dist = Battlefield.gap(spot, pos(foe));
+            const cover = Battlefield.coverPenaltyAt(spot, pos(foe));
+            threat += expectedNet(foe, self, dist, cover);
+        }
+
+        const hpFrac = self.health / Math.max(1, self.maxHealth);
+        const inCover = Battlefield.nearCover(spot) ? 1 : 0;
+        const nearestGap = foes.reduce((m, f) => Math.min(m, Battlefield.gap(spot, pos(f))), Infinity);
+        const moveDist = Battlefield.gap(pos(self), spot);
+
+        // anti-camp: sitting still without a real shot is penalised (scaled by temperament).
+        const stationary = moveDist < 1 ? 1 : 0;
+        const campPenalty = prof.camp * stationary * Math.max(0, 1 - offense / 3);
+
+        const score =
+            prof.off * offense
+            + prof.kill * killBonus
+            + prof.cover * inCover
+            - prof.def * threat * (1 + (1 - hpFrac) * prof.risk)
+            - prof.progress * nearestGap
+            - campPenalty
+            - W_MOVE * moveDist;
+
+        return {score, target};
+    }
+}

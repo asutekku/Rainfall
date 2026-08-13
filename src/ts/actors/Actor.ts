@@ -24,6 +24,7 @@ export class Actor extends GameObject {
     public armor: number;
     public alive: boolean;
     public position: ObjectPosition;
+    public temperament: string;   // tactical AI personality: balanced|aggressive|flanker|camper|berserker
     public equipment: {
         headgear: Armor | null;
         upper: Armor | null;
@@ -231,6 +232,7 @@ export class Actor extends GameObject {
         this.currency = 0;
         this.position = new ObjectPosition(0, 0, 0);
         this.kills = 0;
+        this.temperament = "balanced";
         this.stats = {
             int: 1,
             ref: 1,
@@ -593,6 +595,16 @@ export class Actor extends GameObject {
     /** RED melee/ranged defence: DEX + Evasion (Dodge), minus the wound penalty. */
     public evasion(): number {
         return this.stats.dex + this.skills.ref.dodge + this.woundPenalty();
+    }
+
+    /** RED MOVE stat (metres per Move Action). Baseline 6; cyberlegs etc. can raise it later. */
+    public moveStat(): number {
+        return Math.max(6, this.stats.ma.ma);
+    }
+
+    /** Metres this actor can cover in a turn by Running (a Move Action at x2). */
+    public runMeters(): number {
+        return this.moveStat() * 2;
     }
 
     /** RED Initiative: 1d10 + REF (+ Solo Initiative Reaction + reflex boosters). */
