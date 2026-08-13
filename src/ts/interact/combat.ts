@@ -54,6 +54,12 @@ export class Combat {
         let damage: number = weapon.getDamage();
         if (damage > 0) {
             damage += actor.damageBonus(); // Solo "Spot Weakness"
+            if (weapon.weaponClass === "melee") {
+                // Cyberlimb melee weapons (Wolvers etc.) add extra d6.
+                for (let i = 0; i < actor.cyberMeleeDice(); i++) {
+                    damage += Math.floor(Math.random() * 6) + 1;
+                }
+            }
         }
         const dealt: number = target.receiveDamage(damage, weapon.ap);
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));

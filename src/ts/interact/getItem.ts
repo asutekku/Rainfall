@@ -7,6 +7,8 @@ import {Item} from "../items/Item";
 import items from "../items/items";
 import {Medical} from "../items/Scrap";
 import {Weapon} from "../items/Weapon";
+import {Cyberware} from "../items/Cyberware";
+import {default as cyberwareData} from "../../objects/cyberware";
 import {State} from "../utils/State";
 import {Utils} from "../utils/utils";
 import en_US from "./../../lang/en_US";
@@ -42,6 +44,10 @@ export class GetItem {
     public static armor(name?: string): Armor {
         const t: Armor = name ? armors.find((a) => a.name === name)! : Utils.pickRandom(armors);
         return new Armor(t.bodyPart, t.name, t.set, t.level, t.stoppingPower, t.cost, t.description);
+    }
+
+    public static cyberware(name: string): Cyberware {
+        return new Cyberware(cyberwareData.find((c) => c.name === name)!);
     }
 
     public static item() {

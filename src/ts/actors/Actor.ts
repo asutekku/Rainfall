@@ -1,5 +1,6 @@
 import {GetItem} from "../interact/getItem";
 import {Armor} from "../items/Armor";
+import {Cyberware} from "../items/Cyberware";
 import {Item} from "../items/Item";
 import {Weapon} from "../items/Weapon";
 import {Name} from "./resources/Name";
@@ -203,7 +204,10 @@ export class Actor extends GameObject {
             weaponSmith: number;
         };
     };
-    private cybernetics: any[];
+    public cybernetics: Cyberware[];
+    public humanity: number;
+    public maxHumanity: number;
+    public cyberpsychosis: boolean;
 
     constructor() {
         const role = new Role();
@@ -385,6 +389,9 @@ export class Actor extends GameObject {
             },
         };
         this.cybernetics = [];
+        this.humanity = this.stats.emp * 10;
+        this.maxHumanity = this.stats.emp * 10;
+        this.cyberpsychosis = false;
         this.lifepath = {
             style: {
                 clothes: {
@@ -444,9 +451,9 @@ export class Actor extends GameObject {
         return this.health > 0 && this.health <= this.maxHealth / 2;
     }
 
-    /** RED: -2 to all Actions while Seriously Wounded. */
+    /** RED: -2 to all Actions while Seriously Wounded (negated by a Pain Editor). */
     public woundPenalty(): number {
-        return this.isSeriouslyWounded() ? -2 : 0;
+        return this.isSeriouslyWounded() && !this.hasPainEditor() ? -2 : 0;
     }
 
     /** RED HP = 10 + 5 x ceil((BODY + WILL) / 2). Resets wound state. */
@@ -489,7 +496,9 @@ export class Actor extends GameObject {
         // RED uses body armour SP for normal hits and head armour SP for aimed
         // head shots; limbs are not separately armoured in the core rules.
         const piece: Armor | null = aimedAtHead ? this.equipment.headgear : this.equipment.upper;
-        let sp: number = piece ? piece.stoppingPower : 0;
+        const wornSP: number = piece ? piece.stoppingPower : 0;
+        // Subdermal armour doesn't stack with worn armour; use the higher SP.
+        let sp: number = aimedAtHead ? wornSP : Math.max(wornSP, this.cyberSP());
         if (ap) {
             sp = Math.floor(sp / 2); // armour-piercing halves SP
         }
@@ -533,8 +542,9 @@ export class Actor extends GameObject {
      */
     public attackBonus(weapon: Weapon): number {
         const stat: number = weapon.weaponClass === "melee" ? this.stats.dex : this.stats.ref;
+        const cyber: number = weapon.weaponClass === "melee" ? 0 : this.cyberAttackBonus();
         return stat + this.skillFor(weapon) + weapon.accuracyBonus
-            + this.woundPenalty() + this.precisionAttackBonus();
+            + this.woundPenalty() + this.precisionAttackBonus() + cyber;
     }
 
     /** RED melee/ranged defence: DEX + Evasion (Dodge), minus the wound penalty. */
@@ -542,9 +552,10 @@ export class Actor extends GameObject {
         return this.stats.dex + this.skills.ref.dodge + this.woundPenalty();
     }
 
-    /** RED Initiative: 1d10 + REF (+ a Solo's Initiative Reaction). */
+    /** RED Initiative: 1d10 + REF (+ Solo Initiative Reaction + reflex boosters). */
     public rollInitiative(): number {
-        return Math.floor(Math.random() * 10) + 1 + this.stats.ref + this.initiativeBonus();
+        return Math.floor(Math.random() * 10) + 1 + this.stats.ref
+            + this.initiativeBonus() + this.cyberInitiative();
     }
 
     public isSolo(): boolean {
@@ -570,15 +581,21 @@ export class Actor extends GameObject {
         return this.isSolo() ? 1 : 0;
     }
 
-    /** Configure RED combat-relevant stats and derive HP. */
+    /** Configure RED combat-relevant stats and derive HP and Humanity. */
     public setCombatProfile(cfg: {
-        ref?: number; dex?: number; body?: number; will?: number;
+        ref?: number; dex?: number; body?: number; will?: number; emp?: number;
         skill?: number; luck?: number; roleRank?: number;
     }): void {
         if (cfg.ref !== undefined) { this.stats.ref = cfg.ref; }
         if (cfg.dex !== undefined) { this.stats.dex = cfg.dex; }
         if (cfg.body !== undefined) { this.stats.bt = cfg.body; }
         if (cfg.will !== undefined) { this.stats.will = cfg.will; }
+        if (cfg.emp !== undefined) {
+            this.stats.emp = cfg.emp;
+            this.maxHumanity = cfg.emp * 10;
+            this.humanity = this.maxHumanity;
+            this.stats.hm = this.humanity;
+        }
         if (cfg.roleRank !== undefined) { this.roleRank = cfg.roleRank; }
         if (cfg.luck !== undefined) { this.maxLuck = cfg.luck; this.luck = cfg.luck; }
         if (cfg.skill !== undefined) {
@@ -587,6 +604,50 @@ export class Actor extends GameObject {
                 r.archery = r.heavyWeapons = r.martialKarate = r.athletics = cfg.skill;
         }
         this.recalculateHealth();
+    }
+
+    /**
+     * Installs a piece of cyberware: pays its Humanity Loss, recomputes EMP from
+     * the remaining Humanity, applies stat effects, and flags cyberpsychosis if
+     * Humanity is emptied. Call at set-up (it refreshes HP for BODY changes).
+     */
+    public installCyberware(cw: Cyberware): void {
+        this.cybernetics.push(cw);
+        this.humanity = Math.max(0, this.humanity - cw.humanityLoss);
+        this.stats.emp = Math.floor(this.humanity / 10);
+        this.stats.hm = this.humanity;
+        if (this.humanity <= 0) {
+            this.cyberpsychosis = true;
+        }
+        if (cw.effects.body) {
+            this.stats.bt += cw.effects.body;
+            this.recalculateHealth();
+        }
+    }
+
+    public isCyberpsycho(): boolean {
+        return this.cyberpsychosis;
+    }
+
+    /** RED subdermal/skinweave armour uses the highest single SP, not a sum. */
+    public cyberSP(): number {
+        return this.cybernetics.reduce((sp, c) => Math.max(sp, c.effects.sp || 0), 0);
+    }
+
+    public cyberInitiative(): number {
+        return this.cybernetics.reduce((n, c) => n + (c.effects.initiative || 0), 0);
+    }
+
+    public cyberAttackBonus(): number {
+        return this.cybernetics.reduce((n, c) => n + (c.effects.attackBonus || 0), 0);
+    }
+
+    public cyberMeleeDice(): number {
+        return this.cybernetics.reduce((n, c) => n + (c.effects.meleeDamageDice || 0), 0);
+    }
+
+    public hasPainEditor(): boolean {
+        return this.cybernetics.some((c) => c.effects.ignoreWoundPenalty === true);
     }
 
     /*draw(context) {
