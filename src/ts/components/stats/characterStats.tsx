@@ -33,11 +33,14 @@ export class CharacterStats extends React.Component<StatsProps, StatsState> {
                     <StatListItem name={'Name:'} value={this.props.actor!.weapon.name}
                                   tooltip={this.props.actor!.weapon.description}/>
                     <StatListItem name={'Type:'} value={this.props.actor!.weapon.weaponType}/>
+                    <StatListItem name={'Skill:'} value={this.props.actor!.weapon.skill}/>
                     <StatListItem name={'Damage:'}
-                                  value={`${this.props.actor!.weapon.damage + this.props.actor!.weapon.diceThrows} - ${this.props.actor!.weapon.diceThrows * 6 + this.props.actor!.weapon.damage} * ${this.props.actor!.weapon.rateOfFire}`}/>
-                    <StatListItem name={'Accuracy:'} value={`${this.props.actor!.weapon.accuracy.toString()}%`}/>
+                                  value={`${this.props.actor!.weapon.diceThrows}d6${this.props.actor!.weapon.damage ? '+' + this.props.actor!.weapon.damage : ''}${this.props.actor!.weapon.ap ? ' AP' : ''}`}/>
+                    <StatListItem name={'Accuracy:'}
+                                  value={`${this.props.actor!.weapon.accuracyBonus >= 0 ? '+' : ''}${this.props.actor!.weapon.accuracyBonus}`}/>
+                    <StatListItem name={'ROF:'} value={`${this.props.actor!.weapon.rateOfFire}`}/>
+                    <StatListItem name={'Magazine:'} value={`${this.props.actor!.weapon.shots}`}/>
                     <StatListItem name={'Range:'} value={`${this.props.actor!.weapon.range}m`}/>
-                    <StatListItem name={'Critical chance:'} value={`${this.props.actor!.weapon.crit}%`}/>
                 </div>
             </div>);
     }

@@ -12,6 +12,7 @@ export class Player extends Actor {
         this.role = new Role();
         this.item = GetItem.item();
         this.weapon = GetItem.weapon("Fists");
-        //this.weapon = GetItem.weapon("weapon_stakeout");
+        // A capable solo: RED REF plus trained combat skills so attacks land.
+        this.setBaseCombatStats(7, 4);
     }
 }

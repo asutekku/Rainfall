@@ -5,6 +5,7 @@ import {GetItem} from "./getItem";
 import {Messages} from "./messages";
 import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./messageSchema";
 import {Skill} from "../items/Skill";
+import {rangeDV} from "./rangeTable";
 
 const Log = en_US.Log;
 
@@ -32,13 +33,12 @@ export class Combat {
 
     public static attack(actor: Actor, target: Actor): any {
         const distance: number = Utils.distance(actor.position, target.position);
-        const dices: number = actor.stats.ref + Utils.dice(3, 10);
-        const hitSuccess: boolean = this.didAttackHit(distance, dices, actor);
+        const hitSuccess: boolean = this.didAttackHit(actor, target, distance);
         const targetOldHP: number = target.health;
         const weaponDamage: number = actor.weapon.getDamage();
 
         if (hitSuccess) {
-            const damageCaused: number = target.receiveDamage(weaponDamage);
+            const damageCaused: number = target.receiveDamage(weaponDamage, actor.weapon.ap);
             const combatMessage = Messages.getCombatMessage(actor, target, targetOldHP, damageCaused);
             this.messages.push(combatMessage);
             if (!target.isAlive()) {
@@ -73,13 +73,6 @@ export class Combat {
     public static escapeFight(actor: Actor, target: Actor) {
     }
 
-    // Increases accuracy
-    public static aimAttack(actor: Actor) {
-        if (actor.weapon.accuracy < 100) {
-            actor.weapon.accuracy += 10;
-        }
-    }
-
     public static mountVehicle(actor: Actor, target: Actor) {
     }
 
@@ -102,19 +95,36 @@ export class Combat {
         GetItem.updateCurrency(target.currency, actor);
     }
 
-    private static didAttackHit(distance: number, dices: number, actor: Actor): boolean {
-        let shotTarget: boolean = false;
-        if (distance < 2000) {
-            shotTarget = dices >= 1;
-        } else if (distance <= actor.weapon.range / 4) {
-            shotTarget = dices >= 15;
-        } else if (distance <= actor.weapon.range / 2) {
-            shotTarget = dices >= 20;
-        } else if (distance <= actor.weapon.range) {
-            shotTarget = dices >= 25;
-        } else if (distance <= actor.weapon.range * 2) {
-            shotTarget = dices >= 30;
+    /**
+     * Cyberpunk RED d10: on a natural 10 roll again and add; on a natural 1
+     * roll again and subtract.
+     */
+    private static critRoll(): number {
+        const first: number = Math.floor(Math.random() * 10) + 1;
+        if (first === 10) {
+            return 10 + (Math.floor(Math.random() * 10) + 1);
         }
-        return shotTarget;
+        if (first === 1) {
+            return 1 - (Math.floor(Math.random() * 10) + 1);
+        }
+        return first;
+    }
+
+    /**
+     * Cyberpunk RED attack resolution. Melee is an opposed check against the
+     * target's evasion; ranged compares the attack roll to the weapon's DV for
+     * its class at the current distance (out of range = automatic miss).
+     */
+    private static didAttackHit(actor: Actor, target: Actor, distance: number): boolean {
+        const weapon = actor.weapon;
+        const attack: number = this.critRoll() + actor.attackBonus(weapon);
+        if (weapon.weaponClass === "melee") {
+            return attack >= this.critRoll() + target.evasion();
+        }
+        const dv: number | null = rangeDV(weapon.weaponClass, distance);
+        if (dv === null) {
+            return false; // target beyond the weapon's effective range
+        }
+        return attack >= dv;
     }
 }

@@ -8,13 +8,13 @@ import {Statistics} from "./resources/Statistics";
 export class Enemy extends Actor {
     constructor() {
         super();
-        this.weapon = GetItem.weapon();
         this.gender = Name.getGender();
         this.name = `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
         this.items = [GetItem.item()];
         this.item = GetItem.item();
         this.role = new Role();
-        this.weapon = GetItem.weapon();
+        this.weapon = GetItem.streetWeapon();
+        this.setBaseCombatStats(5, 2);
         this.level = Math.floor(Statistics.level + Utils.range(1, 3));
         this.currency = Math.floor(Utils.range(20, 50));
         this.health = Utils.range(

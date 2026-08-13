@@ -43,11 +43,14 @@ export class Statpane extends React.Component<StatpanelProps, StatpanelState> {
                     <StatListItem name={'Name'} value={this.state.actor!.weapon.name}
                                   tooltip={this.state.actor!.weapon.description}/>
                     <StatListItem name={'Type'} value={this.state.actor!.weapon.weaponType}/>
+                    <StatListItem name={'Skill'} value={this.state.actor!.weapon.skill}/>
                     <StatListItem name={'Damage'}
-                                  value={`${this.state.actor!.weapon.damage + this.state.actor!.weapon.diceThrows} - ${this.state.actor!.weapon.diceThrows * 6 + this.state.actor!.weapon.damage} * ${this.state.actor!.weapon.rateOfFire}`}/>
-                    <StatListItem name={'Accuracy'} value={`${this.state.actor!.weapon.accuracy.toString()}%`}/>
+                                  value={`${this.state.actor!.weapon.diceThrows}d6${this.state.actor!.weapon.damage ? '+' + this.state.actor!.weapon.damage : ''}${this.state.actor!.weapon.ap ? ' AP' : ''}`}/>
+                    <StatListItem name={'Accuracy'}
+                                  value={`${this.state.actor!.weapon.accuracyBonus >= 0 ? '+' : ''}${this.state.actor!.weapon.accuracyBonus}`}/>
+                    <StatListItem name={'ROF'} value={`${this.state.actor!.weapon.rateOfFire}`}/>
+                    <StatListItem name={'Magazine'} value={`${this.state.actor!.weapon.shots}`}/>
                     <StatListItem name={'Range'} value={`${this.state.actor!.weapon.range}m`}/>
-                    <StatListItem name={'Critical chance'} value={`${this.state.actor!.weapon.crit}%`}/>
                 </div>
                 <div className='statCard tooltip'>
                     <span className='statTitle vital' id='armor'>Armor:</span>

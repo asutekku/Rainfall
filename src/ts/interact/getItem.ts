@@ -25,6 +25,18 @@ export class GetItem {
         }
     }
 
+    /**
+     * A common street weapon (handgun / SMG / shotgun / melee, ordinary
+     * availability). Keeps enemy spawns from rolling snipers, machineguns or
+     * rocket launchers out of the full 380-weapon catalog.
+     */
+    public static streetWeapon(): Weapon {
+        const street = weapons.filter((w) =>
+            ["pistol", "smg", "melee", "shotgun"].indexOf(w.weaponClass) !== -1 &&
+            w.damageType === "kinetic" && w.rarity <= 3);
+        return Utils.pickRandom(street);
+    }
+
     public static item() {
         const randomItem = Math.floor(Math.random() * 3);
         if (randomItem === 0) {

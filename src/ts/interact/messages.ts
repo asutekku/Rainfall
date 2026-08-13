@@ -15,7 +15,7 @@ export class Messages {
     public static getHealth = (actor: Actor, target: Actor): string =>
         actor.health <= 0 ? Messages.damageCrit0(actor, target) : Messages.damageCrit(actor, target);
     public static actorName = (actor: Actor): string => Utils.span(`[${actor.name}]`, `${actor.role.name.toLowerCase()}Color`);
-    public static damageType = (actor: Actor): string => (actor.weapon.weaponType === 'Melee' ? 'hit' : 'shot');
+    public static damageType = (actor: Actor): string => (actor.weapon.weaponClass === 'melee' ? 'hit' : 'shot');
     public static causedDamage = (actor: Actor): string => Utils.span(actor.weapon.getDamage().toString(), 'hitRed');
     public static getPron = (actor: Actor) => ({
         pronounP: actor.gender === 'Female' ? 'her' : 'his',

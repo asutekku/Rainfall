@@ -419,7 +419,7 @@ export class Actor extends GameObject {
         return (this.health > 0 && this.alive);
     }
 
-    public receiveDamage(amount: number): number {
+    public receiveDamage(amount: number, ap: boolean = false): number {
         const eq = this.equipment;
         const headSP: number = eq.headgear ? eq.headgear.stoppingPower : 0;
         const armsSP: number = eq.arms ? eq.arms.stoppingPower : 0;
@@ -427,9 +427,14 @@ export class Actor extends GameObject {
         const lowerSP: number = eq.lower ? eq.lower.stoppingPower : 0;
         const upperSP: number = eq.upper ? eq.upper.stoppingPower : 0;
         const SP: number[] = [headSP, armsSP, feetSP, lowerSP, upperSP];
+        // Cyberpunk RED: armour-piercing rounds halve the target's stopping power.
+        let sp: number = SP.reduce((acc: number, c: number) => acc + c);
+        if (ap) {
+            sp = Math.floor(sp / 2);
+        }
         // Floor at 0 so armor that exceeds the incoming hit blocks it entirely
         // instead of subtracting a negative (which would heal the target).
-        const damage = Math.max(0, amount - SP.reduce((acc: number, c: number) => acc + c));
+        const damage = Math.max(0, amount - sp);
         if (this.health <= damage) {
             this.health = 0;
             this.alive = false;
@@ -437,6 +442,39 @@ export class Actor extends GameObject {
             this.health -= damage;
         }
         return damage;
+    }
+
+    /** RED weapon-skill level for the given weapon (all combat skills share a base). */
+    public skillFor(weapon: Weapon): number {
+        const r = this.skills.ref;
+        switch (weapon.skill) {
+            case "Handgun": return r.handgun;
+            case "Shoulder Arms": return r.rifle;
+            case "Heavy Weapons": return r.heavyWeapons;
+            case "Melee Weapon": return r.melee;
+            case "Brawling": return r.brawling;
+            case "Archery": return r.archery;
+            case "Thrown": return r.athletics;
+            default: return r.handgun;
+        }
+    }
+
+    /** RED attack modifier: STAT (REF) + weapon skill + weapon accuracy. */
+    public attackBonus(weapon: Weapon): number {
+        return this.stats.ref + this.skillFor(weapon) + weapon.accuracyBonus;
+    }
+
+    /** RED melee defence: REF + Evasion (Dodge). */
+    public evasion(): number {
+        return this.stats.ref + this.skills.ref.dodge;
+    }
+
+    /** Sets a base REF and a shared level across the combat skills (playability tuning). */
+    public setBaseCombatStats(ref: number, skill: number): void {
+        this.stats.ref = ref;
+        const r = this.skills.ref;
+        r.handgun = r.rifle = r.submachinegun = r.melee = r.brawling =
+            r.archery = r.heavyWeapons = r.martialKarate = r.athletics = skill;
     }
 
     /*draw(context) {
