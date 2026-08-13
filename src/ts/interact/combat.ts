@@ -56,7 +56,8 @@ export class Combat {
         }
         let damage: number = weapon.getDamage();
         if (damage > 0) {
-            damage += this.spotWeakness(actor); // Solo "Spot Weakness" (first hit only)
+            damage += this.spotWeakness(actor);   // Solo "Spot Weakness" (first hit only)
+            damage += actor.backupDamage();        // Cop "Backup" support fire
         }
         const dealt: number = target.receiveDamage(damage, weapon.ap);
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));

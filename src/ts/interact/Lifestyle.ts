@@ -39,7 +39,9 @@ export class Lifestyle {
      * true if everything was paid.
      */
     public static payUpkeep(actor: Actor): boolean {
-        const cost: number = Lifestyle.upkeepCost(actor);
+        actor.currency += actor.corpStipend(); // Corporate "Teamwork": corporate stipend
+        // Fixer "Operator" negotiates the rent down.
+        const cost: number = Math.max(0, Lifestyle.upkeepCost(actor) - actor.operatorBonus() * 10);
         if (actor.currency >= cost) {
             actor.currency -= cost;
             return true;

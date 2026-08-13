@@ -16,7 +16,7 @@ export interface RamResult {
 export class Driving {
     /** Driving-check modifier: REF + Drive skill, minus the wound penalty. */
     public static driveMod(actor: Actor): number {
-        return actor.stats.ref + actor.driveSkill() + actor.woundPenalty();
+        return actor.stats.ref + actor.driveSkill() + actor.woundPenalty() + actor.motoBonus();
     }
 
     /**

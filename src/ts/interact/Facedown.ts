@@ -16,8 +16,8 @@ export interface FacedownResult {
  */
 export class Facedown {
     public static resolve(a: Actor, b: Actor): FacedownResult {
-        const aRoll: number = Math.floor(Math.random() * 10) + 1 + a.stats.cl + a.reputation;
-        const bRoll: number = Math.floor(Math.random() * 10) + 1 + b.stats.cl + b.reputation;
+        const aRoll: number = Math.floor(Math.random() * 10) + 1 + a.stats.cl + a.reputation + a.facedownBonus();
+        const bRoll: number = Math.floor(Math.random() * 10) + 1 + b.stats.cl + b.reputation + b.facedownBonus();
         if (aRoll === bRoll) {
             return {winner: null, loser: null, tie: true, aRoll, bRoll};
         }

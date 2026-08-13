@@ -76,7 +76,8 @@ export class GetItem {
     public static updateCurrency(money: number, actor: Actor) {
         if (money >= 0) {
             Messages.logMessage(Log.findMoney, actor);
-            actor.currency += money;
+            // Fixer "Operator" negotiates a better cut (+10% per rank).
+            actor.currency += Math.floor(money * (1 + actor.operatorBonus() / 10));
         } else {
             Messages.logMessage(Log.insufficientFunds, actor);
         }

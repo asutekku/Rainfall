@@ -619,9 +619,9 @@ export class Actor extends GameObject {
             + this.woundPenalty() + this.precisionAttackBonus() + cyber + this.fearPenalty;
     }
 
-    /** RED Reputation (0-10), earned through notable deeds. */
+    /** RED Reputation (0-10), earned through notable deeds (Media/Rockerboy gain faster). */
     public gainReputation(amount: number): void {
-        this.reputation = Math.min(10, this.reputation + amount);
+        this.reputation = Math.min(10, this.reputation + amount + this.repGainBonus());
     }
 
     /** RED Drive skill (Land Vehicle) for vehicle checks. */
@@ -761,6 +761,40 @@ export class Actor extends GameObject {
     public isNetrunner(): boolean {
         return this.role.name === "Netrunner";
     }
+
+    // --- Remaining RED Role Abilities (rank = roleRank) ---
+    public isNomad(): boolean { return this.role.name === "Nomad"; }
+    public isFixer(): boolean { return this.role.name === "Fixer"; }
+    public isCop(): boolean { return this.role.name === "Cop"; }
+    public isCorporate(): boolean { return this.role.name === "Corporate"; }
+    public isMedia(): boolean { return this.role.name === "Media"; }
+    public isRockerboy(): boolean { return this.role.name === "Rockerboy"; }
+    public isTechie(): boolean { return this.role.name === "Techie"; }
+
+    /** Nomad "Moto": bonus to Driving checks (and calling in family rides). */
+    public motoBonus(): number { return this.isNomad() ? this.roleRank : 0; }
+
+    /** Fixer "Operator": better deals — +10% per rank on eddies, cheaper upkeep. */
+    public operatorBonus(): number { return this.isFixer() ? this.roleRank : 0; }
+
+    /** Cop "Backup": called-in support adds damage each round of a fight. */
+    public backupDamage(): number { return this.isCop() ? this.roleRank : 0; }
+
+    /** Corporate "Teamwork": a corporate stipend paid each period. */
+    public corpStipend(): number { return this.isCorporate() ? this.roleRank * 50 : 0; }
+
+    /** Rockerboy "Charismatic Impact" / Media "Credibility": Facedown edge from fame. */
+    public facedownBonus(): number {
+        if (this.isRockerboy()) { return this.roleRank; }
+        if (this.isMedia()) { return Math.floor(this.roleRank / 2); }
+        return 0;
+    }
+
+    /** Media/Rockerboy earn Reputation faster through exposure. */
+    public repGainBonus(): number { return this.isMedia() || this.isRockerboy() ? 1 : 0; }
+
+    /** Techie "Maker": repairs this much armour SP each time it services gear. */
+    public makerRepair(): number { return this.isTechie() ? this.roleRank : 0; }
 
     /** RED Interface rank: a Netrunner uses its Role Ability rank; others have a basic 2. */
     public interfaceRank(): number {
