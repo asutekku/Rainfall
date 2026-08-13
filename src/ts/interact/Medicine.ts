@@ -1,5 +1,6 @@
 import {Actor} from "../actors/Actor";
 import {Check} from "./check";
+import {Lifestyle} from "./Lifestyle";
 
 /**
  * Cyberpunk RED healing outside of a full hospital: First Aid / Paramedic to
@@ -27,6 +28,7 @@ export class Medicine {
      * BODY. A Mortally Wounded character must be stabilised before they heal.
      */
     public static rest(actor: Actor): number {
-        return actor.heal(actor.stats.bt);
+        const amount: number = Math.max(0, actor.stats.bt + Lifestyle.restBonus(actor));
+        return actor.heal(amount);
     }
 }

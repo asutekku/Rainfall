@@ -1,60 +1,13 @@
-export default {
-    vehicles: [
-        {
-            name: "Scooter",
-            price: 500,
-            health: 100,
-            maxSpeed: 50,
-            driver: null,
-            passengers: null,
-        },
-        {
-            name: "Motorcycle",
-            price: 1500,
-            health: 200,
-            maxSpeed: 150,
-            driver: null,
-            passengers: null,
-        },
-        {
-            name: "CityCar",
-            price: 2e3,
-            health: 400,
-            maxSpeed: 180,
-            driver: null,
-            passengers: null,
-        },
-        {
-            name: "Small Subcompact",
-            price: 6e3,
-            health: 500,
-            maxSpeed: 160,
-            driver: null,
-            passengers: null,
-        },
-        {
-            name: "Medium Sedan",
-            price: 1e4,
-            health: 700,
-            maxSpeed: 160,
-            driver: null,
-            passengers: null,
-        },
-        {
-            name: "Sportscar",
-            price: 2e4,
-            health: 500,
-            maxSpeed: 240,
-            driver: null,
-            passengers: null,
-        },
-        {
-            name: "Luxury Sedan",
-            price: 4e4,
-            health: 600,
-            maxSpeed: 180,
-            driver: null,
-            passengers: null,
-        },
-    ],
+import {VehicleConfig} from "./Vehicle";
+
+// RED-scale vehicles (SDP is small in RED: bikes ~20, cars ~35-50).
+const vehicles: { [name: string]: VehicleConfig } = {
+    Scooter:        {name: "Scooter",        cost: 500,   sdp: 15, sp: 0,  speed: 40,  ramDamage: 1, seats: 1},
+    Motorcycle:     {name: "Motorcycle",     cost: 1500,  sdp: 20, sp: 0,  speed: 100, ramDamage: 2, seats: 2},
+    CityCar:        {name: "CityCar",        cost: 2000,  sdp: 35, sp: 3,  speed: 120, ramDamage: 3, seats: 4},
+    SmallSubcompact:{name: "Small Subcompact", cost: 6000, sdp: 30, sp: 3, speed: 110, ramDamage: 3, seats: 4},
+    MediumSedan:    {name: "Medium Sedan",   cost: 10000, sdp: 40, sp: 5,  speed: 120, ramDamage: 4, seats: 5},
+    ArmoredSUV:     {name: "Armored SUV",    cost: 25000, sdp: 50, sp: 10, speed: 100, ramDamage: 5, seats: 6},
 };
+
+export default vehicles;

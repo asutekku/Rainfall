@@ -30,5 +30,10 @@ export class Player extends Actor {
         this.cyberdeck.push(GetItem.program("Zap"));
         this.cyberdeck.push(GetItem.program("Sword"));
         this.cyberdeck.push(GetItem.program("Armor"));
+        // A working merc: some street cred, a Nice Conapt, and a ride.
+        this.reputation = 2;
+        this.housing = "NiceConapt";
+        this.vehicle = GetItem.vehicle("CityCar");
+        this.currency = 1000; // starting eddies to cover early cost of living
     }
 }

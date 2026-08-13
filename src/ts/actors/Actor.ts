@@ -2,6 +2,7 @@ import {GetItem} from "../interact/getItem";
 import {Armor} from "../items/Armor";
 import {Cyberware} from "../items/Cyberware";
 import {Program} from "../items/Program";
+import {Vehicle} from "../items/Vehicle";
 import {Item} from "../items/Item";
 import {Weapon} from "../items/Weapon";
 import {Name} from "./resources/Name";
@@ -211,6 +212,10 @@ export class Actor extends GameObject {
     public maxHumanity: number;
     public cyberpsychosis: boolean;
     public traumaTeam: boolean;
+    public reputation: number;
+    public fearPenalty: number;
+    public housing: string;
+    public vehicle: Vehicle | null;
 
     constructor() {
         const role = new Role();
@@ -397,6 +402,10 @@ export class Actor extends GameObject {
         this.maxHumanity = this.stats.emp * 10;
         this.cyberpsychosis = false;
         this.traumaTeam = false;
+        this.reputation = 0;
+        this.fearPenalty = 0;
+        this.housing = "Streets";
+        this.vehicle = null;
         this.lifepath = {
             style: {
                 clothes: {
@@ -576,7 +585,17 @@ export class Actor extends GameObject {
         const stat: number = weapon.weaponClass === "melee" ? this.stats.dex : this.stats.ref;
         const cyber: number = weapon.weaponClass === "melee" ? 0 : this.cyberAttackBonus();
         return stat + this.skillFor(weapon) + weapon.accuracyBonus
-            + this.woundPenalty() + this.precisionAttackBonus() + cyber;
+            + this.woundPenalty() + this.precisionAttackBonus() + cyber + this.fearPenalty;
+    }
+
+    /** RED Reputation (0-10), earned through notable deeds. */
+    public gainReputation(amount: number): void {
+        this.reputation = Math.min(10, this.reputation + amount);
+    }
+
+    /** RED Drive skill (Land Vehicle) for vehicle checks. */
+    public driveSkill(): number {
+        return this.skills.ref.driving;
     }
 
     /** RED melee/ranged defence: DEX + Evasion (Dodge), minus the wound penalty. */
@@ -634,7 +653,7 @@ export class Actor extends GameObject {
         if (cfg.skill !== undefined) {
             const r = this.skills.ref;
             r.handgun = r.rifle = r.submachinegun = r.melee = r.brawling =
-                r.archery = r.heavyWeapons = r.martialKarate = r.athletics = cfg.skill;
+                r.archery = r.heavyWeapons = r.martialKarate = r.athletics = r.driving = cfg.skill;
         }
         this.recalculateHealth();
     }
