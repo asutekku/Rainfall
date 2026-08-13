@@ -7,6 +7,7 @@ import {Item} from "../items/Item";
 import {Weapon} from "../items/Weapon";
 import {Name} from "./resources/Name";
 import {Role} from "./resources/Role";
+import {CharacterCreation, Lifepath} from "./resources/CharacterCreation";
 import {Statistics} from "./resources/Statistics";
 import {ObjectPosition} from "../utils/ObjectPosition";
 import {GameObject} from "../items/GameObject";
@@ -67,31 +68,7 @@ export class Actor extends GameObject {
     public roleRank: number;
     public mortallyWounded: boolean;
     public deathSavePenalty: number;
-    public lifepath: {
-        style: {
-            clothes: {
-                headgear: any;
-                upper: any;
-                jacket: any;
-                bottom: any;
-                shoes: any;
-                accessories: any;
-            };
-            hair: any;
-            affectations: any;
-            ethnicity: any;
-            language: any;
-        };
-        familyBackground: any;
-        motivations: {
-            traits: any;
-            valuedPerson: any;
-            valueMost: any;
-            feelAboutPeople: any;
-            valuedPossession: any;
-        };
-        lifeEvents: any[];
-    };
+    public lifepath: Lifepath;
     public maxHealth: number;
     public maxExperience: number;
     private skills: {
@@ -412,31 +389,7 @@ export class Actor extends GameObject {
         this.combatAwareness = {precision: 0, initiative: 0, spotWeakness: 0, deflection: 0};
         this.firstHitDone = false;
         this.deflectionUsed = false;
-        this.lifepath = {
-            style: {
-                clothes: {
-                    headgear: null,
-                    upper: null,
-                    jacket: null,
-                    bottom: null,
-                    shoes: null,
-                    accessories: null,
-                },
-                hair: null,
-                affectations: null,
-                ethnicity: null,
-                language: null,
-            },
-            familyBackground: null,
-            motivations: {
-                traits: null,
-                valuedPerson: null,
-                valueMost: null,
-                feelAboutPeople: null,
-                valuedPossession: null,
-            },
-            lifeEvents: [],
-        };
+        this.lifepath = CharacterCreation.randomLifepath();
     }
 
     public updateAfter() {
