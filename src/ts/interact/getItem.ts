@@ -9,6 +9,8 @@ import {Medical} from "../items/Scrap";
 import {Weapon} from "../items/Weapon";
 import {Cyberware} from "../items/Cyberware";
 import {default as cyberwareData} from "../../objects/cyberware";
+import {Program} from "../items/Program";
+import {default as programData} from "../../objects/programs";
 import {State} from "../utils/State";
 import {Utils} from "../utils/utils";
 import en_US from "./../../lang/en_US";
@@ -48,6 +50,10 @@ export class GetItem {
 
     public static cyberware(name: string): Cyberware {
         return new Cyberware(cyberwareData.find((c) => c.name === name)!);
+    }
+
+    public static program(name: string): Program {
+        return new Program(programData[name]);
     }
 
     public static item() {

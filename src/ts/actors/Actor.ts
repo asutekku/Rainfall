@@ -1,6 +1,7 @@
 import {GetItem} from "../interact/getItem";
 import {Armor} from "../items/Armor";
 import {Cyberware} from "../items/Cyberware";
+import {Program} from "../items/Program";
 import {Item} from "../items/Item";
 import {Weapon} from "../items/Weapon";
 import {Name} from "./resources/Name";
@@ -205,6 +206,7 @@ export class Actor extends GameObject {
         };
     };
     public cybernetics: Cyberware[];
+    public cyberdeck: Program[];
     public humanity: number;
     public maxHumanity: number;
     public cyberpsychosis: boolean;
@@ -389,6 +391,7 @@ export class Actor extends GameObject {
             },
         };
         this.cybernetics = [];
+        this.cyberdeck = [];
         this.humanity = this.stats.emp * 10;
         this.maxHumanity = this.stats.emp * 10;
         this.cyberpsychosis = false;
@@ -648,6 +651,15 @@ export class Actor extends GameObject {
 
     public hasPainEditor(): boolean {
         return this.cybernetics.some((c) => c.effects.ignoreWoundPenalty === true);
+    }
+
+    public isNetrunner(): boolean {
+        return this.role.name === "Netrunner";
+    }
+
+    /** RED Interface rank: a Netrunner uses its Role Ability rank; others have a basic 2. */
+    public interfaceRank(): number {
+        return this.isNetrunner() ? this.roleRank : 2;
     }
 
     /*draw(context) {

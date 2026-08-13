@@ -25,5 +25,9 @@ export class Player extends Actor {
         this.installCyberware(GetItem.cyberware("Cybereye w/ Targeting Scope"));
         this.installCyberware(GetItem.cyberware("Sandevistan"));
         this.installCyberware(GetItem.cyberware("Subdermal Armor"));
+        // A basic cyberdeck loadout for jacking into the NET.
+        this.cyberdeck.push(GetItem.program("Zap"));
+        this.cyberdeck.push(GetItem.program("Sword"));
+        this.cyberdeck.push(GetItem.program("Armor"));
     }
 }
