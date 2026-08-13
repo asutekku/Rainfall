@@ -46,57 +46,28 @@ export class GetItem {
     }
 
     public static addItemToInventory(item: Item | Armor | Weapon | Medical, actor: Actor) {
-        const multiple: boolean = !!actor.inventory[item.type!.toString()].find(
-            (i) => i.name.toString() === item.name!.toString(),
-        );
         actor.inventory[item.type.toString()].push(item);
-        const inventoryContainer: HTMLElement = document.getElementById("inventoryItems")!;
-        if (inventoryContainer) {
-            const invItemCount = document.getElementById(item.name.toString());
-            /*if (!multiple) {
-                const inventoryItem: HTMLElement = Paper.paperInventoryItem(item);
-                if (inventoryContainer && State.UI.inventoryView === item.type) {
-                    inventoryContainer.appendChild(inventoryItem);
-                }
-            } else if (invItemCount) {
-                const itemCount = parseInt(invItemCount!.querySelector(".itemCount")!.textContent!, 10);
-                invItemCount.querySelector(".itemCount")!.textContent = `${itemCount + 1}x`;
-            }*/
-        }
     }
 
-    public static clearEquips(item: Item): void {
-        if (item instanceof Armor) {
-            Array.from(document.getElementsByClassName("inventoryItem")).forEach((e) => {
-                if (e.classList.contains(`${item.bodyPart}_node`)) {
-                    e.getElementsByClassName("itemEquipped")[0].textContent = "";
-                }
-            });
-        } else {
-            Array.from(document.getElementsByClassName("inventoryItem")).forEach((e) => {
-                e.getElementsByClassName("itemEquipped")[0].textContent = "";
-            });
-        }
-    }
-
+    /**
+     * Equips/uses an item by mutating the model only. Rendering the resulting
+     * equipped/health state is the view layer's job (it re-reads the model),
+     * which keeps this usable headless and in tests.
+     */
     public static useItem(item: Item) {
         const player: Player = State.player!;
         if (item instanceof Weapon) {
-            GetItem.clearEquips(item);
-            const equipDiv = document.getElementById(item.name)!.getElementsByClassName("itemEquipped")[0];
             const equipWeapon = !item.equipped;
-            equipDiv.textContent = !item.equipped ? "[Equipped]" : "";
-            player.weapon = equipWeapon ? (item as Weapon) : GetItem.weapon("weapon_fists");
             player.inventory.weapons.forEach((w) => (w.equipped = false));
+            player.weapon = equipWeapon ? (item as Weapon) : GetItem.weapon("Fists");
             item.equipped = equipWeapon;
         }
         if (item instanceof Armor) {
-            const equipDiv = document.getElementById(item.name)!.getElementsByClassName("itemEquipped")[0];
             const equipArmor = !item.equipped;
-            GetItem.clearEquips(item);
-            equipDiv.textContent = !item.equipped ? "[Equipped]" : "";
+            player.inventory.armor
+                .filter((w) => w.bodyPart === item.bodyPart)
+                .forEach((e) => (e.equipped = false));
             player.equipment[item.bodyPart!] = equipArmor ? item : null;
-            player.inventory.armor.filter((w) => w.bodyPart === item.bodyPart).forEach((e) => (e.equipped = false));
             item.equipped = equipArmor;
         }
         if (item instanceof Medical) {

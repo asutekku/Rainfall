@@ -13,9 +13,11 @@ export class Map {
     public actors: any[];
 
     public static clear(): void {
-        this.prototype
-            .canvas!.getContext("2d")!
-            .clearRect(0, 0, this.prototype.canvas!.width, this.prototype.canvas!.height);
+        const canvas = this.prototype.canvas;
+        if (!canvas) {
+            return;
+        }
+        canvas.getContext("2d")!.clearRect(0, 0, canvas.width, canvas.height);
     }
 
     constructor(name: string, height: number, width: number, depth: number, setting: Setting) {
@@ -26,11 +28,30 @@ export class Map {
         this.setting = setting;
         this.buildings = [];
         this.actors = [];
+        // The canvas is a rendering concern, not part of the map model. It is
+        // created lazily via initCanvas() so the map (and everything that
+        // imports it, e.g. State) can be constructed headless, without a DOM.
+        this.canvas = null;
+        this.context = null;
+    }
+
+    /**
+     * Creates the backing canvas. Browser-only; call from the render layer once
+     * a DOM is available. Safe to call more than once.
+     */
+    public initCanvas(): HTMLCanvasElement {
+        if (this.canvas) {
+            return this.canvas;
+        }
         this.canvas = document.createElement("canvas");
         this.canvas.id = "map";
-        this.canvas.height = height;
-        this.canvas.width = width;
+        this.canvas.height = this.height;
+        this.canvas.width = this.width;
         this.context = this.canvas.getContext("2d");
-        this.context!.translate((width ? width : 100) * 0.5, (height ? height : 100) * 0.5);
+        this.context!.translate(
+            (this.width ? this.width : 100) * 0.5,
+            (this.height ? this.height : 100) * 0.5,
+        );
+        return this.canvas;
     }
 }
