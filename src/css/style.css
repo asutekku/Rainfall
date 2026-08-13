@@ -774,3 +774,146 @@ progress::-webkit-progress-value {
     border: 0 solid var(--borderColor);
     border-bottom-width: 2px;
 }
+/* ============================================================
+   Tier 3 UI panels — RED character sheet, netrun, downtime,
+   store. Uses the existing tokens: dark bg, monospace,
+   rust (#934E41) + cyan (#D2FEFD) accents.
+   ============================================================ */
+.redPanel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 2px;
+    font-family: monospace;
+    color: var(--textColor);
+    overflow-y: auto;
+}
+.redSection {
+    background: var(--backgroundLight);
+    border-left: 3px solid var(--selectionActiveBorder);
+    padding: 10px 14px;
+}
+.redSectionTitle {
+    color: var(--baseColor);
+    font-size: 0.82rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+    border-bottom: 1px solid var(--borderColor);
+    padding-bottom: 6px;
+}
+.redRow {
+    display: flex;
+    align-items: baseline;
+    gap: 12px;
+    padding: 4px 0;
+    font-size: 0.82rem;
+    border-bottom: 1px dotted #1a1a1a;
+}
+.redRowName { color: var(--textColor); min-width: 200px; }
+.redRowMeta {
+    color: var(--textColorDim);
+    min-width: 96px;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.redRowDesc { color: var(--textColorDim); flex: 1; }
+.redEmpty { color: var(--textColorDim); font-style: italic; padding: 8px 0; }
+
+.redStatGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    margin-top: 12px;
+}
+.redStat {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: var(--backgroundLight);
+    border: 1px solid var(--borderColor);
+    padding: 7px 11px;
+}
+.redStat:hover { border-color: var(--selectionHoverBorder); }
+.redStatLabel { color: var(--textColorDim); font-size: 0.7rem; letter-spacing: 0.08em; }
+.redStatValue { color: var(--baseColor); font-size: 1.05rem; font-weight: bold; }
+
+.redControls { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; }
+.redBtn {
+    font-family: monospace;
+    font-size: 0.76rem;
+    color: var(--buttonTextColor);
+    background: var(--buttonColor);
+    border: 1px solid var(--borderColor);
+    border-left: 3px solid var(--borderColor);
+    padding: 6px 11px;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s, color 0.12s;
+}
+.redBtn:hover { border-left-color: var(--selectionHoverBorder); background: var(--selectionActive); }
+.redBtnActive {
+    border-left-color: var(--selectionActiveBorder);
+    color: var(--selectionActiveBorder);
+    background: var(--selectionActive);
+}
+.redBtnDisabled { opacity: 0.4; cursor: not-allowed; }
+.redBtnPrimary {
+    font-family: monospace;
+    font-size: 0.82rem;
+    color: var(--baseColor);
+    background: var(--selectionActive);
+    border: 1px solid var(--selectionActiveBorder);
+    border-left: 3px solid var(--selectionActiveBorder);
+    padding: 8px 18px;
+    cursor: pointer;
+    margin-top: 4px;
+    transition: box-shadow 0.15s, background 0.15s;
+}
+.redBtnPrimary:hover { background: #1c1818; box-shadow: 0 0 8px rgba(147, 78, 65, 0.45); }
+
+.netLog {
+    margin-top: 8px;
+    background: #070606;
+    border: 1px solid var(--borderColor);
+    padding: 8px 10px;
+    max-height: 220px;
+    overflow-y: auto;
+}
+.netLogLine { color: #aed581; font-size: 0.77rem; padding: 1px 0; }
+.redNotice {
+    color: var(--baseColor);
+    background: var(--backgroundLight);
+    border-left: 3px solid var(--selectionActiveBorder);
+    padding: 9px 13px;
+    font-size: 0.82rem;
+}
+
+.storeHeader {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 2px 2px 10px;
+    border-bottom: 1px solid var(--borderColor);
+    margin-bottom: 10px;
+}
+.storeEddies { color: #aed581; font-size: 1.1rem; font-weight: bold; letter-spacing: 0.03em; }
+.storeNotice { color: var(--textColorDim); font-size: 0.8rem; }
+.storeStock { display: flex; flex-direction: column; gap: 4px; overflow-y: auto; max-height: 62vh; width: 100%; }
+.storeItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--backgroundLight);
+    border: 1px solid var(--borderColor);
+    border-left: 3px solid var(--borderColor);
+    padding: 8px 13px;
+    transition: border-color 0.12s;
+}
+.storeItem:hover { border-left-color: var(--selectionActiveBorder); }
+.storeItemName { color: var(--textColor); min-width: 190px; font-size: 0.84rem; }
+.storeItemDetail { color: var(--textColorDim); flex: 1; font-size: 0.77rem; }
+
+.vital-good { color: #aed581; }
+.vital-warn { color: #f0a830; }
+.vital-critical { color: #e0533f; }

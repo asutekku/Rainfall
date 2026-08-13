@@ -30,6 +30,8 @@ export class Sidebar extends React.Component<SidebarProps, SidebarState> {
                 <MenuButton text='Store' update={this.handleClick} active={this.state.activeSelection}/>
                 <MenuButton text='Inventory' update={this.handleClick} active={this.state.activeSelection}/>
                 <MenuButton text='Combat' update={this.handleClick} active={this.state.activeSelection}/>
+                <MenuButton text='Netrun' update={this.handleClick} active={this.state.activeSelection}/>
+                <MenuButton text='Downtime' update={this.handleClick} active={this.state.activeSelection}/>
                 <MenuButton text='Auto' update={this.handleClick} active={this.state.activeSelection}/>
                 <MenuButton text='Restart' update={this.handleClick} active={this.state.activeSelection}/>
                 <MenuButton text='Respawn' update={this.handleClick} active={this.state.activeSelection}/>

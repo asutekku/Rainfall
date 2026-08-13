@@ -3,6 +3,7 @@ import {Actor} from "../../actors/Actor";
 import {Category} from "../general/category";
 import {CharacterAbout} from "./characterAbout";
 import {CharacterStats} from "./characterStats";
+import {CyberwarePanel} from "./cyberwarePanel";
 
 interface StatProps {
     actor: Actor;
@@ -24,8 +25,10 @@ export class Character extends React.Component<StatProps, StatState> {
     }
 
     public changeView(selection: string) {
-        if (selection == 'About') {
+        if (selection === 'About') {
             return <CharacterAbout actor={this.props.actor}/>;
+        } else if (selection === 'Chrome') {
+            return <CyberwarePanel actor={this.props.actor}/>;
         } else {
             return <CharacterStats actor={this.props.actor}/>;
         }
@@ -41,7 +44,8 @@ export class Character extends React.Component<StatProps, StatState> {
                 <div className={"itemCollectionContainer"}>
                     <div className={"itemCollectionCategories"}>
                         <Category title={"About"} update={this.handleClick} active={this.state.selection}/>
-                        <Category title={"Stats"} update={this.handleClick} active={this.state.selection}/>
+                        <Category title={"Weapon"} update={this.handleClick} active={this.state.selection}/>
+                        <Category title={"Chrome"} update={this.handleClick} active={this.state.selection}/>
                     </div>
                     <div className={"itemCollection-100"}>
                         {this.changeView(this.state.selection)}

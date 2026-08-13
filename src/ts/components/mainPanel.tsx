@@ -8,6 +8,8 @@ import {Inventory} from "./inventory/inventory";
 import {Quests} from "./quests/quests";
 import {Character} from "./stats/stats";
 import {Store} from "./storePanel/store";
+import {Netrun} from "./net/netrun";
+import {Downtime} from "./downtime/downtime";
 
 interface MainProps {
     activeView: string;
@@ -49,7 +51,11 @@ export class MainPanel extends React.Component<MainProps, MainState> {
             case 'Character':
                 return <Character actor={this.props.currentActor}/>;
             case 'Store':
-                return <Store messages={this.getMessage}/>;
+                return <Store player={this.props.currentActor} messages={this.getMessage}/>;
+            case 'Netrun':
+                return <Netrun actor={this.props.currentActor}/>;
+            case 'Downtime':
+                return <Downtime actor={this.props.currentActor}/>;
             default:
                 return <div>This is yet to be implemented</div>;
         }
