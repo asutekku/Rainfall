@@ -795,8 +795,12 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             return;
         }
 
-        const shots = ev.autofire ? 5 : 1;
-        const gapT = 0.09;
+        // every round leaving the barrel gets a tracer: bursts as a stitched
+        // string of shots, shotguns as one trigger pull spraying a pellet fan
+        const shotgun = ev.actor.weapon.weaponClass === "shotgun";
+        const shots = shotgun ? 1 : Math.max(1, ev.rounds || (ev.autofire ? 5 : 1));
+        const pellets = shotgun ? 6 : 1;
+        const gapT = ev.autofire ? 0.09 : 0.13;
         const flight = 0.16;
         const total = 0.34 + shots * gapT + flight + (ev.dropped ? 0.55 : 0);
         let elapsed = 0;         // unscaled timeline seconds
@@ -808,7 +812,9 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             update: (_k, dt) => {
                 elapsed += dt * sp;
                 while (spawned < shots && elapsed > 0.05 + spawned * gapT) {
-                    this.spawnTracer(shooter, target, ev);
+                    for (let p = 0; p < pellets; p++) {
+                        this.spawnTracer(shooter, target, ev, shotgun ? 0.55 : 0);
+                    }
                     spawned += 1;
                 }
                 if (!impacted && elapsed > 0.05 + (shots - 1) * gapT + flight) {
@@ -851,9 +857,9 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         return v;
     }
 
-    private spawnTracer(shooter: UnitView, target: UnitView, ev: ShotEvent) {
+    private spawnTracer(shooter: UnitView, target: UnitView, ev: ShotEvent, extraSpread: number = 0) {
         const from = this.muzzleWorld(shooter);
-        const jitter = ev.autofire ? 0.35 : 0.12;
+        const jitter = (ev.autofire ? 0.35 : ev.rounds > 1 ? 0.22 : 0.12) + extraSpread;
         let to = this.unitAnchor(target, 1.25).add(new THREE.Vector3(
             (Math.random() - 0.5) * jitter * 2, (Math.random() - 0.5) * jitter, (Math.random() - 0.5) * jitter * 2));
         if (!ev.hit) {
