@@ -2,7 +2,7 @@ import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {Battlefield} from "../../interact/battlefield";
 import {rangeDV} from "../../interact/rangeTable";
-import {MapNode, RunState} from "../../interact/runMap";
+import {RunNode, RunState} from "../../interact/runMap";
 import {MainPanel} from "../mainPanel";
 import {IsoMap} from "./isoMap";
 import {CityMap} from "../run/cityMap";
@@ -19,7 +19,7 @@ export interface StageProps {
     onSelectAlly: (a: Actor) => void;
     onSelectEnemy: (a: Actor) => void;
     onGotoCombat: () => void;
-    onPickNode: (node: MapNode) => void;
+    onPickNode: (node: RunNode) => void;
 }
 
 /**
