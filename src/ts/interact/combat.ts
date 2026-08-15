@@ -176,6 +176,7 @@ export class Combat {
             }
             this.messages.push(new DeathMessage(target, actor));
             if (eddies > 0) { this.messages.push(new MessageStr(`${actor.name} loots ${eddies}¥.`)); }
+            Economy.scavenge(actor, target).forEach((m) => this.messages.push(new MessageStr(m)));
         }
     }
 

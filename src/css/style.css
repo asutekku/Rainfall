@@ -305,6 +305,7 @@ main.panel > .panelBody { flex:1; min-height:0; overflow-y:auto; padding:12px; }
 .feed .log { flex:1; min-height:0; overflow-y:auto; padding:8px 10px; font-size:11.5px; line-height:1.7; }
 .actionMessage.msg-loot { color:var(--warn); }
 .actionMessage.msg-gear { color:var(--cyan); }
+.actionMessage.msg-scav { color:var(--good); }
 .actionMessage, .actionMessage-first { color:var(--mid); padding-bottom:1px; margin-left:1em; text-indent:-1em; }
 .messageArrow { color:var(--rust); margin-right:6px; font-weight:bold; }
 .hitRed { color:var(--crit); }
