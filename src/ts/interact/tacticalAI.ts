@@ -24,7 +24,7 @@ export interface Plan {
 }
 
 const SAMPLES = 20;        // rollouts per (attacker,target) estimate
-const MELEE_REACH = 2;     // metres you must be within to land a melee hit
+const MELEE_REACH = 4;     // metres you must be within to melee (>= one cell, so adjacent works)
 
 const W_MOVE = 0.02;       // tiny cost per metre moved (prefer standing when equal)
 
@@ -124,7 +124,7 @@ function pointToward(from: Point, to: Point, maxDist: number): Point {
 
 /** The range this weapon wants to fight at (its low-DV band, kept off point-blank). */
 function preferredGap(w: Weapon): number {
-    if (w.weaponClass === "melee") { return 1.5; }
+    if (w.weaponClass === "melee") { return 2.5; }   // adjacent cell, not on top of the target
     switch (w.weaponClass) {
         case "shotgun": return 10;
         case "pistol": return 14;

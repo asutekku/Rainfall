@@ -20,6 +20,7 @@ const ENEMY_Y = 30;  // far line (staggered per unit)
 
 const COVER_RADIUS = 3;  // metres: how close you must be to a cover point to benefit
 const COVER_DV = 4;      // extra DV to hit a target that is behind cover
+const MIN_SEP = 2.5;     // metres: no two units share a cell — melee is adjacent, not stacked
 
 const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
 const dist2 = (ax: number, ay: number, bx: number, by: number): number => Math.hypot(ax - bx, ay - by);
@@ -105,18 +106,40 @@ export class Battlefield {
         return {x: Math.max(X_MIN, Math.min(X_MAX, p.x)), y: Math.max(Y_MIN, Math.min(Y_MAX, p.y))};
     }
 
-    /** Move an actor up to `maxMeters` toward a destination; returns metres moved. */
-    public static stepToward(self: Actor, dest: Point, maxMeters: number): number {
+    /**
+     * Move an actor up to `maxMeters` toward a destination, then resolve it out of
+     * any cell already occupied by another unit (no stacking — melee ends up on an
+     * adjacent cell). Returns metres actually moved.
+     */
+    public static stepToward(self: Actor, dest: Point, maxMeters: number, others: Actor[] = []): number {
+        const start: Point = {x: self.position.x, y: self.position.y};
         const d = this.clamp(dest);
-        const gap = dist2(self.position.x, self.position.y, d.x, d.y);
-        if (gap <= maxMeters || gap === 0) {
-            self.position.x = d.x; self.position.y = d.y;
-            return gap;
+        const gap = dist2(start.x, start.y, d.x, d.y);
+        const target: Point = (gap <= maxMeters || gap === 0)
+            ? d
+            : {x: start.x + (d.x - start.x) * (maxMeters / gap), y: start.y + (d.y - start.y) * (maxMeters / gap)};
+        const resolved = this.resolveFree(target, others, self);
+        self.position.x = resolved.x; self.position.y = resolved.y;
+        return dist2(start.x, start.y, resolved.x, resolved.y);
+    }
+
+    /** Is this point clear of every other live unit's cell? */
+    private static isFree(p: Point, others: Actor[], self: Actor): boolean {
+        return !others.some((o) => o !== self && o.canFight()
+            && dist2(o.position.x, o.position.y, p.x, p.y) < MIN_SEP);
+    }
+
+    /** Nearest unoccupied point to `target`: try it, then rings of cells around it. */
+    private static resolveFree(target: Point, others: Actor[], self: Actor): Point {
+        if (this.isFree(target, others, self)) { return target; }
+        for (const r of [MIN_SEP, MIN_SEP * 1.5, MIN_SEP * 2.2, MIN_SEP * 3]) {
+            for (let k = 0; k < 8; k++) {
+                const ang = k * Math.PI / 4;
+                const cand = this.clamp({x: target.x + Math.cos(ang) * r, y: target.y + Math.sin(ang) * r});
+                if (this.isFree(cand, others, self)) { return cand; }
+            }
         }
-        const t = maxMeters / gap;
-        self.position.x += (d.x - self.position.x) * t;
-        self.position.y += (d.y - self.position.y) * t;
-        return maxMeters;
+        return target;
     }
 
     private static place(a: Actor, x: number, y: number): void {

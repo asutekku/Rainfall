@@ -224,21 +224,22 @@ export class Combat {
             if (!c.canFight()) { continue; }
             const foes: Actor[] = party.indexOf(c) >= 0 ? enemies : party;
             const allies: Actor[] = party.indexOf(c) >= 0 ? party : enemies;
+            const others: Actor[] = [...party, ...enemies].filter((a) => a !== c);
             if (c === controlled && action) {
                 // Manual turn: apply the player's move + attack the same way an AI plan is applied.
-                this.applyPlan(c, {moveTo: action.moveTo, target: action.target, label: "manual"}, foes);
+                this.applyPlan(c, {moveTo: action.moveTo, target: action.target, label: "manual"}, foes, others);
                 continue;
             }
-            this.applyPlan(c, TacticalAI.plan(c, allies, foes), foes);
+            this.applyPlan(c, TacticalAI.plan(c, allies, foes), foes, others);
         }
         return this.messages.flat().reverse();
     }
 
     /** Apply a tactical plan: move (if any), then attack the chosen target. */
-    private static applyPlan(self: Actor, plan: Plan, foes: Actor[]): void {
+    private static applyPlan(self: Actor, plan: Plan, foes: Actor[], others: Actor[]): void {
         if (plan.moveTo) {
             const before: number = this.nearestFoeGap(self, foes);
-            const moved: number = Battlefield.stepToward(self, plan.moveTo, self.runMeters());
+            const moved: number = Battlefield.stepToward(self, plan.moveTo, self.runMeters(), others);
             if (moved >= 1) {
                 const after: number = this.nearestFoeGap(self, foes);
                 const verb: string = Battlefield.nearCover(self.position) ? "takes cover"
