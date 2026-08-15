@@ -2,6 +2,7 @@ import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {StatListItem} from "../statListItem";
 import {CharacterPortrait} from "./characterPortrait";
+import {Purse} from "../../interact/crew";
 
 export interface AboutProps {
     actor: Actor;
@@ -67,7 +68,7 @@ export class CharacterAbout extends React.Component<AboutProps, AboutState> {
                     <StatListItem name={"Reputation:"} value={`${a.reputation}/10`}/>
                     <StatListItem name={"Luck:"} value={`${a.luck}/${a.maxLuck}`}/>
                     <StatListItem name={"Housing:"} value={a.housing}/>
-                    <StatListItem name={"Eddies:"} value={`${a.currency}¥`}/>
+                    <StatListItem name={"Eddies:"} value={`${Purse.balance(a)}¥`}/>
 
                     <div className={"redStatGrid"}>
                         {this.stat("INT", a.stats.int)}

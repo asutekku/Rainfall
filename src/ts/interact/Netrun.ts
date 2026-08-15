@@ -1,4 +1,5 @@
 import {Actor} from "../actors/Actor";
+import {Purse} from "./crew";
 import {Program} from "../items/Program";
 import programData from "../../objects/programs";
 import {Check} from "./check";
@@ -102,7 +103,7 @@ export class Netrun {
             }
         }
 
-        runner.currency += eddies;
+        Purse.earn(runner, eddies);
         return {
             success: cleared === arch.floors.length && !flat,
             floorsCleared: cleared, totalFloors: arch.floors.length,

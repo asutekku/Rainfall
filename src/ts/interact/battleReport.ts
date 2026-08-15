@@ -59,7 +59,6 @@ export interface CombatantTally {
     damageDealt: number;
     damageTaken: number;
     kills: number;
-    eddies: number;
 }
 
 /** A hostile that was on the field, for the "contacts neutralised" roster. */
@@ -95,7 +94,6 @@ interface Snapshot {
     actor: Actor;
     hpBefore: number;
     levelBefore: number;
-    eddiesBefore: number;
     killsBefore: number;
     shots: number;
     hits: number;
@@ -110,6 +108,7 @@ interface OpenBattle {
     nodeType: string;
     nodeLabel: string;
     rounds: number;
+    eddies: number;
     loot: LootItem[];
     lootSeq: number;
 }
@@ -118,7 +117,6 @@ const snapshot = (a: Actor): Snapshot => ({
     actor: a,
     hpBefore: a.health,
     levelBefore: a.level,
-    eddiesBefore: a.currency,
     killsBefore: a.kills,
     shots: 0, hits: 0, damageDealt: 0, damageTaken: 0, xpGained: 0,
 });
@@ -134,6 +132,7 @@ export class BattleRecorder {
             hostiles: enemies.slice(),
             nodeType, nodeLabel,
             rounds: 0,
+            eddies: 0,
             loot: [],
             lootSeq: 0,
         };
@@ -172,6 +171,11 @@ export class BattleRecorder {
         if (from) { from.damageDealt += dealt; }
         const to = this.snapOf(target);
         if (to) { to.damageTaken += dealt; }
+    }
+
+    /** Eddies a kill paid into the crew purse (hostile takings aren't counted). */
+    public static countEddies(killer: Actor, amount: number): void {
+        if (this.open && this.snapOf(killer)) { this.open.eddies += Math.max(0, amount); }
     }
 
     /** XP awarded for a kill, recorded before a level-up can zero the counter. */
@@ -213,7 +217,6 @@ export class BattleRecorder {
                 shots: s.shots, hits: s.hits,
                 damageDealt: s.damageDealt, damageTaken: s.damageTaken,
                 kills: a.kills - s.killsBefore,
-                eddies: Math.max(0, Math.floor(a.currency - s.eddiesBefore)),
             };
         });
 
@@ -233,7 +236,7 @@ export class BattleRecorder {
             rounds: open.rounds,
             hostiles, party,
             kills: sum((t) => t.kills),
-            eddies: sum((t) => t.eddies),
+            eddies: open.eddies,
             fenced: 0,
             xp: sum((t) => t.xpGained),
             damageDealt: sum((t) => t.damageDealt),

@@ -18,6 +18,7 @@ import {RunController} from "../interact/runController";
 import {RunEndView} from "./run/runEndView";
 import {DebriefView} from "./run/debriefView";
 import {BattleReport} from "../interact/battleReport";
+import {Crew} from "../interact/crew";
 import {MetaOverlay} from "./run/metaOverlay";
 import {Store} from "./storePanel/store";
 import {Downtime} from "./downtime/downtime";
@@ -47,6 +48,8 @@ export interface InterfaceAppState {
     screen: RunScreen;
     /** The sealed after-action report while the debrief screen is up. */
     report: BattleReport | null;
+    /** The crew's shared purse — every payday, hire and store buy runs through it. */
+    crew: Crew;
 }
 
 export class App extends React.Component<{}, InterfaceAppState> {
@@ -79,6 +82,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             run: null,
             screen: "combat",
             report: null,
+            crew: new Crew().activate(),
         };
     }
 
@@ -103,7 +107,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         }
         if (run && this.state.screen === "end") {
             const kills = this.state.party.reduce((n, p) => n + p.kills, 0);
-            const eddies = this.state.party.reduce((n, p) => n + Math.floor(p.currency), 0);
+            const eddies = this.state.crew.funds;
             return <RunEndView outcome={run.outcome === "won" ? "won" : "lost"}
                                depth={run.depth} kills={kills} eddies={eddies}
                                canRevive={run.outcome === "lost" && !run.reviveUsed}
@@ -126,7 +130,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
                     data-mtab={this.state.mobileTab}
                     data-more={this.state.mobileMore ? "1" : "0"}
                     data-view={this.state.activeMainPanel}>
-            <Hud actor={this.getCurrentActor()}/>
+            <Hud actor={this.getCurrentActor()} crew={this.state.crew}/>
             <Sidebar active={this.state.activeMainPanel}
                      auto={this.state.auto}
                      activeSelection={this.updateSelection}
@@ -184,6 +188,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             squadSpecs: specs, party, currentEnemies: enemies,
             activeChar: party[0], activeEnemy: enemies[0],
             creating: false, run: RunController.freshRun(), screen: "map", report: null,
+            crew: new Crew().activate(),
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
             messages: [{msg: "— crew hits the street —"} as any],
         });
@@ -315,6 +320,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             run: RunController.freshRun(),
             screen: "map",
             report: null,
+            crew: new Crew().activate(),
             messages: [{msg: "— new job, same crew —"} as any],
         });
     };

@@ -4,6 +4,7 @@ import {Armor} from "../items/Armor";
 import {Weapon} from "../items/Weapon";
 import {BattleRecorder, BattleReport, GearChange, LootItem} from "./battleReport";
 import {Battlefield} from "./battlefield";
+import {Purse} from "./crew";
 import {Economy} from "./economy";
 import {RunMap, RunNode, RunState, encounterSpec, spawnEncounter} from "./runMap";
 
@@ -140,8 +141,7 @@ export class RunController {
         const loot = RunController.heldLoot(report, id);
         if (!loot) { return null; }
         RunController.takeFromPack(loot);
-        const paid = Economy.sellValue(loot.item.cost);
-        loot.owner.currency += paid;
+        const paid = Purse.earn(loot.owner, Economy.sellValue(loot.item.cost));
         loot.fate = "sold";
         return {...report, loot: report.loot.slice(), fenced: report.fenced + paid};
     }

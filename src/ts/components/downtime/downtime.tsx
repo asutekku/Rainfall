@@ -3,6 +3,7 @@ import {Actor} from "../../actors/Actor";
 import {Medicine} from "../../interact/Medicine";
 import {Lifestyle} from "../../interact/Lifestyle";
 import {TraumaTeam} from "../../interact/TraumaTeam";
+import {Purse} from "../../interact/crew";
 
 interface DowntimeProps {
     actor: Actor;
@@ -50,7 +51,7 @@ export class Downtime extends React.Component<DowntimeProps, DowntimeState> {
         return (
             <div className={"redPanel"}>
                 <div className={"redSection"}>
-                    <div className={"redSectionTitle"}>Downtime — {a.health}/{a.maxHealth} HP · {a.currency}¥</div>
+                    <div className={"redSectionTitle"}>Downtime — {a.health}/{a.maxHealth} HP · {Purse.balance(a)}¥</div>
                     <div className={"redControls"}>
                         <button className={"redBtnPrimary"} onClick={this.rest}>Rest &amp; Recover</button>
                         {a.mortallyWounded &&

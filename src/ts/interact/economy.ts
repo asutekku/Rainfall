@@ -3,6 +3,7 @@ import {Armor} from "../items/Armor";
 import Equipment from "../items/Equipment";
 import {Weapon} from "../items/Weapon";
 import {BattleRecorder, GearChange} from "./battleReport";
+import {Purse} from "./crew";
 
 const WEAPONS: Weapon[] = Equipment.weapons;
 
@@ -27,10 +28,10 @@ const ARMOR_TIERS: Array<{ name: string; sp: number; cost: number }> = [
  */
 export class Economy {
 
-    /** Award a defeated foe's eddies to the killer. */
+    /** Award a defeated foe's eddies — to the crew purse when a player killed it. */
     public static loot(killer: Actor, victim: Actor): number {
-        const eddies = Math.max(5, Math.floor(victim.currency));
-        killer.currency += eddies;
+        const eddies = Purse.earn(killer, Math.max(5, Math.floor(victim.currency)));
+        BattleRecorder.countEddies(killer, eddies);
         return eddies;
     }
 
@@ -126,7 +127,7 @@ export class Economy {
         let bestV = this.weaponValue(actor.weapon) * 1.15;   // require > 15% better
         for (const w of WEAPONS) {
             if (w.weaponClass !== cls || w.damageType !== "kinetic") { continue; }
-            if (w.rarity > cap || w.cost > actor.currency) { continue; }
+            if (w.rarity > cap || !Purse.canAfford(actor, w.cost)) { continue; }
             const v = this.weaponValue(w);
             if (v > bestV) { bestV = v; best = w; }
         }
@@ -139,7 +140,7 @@ export class Economy {
         const curSP = actor.equipment.upper ? actor.equipment.upper.stoppingPower : 0;
         let best: { name: string; sp: number; cost: number } | null = null;
         for (const t of ARMOR_TIERS) {
-            if (t.sp <= curSP || t.sp > cap || t.cost > actor.currency) { continue; }
+            if (t.sp <= curSP || t.sp > cap || !Purse.canAfford(actor, t.cost)) { continue; }
             if (!best || t.sp > best.sp) { best = t; }
         }
         return best;
@@ -160,7 +161,7 @@ export class Economy {
             actor.inventory.weapons.splice(invW.idx, 1);
             changes.push(this.equipWeapon(actor, invW.w, "salvage", 0));
         } else if (buyW) {
-            actor.currency -= buyW.cost;
+            Purse.spend(actor, buyW.cost);
             changes.push(this.equipWeapon(actor, buyW.clone(), "bought", buyW.cost));
         }
 
@@ -171,7 +172,7 @@ export class Economy {
             actor.inventory.armor.splice(invA.idx, 1);
             changes.push(this.equipArmor(actor, invA.a, "salvage", 0));
         } else if (buyA) {
-            actor.currency -= buyA.cost;
+            Purse.spend(actor, buyA.cost);
             changes.push(this.equipArmor(actor, new Armor("upper", buyA.name, "", 1, buyA.sp, buyA.cost, ""),
                 "bought", buyA.cost));
         }
