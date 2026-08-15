@@ -1285,10 +1285,11 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                 }
             }
 
-            // overlay tag
+            // overlay tag — names only while a unit is on the move (keeps the
+            // street readable; strips and the order bar identify everyone else)
             const anchor = this.toScreen(this.unitAnchor(u, u.fallen > 0.5 ? 1.0 : 2.35));
-            if (anchor) {
-                u.tag.style.display = u.faded ? "none" : "block";
+            if (anchor && u.walking && !u.faded) {
+                u.tag.style.display = "block";
                 u.tag.style.left = anchor.x + "px";
                 u.tag.style.top = anchor.y + "px";
                 const hp = Math.max(0, Math.min(100, (a.health / Math.max(1, a.maxHealth)) * 100));

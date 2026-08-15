@@ -29,6 +29,8 @@ import {HireBoard} from "./run/hireBoard";
 import {SectorClearView} from "./run/sectorClearView";
 import {MetaOverlay} from "./run/metaOverlay";
 import {OrderCtx, PlaybackBundle} from "./combat/battleScene";
+import {BattleEvent} from "../interact/battleEvents";
+import {FeedLog, missionClock} from "../interact/feedLog";
 
 /** Which run-loop screen is on top. "combat" falls through to the ops shell. */
 export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "event" | "end";
@@ -85,12 +87,16 @@ export interface InterfaceAppState {
  */
 export class App extends React.Component<{}, InterfaceAppState> {
 
-    private logLength = 20;
+    private logLength = 30;
     private queue: Actor[] = [];             // initiative order, minus the acting unit
-    private pendingMsgs: any[] = [];         // feed lines held back until the animation lands
+    private pendingMsgs: any[] = [];         // engine messages held back until the animation lands
+    private pendingEvents: BattleEvent[] = [];   // the animated turn's events, for the feed summary
     private playId = 0;
     private turnTimer: number | null = null;
     private viewPaused = false;              // combat hidden behind another panel — resume on return
+    private battleStart = 0;                 // mission-clock zero for the current fight
+    private roundNo = 0;
+    private markRound = 0;                   // round separator waiting to land in the feed
 
     constructor(props: any) {
         super(props);
@@ -110,7 +116,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             party,
             currentEnemies: enemies,
             messages: [],
-            auto: false,
+            auto: true,   // combat plays itself by default; TAKE CONTROL opts into orders
             creating: true,
             characterSpec,
             offers: [],
@@ -268,7 +274,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             eventId: null, usedEvents: [],
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
             messages: [{msg: `— ${character.name} hits the street with a rookie in tow —`} as any],
-            playback: null, orders: null, turnOrder: [],
+            playback: null, orders: null, turnOrder: [], auto: true,
         });
     };
 
@@ -418,12 +424,16 @@ export class App extends React.Component<{}, InterfaceAppState> {
         this.clearTurnTimer();
         this.queue = [];
         this.pendingMsgs = [];
+        this.pendingEvents = [];
         this.viewPaused = false;
+        this.roundNo = 0;
+        this.markRound = 0;
     }
 
     /** A combat node just opened: fresh street, fresh initiative, first turn. */
     private beginBattle = () => {
         this.resetSequencer();
+        this.battleStart = Date.now();
         this.setState({
             battleId: this.state.battleId + 1,
             playback: null, orders: null, turnOrder: [],
@@ -459,6 +469,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
             if (!unit) {
                 this.queue = Combat.beginRound(this.state.party, this.state.currentEnemies);
                 if (!this.queue.length) { return; }
+                this.roundNo += 1;
+                if (this.roundNo > 1) { this.markRound = this.roundNo; }
             }
         }
         if (!unit) { return; }
@@ -482,27 +494,35 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private resolveTurn = (unit: Actor, order?: {moveTo?: Point | undefined; target?: Actor | undefined; aimed?: boolean | undefined}) => {
         const res = Combat.takeTurn(unit, this.state.party, this.state.currentEnemies, order);
         this.pendingMsgs = res.messages;
+        this.pendingEvents = res.events;
         this.playId += 1;
         this.setState({playback: {id: this.playId, events: res.events}, orders: null});
     };
 
-    /** The scene finished animating a turn: commit its feed lines, move on. */
+    /** The scene finished animating a turn: commit its surveillance line, move on. */
     private onPlaybackDone = (id: number) => {
         if (id !== this.playId || !this.state.playback) { return; }
-        const msgs = this.pendingMsgs;
+        // one overwatch line per turn (plus loot/level lines the summary can't carry)
+        const time = missionClock(this.battleStart);
+        const lines: any[] = [
+            ...FeedLog.keepLegacy(this.pendingMsgs, time),
+            ...FeedLog.fromTurn(this.pendingEvents, time),
+        ];
+        if (this.markRound) { lines.push(FeedLog.round(this.markRound)); this.markRound = 0; }
         this.pendingMsgs = [];
+        this.pendingEvents = [];
         const done = () => {
             if (this.state.screen === "combat") {
                 this.scheduleAdvance(this.state.auto ? 160 : 300);
             }
         };
         if (this.state.run && this.state.screen === "combat") {
-            const patch = RunController.step(this.state, msgs, this.logLength);
+            const patch = RunController.step(this.state, lines, this.logLength);
             this.setState({...patch, playback: null} as any, done);
         } else {
             this.setState({
                 playback: null,
-                messages: [...msgs, ...this.state.messages].slice(0, this.logLength) as any,
+                messages: [...lines, ...this.state.messages].slice(0, this.logLength) as any,
             }, done);
         }
     };
