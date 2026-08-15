@@ -13,6 +13,7 @@ const TYPE: { [k in NodeType]: [number, string, string] } = {
     elite: [0xf0a830, "Elite", "☠"],
     merchant: [0x7fd67f, "Black Market", "▤"],
     rest: [0x8be0ff, "Safehouse", "☾"],
+    hire: [0xc56bff, "Fixer's Table", "☰"],
     boss: [0xe0533f, "Boss", "⚑"],
 };
 
@@ -358,6 +359,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
             case "elite": return CityMap.tetraGeo;      // spike
             case "merchant": return CityMap.boxGeo;     // crate
             case "rest": return CityMap.torusGeo;       // safe ring
+            case "hire": return CityMap.boxGeo;         // a table with bodies for sale
             case "boss": return CityMap.dodecaGeo;      // heavy core
             default: return CityMap.icoGeo;             // firefight
         }

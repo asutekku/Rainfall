@@ -59,7 +59,7 @@ export class Player extends Actor {
         this.reputation = 2;
         this.housing = "NiceConapt";
         this.vehicle = GetItem.vehicle("CityCar");
-        this.currency = 1000; // starting eddies to cover early cost of living
+        this.currency = 0;    // player-side eddies live in the crew purse (see interact/crew.ts)
     }
 
     /**

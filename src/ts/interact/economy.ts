@@ -3,6 +3,8 @@ import {Armor} from "../items/Armor";
 import Equipment from "../items/Equipment";
 import {Weapon} from "../items/Weapon";
 import {BattleRecorder, GearChange} from "./battleReport";
+import {Purse} from "./crew";
+import {GetItem} from "./getItem";
 
 const WEAPONS: Weapon[] = Equipment.weapons;
 
@@ -27,10 +29,10 @@ const ARMOR_TIERS: Array<{ name: string; sp: number; cost: number }> = [
  */
 export class Economy {
 
-    /** Award a defeated foe's eddies to the killer. */
+    /** Award a defeated foe's eddies — to the crew purse when a player killed it. */
     public static loot(killer: Actor, victim: Actor): number {
-        const eddies = Math.max(5, Math.floor(victim.currency));
-        killer.currency += eddies;
+        const eddies = Purse.earn(killer, Math.max(5, Math.floor(victim.currency)));
+        BattleRecorder.countEddies(killer, eddies);
         return eddies;
     }
 
@@ -119,27 +121,33 @@ export class Economy {
     }
 
     /** Best affordable same-class weapon that beats the current one by a clear margin. */
-    public static bestWeaponUpgrade(actor: Actor): Weapon | null {
+    public static bestWeaponUpgrade(actor: Actor, budget: number = Infinity): Weapon | null {
         const cls = actor.weapon.weaponClass;
         const cap = this.rarityCap(actor.level);
         let best: Weapon | null = null;
         let bestV = this.weaponValue(actor.weapon) * 1.15;   // require > 15% better
         for (const w of WEAPONS) {
             if (w.weaponClass !== cls || w.damageType !== "kinetic") { continue; }
-            if (w.rarity > cap || w.cost > actor.currency) { continue; }
+            if (w.rarity > cap || w.cost > budget || !Purse.canAfford(actor, w.cost)) { continue; }
             const v = this.weaponValue(w);
             if (v > bestV) { bestV = v; best = w; }
         }
         return best;
     }
 
-    /** Best affordable armour tier with higher SP (within the level SP ceiling). */
-    public static bestArmorUpgrade(actor: Actor): { name: string; sp: number; cost: number } | null {
+    /**
+     * Best affordable armour tier with higher SP (within the level SP ceiling).
+     * Compared against the piece's *undamaged* rating: armour ablates as it takes
+     * hits, and comparing against the ablated number made the crew re-buy the
+     * same tier after every fight — a treadmill that swallowed each payday whole.
+     */
+    public static bestArmorUpgrade(actor: Actor, budget: number = Infinity): { name: string; sp: number; cost: number } | null {
         const cap = this.spCap(actor.level);
-        const curSP = actor.equipment.upper ? actor.equipment.upper.stoppingPower : 0;
+        const worn = actor.equipment.upper;
+        const curSP = worn ? Math.max(worn.stoppingPower, worn.maxStoppingPower) : 0;
         let best: { name: string; sp: number; cost: number } | null = null;
         for (const t of ARMOR_TIERS) {
-            if (t.sp <= curSP || t.sp > cap || t.cost > actor.currency) { continue; }
+            if (t.sp <= curSP || t.sp > cap || t.cost > budget || !Purse.canAfford(actor, t.cost)) { continue; }
             if (!best || t.sp > best.sp) { best = t; }
         }
         return best;
@@ -150,28 +158,28 @@ export class Economy {
      * from inventory over buying. Returns the loadout changes it made (the
      * debrief renders them; the feed prints `describe()` of each).
      */
-    public static autoEquip(actor: Actor): GearChange[] {
+    public static autoEquip(actor: Actor, budget: number = Infinity): GearChange[] {
         const changes: GearChange[] = [];
 
         // Weapon: scavenged (free) beats a store buy of equal-or-lower value.
         const invW = this.bestInventoryWeapon(actor);
-        const buyW = this.bestWeaponUpgrade(actor);
+        const buyW = this.bestWeaponUpgrade(actor, budget);
         if (invW && (!buyW || this.weaponValue(invW.w) >= this.weaponValue(buyW))) {
             actor.inventory.weapons.splice(invW.idx, 1);
             changes.push(this.equipWeapon(actor, invW.w, "salvage", 0));
         } else if (buyW) {
-            actor.currency -= buyW.cost;
+            Purse.spend(actor, buyW.cost);
             changes.push(this.equipWeapon(actor, buyW.clone(), "bought", buyW.cost));
         }
 
         // Armour: scavenged SP (free) beats an affordable store tier of equal-or-lower SP.
         const invA = this.bestInventoryArmor(actor);
-        const buyA = this.bestArmorUpgrade(actor);
+        const buyA = this.bestArmorUpgrade(actor, budget);
         if (invA && (!buyA || invA.a.stoppingPower >= buyA.sp)) {
             actor.inventory.armor.splice(invA.idx, 1);
             changes.push(this.equipArmor(actor, invA.a, "salvage", 0));
         } else if (buyA) {
-            actor.currency -= buyA.cost;
+            Purse.spend(actor, buyA.cost);
             changes.push(this.equipArmor(actor, new Armor("upper", buyA.name, "", 1, buyA.sp, buyA.cost, ""),
                 "bought", buyA.cost));
         }
@@ -208,6 +216,30 @@ export class Economy {
     /** What the fence pays for a piece the squad doesn't want: half sticker price. */
     public static sellValue(cost: number): number {
         return Math.max(5, Math.floor((cost || 0) / 2));
+    }
+
+    /** Patch worn armour back up to its rating — what a safehouse stop is for. */
+    public static repairArmor(actor: Actor): void {
+        [actor.equipment.upper, actor.equipment.headgear].forEach((a) => {
+            if (a) { a.stoppingPower = a.maxStoppingPower; }
+        });
+    }
+
+    /**
+     * Back to street basics: a sidearm and a jacket. Called when a run ends —
+     * the character keeps everything they learned and none of what they carried.
+     */
+    public static stripToBasics(actor: Actor): void {
+        actor.weapon = GetItem.weapon("WSA Autopistol");
+        actor.weapon.equipped = true;
+        actor.equipment.upper = GetItem.armor("Light Armor Jacket");
+        actor.equipment.headgear = GetItem.armor("Kevlar Helmet");
+        actor.inventory.weapons = [GetItem.weapon("Fists")];
+        actor.inventory.armor = [];
+        // Trauma Team put them back on the street with a roof and a subscription;
+        // without this an eviction earlier in a run followed the character forever.
+        actor.housing = "NiceConapt";
+        actor.traumaTeam = true;
     }
 
     /** Feed line for a loadout change. */

@@ -16,6 +16,8 @@ interface MainProps {
     currentEnemy?: Actor;
     party: Actor[];
     messages: any;
+    /** A panel notice destined for the action feed. */
+    onNotice: (msg: any) => void;
 }
 
 interface MainState {
@@ -36,7 +38,7 @@ export class MainPanel extends React.Component<MainProps, MainState> {
      * @param {Message} msg Messages to add into an array
      */
     public getMessage = (msg: Message) => {
-        this.props.messages(msg);
+        this.props.onNotice(msg);
     };
 
     public renderView(view: string): any {

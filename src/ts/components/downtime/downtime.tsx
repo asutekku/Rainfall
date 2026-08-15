@@ -2,10 +2,14 @@ import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {Medicine} from "../../interact/Medicine";
 import {Lifestyle} from "../../interact/Lifestyle";
+import {Economy} from "../../interact/economy";
 import {TraumaTeam} from "../../interact/TraumaTeam";
+import {Purse} from "../../interact/crew";
 
 interface DowntimeProps {
     actor: Actor;
+    /** The whole crew, when a run is in progress — a safehouse patches everyone. */
+    party?: Actor[];
 }
 
 interface DowntimeState {
@@ -16,18 +20,28 @@ const HOUSING_TIERS = ["Streets", "CubeHotel", "CheapConapt", "NiceConapt", "Cor
 
 export class Downtime extends React.Component<DowntimeProps, DowntimeState> {
 
+    /** Flat safehouse charge, per body patched. */
+    private static readonly REST_FEE = 80;
+
     constructor(props: any) {
         super(props);
         this.state = {message: ""};
     }
 
+    /**
+     * A safehouse stop patches the crew up and repairs their armour for a flat
+     * fee. It used to run Lifestyle.payUpkeep, which billed rent + subscriptions
+     * against the crew purse on every click with no cooldown — three taps of a
+     * button labelled "Rest" emptied the run's whole stake and evicted the
+     * character, permanently voiding their Trauma Team cover.
+     */
     private rest = () => {
-        const a = this.props.actor;
-        const healed = Medicine.rest(a);
-        const paid = Lifestyle.payUpkeep(a);
+        const crew = this.props.party && this.props.party.length ? this.props.party : [this.props.actor];
+        const fee = Purse.garnish(this.props.actor, Downtime.REST_FEE * crew.length);
+        let healed = 0;
+        crew.forEach((p) => { healed += Medicine.rest(p); Economy.repairArmor(p); });
         this.setState({
-            message: `Rested — recovered ${healed} HP (now ${a.health}/${a.maxHealth}). ` +
-                (paid ? `Cost of living paid.` : `Couldn't make rent — evicted to the Streets!`),
+            message: `Patched up the crew — ${healed} HP across ${crew.length} and armour repaired (${fee}¥).`,
         });
     };
 
@@ -50,7 +64,7 @@ export class Downtime extends React.Component<DowntimeProps, DowntimeState> {
         return (
             <div className={"redPanel"}>
                 <div className={"redSection"}>
-                    <div className={"redSectionTitle"}>Downtime — {a.health}/{a.maxHealth} HP · {a.currency}¥</div>
+                    <div className={"redSectionTitle"}>Downtime — {a.health}/{a.maxHealth} HP · {Purse.balance(a)}¥</div>
                     <div className={"redControls"}>
                         <button className={"redBtnPrimary"} onClick={this.rest}>Rest &amp; Recover</button>
                         {a.mortallyWounded &&
