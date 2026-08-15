@@ -10,6 +10,7 @@ import {Hud} from "./hud";
 import {ActorController} from "../actors/actorController";
 import {Combat} from "../interact/combat";
 import {Battlefield} from "../interact/battlefield";
+import {Economy} from "../interact/economy";
 import {Utils} from "../utils/utils";
 
 
@@ -94,14 +95,20 @@ export class App extends React.Component<{}, InterfaceAppState> {
         // Removes dead enemies from the array
         enemies = enemies.filter((e: Actor) => e.health > 0);
 
-        // If there are no enemies alive, spawn a fresh faction wave scaled to the party
+        // If there are no enemies alive, the wave is clear: auto-shop upgrades, then respawn.
+        const shopMsgs: any[] = [];
         if (enemies.length <= 0) {
+            this.state.party.forEach((p) => {
+                if (p.canFight() && (this.state.auto || p.auto)) {
+                    Economy.autoEquip(p).forEach((m) => shopMsgs.push({msg: m}));
+                }
+            });
             enemies = ActorController.getEnemies(Utils.range(1, 3), App.levelOf(this.state.party));
             Battlefield.deployEnemies(enemies);
         }
 
         // Joins all the messages together to form a single array
-        const joined = [...messages.flat(), ...this.state.messages];
+        const joined = [...shopMsgs, ...messages.flat(), ...this.state.messages];
 
         // Sets the max amount of messages shown in the view
         if (joined.length >= this.logLength) joined.length = this.logLength;

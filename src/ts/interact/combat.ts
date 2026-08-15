@@ -9,6 +9,7 @@ import {rangeDV} from "./rangeTable";
 import {Check} from "./check";
 import {Battlefield} from "./battlefield";
 import {TacticalAI, Plan} from "./tacticalAI";
+import {Economy} from "./economy";
 
 const Log = en_US.Log;
 
@@ -169,10 +170,12 @@ export class Combat {
         if (!target.canFight()) {
             actor.kills += 1;
             actor.experience += target.experience;
+            const eddies: number = Economy.loot(actor, target);   // eddies fund the gear economy
             if (actor.experience >= actor.maxExperience) {
                 Combat.gainLevel(actor, target);
             }
             this.messages.push(new DeathMessage(target, actor));
+            if (eddies > 0) { this.messages.push(new MessageStr(`${actor.name} loots ${eddies}¥.`)); }
         }
     }
 
