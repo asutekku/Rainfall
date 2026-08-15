@@ -909,6 +909,10 @@ progress::-moz-progress-bar { background:var(--rust); }
     .debriefHead h1 { font-size:23px; }
     .debriefTotals span { min-width:0; flex:1 1 30%; padding:7px 10px; }
     .dbBars { grid-template-columns:1fr auto; }
+    /* narrow rows wrap instead of crushing: who/what on top, numbers beneath */
+    .dbLoot, .dbGear { flex-wrap:wrap; row-gap:3px; }
+    .dbGearWho { width:100%; min-width:0; color:var(--ink); }
+    .dbLootOwner { width:100%; }
     .debriefActions { flex-direction:column; }
 }
 
