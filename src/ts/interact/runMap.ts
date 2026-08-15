@@ -12,7 +12,7 @@ import {Utils} from "../utils/utils";
  * relocates (so you can backtrack and take other branches). Clearing the boss
  * wins the run.
  */
-export type NodeType = "combat" | "elite" | "merchant" | "rest" | "hire" | "boss";
+export type NodeType = "combat" | "elite" | "merchant" | "rest" | "hire" | "event" | "boss";
 
 export interface RunNode {
     id: string;
@@ -32,6 +32,7 @@ export interface RunState {
     node: RunNode | null;             // node currently being resolved
     clearedIds: string[];
     reachableIds: string[];           // neighbours of `position`
+    revealedIds: string[];            // fog-of-war waypoints uncovered by intel
     reviveUsed: boolean;
     depth: number;
     outcome: "active" | "won" | "lost";
@@ -189,7 +190,8 @@ export class RunMap {
         // one guaranteed shop, safehouse and fixer's table; the rest is trouble
         const extra: NodeType[] = ["merchant", "rest", "hire"];
         shuffled.forEach((i, k) => {
-            nodes[i]!.type = k === 0 ? "merchant" : k === 1 ? "rest" : k === 2 ? "hire"
+            nodes[i]!.type = k === 0 ? "merchant" : k === 1 ? "rest" : k === 2 ? "hire" : k === 3 ? "event"
+                : Math.random() < 0.24 ? "event"
                 : (sector > 1 && Math.random() < 0.22) ? "elite"
                 : Math.random() < 0.2 ? Utils.pickRandom(extra)
                 : "combat";
@@ -201,6 +203,7 @@ export class RunMap {
             position: entry.id, node: null,
             clearedIds: [entry.id],
             reachableIds: adj[entry.id]!.slice(),
+            revealedIds: [],
             reviveUsed: false, depth: 0, outcome: "active",
         };
     }

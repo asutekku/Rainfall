@@ -44,6 +44,7 @@ export class RunController {
         }
         if (node.type === "merchant") { return {run: {...run, node}, screen: "merchant"}; }
         if (node.type === "rest") { return {run: {...run, node}, screen: "rest"}; }
+        if (node.type === "event") { return {run: {...run, node}, screen: "event"}; }
         if (node.type === "hire") {
             // A fixer's table mid-sector: short list, and he takes his cut.
             return {run: {...run, node}, screen: "hire", offers: MercMarket.board(run.sector + 1, 3, 1.25)};
@@ -246,6 +247,7 @@ export class RunController {
         });
         return {
             run: RunController.freshRun(sector), screen: "map", report: null, offers: [],
+            eventId: null, usedEvents: [],       // new streets, fresh encounter pool
             activeMainPanel: "Combat", mobileTab: "arena",
             messages: [{msg: `— sector ${sector}: new streets, worse people —`} as any,
                 ...state.messages].slice(0, log),
@@ -266,6 +268,7 @@ export class RunController {
         return {
             character, party: [character, new Merc(MercMarket.starter(1))], crew,
             run: RunController.freshRun(1), screen: "map", report: null, offers: [],
+            eventId: null, usedEvents: [],
             activeChar: character, activeMainPanel: "Combat", mobileTab: "arena",
             messages: [{msg: "— Trauma Team drops you back on the street. New crew, old scars. —"} as any].slice(0, log),
         };

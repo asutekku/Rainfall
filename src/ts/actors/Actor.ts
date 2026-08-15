@@ -426,6 +426,15 @@ export class Actor extends GameObject {
     /** Hook for spending RED Improvement Points on level-up (players override). */
     public onLevelUp(): void { /* no-op for generic actors */ }
 
+    /** Train the equipped weapon's skill by one (cap 10) — safehouse drills. */
+    public trainWeaponSkill(): boolean {
+        const r: any = this.skills.ref;
+        const key = this.weaponSkillKey();
+        if (r[key] >= 10) { return false; }
+        r[key] += 1;
+        return true;
+    }
+
     /** The ref-skill key backing the equipped weapon (for training it up). */
     public weaponSkillKey(): string {
         switch (this.weapon.skill) {

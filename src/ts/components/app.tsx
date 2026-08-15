@@ -13,23 +13,25 @@ import {Battlefield, Point} from "../interact/battlefield";
 import {Creator} from "./creation/creator";
 import {CharacterCreation, CharacterSpec} from "../actors/resources/CharacterCreation";
 import {MobileTab, MobileTabs} from "./mobileTabs";
-import {RunNode, RunState} from "../interact/runMap";
+import {RunNode, RunState, spawnEncounter} from "../interact/runMap";
 import {RunController} from "../interact/runController";
+import {Events, EventOutcome, makeCtx} from "../interact/events";
 import {RunEndView} from "./run/runEndView";
 import {DebriefView} from "./run/debriefView";
-import {BattleReport} from "../interact/battleReport";
+import {BattleRecorder, BattleReport} from "../interact/battleReport";
+import {EventView} from "./run/eventView";
+import {MarketView} from "./run/marketView";
+import {SafehouseView} from "./run/safehouseView";
 import {Crew} from "../interact/crew";
 import {MercMarket, MercOffer} from "../interact/mercMarket";
 import {Merc} from "../actors/Merc";
 import {HireBoard} from "./run/hireBoard";
 import {SectorClearView} from "./run/sectorClearView";
 import {MetaOverlay} from "./run/metaOverlay";
-import {Store} from "./storePanel/store";
-import {Downtime} from "./downtime/downtime";
 import {OrderCtx, PlaybackBundle} from "./combat/battleScene";
 
 /** Which run-loop screen is on top. "combat" falls through to the ops shell. */
-export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "end";
+export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "event" | "end";
 
 export interface InterfaceAppState {
     activeMainPanel: string;
@@ -58,6 +60,10 @@ export interface InterfaceAppState {
     screen: RunScreen;
     /** The sealed after-action report while the debrief screen is up. */
     report: BattleReport | null;
+    /** The street encounter being resolved (screen === "event"). */
+    eventId: string | null;
+    /** Encounters already seen this run (no reruns until the pool dries up). */
+    usedEvents: string[];
     /** The crew's shared purse — every payday, hire and store buy runs through it. */
     crew: Crew;
     /** Bumped when a new encounter starts — tells the 3D arena to build a fresh street. */
@@ -114,6 +120,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
             run: null,
             screen: "combat",
             report: null,
+            eventId: null,
+            usedEvents: [],
             crew: new Crew().activate(),
             battleId: 1,
             playback: null,
@@ -165,14 +173,14 @@ export class App extends React.Component<{}, InterfaceAppState> {
             </MetaOverlay>;
         }
         if (run && this.state.screen === "merchant") {
-            return <MetaOverlay title={"▤ Black Market"} onLeave={this.leaveMeta}>
-                <Store player={this.getCurrentActor()} messages={this.noop}/>
-            </MetaOverlay>;
+            return <MarketView party={this.state.party} onLeave={this.leaveMeta}/>;
         }
         if (run && this.state.screen === "rest") {
-            return <MetaOverlay title={"☾ Safehouse"} onLeave={this.leaveMeta}>
-                <Downtime actor={this.getCurrentActor()} party={this.state.party}/>
-            </MetaOverlay>;
+            return <SafehouseView party={this.state.party} onLeave={this.leaveSafehouse}/>;
+        }
+        if (run && this.state.screen === "event" && this.state.eventId) {
+            const ev = Events.byId(this.state.eventId);
+            if (ev) { return <EventView event={ev} party={this.state.party} onDone={this.finishEvent}/>; }
         }
         // Battle Stage shell: topbar (Hud) / nav rail / feed column (squad + feed) / stage (game).
         // On phones the same DOM re-flows into a tab console — see the mobile block
@@ -243,8 +251,6 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     private closeMore = () => this.setState({mobileMore: false});
 
-    private noop = () => { /* placeholder callback for reused panels */ };
-
     /** Build your character and hit the street. The crew gets hired on the way. */
     private deployCharacter = (spec: CharacterSpec) => {
         this.resetSequencer();
@@ -259,16 +265,72 @@ export class App extends React.Component<{}, InterfaceAppState> {
             activeChar: character, activeEnemy: enemies[0],
             creating: false, run: RunController.freshRun(1), screen: "map", report: null,
             crew: new Crew().activate(), offers: [],
+            eventId: null, usedEvents: [],
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
             messages: [{msg: `— ${character.name} hits the street with a rookie in tow —`} as any],
             playback: null, orders: null, turnOrder: [],
         });
     };
 
-    /** Player picked a node: fight it, or open its merchant / rest screen. */
+    /** Player picked a node: fight it, or open its merchant / rest / event screen. */
     private enterNode = (node: RunNode) => {
-        this.setState(RunController.enter(this.state, node, this.logLength) as any,
+        const patch: any = RunController.enter(this.state, node, this.logLength);
+        if (patch.screen === "event") {
+            const ev = Events.pick(this.state.usedEvents, makeCtx(this.state.party));
+            patch.eventId = ev.id;
+            patch.usedEvents = this.state.usedEvents.concat(ev.id);
+        }
+        this.setState(patch,
             () => { if (this.state.screen === "combat") { this.beginBattle(); } });
+    };
+
+    /** A street encounter resolved: apply its fallout, then advance — or fight. */
+    private finishEvent = (outcome: EventOutcome) => {
+        const state = this.state;
+        const run = state.run;
+        if (!run || !run.node) { return; }
+        const lines: any[] = outcome.lines.map((l) => ({msg: l}));
+        let nextRun = run;
+        if (outcome.restoreRevive) { nextRun = {...nextRun, reviveUsed: false}; }
+        if (outcome.reveal) {
+            // intel: uncover N random still-hidden waypoints on the holo-map
+            const known = new Set([...nextRun.clearedIds, ...nextRun.reachableIds, ...nextRun.revealedIds]);
+            const hidden = nextRun.nodes.filter((n) => !known.has(n.id) && n.type !== "boss");
+            const picked: string[] = [];
+            for (let i = 0; i < outcome.reveal && hidden.length > 0; i++) {
+                picked.push(hidden.splice((Math.random() * hidden.length) << 0, 1)[0]!.id);
+            }
+            if (picked.length) {
+                lines.push({msg: `— intel: ${picked.length} waypoint${picked.length > 1 ? "s" : ""} lit up on the map —`});
+                nextRun = {...nextRun, revealedIds: nextRun.revealedIds.concat(picked)};
+            }
+        }
+        if (outcome.combat) {
+            // the encounter turned violent — run.node stays set, so clearing the
+            // fight advances the map exactly like a normal combat node. The
+            // authored level is an offset on the sector curve (1 = baseline).
+            const base = Math.max(1, run.sector + Math.floor(RunController.levelOf(state.party) / 4));
+            const enemies = spawnEncounter({...outcome.combat, level: base + outcome.combat.level - 1});
+            Battlefield.deploy(state.party, enemies);
+            BattleRecorder.begin(state.party, enemies, "event", "it turned ugly");
+            this.setState({
+                run: nextRun, eventId: null, screen: "combat",
+                currentEnemies: enemies, activeEnemy: enemies[0], activeChar: state.party[0],
+                activeMainPanel: "Combat", mobileTab: "arena",
+                messages: [...lines, ...state.messages].slice(0, this.logLength),
+            } as any, this.beginBattle);
+            return;
+        }
+        const midState = {...state, run: nextRun} as InterfaceAppState;
+        this.setState({...RunController.advance(midState, run.node, lines, this.logLength), eventId: null} as any);
+    };
+
+    /** Leave the safehouse with the night's outcome in the feed. */
+    private leaveSafehouse = (lines: string[]) => {
+        const run = this.state.run;
+        if (!run || !run.node) { return; }
+        this.setState(RunController.advance(this.state, run.node,
+            lines.map((l) => ({msg: l})), this.logLength) as any);
     };
 
     /** Leave a merchant / rest node and advance the map. */
