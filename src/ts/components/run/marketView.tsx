@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {Purse} from "../../interact/crew";
 import {GetItem} from "../../interact/getItem";
 import Equipment from "../../items/Equipment";
 import armors from "../../items/armors";
@@ -84,8 +85,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
 
     private buy(item: Stock) {
         const leader = this.props.party[0]!;
-        if (leader.currency < item.cost) { this.setState({notice: `Not enough eddies (${item.cost}¥).`}); return; }
-        leader.currency -= item.cost;
+        if (!Purse.spend(leader, item.cost)) { this.setState({notice: `Not enough eddies (${item.cost}¥).`}); return; }
         let line: string;
         if (item.detail.indexOf("service") === 0) {
             line = item.buy(leader);
@@ -120,7 +120,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
     private sell(f: Fence) {
         if (f.kind === "weapon") { f.owner.inventory.weapons.splice(f.idx, 1); }
         else { f.owner.inventory.armor.splice(f.idx, 1); }
-        f.owner.currency += f.price;
+        Purse.earn(f.owner, f.price);
         this.setState({notice: `Fenced the ${f.name} for ${f.price}¥.`, version: this.state.version + 1});
     }
 
@@ -131,7 +131,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
             <div className={"metaOverlay"}>
                 <div className={"metaHead"}>
                     <span className={"metaTitle"}>▤ Black Market</span>
-                    <span className={"evEddies"}>{Math.floor(leader.currency)}¥</span>
+                    <span className={"evEddies"}>{Math.floor(Purse.balance(leader))}¥</span>
                     <button className={"metaLeave"} onClick={this.props.onLeave}>Leave ▸</button>
                 </div>
                 <div className={"mkBody"}>
@@ -144,7 +144,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                                 <div key={i} className={"mkItem" + (sold ? " sold" : "")}>
                                     <span className={"mkName"}>{item.name}</span>
                                     <span className={"mkDetail"}>{item.detail}</span>
-                                    <button className={"mkBuy"} disabled={sold || leader.currency < item.cost}
+                                    <button className={"mkBuy"} disabled={sold || !Purse.canAfford(leader, item.cost)}
                                             onClick={() => this.buy(item)}>
                                         {sold ? "SOLD" : item.cost + "¥"}
                                     </button>

@@ -1,4 +1,5 @@
 import {Actor} from "../actors/Actor";
+import {Purse} from "./crew";
 import {Player} from "../actors/player";
 import {Armor} from "../items/Armor";
 import armors from "../items/armors";
@@ -91,7 +92,7 @@ export class GetItem {
         if (money >= 0) {
             Messages.logMessage(Log.findMoney, actor);
             // Fixer "Operator" negotiates a better cut (+10% per rank).
-            actor.currency += Math.floor(money * (1 + actor.operatorBonus() / 10));
+            Purse.earn(actor, Math.floor(money * (1 + actor.operatorBonus() / 10)));
         } else {
             Messages.logMessage(Log.insufficientFunds, actor);
         }

@@ -233,10 +233,16 @@ export class TacticalAI {
         const flankL: Point = {x: advance.x + perp.x * 6, y: advance.y + perp.y * 6};
         const flankR: Point = {x: advance.x - perp.x * 6, y: advance.y - perp.y * 6};
 
-        // nearest cover, stepped to within run
-        const cover = Battlefield.COVER
-            .reduce((a, b) => Battlefield.gap(here, b) < Battlefield.gap(here, a) ? b : a);
-        const coverStep = pointToward(here, cover, run);
+        // the three nearest covers, each approached on the side AWAY from the
+        // closest foe — hug the safe face, don't stand on the object
+        const hugs = Battlefield.COVER.slice()
+            .sort((a, b) => Battlefield.gap(here, a) - Battlefield.gap(here, b))
+            .slice(0, 3)
+            .map((c) => {
+                const d = Battlefield.gap(c, primary) || 1;
+                const hug: Point = {x: c.x + (c.x - primary.x) / d * 2.0, y: c.y + (c.y - primary.y) / d * 2.0};
+                return pointToward(here, hug, run);
+            });
 
         // retreat away from the foe centroid (matters most when hurt)
         const cx = foes.reduce((s, f) => s + f.position.x, 0) / foes.length;
@@ -246,7 +252,7 @@ export class TacticalAI {
             ? {x: here.x + (here.x - cx) / away * run, y: here.y + (here.y - cy) / away * run}
             : here;
 
-        return [here, advance, flankL, flankR, coverStep, retreat].map((p) => Battlefield.clamp(p));
+        return [here, advance, flankL, flankR, ...hugs, retreat].map((p) => Battlefield.clamp(p));
     }
 
     /** Score a destination: expected damage dealt minus damage taken, plus positional value. */

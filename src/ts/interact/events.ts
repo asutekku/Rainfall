@@ -1,4 +1,5 @@
 import {Actor} from "../actors/Actor";
+import {Purse} from "./crew";
 import {Check} from "./check";
 import {GetItem} from "./getItem";
 import Equipment from "../items/Equipment";
@@ -95,14 +96,10 @@ const hum = (a: Actor, delta: number): void => {
     if (a.humanity <= 0) { a.cyberpsychosis = true; }
 };
 
-const pay = (ctx: EventCtx, eddies: number): boolean => {
-    if (ctx.leader.currency < eddies) { return false; }
-    ctx.leader.currency -= eddies;
-    return true;
-};
+const pay = (ctx: EventCtx, eddies: number): boolean => Purse.spend(ctx.leader, eddies);
 
 const needEddies = (n: number) => (ctx: EventCtx): string | null =>
-    ctx.leader.currency >= n ? null : `need ${n}¥`;
+    Purse.canAfford(ctx.leader, n) ? null : `need ${n}¥`;
 
 const randomCyberName = (): string =>
     cyberwareData[(Math.random() * cyberwareData.length) << 0]!.name;
@@ -227,7 +224,7 @@ export const EVENTS: GameEvent[] = [
         options: [
             {
                 label: "Renew Platinum — 400¥, re-arm the extraction",
-                req: (ctx) => ctx.leader.currency < 400 ? "need 400¥" : null,
+                req: (ctx) => Purse.canAfford(ctx.leader, 400) ? null : "need 400¥",
                 run: (ctx) => {
                     pay(ctx, 400);
                     return {lines: ["Biometrics logged. One extraction, re-armed. Try not to need it."], restoreRevive: true};
@@ -272,8 +269,7 @@ export const EVENTS: GameEvent[] = [
             {
                 label: "Pay the tax — 15% of your eddies",
                 run: (ctx) => {
-                    const cut = Math.floor(ctx.leader.currency * 0.15);
-                    ctx.leader.currency -= cut;
+                    const cut = Purse.garnish(ctx.leader, Math.floor(Purse.balance(ctx.leader) * 0.15));
                     return {lines: [`${cut}¥ lighter. The badge smiles like a landlord.`]};
                 },
             },
@@ -385,7 +381,7 @@ export const EVENTS: GameEvent[] = [
                     const a = ctx.best("int");
                     if (ok) {
                         const take = 120 + d6(4) * 10;
-                        a.currency += take;
+                        Purse.earn(a, take);
                         return {lines: [`${a.name} rides the dead run's wake — ${take}¥ skimmed before the ICE re-forms.`]};
                     }
                     const dmg = hurt(a, d6(3));
@@ -394,7 +390,7 @@ export const EVENTS: GameEvent[] = [
             },
             {
                 label: "Just take the deck hardware",
-                run: (ctx) => { ctx.leader.currency += 70; return {lines: ["Stripped for parts. 70¥. The body keeps its secrets."]}; },
+                run: (ctx) => { Purse.earn(ctx.leader, 70); return {lines: ["Stripped for parts. 70¥. The body keeps its secrets."]}; },
             },
             {label: "Leave the dead alone", run: (ctx) => { hum(ctx.leader, 2); return {lines: ["You close their eyes. It costs nothing and it isn't nothing (+2 Humanity)."]}; }},
         ],
@@ -408,7 +404,7 @@ export const EVENTS: GameEvent[] = [
                 check: {stat: "int", dv: 14, label: "beat the trap"},
                 run: (ctx, ok) => {
                     const a = ctx.best("int");
-                    if (ok) { a.currency += 150; return {lines: [`${a.name} snatches the bait and cuts the line — 150¥, no hook.`]}; }
+                    if (ok) { Purse.earn(a, 150); return {lines: [`${a.name} snatches the bait and cuts the line — 150¥, no hook.`]}; }
                     const dmg = hurt(a, d6(3));
                     return {lines: [`The hook sets. ${a.name} takes ${dmg} neural feedback for zero eddies.`]};
                 },
@@ -416,7 +412,7 @@ export const EVENTS: GameEvent[] = [
             {
                 label: "Techie: strip the terminal", detail: "Techie only",
                 req: (ctx) => ctx.party.some((p) => p.isTechie()) ? null : "no Techie in the crew",
-                run: (ctx) => { ctx.leader.currency += 90; return {lines: ["The Techie unbolts the whole faceplate. Scrap and coin box: 90¥."]}; },
+                run: (ctx) => { Purse.earn(ctx.leader, 90); return {lines: ["The Techie unbolts the whole faceplate. Scrap and coin box: 90¥."]}; },
             },
             {label: "Nothing's free", run: () => ({lines: ["Six languages of no."]})},
         ],
@@ -439,7 +435,7 @@ export const EVENTS: GameEvent[] = [
                 label: "Rip out the coin box", detail: "TECH check",
                 check: {stat: "tech", dv: 11, label: "pry it open"},
                 run: (ctx, ok) => {
-                    if (ok) { ctx.leader.currency += 40; return {lines: ["Forty eddies in physical coin. Who even pays cash?"]}; }
+                    if (ok) { Purse.earn(ctx.leader, 40); return {lines: ["Forty eddies in physical coin. Who even pays cash?"]}; }
                     const a = ctx.best("tech");
                     const dmg = hurt(a, d6(1));
                     return {lines: [`The casing bites back — ${dmg} HP of sparks. The ringing stops. Somehow that's worse.`]};
@@ -466,7 +462,7 @@ export const EVENTS: GameEvent[] = [
             {
                 label: "Finish him and loot the armour",
                 run: (ctx) => {
-                    ctx.leader.currency += 60;
+                    Purse.earn(ctx.leader, 60);
                     hum(ctx.leader, -6);
                     ctx.leader.reputation = Math.max(0, ctx.leader.reputation - 1);
                     return {lines: ["Quick and quiet. 60¥ and lacquer scraps. The street saw. The street always sees."]};
@@ -521,7 +517,7 @@ export const EVENTS: GameEvent[] = [
                 run: (ctx) => {
                     if (Math.random() < 0.5) {
                         const name = grantWeapon(ctx.leader, 2, 4);
-                        ctx.leader.currency += 80;
+                        Purse.earn(ctx.leader, 80);
                         return {lines: [`Coolers full of salvage — 80¥ and a ${name} under the false floor.`]};
                     }
                     return {lines: ["The coolers are bait. Scavs drop from the scaffolding."], combat: {boss: false, amount: 3, level: 1, rank: 1}};
@@ -549,7 +545,7 @@ export const EVENTS: GameEvent[] = [
             {
                 label: "Put it down, strip the chrome",
                 run: (ctx) => {
-                    ctx.leader.currency += 50;
+                    Purse.earn(ctx.leader, 50);
                     hum(ctx.leader, -4);
                     return {lines: ["One shot. The optics fetch 50¥. The growl stays in your ears."]};
                 },
@@ -565,7 +561,7 @@ export const EVENTS: GameEvent[] = [
                 label: "Search the body",
                 run: (ctx) => {
                     const roll = Math.random();
-                    if (roll < 0.4) { ctx.leader.currency += 90; return {lines: ["A courier, judging by the shoes. 90¥ in a hidden belt."]}; }
+                    if (roll < 0.4) { Purse.earn(ctx.leader, 90); return {lines: ["A courier, judging by the shoes. 90¥ in a hidden belt."]}; }
                     if (roll < 0.7) { const name = grantWeapon(ctx.leader, 1, 3); return {lines: [`Whoever they were, they were armed — a ${name}, still loaded.`]}; }
                     const a = first(ctx.party);
                     const dmg = hurt(a, d6(1));
@@ -584,7 +580,7 @@ export const EVENTS: GameEvent[] = [
                 req: needEddies(50),
                 run: (ctx) => {
                     pay(ctx, 50);
-                    if (Math.random() < 0.5) { ctx.leader.currency += 120; return {lines: ["The ugly one wins ugly. 120¥ over the counter."]}; }
+                    if (Math.random() < 0.5) { Purse.earn(ctx.leader, 120); return {lines: ["The ugly one wins ugly. 120¥ over the counter."]}; }
                     return {lines: ["The ugly one loses beautifully. Fifty eddies, gone."]};
                 },
             },
@@ -593,7 +589,7 @@ export const EVENTS: GameEvent[] = [
                 req: needEddies(50), check: {stat: "int", dv: 12, label: "study the form"},
                 run: (ctx, ok) => {
                     pay(ctx, 50);
-                    if (ok || Math.random() < 0.5) { ctx.leader.currency += 120; return {lines: ["The limp was fake. Yours pays out: 120¥."]}; }
+                    if (ok || Math.random() < 0.5) { Purse.earn(ctx.leader, 120); return {lines: ["The limp was fake. Yours pays out: 120¥."]}; }
                     return {lines: ["The limp was real. The eddies are gone."]};
                 },
             },
@@ -629,14 +625,14 @@ export const EVENTS: GameEvent[] = [
                 label: "Walk him out", detail: "COOL check — look like protection, not a threat",
                 check: {stat: "cool", dv: 11, label: "play bodyguard"},
                 run: (ctx, ok) => {
-                    if (ok) { ctx.leader.currency += 60; return {lines: ["He transfers 60¥ 'for the escort service' and never knows how close it was."]}; }
+                    if (ok) { Purse.earn(ctx.leader, 60); return {lines: ["He transfers 60¥ 'for the escort service' and never knows how close it was."]}; }
                     return {lines: ["Halfway there, a pickpocket relieves him of everything. He blames you, loudly, and flees."]};
                 },
             },
             {
                 label: "Rob him yourselves",
                 run: (ctx) => {
-                    ctx.leader.currency += 80;
+                    Purse.earn(ctx.leader, 80);
                     hum(ctx.leader, -5);
                     ctx.leader.reputation = Math.max(0, ctx.leader.reputation - 1);
                     return {lines: ["80¥ and a real leather bag. He'll tell this story at dinner parties forever."]};
@@ -687,7 +683,7 @@ export const EVENTS: GameEvent[] = [
             },
             {
                 label: "Fixer's discount", detail: "Fixer only — 30¥, better odds",
-                req: (ctx) => ctx.party.some((p) => p.isFixer()) ? (ctx.leader.currency >= 30 ? null : "need 30¥") : "no Fixer in the crew",
+                req: (ctx) => ctx.party.some((p) => p.isFixer()) ? (Purse.canAfford(ctx.leader, 30) ? null : "need 30¥") : "no Fixer in the crew",
                 run: (ctx) => {
                     pay(ctx, 30);
                     const name = grantWeapon(ctx.leader, 3, 4);

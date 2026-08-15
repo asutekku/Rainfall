@@ -1,4 +1,5 @@
 import {Actor} from "../actors/Actor";
+import {Purse} from "./crew";
 
 export interface TraumaResult {
     responded: boolean;
@@ -25,8 +26,7 @@ export class TraumaTeam {
         }
         patient.stabilize();
         patient.health = Math.max(patient.health, Math.ceil(patient.maxHealth / 2));
-        const fee: number = Math.min(patient.currency, TraumaTeam.FEE);
-        patient.currency -= fee;
+        const fee: number = Purse.garnish(patient, TraumaTeam.FEE);
         return {responded: true, fee, healedTo: patient.health};
     }
 }

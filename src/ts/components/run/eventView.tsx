@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {Purse} from "../../interact/crew";
 import {EventCtx, EventOutcome, GameEvent, makeCtx, odds, rollCheck} from "../../interact/events";
 
 export interface EventViewProps {
@@ -71,7 +72,7 @@ export class EventView extends React.Component<EventViewProps, EventViewState> {
             <div className={"metaOverlay evWrap"}>
                 <div className={"metaHead"}>
                     <span className={"metaTitle"}>◈ {e.title}</span>
-                    <span className={"evEddies"}>{Math.floor(this.props.party[0]!.currency)}¥</span>
+                    <span className={"evEddies"}>{Math.floor(Purse.balance(this.props.party[0]!))}¥</span>
                 </div>
                 <div className={"evBody"}>
                     <p className={"evFlavor"}>{e.flavor}</p>

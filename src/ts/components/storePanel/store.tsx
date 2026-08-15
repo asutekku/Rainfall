@@ -6,6 +6,7 @@ import Equipment from '../../items/Equipment';
 import armors from '../../items/armors';
 import cyberwareData from '../../../objects/cyberware';
 import programData from '../../../objects/programs';
+import {Purse} from "../../interact/crew";
 
 export interface StoreProps {
     player?: Actor;
@@ -29,7 +30,7 @@ export class Store extends React.Component<StoreProps, StoreState> {
 
     constructor(props: any) {
         super(props);
-        this.state = {activeInventory: 'Weapons', eddies: this.props.player ? this.props.player.currency : 0, notice: ''};
+        this.state = {activeInventory: 'Weapons', eddies: this.props.player ? Purse.balance(this.props.player) : 0, notice: ''};
     }
 
     public handleClick = (selection: string) => {
@@ -74,13 +75,12 @@ export class Store extends React.Component<StoreProps, StoreState> {
     private purchase = (item: StockItem) => {
         const a = this.props.player;
         if (!a) { return; }
-        if (a.currency < item.cost) {
+        if (!Purse.spend(a, item.cost)) {
             this.setState({notice: `Not enough eddies for ${item.name} (need ${item.cost}¥).`});
             return;
         }
-        a.currency -= item.cost;
         item.buy(a);
-        this.setState({eddies: a.currency, notice: `Bought ${item.name} for ${item.cost}¥.`});
+        this.setState({eddies: Purse.balance(a), notice: `Bought ${item.name} for ${item.cost}¥.`});
     };
 
     private cat = (title: string) =>
@@ -104,7 +104,7 @@ export class Store extends React.Component<StoreProps, StoreState> {
                             <div className={'storeItem'} key={i}>
                                 <span className={'storeItemName'}>{item.name}</span>
                                 <span className={'storeItemDetail'}>{item.detail}</span>
-                                <button className={'redBtn ' + (this.props.player && this.props.player.currency >= item.cost ? '' : 'redBtnDisabled')}
+                                <button className={'redBtn ' + (this.props.player && Purse.canAfford(this.props.player, item.cost) ? '' : 'redBtnDisabled')}
                                         onClick={() => this.purchase(item)}>{item.cost}¥</button>
                             </div>
                         ))}

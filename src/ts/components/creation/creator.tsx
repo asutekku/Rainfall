@@ -26,43 +26,47 @@ const LIFEPATH: Array<[keyof Lifepath, string, string[]]> = [
 ];
 
 export interface CreatorProps {
-    initial: CharacterSpec[];
+    initial: CharacterSpec;
     canCancel: boolean;
-    onDeploy: (specs: CharacterSpec[]) => void;
+    onDeploy: (spec: CharacterSpec) => void;
     onCancel: () => void;
 }
 
 interface CreatorState {
-    squad: CharacterSpec[];
-    sel: number;
+    spec: CharacterSpec;
+    /** Point-buy + lifepath revealed. Closed, the role's own stat line is used. */
+    advanced: boolean;
 }
 
 /**
- * Cyberpunk RED "Complete Package" character creation for the whole squad: pick
- * each merc's Role, distribute the 62-point STAT budget (2-8 each), roll a
- * Lifepath, then deploy. Every choice maps to a CharacterSpec the Player
- * constructor already understands, so "Deploy" simply builds Players from these
- * specs. Opens pre-filled (randomized default) so a one-click Deploy still works.
+ * Boot screen: you, not a squad.
+ *
+ * The rest of the crew is hired off the street from the merc market, so this
+ * only builds the one character who persists across runs. Pick a role, take
+ * the name or roll another, hit the street — the role's signature stat line
+ * does the rest. The full RED Complete Package point-buy and the Lifepath
+ * tables are still here for anyone who wants them, folded behind "customise".
  */
 export class Creator extends React.Component<CreatorProps, CreatorState> {
 
-    private base: CharacterSpec[];   // snapshot for Reset
+    private base: CharacterSpec;   // snapshot for Reset
 
     constructor(props: CreatorProps) {
         super(props);
-        const squad = props.initial.map(Creator.normalize);
-        this.base = squad.map(Creator.clone);
-        this.state = {squad, sel: 0};
+        const spec = Creator.normalize(props.initial);
+        this.base = Creator.clone(spec);
+        this.state = {spec, advanced: false};
     }
 
     /** Fill in every stat + a lifepath so the editor never reads an undefined field. */
     private static normalize(spec: CharacterSpec): CharacterSpec {
-        const src = spec.stats || {};
+        const role = spec.role || "solo";
+        const src = spec.stats || CharacterCreation.statsForRole(role);
         const stats: any = {};
         STAT_KEYS.forEach((k) => stats[k] = (src as any)[k] === undefined ? STAT_MIN : (src as any)[k]);
         return {
             name: spec.name || CharacterCreation.randomName(),
-            role: spec.role || "solo",
+            role,
             roleRank: spec.roleRank === undefined ? 4 : spec.roleRank,
             stats,
             lifepath: spec.lifepath || CharacterCreation.randomLifepath(),
@@ -73,58 +77,50 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
         return {...s, stats: {...s.stats}, lifepath: {...(s.lifepath as Lifepath)}};
     }
 
-    private cur(): CharacterSpec { return this.state.squad[this.state.sel]!; }
-
     private used(s: CharacterSpec): number {
         return STAT_KEYS.reduce((n, k) => n + ((s.stats as any)[k] || 0), 0);
     }
 
-    /** Replace the selected member with the result of `mut`. */
     private update(mut: (s: CharacterSpec) => CharacterSpec): void {
-        const squad = this.state.squad.slice();
-        squad[this.state.sel] = mut(Creator.clone(squad[this.state.sel]!));
-        this.setState({squad});
+        this.setState({spec: mut(Creator.clone(this.state.spec))});
     }
 
-    private setStat(key: string, delta: number): void {
+    /**
+     * Picking a role also takes its stat line — until you've opened customise,
+     * at which point the numbers are yours and switching role leaves them alone.
+     */
+    private pickRole = (role: string) => {
+        this.update((s) => this.state.advanced
+            ? {...s, role}
+            : {...s, role, stats: CharacterCreation.statsForRole(role)});
+    };
+
+    private setStat = (key: string, delta: number) => {
         this.update((s) => {
-            const stats: any = s.stats;
+            const stats: any = {...s.stats};
             const cur = stats[key] || STAT_MIN;
             const next = Math.max(STAT_MIN, Math.min(STAT_MAX, cur + delta));
-            if (delta > 0 && this.used(s) - cur + next > STAT_BUDGET) { return s; }  // over budget
+            const after = this.used(s) - cur + next;
+            if (after > STAT_BUDGET) { return s; }
             stats[key] = next;
-            return s;
+            return {...s, stats};
         });
-    }
+    };
 
-    private setRank(delta: number): void {
-        this.update((s) => ({...s, roleRank: Math.max(4, Math.min(10, (s.roleRank || 4) + delta))}));
-    }
 
-    private randomizeMember(): void {
-        this.update(() => Creator.normalize(CharacterCreation.randomSpec()));
-    }
+    private randomize = () => {
+        const rolled = CharacterCreation.randomSpec();
+        this.setState({
+            spec: Creator.normalize(this.state.advanced
+                ? rolled
+                : {...rolled, stats: CharacterCreation.statsForRole(rolled.role || "solo")}),
+        });
+    };
 
-    private randomizeAll = (): void => {
-        this.setState({squad: this.state.squad.map(() => Creator.normalize(CharacterCreation.randomSpec()))});
-    }
+    private reset = () => this.setState({spec: Creator.clone(this.base)});
 
-    private reset = (): void => {
-        this.setState({squad: this.base.map(Creator.clone), sel: 0});
-    }
-
-    private addMember = (): void => {
-        if (this.state.squad.length >= 4) { return; }
-        const squad = this.state.squad.concat(Creator.normalize(CharacterCreation.randomSpec()));
-        this.setState({squad, sel: squad.length - 1});
-    }
-
-    private removeMember = (): void => {
-        if (this.state.squad.length <= 1) { return; }
-        const squad = this.state.squad.slice();
-        squad.splice(this.state.sel, 1);
-        this.setState({squad, sel: Math.max(0, this.state.sel - 1)});
-    }
+    /** Opening customise keeps the role line as the starting point for edits. */
+    private toggleAdvanced = () => this.setState({advanced: !this.state.advanced});
 
     // ---- derived RED numbers, live-previewed as you build ----
     private derived(s: CharacterSpec): Array<[string, string]> {
@@ -133,30 +129,10 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
         return [
             ["HP", "" + hp],
             ["Humanity", "" + (st.emp * 10)],
-            ["Run", (st.move * 2) + "m"],
+            ["Run", (st.move * 3) + "m"],
             ["Initiative", "+" + st.ref],
             ["Evasion", "+" + st.dex],
         ];
-    }
-
-    private roster() {
-        return (
-            <aside className={"crRoster"}>
-                {this.state.squad.map((s, i) => {
-                    const r = ROLE_MAP[s.role || "solo"];
-                    return (
-                        <button key={i} className={"crMerc" + (i === this.state.sel ? " on" : "")}
-                                onClick={() => this.setState({sel: i})}>
-                            <img src={`src/media/portraits/${s.role}.png`} alt={r.name}/>
-                            <span className={"crMercX"}>
-                                <b>{s.name}</b>
-                                <i style={{color: r.color}}>{r.name}</i>
-                            </span>
-                        </button>);
-                })}
-                {this.state.squad.length < 4 &&
-                    <button className={"crAdd"} onClick={this.addMember}>＋ Add merc</button>}
-            </aside>);
     }
 
     private identity(s: CharacterSpec) {
@@ -166,8 +142,6 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                        onChange={(e) => { const v = e.target.value; this.update((x) => ({...x, name: v})); }}/>
                 <button title={"Reroll name"}
                         onClick={() => this.update((x) => ({...x, name: CharacterCreation.randomName()}))}>⟳</button>
-                {this.state.squad.length > 1 &&
-                    <button className={"crDel"} title={"Remove merc"} onClick={this.removeMember}>✕</button>}
             </div>);
     }
 
@@ -183,7 +157,7 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                         return (
                             <button key={k} className={"crRole" + (on ? " on" : "")}
                                     style={on ? {borderColor: role.color, color: role.color} : {}}
-                                    onClick={() => this.update((x) => ({...x, role: k}))}>
+                                    onClick={() => this.pickRole(k)}>
                                 <img src={`src/media/portraits/${k}.png`} alt={role.name}/>
                                 {role.name}
                             </button>);
@@ -191,11 +165,7 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                 </div>
                 <div className={"crRoleInfo"}>
                     <div className={"crRoleAbil"}><b style={{color: r.color}}>{r.skill}</b>
-                        <span className={"crRank"}>Rank
-                            <button onClick={() => this.setRank(-1)}>−</button>
-                            <em>{s.roleRank}</em>
-                            <button onClick={() => this.setRank(1)}>+</button>
-                        </span>
+                        <span className={"crRank"}>Rank <em>{s.roleRank}</em></span>
                     </div>
                     <p>{r.skillDescription}</p>
                 </div>
@@ -259,33 +229,36 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
     }
 
     public override render() {
-        const s = this.cur();
+        const s = this.state.spec;
+        const r = ROLE_MAP[s.role || "solo"];
         return (
-            <div className={"creator"}>
+            <div className={"creator solo"}>
                 <header className={"crHead"}>
                     <div>
-                        <h1>Assemble Your Crew</h1>
-                        <p>Cyberpunk RED · Complete Package</p>
+                        <h1>Hit the Street</h1>
+                        <p>Your merc — the crew gets hired on the way</p>
                     </div>
                     <div className={"crActions"}>
-                        <button onClick={this.randomizeAll}>⚄ Randomize all</button>
+                        <button onClick={this.randomize}>⚄ Randomize</button>
                         <button onClick={this.reset}>⟲ Reset</button>
                         {this.props.canCancel && <button onClick={this.props.onCancel}>✕ Cancel</button>}
-                        <button className={"prim"} onClick={() => this.props.onDeploy(this.state.squad)}>Deploy Squad ▸</button>
+                        <button className={"prim"} onClick={() => this.props.onDeploy(this.state.spec)}>Hit the Street ▸</button>
                     </div>
                 </header>
                 <div className={"crBody"}>
-                    {this.roster()}
                     <main className={"crEdit"}>
                         <div className={"crEditHead"}>
+                            <img className={"crPortrait"} src={`src/media/portraits/${s.role}.png`} alt={r.name}/>
                             {this.identity(s)}
-                            <button className={"crRand"} title={"Randomize this merc"}
-                                    onClick={() => this.randomizeMember()}>⚄ Randomize</button>
                         </div>
                         {this.rolePicker(s)}
-                        {this.statBuy(s)}
                         {this.derivedBar(s)}
-                        {this.lifepath(s)}
+                        <button className={"crAdvToggle" + (this.state.advanced ? " on" : "")}
+                                onClick={this.toggleAdvanced}>
+                            {this.state.advanced ? "▾" : "▸"} Customise — stat point-buy & lifepath
+                        </button>
+                        {this.state.advanced && this.statBuy(s)}
+                        {this.state.advanced && this.lifepath(s)}
                     </main>
                 </div>
             </div>);

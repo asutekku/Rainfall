@@ -43,6 +43,8 @@ export class Actor extends GameObject {
     public items: Item[];
     public currency: number;
     public kills: number;
+    /** Hired help — expendable. Your character is never this, so it never dies for good. */
+    public hireable: boolean;
     public inventory: {
         weapons: Weapon[];
         armor: Armor[];
@@ -236,6 +238,7 @@ export class Actor extends GameObject {
         this.currency = 0;
         this.position = new ObjectPosition(0, 0, 0);
         this.kills = 0;
+        this.hireable = false;
         this.temperament = "balanced";
         this.auto = false;
         this.stats = {

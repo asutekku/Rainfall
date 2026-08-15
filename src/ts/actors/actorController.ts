@@ -18,17 +18,24 @@ export class ActorController {
         return out;
     }
 
-    /** A wave of a specific threat rank (event ambushes: cops, scavs, psychos). */
-    public static getEnemiesOfRank(amount: number, rank: number, level: number): Actor[] {
+    /** A wave drawn from an exact archetype rank — the "elite contact" nodes. */
+    public static getEliteWave(amount: number, level: number, rank: number): Actor[] {
         const out: Actor[] = [];
-        for (let i = 0; i < amount; i++) { out.push(new Adversary(pickArchetypeOfRank(rank), level)); }
+        for (let i = 0; i < amount; i++) {
+            out.push(new Adversary(pickArchetypeOfRank(Math.max(1, Math.min(5, rank))), level));
+        }
         return out;
     }
 
-    /** A boss encounter: a forced rank-5 adversary plus one escort. */
-    public static getBoss(level: number): Actor[] {
+    /**
+     * A boss encounter: a forced high-rank adversary plus one escort. Rank is
+     * the sector's job, not the level's — a rank-5 boss in Flak armour is
+     * unkillable with the sidearm a run opens on, so early sectors cap out
+     * lower and the ladder climbs with the run.
+     */
+    public static getBoss(level: number, rank: number = 5): Actor[] {
         return [
-            new Adversary(pickArchetypeOfRank(5), level + 2),
+            new Adversary(pickArchetypeOfRank(Math.max(1, Math.min(5, rank))), level + 2),
             new Adversary(pickArchetype(level), level),
         ];
     }

@@ -1,6 +1,7 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {Bar} from "../general/bar";
+import {Purse} from "../../interact/crew";
 
 export interface CareerStatsProps {
     party: Actor[];
@@ -34,7 +35,7 @@ export class CareerStats extends React.Component<CareerStatsProps, {}> {
                 <Bar label={"XP"} value={a.experience} max={a.maxExperience} kind={"xp"}/>
                 <Bar label={"HUM"} value={a.humanity} max={a.maxHumanity} kind={"hum"}/>
                 <div className={"redRow"}>
-                    <span className={"redRowMeta"}>Eddies</span><span className={"redRowName"}>{a.currency}¥</span>
+                    <span className={"redRowMeta"}>Eddies</span><span className={"redRowName"}>{Purse.balance(a)}¥</span>
                     <span className={"redRowMeta"}>Rep</span><span className={"redRowName"}>{a.reputation}/10</span>
                     <span className={"redRowMeta"}>Luck</span><span className={"redRowName"}>{a.luck}/{a.maxLuck}</span>
                 </div>
@@ -44,7 +45,7 @@ export class CareerStats extends React.Component<CareerStatsProps, {}> {
     public override render() {
         const party = this.props.party || [];
         const kills = party.reduce((n, a) => n + (a.kills || 0), 0);
-        const eddies = party.reduce((n, a) => n + (a.currency || 0), 0);
+        const eddies = party.length ? Purse.balance(party[0]!) : 0;   // one crew purse, not a per-merc sum
         const topLvl = party.reduce((n, a) => Math.max(n, a.level), 0);
         const standing = party.filter((a) => a.canFight()).length;
         return (

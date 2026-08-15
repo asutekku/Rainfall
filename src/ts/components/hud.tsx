@@ -1,8 +1,10 @@
 import * as React from "react";
 import {Actor} from "../actors/Actor";
+import {Crew} from "../interact/crew";
 
 export interface HudProps {
     actor: Actor;
+    crew: Crew;
 }
 
 interface HudState { loot: number; }
@@ -16,11 +18,11 @@ export class Hud extends React.Component<HudProps, HudState> {
     constructor(props: HudProps) {
         super(props);
         this.state = {loot: 0};
-        this.lastEddies = props.actor ? props.actor.currency : -1;
+        this.lastEddies = props.crew ? props.crew.funds : -1;
     }
 
     public override componentDidUpdate() {
-        const cur = this.props.actor ? this.props.actor.currency : 0;
+        const cur = this.props.crew ? this.props.crew.funds : 0;
         if (this.lastEddies >= 0 && cur > this.lastEddies) {
             const gain = cur - this.lastEddies;
             this.setState({loot: gain});
@@ -59,7 +61,7 @@ export class Hud extends React.Component<HudProps, HudState> {
                 <span className={"mini " + condClass}>{condition}</span>
                 <span className={"eddies" + (this.state.loot ? " looting" : "")}>
                     {this.state.loot ? <em className={"lootGain"}>+{this.state.loot}¥</em> : null}
-                    {a.currency}¥
+                    {this.props.crew ? this.props.crew.funds : 0}¥
                 </span>
             </header>);
     }
