@@ -2,6 +2,7 @@ import * as React from "react";
 import * as THREE from "three";
 import {Actor} from "../../actors/Actor";
 import {MapNode, NodeType, RunState} from "../../interact/runMap";
+import {City, Pt, generateCity} from "../../interact/cityGen";
 
 // node type -> [marker colour, label]
 const TYPE: { [k in NodeType]: [number, string] } = {
@@ -12,6 +13,9 @@ const TYPE: { [k in NodeType]: [number, string] } = {
     boss: [0xe0533f, "Boss"],
 };
 
+// district -> building fill colour (downtown hot, sprawl dim) — all in the rust family
+const DISTRICT_FILL = [0xa03428, 0x86392e, 0x5f2c26];
+
 export interface CityMapProps {
     run: RunState;
     party: Actor[];
@@ -21,11 +25,12 @@ export interface CityMapProps {
 interface Marker { node: MapNode; mesh: THREE.Mesh; beam: THREE.Line; base: number; }
 
 /**
- * The run map as a lean holographic cityscape (three.js): a procedurally
- * generated wireframe grid of streets and high-rises, with the run's nodes as
- * glowing waypoints hovering over the city, linked by lit routes. Reachable
- * nodes pulse and carry a floating label; the rest are dim. Tapping a reachable
- * waypoint enters that node.
+ * The run map as a holographic city (three.js). The city itself comes from
+ * cityGen — recursive angled subdivision: glowing cyan arterials and side
+ * streets carving translucent rust blocks, with building heights driven by
+ * districts (a downtown high-rise core falling off to low sprawl). The whole
+ * city fits the frame at a near-top-down angle; the run's nodes hover above it
+ * as glowing waypoints. Tapping a reachable waypoint enters that node.
  */
 export class CityMap extends React.Component<CityMapProps, {}> {
 
@@ -34,11 +39,13 @@ export class CityMap extends React.Component<CityMapProps, {}> {
     private scene!: THREE.Scene;
     private camera!: THREE.PerspectiveCamera;
     private renderer!: THREE.WebGLRenderer;
+    private city!: City;
     private markers: Marker[] = [];
     private labels: { [id: string]: HTMLDivElement } = {};
     private pos: { [id: string]: THREE.Vector3 } = {};
     private raf = 0;
     private t = 0;
+    private baseY = 120;   // fitted camera height (recomputed on resize)
     private ro: ResizeObserver | null = null;
 
     public override componentDidMount() { this.init(); }
@@ -57,15 +64,17 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         }
     }
 
-    // ---- world position for a node: col → depth, row → spread, hovering high ----
+    // ---- world position for a node: col → depth, row → spread, above the skyline ----
     private nodePos(node: MapNode): THREE.Vector3 {
         const cached = this.pos[node.id];
         if (cached) { return cached; }
         const cols = this.props.run.map.length;
-        const z = 18 - (cols <= 1 ? 0 : node.col / (cols - 1)) * 42;
+        const tz = cols <= 1 ? 0.5 : node.col / (cols - 1);
+        const z = (0.5 - tz) * this.city.extentZ * 1.5;
         const col = this.props.run.map[node.col]!;
-        const x = col.length <= 1 ? 0 : (node.row / (col.length - 1) - 0.5) * 40;
-        const y = 34 + ((node.id.charCodeAt(node.id.length - 1) % 5)) * 0.8;   // hover above the skyline
+        const tx = col.length <= 1 ? 0.5 : node.row / (col.length - 1);
+        const x = (tx - 0.5) * this.city.extentX * 1.4;
+        const y = this.city.maxHeight + 7 + ((node.id.charCodeAt(node.id.length - 1) % 5)) * 0.9;
         const v = new THREE.Vector3(x, y, z);
         this.pos[node.id] = v;
         return v;
@@ -77,11 +86,9 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         const w = host.clientWidth || 800;
         const h = host.clientHeight || 500;
 
+        this.city = generateCity();
         this.scene = new THREE.Scene();
-        this.scene.fog = new THREE.Fog(0x08080b, 90, 260);
-        this.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 500);
-        this.camera.position.set(0, 90, 24);   // near top-down, slight tilt
-        this.camera.lookAt(0, 0, 0);
+        this.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 900);
 
         this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -89,9 +96,11 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         this.renderer.setClearColor(0x08080b, 0);
         host.appendChild(this.renderer.domElement);
 
-        this.scene.add(this.buildStreets());
-        this.scene.add(this.buildCity());
+        this.scene.add(this.buildGround());
+        this.scene.add(this.buildRoads());
+        this.scene.add(this.buildBuildings());
         this.buildNodes();
+        this.fitCamera(w, h);
 
         this.renderer.domElement.addEventListener("pointerdown", this.onPick);
         window.addEventListener("resize", this.resize);
@@ -101,121 +110,126 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         this.animate();
     }
 
-    /** Dark ground plane with a faint reference grid. */
-    private buildStreets(): THREE.Object3D {
+    /** Fit the camera height so the whole city is in frame at any aspect. */
+    private fitCamera(w: number, h: number) {
+        const aspect = w / Math.max(1, h);
+        const halfFov = Math.tan((50 * Math.PI / 180) / 2);
+        const needed = Math.max(this.city.extentZ * 1.28, this.city.extentX / aspect * 1.12);
+        this.baseY = (needed / halfFov) * 1.08;
+        this.camera.aspect = aspect;
+        this.camera.updateProjectionMatrix();
+        this.scene.fog = new THREE.Fog(0x08080b, this.baseY * 0.9, this.baseY * 2.4);
+        // markers keep a readable on-screen size regardless of camera distance
+        const ms = Math.max(1.6, this.baseY * 0.02);
+        this.markers.forEach((m) => { m.base = (m.node.type === "boss" ? 1.7 : 1) * ms; });
+    }
+
+    /** Dark ground with a faint survey grid. */
+    private buildGround(): THREE.Object3D {
         const g = new THREE.Group();
-        const ground = new THREE.Mesh(new THREE.PlaneGeometry(360, 360),
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(900, 900),
             new THREE.MeshBasicMaterial({color: 0x06060d}));
         ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -0.15;
+        ground.position.y = -0.2;
         g.add(ground);
-        const grid = new THREE.GridHelper(320, 64, 0x143038, 0x0d1a20);
-        (grid.material as THREE.Material).opacity = 0.25;
+        const grid = new THREE.GridHelper(700, 70, 0x11262c, 0x0b161b);
+        (grid.material as THREE.Material).opacity = 0.3;
         (grid.material as THREE.Material).transparent = true;
         g.add(grid);
         return g;
     }
 
-    /** Glowing cyan road network on the grid lines + rust city blocks between them. */
-    private buildCity(): THREE.Object3D {
-        const group = new THREE.Group();
-        const XE = 82, ZE = 68, BLOCK = 18, ROADW = 2.6;
-        const xs = this.gridLines(XE, BLOCK);
-        const zs = this.gridLines(ZE, BLOCK);
+    /** Glowing road strips along every cut segment — arterials wide and bright. */
+    private buildRoads(): THREE.Object3D {
+        const g = new THREE.Group();
+        const build = (major: boolean): THREE.Mesh | null => {
+            const verts: number[] = [];
+            this.city.roads.filter((r) => r.major === major).forEach((r) => {
+                const dx = r.b.x - r.a.x, dz = r.b.z - r.a.z;
+                const l = Math.hypot(dx, dz) || 1;
+                const nx = (-dz / l) * (r.width / 2), nz = (dx / l) * (r.width / 2);
+                const y = major ? 0.1 : 0.06;
+                const p = [
+                    r.a.x + nx, y, r.a.z + nz, r.b.x + nx, y, r.b.z + nz, r.b.x - nx, y, r.b.z - nz,
+                    r.a.x + nx, y, r.a.z + nz, r.b.x - nx, y, r.b.z - nz, r.a.x - nx, y, r.a.z - nz,
+                ];
+                verts.push(...p);
+            });
+            if (!verts.length) { return null; }
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+            return new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+                color: major ? 0x37e1e7 : 0x1f9aa0,
+                transparent: true, opacity: major ? 0.75 : 0.4,
+                depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+            }));
+        };
+        const majors = build(true), minors = build(false);
+        if (minors) { g.add(minors); }
+        if (majors) { g.add(majors); }
+        return g;
+    }
 
-        // roads: glowing cyan strips along every grid line
-        const roadMat = new THREE.MeshBasicMaterial({color: 0x37e1e7, transparent: true, opacity: 0.5,
-            depthWrite: false, blending: THREE.AdditiveBlending});
-        const roads = new THREE.Group();
-        xs.forEach((gx) => {
-            const m = new THREE.Mesh(new THREE.PlaneGeometry(ROADW, ZE * 2), roadMat);
-            m.rotation.x = -Math.PI / 2; m.position.set(gx, 0.06, 0); roads.add(m);
-        });
-        zs.forEach((gz) => {
-            const m = new THREE.Mesh(new THREE.PlaneGeometry(XE * 2, ROADW), roadMat);
-            m.rotation.x = -Math.PI / 2; m.position.set(0, 0.06, gz); roads.add(m);
-        });
-        group.add(roads);
-
-        // one rust high-rise per block, inset from the roads, random height
-        const boxes: Array<[number, number, number, number, number]> = [];
-        const verts: number[] = [];
-        for (let i = 0; i < xs.length - 1; i++) {
-            for (let j = 0; j < zs.length - 1; j++) {
-                if (Math.random() < 0.12) { continue; }              // occasional plaza
-                const inset = ROADW / 2 + 1.6;
-                const x0 = xs[i]! + inset, x1 = xs[i + 1]! - inset;
-                const z0 = zs[j]! + inset, z1 = zs[j + 1]! - inset;
-                const cx = (x0 + x1) / 2 + (Math.random() - 0.5) * 1.5;
-                const cz = (z0 + z1) / 2 + (Math.random() - 0.5) * 1.5;
-                const bw = ((x1 - x0) / 2) * (0.68 + Math.random() * 0.26);
-                const bd = ((z1 - z0) / 2) * (0.68 + Math.random() * 0.26);
-                const bh = 3 + Math.random() * Math.random() * 28;
-                boxes.push([cx, cz, bw, bd, bh]);
-                this.pushBox(verts, cx, cz, bw, bd, bh);
+    /** All buildings as merged translucent prisms + rust edge lines (3 draw calls). */
+    private buildBuildings(): THREE.Object3D {
+        const g = new THREE.Group();
+        const tri: number[][] = [[], [], []];   // per-district fill vertices
+        const edge: number[] = [];
+        this.city.buildings.forEach((b) => {
+            const p = b.poly, n = p.length, h = b.height, d = b.district;
+            const put = (v: number[], a: Pt, ya: number, bb: Pt, yb: number, c: Pt, yc: number) =>
+                v.push(a.x, ya, a.z, bb.x, yb, bb.z, c.x, yc, c.z);
+            for (let i = 1; i < n - 1; i++) {              // top face fan
+                put(tri[d]!, p[0]!, h, p[i]!, h, p[i + 1]!, h);
             }
-        }
-        const faces = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
-            new THREE.MeshBasicMaterial({color: 0x8a2e26, transparent: true, opacity: 0.4, depthWrite: false}),
-            boxes.length);
-        const mtx = new THREE.Matrix4();
-        const rot = new THREE.Quaternion();
-        boxes.forEach((b, i) => {
-            mtx.compose(new THREE.Vector3(b[0], b[4] / 2, b[1]), rot, new THREE.Vector3(b[2] * 2, b[4], b[3] * 2));
-            faces.setMatrixAt(i, mtx);
+            for (let i = 0; i < n; i++) {                   // side quads + edges
+                const a = p[i]!, c = p[(i + 1) % n]!;
+                put(tri[d]!, a, 0, c, 0, c, h);
+                put(tri[d]!, a, 0, c, h, a, h);
+                edge.push(a.x, h, a.z, c.x, h, c.z);        // roof outline
+                edge.push(a.x, 0, a.z, a.x, h, a.z);        // corner riser
+            }
         });
-        faces.instanceMatrix.needsUpdate = true;
-        faces.renderOrder = -1;
-        group.add(faces);
-        const geo = new THREE.BufferGeometry();
-        geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
-        group.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color: 0xd06a52, transparent: true, opacity: 0.5})));
-        return group;
-    }
-
-    private gridLines(extent: number, step: number): number[] {
-        const out: number[] = [];
-        const n = Math.floor(extent / step);
-        for (let i = -n; i <= n; i++) { out.push(i * step); }
-        return out;
-    }
-
-    /** Push the 12 edges of a box (base on the ground) into a line-vertex buffer. */
-    private pushBox(v: number[], cx: number, cz: number, bw: number, bd: number, bh: number) {
-        const x0 = cx - bw, x1 = cx + bw, z0 = cz - bd, z1 = cz + bd, y0 = 0, y1 = bh;
-        const c = [
-            [x0, y0, z0], [x1, y0, z0], [x1, y0, z1], [x0, y0, z1],
-            [x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1],
-        ];
-        const e = [[0, 1], [1, 2], [2, 3], [3, 0], [4, 5], [5, 6], [6, 7], [7, 4], [0, 4], [1, 5], [2, 6], [3, 7]];
-        e.forEach(([a, b]) => { v.push(...c[a!]!, ...c[b!]!); });
+        tri.forEach((verts, d) => {
+            if (!verts.length) { return; }
+            const geo = new THREE.BufferGeometry();
+            geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
+            const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({
+                color: DISTRICT_FILL[d]!, transparent: true, opacity: 0.42,
+                depthWrite: false, side: THREE.DoubleSide,
+            }));
+            m.renderOrder = -1;
+            g.add(m);
+        });
+        const egeo = new THREE.BufferGeometry();
+        egeo.setAttribute("position", new THREE.Float32BufferAttribute(edge, 3));
+        g.add(new THREE.LineSegments(egeo,
+            new THREE.LineBasicMaterial({color: 0xe07a5f, transparent: true, opacity: 0.4})));
+        return g;
     }
 
     /** Waypoint markers + ground beams + route lines between linked nodes. */
     private buildNodes() {
-        const geo = new THREE.IcosahedronGeometry(1.5, 0);
+        const geo = new THREE.IcosahedronGeometry(1, 0);
         this.props.run.map.forEach((col) => col.forEach((node) => {
             const p = this.nodePos(node);
             const colour = TYPE[node.type][0];
             const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({color: colour, wireframe: true}));
             mesh.position.copy(p);
             mesh.userData["nodeId"] = node.id;
-            if (node.type === "boss") { mesh.scale.setScalar(1.7); }
             this.scene.add(mesh);
             const beamGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p.x, 0, p.z), p]);
             const beam = new THREE.Line(beamGeo, new THREE.LineBasicMaterial({color: colour, transparent: true, opacity: 0.3}));
             this.scene.add(beam);
             this.markers.push({node, mesh, beam, base: node.type === "boss" ? 1.7 : 1});
-            // route lines to the next column
             node.next.forEach((id) => {
                 const t = this.findNode(id);
                 if (!t) { return; }
                 const line = new THREE.Line(
                     new THREE.BufferGeometry().setFromPoints([p, this.nodePos(t)]),
-                    new THREE.LineBasicMaterial({color: 0x2e2e3b, transparent: true, opacity: 0.6}));
+                    new THREE.LineBasicMaterial({color: 0x2e2e3b, transparent: true, opacity: 0.65}));
                 this.scene.add(line);
             });
-            // floating HTML label
             const el = document.createElement("div");
             el.className = "cityLabel";
             el.textContent = TYPE[node.type][1];
@@ -249,9 +263,8 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         if (!host || !this.renderer) { return; }
         const w = host.clientWidth || 800;
         const h = host.clientHeight || 500;
-        this.camera.aspect = w / h;
-        this.camera.updateProjectionMatrix();
         this.renderer.setSize(w, h);
+        this.fitCamera(w, h);
     };
 
     private onPick = (ev: PointerEvent) => {
@@ -272,12 +285,11 @@ export class CityMap extends React.Component<CityMapProps, {}> {
     private animate = () => {
         this.raf = requestAnimationFrame(this.animate);
         this.t += 0.016;
-        // gentle top-down sway keeps the route readable while feeling alive
-        this.camera.position.x = Math.sin(this.t * 0.1) * 6;
-        this.camera.position.y = 90 + Math.sin(this.t * 0.16) * 3;
-        this.camera.position.z = 24;
+        // near top-down with a slow drift; the whole city stays in frame
+        this.camera.position.x = Math.sin(this.t * 0.1) * this.baseY * 0.04;
+        this.camera.position.y = this.baseY + Math.sin(this.t * 0.16) * this.baseY * 0.02;
+        this.camera.position.z = this.baseY * 0.24;
         this.camera.lookAt(0, 0, 0);
-        // pulse reachable markers + spin all
         const rect = this.renderer.domElement.getBoundingClientRect();
         this.markers.forEach((m) => {
             m.mesh.rotation.y += 0.01;
@@ -287,7 +299,6 @@ export class CityMap extends React.Component<CityMapProps, {}> {
             const label = this.labels[m.node.id];
             if (label && reachable) {
                 const v = m.mesh.position.clone().project(this.camera);
-                // clamp inside the canvas so edge waypoints keep a readable label
                 const lx = Math.max(48, Math.min(rect.width - 48, (v.x * 0.5 + 0.5) * rect.width));
                 const ly = Math.max(18, Math.min(rect.height - 12, (-v.y * 0.5 + 0.5) * rect.height - 26));
                 label.style.left = lx + "px";
