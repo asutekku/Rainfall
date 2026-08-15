@@ -116,6 +116,12 @@ nav button.act-on { color:var(--good); border-left-color:var(--good); background
 .es.on { border-left-color:var(--cyan); box-shadow:inset 0 0 10px rgba(55,225,231,.18); }
 .es.dead { opacity:.4; }
 .es .d { width:20px; height:20px; flex:none; display:grid; place-items:center; color:var(--crit); border:1px solid var(--crit); font-size:11px; }
+/* threat-rank colour on the strip marker */
+.es .d.rank-1 { color:var(--dim); border-color:var(--faint); }
+.es .d.rank-2 { color:var(--mid); border-color:var(--line2); }
+.es .d.rank-3 { color:var(--cyan); border-color:var(--cyanDim); }
+.es .d.rank-4 { color:var(--warn); border-color:var(--warn); }
+.es .d.rank-5 { color:var(--crit); border-color:var(--crit); box-shadow:0 0 8px rgba(224,83,63,.5); }
 .es .nm { color:var(--ink); min-width:88px; }
 .es .lv { color:var(--dim); font-size:10px; }
 .es .bar { flex:1; height:8px; background:#0b0b10; border:1px solid var(--line); overflow:hidden; }

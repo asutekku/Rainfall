@@ -26,6 +26,9 @@ export class Actor extends GameObject {
     public position: ObjectPosition;
     public temperament: string;   // tactical AI personality: balanced|aggressive|flanker|camper|berserker
     public auto: boolean;         // squad member played by the tactical AI instead of the player
+    public faction?: string;      // enemy faction (Maelstrom, Arasaka, ...) for display
+    public rank?: number;         // enemy threat rank 1-5
+    public archetype?: string;    // enemy role within the faction (Reaver, Lanceman, ...)
     public equipment: {
         headgear: Armor | null;
         upper: Armor | null;

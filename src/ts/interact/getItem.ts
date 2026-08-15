@@ -40,6 +40,16 @@ export class GetItem {
         return Utils.pickRandom(street).clone();
     }
 
+    /** A random kinetic weapon drawn from the given classes (for faction loadouts). */
+    public static weaponOfClass(classes: string[], maxRarity: number = 3, minDice: number = 0): Weapon {
+        const pool = weapons.filter((w) =>
+            classes.indexOf(w.weaponClass) !== -1 && w.damageType === "kinetic"
+            && w.rarity <= maxRarity && w.diceThrows >= minDice);
+        const list = pool.length ? pool : weapons.filter((w) =>
+            classes.indexOf(w.weaponClass) !== -1 && w.damageType === "kinetic" && w.rarity <= maxRarity);
+        return Utils.pickRandom(list.length ? list : weapons.filter((w) => w.weaponClass === "pistol")).clone();
+    }
+
     /**
      * Returns a fresh Armor instance (a clone of the template). Armor ablates
      * as it takes hits, so each wearer needs its own object — handing out the

@@ -1,6 +1,5 @@
 import * as React from "react";
 import {Actor} from "../actors/Actor";
-import {Goon} from "../actors/Enemies/Goon";
 import {Player} from "../actors/player";
 import {ActionLog} from "./actionLog/actionLog";
 import {Message} from "./actionLog/messageComponent";
@@ -32,7 +31,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     constructor(props: any) {
         super(props);
         const party = [new Player(), new Player()];
-        const enemies = [new Goon(), new Goon()];
+        const enemies = ActorController.getEnemies(2, App.levelOf(party));
         Battlefield.deploy(party, enemies);
         this.state = {
             activeMainPanel: "Character",
@@ -74,6 +73,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     private gotoCombat = () => this.setState({activeMainPanel: "Combat"});
 
+    /** Highest level in a party — the yardstick for scaling enemy waves. */
+    private static levelOf(party: Actor[]): number {
+        return party.reduce((m, p) => Math.max(m, p.level), 1);
+    }
+
     /** Flip a squad member between manual and AI control. */
     private toggleActorAuto = (a: Actor) => { a.auto = !a.auto; this.forceUpdate(); };
 
@@ -90,9 +94,9 @@ export class App extends React.Component<{}, InterfaceAppState> {
         // Removes dead enemies from the array
         enemies = enemies.filter((e: Actor) => e.health > 0);
 
-        // If there are no Goons alive spawn one to three new goons, deployed on the far line
+        // If there are no enemies alive, spawn a fresh faction wave scaled to the party
         if (enemies.length <= 0) {
-            enemies = ActorController.getGoons(Utils.range(1, 3));
+            enemies = ActorController.getEnemies(Utils.range(1, 3), App.levelOf(this.state.party));
             Battlefield.deployEnemies(enemies);
         }
 
@@ -141,7 +145,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private restart = () => {
         this.stopAuto();
         const party = [new Player(), new Player()];
-        const enemies = [new Goon(), new Goon()];
+        const enemies = ActorController.getEnemies(2, App.levelOf(party));
         Battlefield.deploy(party, enemies);
         this.setState({
             party,

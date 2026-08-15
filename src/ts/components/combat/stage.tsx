@@ -109,11 +109,12 @@ export class Stage extends React.Component<StageProps, StageState> {
         const cls = this.props.actor.weapon.weaponClass;
         const outOfRange = cls !== "melee" && rangeDV(cls, dist) === null;
         const temper = Stage.TEMPER[e.temperament] || Stage.TEMPER.balanced;
+        const sub = e.faction ? `${e.faction}${e.archetype ? " " + e.archetype : ""}` : e.role.name;
         return (
             <button key={i} className={"es" + (active ? " on" : "") + (e.canFight() ? "" : " dead")}
                     onClick={() => this.props.onSelectEnemy(e)}>
-                <span className={"d"}>✦</span>
-                <span className={"nm"}>{e.name} <span className={"lv"}>L{e.level}</span></span>
+                <span className={"d rank-" + (e.rank || 1)} title={"threat rank " + (e.rank || 1)}>✦</span>
+                <span className={"nm"}>{e.name} <span className={"lv"}>{sub} · L{e.level}</span></span>
                 <span className={"temp " + temper[1]} title={"AI temperament"}>{temper[0]}</span>
                 <span className={"bar hp"}><i style={{width: hpPct + "%"}}/></span>
                 <span className={"rng" + (outOfRange ? " oor" : "")}>{dist}m</span>
