@@ -2,9 +2,11 @@ import type {InterfaceAppState} from "../components/app";
 import {Actor} from "../actors/Actor";
 import {Armor} from "../items/Armor";
 import {Weapon} from "../items/Weapon";
+import {Merc} from "../actors/Merc";
 import {BattleRecorder, BattleReport, GearChange, LootItem} from "./battleReport";
 import {Battlefield} from "./battlefield";
-import {Purse} from "./crew";
+import {Crew, Purse} from "./crew";
+import {MercMarket} from "./mercMarket";
 import {Economy} from "./economy";
 import {RunMap, RunNode, RunState, encounterSpec, spawnEncounter} from "./runMap";
 
@@ -23,10 +25,13 @@ export class RunController {
         return party.reduce((m, p) => Math.max(m, p.level), 1);
     }
 
-    /** A brand-new run: fresh city, road-graph waypoints, squad at the entry. */
-    public static freshRun(): RunState {
+    /** Squad size ceiling: you plus three on the payroll. */
+    public static readonly SQUAD_CAP: number = 4;
+
+    /** A brand-new sector: fresh city, road-graph waypoints, squad at the entry. */
+    public static freshRun(sector: number = 1): RunState {
         BattleRecorder.abort();
-        return RunMap.generate();
+        return RunMap.generate(sector);
     }
 
     /** Move onto an adjacent node: relocate, open its screen, or start its fight. */
@@ -39,8 +44,12 @@ export class RunController {
         }
         if (node.type === "merchant") { return {run: {...run, node}, screen: "merchant"}; }
         if (node.type === "rest") { return {run: {...run, node}, screen: "rest"}; }
+        if (node.type === "hire") {
+            // A fixer's table mid-sector: short list, and he takes his cut.
+            return {run: {...run, node}, screen: "hire", offers: MercMarket.board(run.sector, 3, 1.25)};
+        }
         // combat / elite / boss
-        const enemies = spawnEncounter(encounterSpec(node, RunController.levelOf(state.party)));
+        const enemies = spawnEncounter(encounterSpec(node, run.sector, RunController.levelOf(state.party)));
         Battlefield.deploy(state.party, enemies);
         const label = node.type === "boss" ? "BOSS — hold nothing back"
             : node.type === "elite" ? "elite contact" : "firefight";
@@ -68,7 +77,11 @@ export class RunController {
         const depth = run.depth + 1;
         const messages = [...extra, ...state.messages].slice(0, log);
         if (node.type === "boss") {
-            return {run: {...run, clearedIds, depth, node: null, position: node.id, outcome: "won"}, screen: "end", messages};
+            // Sector cleared — not the end of anything, just the next city over.
+            return {
+                run: {...run, clearedIds, depth, node: null, position: node.id, outcome: "won"},
+                screen: "sector", offers: MercMarket.board(run.sector + 1, 4), messages,
+            };
         }
         return {
             run: {
@@ -165,16 +178,80 @@ export class RunController {
         return {...report, loot: report.loot.slice(), gear: [...report.gear, ...changes], kitted: true};
     }
 
-    /** Leave the debrief: auto-kit the leftovers, then hit the map (or the run-over screen). */
+    /** Trauma Team for a merc the crew wants back — paid for out of the purse. */
+    public static buyout(state: InterfaceAppState, report: BattleReport, name: string): BattleReport | null {
+        const merc = report.casualties.find((c) => c.name === name);
+        if (!merc) { return null; }
+        const cost = merc instanceof Merc ? merc.buyoutCost() : 400;
+        if (!state.crew.spend(cost)) { return null; }
+        merc.revive();
+        return {...report, casualties: report.casualties.filter((c) => c !== merc)};
+    }
+
+    /**
+     * Leave the debrief: auto-kit the leftovers, strike off anyone nobody paid
+     * for, then hit the map (or the run-over screen).
+     */
     public static continueFromDebrief(state: InterfaceAppState, log: number): Patch {
         const run = state.run;
         const report = state.report ? RunController.autoKit(state, state.report) : null;
         const notes: any[] = report ? report.gear.map((c) => ({msg: Economy.describe(c)})) : [];
-        if (!run) { return {screen: "map", report: null}; }
+        const lost = report ? report.casualties : [];
+        lost.forEach((c) => notes.unshift({msg: `${c.name} didn't make it off the street.`}));
+        const party = lost.length ? state.party.filter((p) => lost.indexOf(p) < 0) : state.party;
+        if (!run) { return {screen: "map", report: null, party}; }
         if (report && report.outcome === "defeat") {
-            return {screen: "end", report: null, messages: [...notes, ...state.messages].slice(0, log)};
+            return {screen: "end", report: null, party, messages: [...notes, ...state.messages].slice(0, log)};
         }
-        return {...RunController.advance(state, run.node!, notes, log), report: null};
+        return {...RunController.advance(state, run.node!, notes, log), report: null, party};
+    }
+
+    // =====================================================================
+    // Hiring and sectors
+    // =====================================================================
+
+    /** Put a candidate on the payroll if the purse and the squad cap allow it. */
+    public static hire(state: InterfaceAppState, id: string, log: number): Patch | null {
+        const offer = state.offers.find((o) => o.id === id);
+        if (!offer || state.party.length >= RunController.SQUAD_CAP) { return null; }
+        if (!state.crew.spend(offer.price)) { return null; }
+        const merc = new Merc(offer);
+        return {
+            party: [...state.party, merc],
+            messages: [{msg: `${merc.name} (${merc.tier} ${merc.role.name}) signs on for ${offer.price}¥.`} as any,
+                ...state.messages].slice(0, log),
+        };
+    }
+
+    /** Next sector: a new city, a harder one, with the crew you walked out with. */
+    public static nextSector(state: InterfaceAppState, log: number): Patch {
+        const sector = (state.run ? state.run.sector : 0) + 1;
+        state.party.forEach((p) => { if (p.canFight()) { p.health = p.maxHealth; } });
+        return {
+            run: RunController.freshRun(sector), screen: "map", report: null, offers: [],
+            activeMainPanel: "Combat", mobileTab: "arena",
+            messages: [{msg: `— sector ${sector}: new streets, worse people —`} as any,
+                ...state.messages].slice(0, log),
+        };
+    }
+
+    /**
+     * A wipe ends the run, not the character. Trauma Team pulls them out with
+     * their levels and training intact; the gear, the crew and the eddies stay
+     * on the pavement. Next run starts at sector 1 with a stronger merc in
+     * basic kit — which is why encounters scale off the sector, not the party.
+     */
+    public static nextRun(state: InterfaceAppState, log: number): Patch {
+        const character = state.character;
+        character.revive();
+        Economy.stripToBasics(character);
+        const crew = new Crew().activate();
+        return {
+            character, party: [character, new Merc(MercMarket.starter(1))], crew,
+            run: RunController.freshRun(1), screen: "map", report: null, offers: [],
+            activeChar: character, activeMainPanel: "Combat", mobileTab: "arena",
+            messages: [{msg: "— Trauma Team drops you back on the street. New crew, old scars. —"} as any].slice(0, log),
+        };
     }
 
     /** Spend the one-per-run Trauma Team revive and resume the current fight. */

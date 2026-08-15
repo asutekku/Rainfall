@@ -19,15 +19,21 @@ import {RunEndView} from "./run/runEndView";
 import {DebriefView} from "./run/debriefView";
 import {BattleReport} from "../interact/battleReport";
 import {Crew} from "../interact/crew";
+import {MercMarket, MercOffer} from "../interact/mercMarket";
+import {Merc} from "../actors/Merc";
+import {HireBoard} from "./run/hireBoard";
+import {SectorClearView} from "./run/sectorClearView";
 import {MetaOverlay} from "./run/metaOverlay";
 import {Store} from "./storePanel/store";
 import {Downtime} from "./downtime/downtime";
 
 /** Which run-loop screen is on top. "combat" falls through to the ops shell. */
-export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "end";
+export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "end";
 
 export interface InterfaceAppState {
     activeMainPanel: string;
+    /** Your merc — the one who persists across runs. Never a casualty. */
+    character: Actor;
     activeChar: Actor | undefined;
     activeEnemy: Actor | undefined;
     party: Actor[];
@@ -35,7 +41,10 @@ export interface InterfaceAppState {
     messages: Message[];
     auto: boolean;
     creating: boolean;
-    squadSpecs: CharacterSpec[];
+    /** The spec your character was built from, so "new character" opens where you left it. */
+    characterSpec: CharacterSpec;
+    /** Candidates on the board while a hire screen is up. */
+    offers: MercOffer[];
     /** Which mobile destination is on screen. Ignored above the breakpoint. */
     mobileTab: MobileTab;
     /** More sheet open (mobile only). */
@@ -62,12 +71,14 @@ export class App extends React.Component<{}, InterfaceAppState> {
         // Boot into character creation, pre-filled with a two-merc default squad
         // (one-click Deploy still works). The specs also seed a valid party so the
         // game state behind the creator is never empty.
-        const squadSpecs = [CharacterCreation.defaultSpec(), CharacterCreation.defaultSpec()];
-        const party = squadSpecs.map((s) => new Player(s));
+        const characterSpec = CharacterCreation.defaultSpec();
+        const character = new Player(characterSpec);
+        const party = [character];
         const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
         Battlefield.deploy(party, enemies);
         this.state = {
             activeMainPanel: "Character",
+            character,
             activeChar: undefined,
             activeEnemy: undefined,
             party,
@@ -75,7 +86,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
             messages: [],
             auto: false,
             creating: true,
-            squadSpecs,
+            characterSpec,
+            offers: [],
             mobileTab: "arena",
             mobileMore: false,
             unread: 0,
@@ -93,25 +105,39 @@ export class App extends React.Component<{}, InterfaceAppState> {
     public override render() {
         // Character creation is a full-screen takeover shown before / on demand.
         if (this.state.creating) {
-            return <Creator initial={this.state.squadSpecs} canCancel={this.state.run !== null}
-                            onDeploy={this.deploySquad} onCancel={this.closeCreator}/>;
+            return <Creator initial={this.state.characterSpec} canCancel={this.state.run !== null}
+                            onDeploy={this.deployCharacter} onCancel={this.closeCreator}/>;
         }
         // Run-loop takeovers that sit ABOVE the shell. The city map and combat
         // both render inside the shell (via Stage) so the nav / bottom bar stay.
         const run = this.state.run;
         if (run && this.state.screen === "debrief" && this.state.report) {
-            return <DebriefView report={this.state.report} depth={run.depth}
+            return <DebriefView report={this.state.report} sector={run.sector}
                                 canRevive={run.outcome === "lost" && !run.reviveUsed}
+                                funds={this.state.crew.funds}
                                 onClaim={this.claimLoot} onSell={this.sellLoot} onAutoKit={this.autoKit}
+                                onBuyout={this.buyoutMerc}
                                 onContinue={this.leaveDebrief} onRevive={this.reviveRun}/>;
         }
+        if (run && this.state.screen === "sector") {
+            return <SectorClearView sector={run.sector} funds={this.state.crew.funds}
+                                    party={this.state.party} offers={this.state.offers}
+                                    cap={RunController.SQUAD_CAP}
+                                    onHire={this.hireMerc} onContinue={this.nextSector}/>;
+        }
         if (run && this.state.screen === "end") {
-            const kills = this.state.party.reduce((n, p) => n + p.kills, 0);
-            const eddies = this.state.crew.funds;
-            return <RunEndView outcome={run.outcome === "won" ? "won" : "lost"}
-                               depth={run.depth} kills={kills} eddies={eddies}
-                               canRevive={run.outcome === "lost" && !run.reviveUsed}
-                               onRevive={this.reviveRun} onNewCrew={this.openCreator}/>;
+            return <RunEndView character={this.state.character} sector={run.sector}
+                               depth={run.depth} kills={this.state.character.kills}
+                               canRevive={!run.reviveUsed}
+                               onRevive={this.reviveRun} onNextRun={this.nextRun}
+                               onNewCharacter={this.openCreator}/>;
+        }
+        if (run && this.state.screen === "hire") {
+            return <MetaOverlay title={"☰ Fixer\u2019s Table"} onLeave={this.leaveMeta}>
+                <HireBoard offers={this.state.offers} party={this.state.party}
+                           funds={this.state.crew.funds} cap={RunController.SQUAD_CAP}
+                           onHire={this.hireMerc}/>
+            </MetaOverlay>;
         }
         if (run && this.state.screen === "merchant") {
             return <MetaOverlay title={"▤ Black Market"} onLeave={this.leaveMeta}>
@@ -177,20 +203,22 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     private noop = () => { /* placeholder callback for reused panels */ };
 
-    /** Build the squad and start a fresh run on the map. Run logic lives in RunController. */
-    private deploySquad = (specs: CharacterSpec[]) => {
+    /** Build your character and hit the street. The crew gets hired on the way. */
+    private deployCharacter = (spec: CharacterSpec) => {
         this.stopAuto();
-        const party = specs.map((s) => new Player(s));
+        const character = new Player(spec);
+        // Never start alone: the fixer throws in a rookie with the job.
+        const party = [character, new Merc(MercMarket.starter(1))];
         // Seed a placeholder wave so the combat shell never reads an empty array.
         const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
         Battlefield.deploy(party, enemies);
         this.setState({
-            squadSpecs: specs, party, currentEnemies: enemies,
-            activeChar: party[0], activeEnemy: enemies[0],
-            creating: false, run: RunController.freshRun(), screen: "map", report: null,
-            crew: new Crew().activate(),
+            characterSpec: spec, character, party, currentEnemies: enemies,
+            activeChar: character, activeEnemy: enemies[0],
+            creating: false, run: RunController.freshRun(1), screen: "map", report: null,
+            crew: new Crew().activate(), offers: [],
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
-            messages: [{msg: "— crew hits the street —"} as any],
+            messages: [{msg: `— ${character.name} hits the street with a rookie in tow —`} as any],
         });
     };
 
@@ -307,22 +335,31 @@ export class App extends React.Component<{}, InterfaceAppState> {
     /** Fresh run — a new act with the same crew, back on the map. */
     private restart = () => {
         this.stopAuto();
-        const specs = this.state.squadSpecs.length ? this.state.squadSpecs
-            : [CharacterCreation.defaultSpec(), CharacterCreation.defaultSpec()];
-        const party = specs.map((s) => new Player(s));
-        const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
-        Battlefield.deploy(party, enemies);
-        this.setState({
-            party,
-            currentEnemies: enemies,
-            activeChar: party[0],
-            activeEnemy: enemies[0],
-            run: RunController.freshRun(),
-            screen: "map",
-            report: null,
-            crew: new Crew().activate(),
-            messages: [{msg: "— new job, same crew —"} as any],
-        });
+        this.setState(RunController.nextRun(this.state, this.logLength) as any);
+    };
+
+    /** Sign a candidate off the board. */
+    private hireMerc = (id: string) => {
+        const patch = RunController.hire(this.state, id, this.logLength);
+        if (patch) { this.setState(patch as any); }
+    };
+
+    /** Move the crew on to the next, harder sector. */
+    private nextSector = () => {
+        this.stopAuto();
+        this.setState(RunController.nextSector(this.state, this.logLength) as any);
+    };
+
+    /** Trauma Team for a downed merc, out of the crew purse. */
+    private buyoutMerc = (name: string) => {
+        const report = this.state.report && RunController.buyout(this.state, this.state.report, name);
+        if (report) { this.setState({report}); }
+    };
+
+    /** A wipe is not the end of the character — start the next run with them. */
+    private nextRun = () => {
+        this.stopAuto();
+        this.setState(RunController.nextRun(this.state, this.logLength) as any);
     };
 
     /** Trauma Team pickup: fully revive and heal every squad member. */

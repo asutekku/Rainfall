@@ -4,6 +4,7 @@ import Equipment from "../items/Equipment";
 import {Weapon} from "../items/Weapon";
 import {BattleRecorder, GearChange} from "./battleReport";
 import {Purse} from "./crew";
+import {GetItem} from "./getItem";
 
 const WEAPONS: Weapon[] = Equipment.weapons;
 
@@ -209,6 +210,19 @@ export class Economy {
     /** What the fence pays for a piece the squad doesn't want: half sticker price. */
     public static sellValue(cost: number): number {
         return Math.max(5, Math.floor((cost || 0) / 2));
+    }
+
+    /**
+     * Back to street basics: a sidearm and a jacket. Called when a run ends —
+     * the character keeps everything they learned and none of what they carried.
+     */
+    public static stripToBasics(actor: Actor): void {
+        actor.weapon = GetItem.weapon("WSA Autopistol");
+        actor.weapon.equipped = true;
+        actor.equipment.upper = GetItem.armor("Light Armor Jacket");
+        actor.equipment.headgear = GetItem.armor("Kevlar Helmet");
+        actor.inventory.weapons = [GetItem.weapon("Fists")];
+        actor.inventory.armor = [];
     }
 
     /** Feed line for a loadout change. */

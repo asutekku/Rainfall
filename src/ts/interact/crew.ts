@@ -19,8 +19,13 @@ export class Crew {
     /** The purse the running game is spending from (null before a crew exists). */
     public static active: Crew | null = null;
 
-    /** Eddies a fresh run starts with — enough to put one rookie on the payroll. */
-    public static readonly STARTING_FUNDS: number = 500;
+    /**
+     * Eddies a fresh run starts with. Enough to arm the pair you open with *or*
+     * put a Pro on the payroll — the first real decision of a run. Tuned up from
+     * 500¥ after playtesting: a crew that can't afford a weapon that beats SP 7
+     * turns every early firefight into a twenty-round grind.
+     */
+    public static readonly STARTING_FUNDS: number = 1200;
 
     public funds: number;
 

@@ -1,6 +1,7 @@
 import {Actor} from "../actors/Actor";
 import {ActorController} from "../actors/actorController";
 import {City, Pt, generateCity} from "./cityGen";
+import {Utils} from "../utils/utils";
 
 /**
  * The run graph, dungeon-style, laid over the city's road network. Waypoints
@@ -11,7 +12,7 @@ import {City, Pt, generateCity} from "./cityGen";
  * relocates (so you can backtrack and take other branches). Clearing the boss
  * wins the run.
  */
-export type NodeType = "combat" | "elite" | "merchant" | "rest" | "boss";
+export type NodeType = "combat" | "elite" | "merchant" | "rest" | "hire" | "boss";
 
 export interface RunNode {
     id: string;
@@ -21,6 +22,8 @@ export interface RunNode {
 }
 
 export interface RunState {
+    /** Which sector of the run this map is — drives difficulty and prices. */
+    sector: number;
     city: City;
     nodes: RunNode[];
     adj: { [id: string]: string[] };
@@ -41,16 +44,16 @@ const NEIGHBOURS = 2;      // road-nearest links per node (plus connectivity rep
 
 export class RunMap {
 
-    /** Build a fresh run: city → road graph → waypoints → free-roam adjacency. */
-    public static generate(): RunState {
+    /** Build a fresh sector: city → road graph → waypoints → free-roam adjacency. */
+    public static generate(sector: number = 1): RunState {
         for (let attempt = 0; attempt < 8; attempt++) {
-            const state = RunMap.tryGenerate();
+            const state = RunMap.tryGenerate(sector);
             if (state) { return state; }
         }
         throw new Error("run generation failed");
     }
 
-    private static tryGenerate(): RunState | null {
+    private static tryGenerate(sector: number): RunState | null {
         const city = generateCity();
 
         // adjacency of the road graph itself
@@ -183,16 +186,18 @@ export class RunMap {
         nodes[bossIdx]!.type = "boss";
         const others = nodes.map((_n, i) => i).filter((i) => i !== entryIdx && i !== bossIdx);
         const shuffled = others.sort(() => Math.random() - 0.5);
+        // one guaranteed shop, safehouse and fixer's table; the rest is trouble
+        const extra: NodeType[] = ["merchant", "rest", "hire"];
         shuffled.forEach((i, k) => {
-            nodes[i]!.type = k === 0 ? "merchant" : k === 1 ? "rest"
-                : Math.random() < 0.22 ? "elite"
-                : Math.random() < 0.18 ? (Math.random() < 0.5 ? "merchant" : "rest")
+            nodes[i]!.type = k === 0 ? "merchant" : k === 1 ? "rest" : k === 2 ? "hire"
+                : (sector > 1 && Math.random() < 0.22) ? "elite"
+                : Math.random() < 0.2 ? Utils.pickRandom(extra)
                 : "combat";
         });
 
         const entry = nodes[entryIdx]!;
         return {
-            city, nodes, adj, paths,
+            sector, city, nodes, adj, paths,
             position: entry.id, node: null,
             clearedIds: [entry.id],
             reachableIds: adj[entry.id]!.slice(),
@@ -244,18 +249,30 @@ export class RunMap {
     }
 }
 
-export interface EncounterSpec { boss: boolean; amount: number; level: number; }
+export interface EncounterSpec { boss: boolean; amount: number; level: number; rank: number; }
 
-/** How hard a node's fight is, derived from its type and the party level. */
-export function encounterSpec(node: RunNode, level: number): EncounterSpec {
+/**
+ * How hard a node's fight is. The sector drives it, not the party's level:
+ * a character who survives several runs keeps their levels but starts each run
+ * in basic kit, and scaling off party level would erase that progress by
+ * spawning level-20 gangers in sector 1. A strong crew still nudges it up a
+ * little, so the curve doesn't go flat.
+ */
+export function encounterSpec(node: RunNode, sector: number, partyLevel: number): EncounterSpec {
+    const base = Math.max(1, sector + Math.floor(partyLevel / 4));
+    // Boss rank climbs with the sector: sector 1 fields a ganger boss, the
+    // Flak-and-MetalGear tier only shows up once the crew can punch through it.
+    const bossRank = Math.max(2, Math.min(5, 1 + Math.ceil(sector / 2)));
     switch (node.type) {
-        case "elite": return {boss: false, amount: 2, level: level + 2};
-        case "boss": return {boss: true, amount: 1, level: level + 2};
-        default: return {boss: false, amount: 1 + (Math.random() < 0.5 ? 1 : 0), level};
+        case "elite": return {boss: false, amount: 2, level: base + 1, rank: 0};
+        case "boss": return {boss: true, amount: 1, level: base + 2, rank: bossRank};
+        default: return {boss: false, amount: 1 + (Math.random() < 0.5 ? 1 : 0), level: base, rank: 0};
     }
 }
 
 /** Mint the actual enemies for an encounter spec. */
 export function spawnEncounter(spec: EncounterSpec): Actor[] {
-    return spec.boss ? ActorController.getBoss(spec.level) : ActorController.getEnemies(spec.amount, spec.level);
+    return spec.boss
+        ? ActorController.getBoss(spec.level, spec.rank)
+        : ActorController.getEnemies(spec.amount, spec.level);
 }

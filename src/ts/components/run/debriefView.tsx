@@ -1,13 +1,17 @@
 import * as React from "react";
+import {Actor} from "../../actors/Actor";
+import {Merc} from "../../actors/Merc";
 import {BattleReport, CombatantTally, GearChange, LootItem} from "../../interact/battleReport";
 
 export interface DebriefViewProps {
     report: BattleReport;
-    depth: number;
+    sector: number;
     canRevive: boolean;
+    funds: number;
     onClaim: (id: string) => void;
     onSell: (id: string) => void;
     onAutoKit: () => void;
+    onBuyout: (name: string) => void;
     onContinue: () => void;
     onRevive: () => void;
 }
@@ -109,6 +113,24 @@ export class DebriefView extends React.Component<DebriefViewProps, {}> {
             <span className={"dbGearCost"}>{c.cost > 0 ? "−" + c.cost + "¥" : "free"}</span>
         </li>);
 
+    /**
+     * A downed merc bleeds out when the crew moves on. The buyout is the only
+     * thing on this screen that can't be undone by walking away, so it gets a
+     * price and a name rather than a quiet line in the feed.
+     */
+    private casualty = (a: Actor, i: number) => {
+        const cost = a instanceof Merc ? a.buyoutCost() : 400;
+        return (
+            <li key={i} className={"dbCasualty"}>
+                <span className={"dbCasIcon"}>✚</span>
+                <span className={"dbCasName"}>{a.name}</span>
+                <span className={"dbCasRole"}>{a.role.name} · L{a.level}</span>
+                <button disabled={this.props.funds < cost}
+                        title={this.props.funds < cost ? "Not enough eddies" : "Trauma Team pickup"}
+                        onClick={() => this.props.onBuyout(a.name)}>{cost}¥</button>
+            </li>);
+    };
+
     public override render() {
         const r = this.props.report;
         const won = r.outcome === "victory";
@@ -122,7 +144,7 @@ export class DebriefView extends React.Component<DebriefViewProps, {}> {
                         <h1>{won ? "ENGAGEMENT CLEAR" : "SQUAD DOWN"}</h1>
                         <p className={"debriefSub"}>
                             {r.nodeLabel} · {won ? down : `${down} of ${r.hostiles.length}`} down
-                            {" · "}{r.rounds} round{r.rounds === 1 ? "" : "s"} · sector {this.props.depth + 1}
+                            {" · "}{r.rounds} round{r.rounds === 1 ? "" : "s"} · sector {this.props.sector}
                         </p>
                     </div>
 
@@ -133,6 +155,12 @@ export class DebriefView extends React.Component<DebriefViewProps, {}> {
                         </div>
 
                         <div className={"debriefBlock"}>
+                            {r.casualties.length > 0 &&
+                                <div className={"dbCasualties"}>
+                                    <h2>Bleeding out</h2>
+                                    <ul>{r.casualties.map(this.casualty)}</ul>
+                                    <p className={"dbEmpty"}>Left unpaid, they don't get up.</p>
+                                </div>}
                             <h2>Take <b className={"dbPayday"}>{payday}¥</b>
                                 {r.fenced > 0 && <em className={"dbFenced"}>{r.fenced}¥ fenced</em>}</h2>
                             {r.loot.length > 0

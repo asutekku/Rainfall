@@ -86,6 +86,8 @@ export interface BattleReport {
     damageTaken: number;
     loot: LootItem[];
     gear: GearChange[];
+    /** Hired mercs who went down: dead when the player moves on unless bought out. */
+    casualties: Actor[];
     /** Set once the auto-kit pass has run, so it can't be spent twice. */
     kitted: boolean;
 }
@@ -243,6 +245,8 @@ export class BattleRecorder {
             damageTaken: sum((t) => t.damageTaken),
             loot: open.loot,
             gear: [],
+            // Your character is never a casualty — Trauma Team always comes for them.
+            casualties: open.snaps.filter((s) => !s.actor.canFight() && s.actor.hireable).map((s) => s.actor),
             kitted: false,
         };
     }
