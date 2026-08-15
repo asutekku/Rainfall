@@ -69,9 +69,12 @@ export function odds(actor: Actor, check: EventCheck): number {
     return Math.max(5, Math.min(95, p));
 }
 
-export function rollCheck(actor: Actor, check: EventCheck): { success: boolean; luckSpent: number } {
-    const res = Check.resolve(actor, statOf(actor, check.stat), check.dv);
-    return {success: res.success, luckSpent: res.luckSpent};
+export interface CheckResult { success: boolean; luckSpent: number; roll: number; total: number; stat: number; }
+
+export function rollCheck(actor: Actor, check: EventCheck): CheckResult {
+    const stat = statOf(actor, check.stat);
+    const res = Check.resolve(actor, stat, check.dv);
+    return {success: res.success, luckSpent: res.luckSpent, roll: res.roll, total: res.total, stat};
 }
 
 const healPct = (a: Actor, pct: number): number => a.heal(Math.floor(a.maxHealth * pct));

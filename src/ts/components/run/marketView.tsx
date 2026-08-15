@@ -3,6 +3,7 @@ import {Actor} from "../../actors/Actor";
 import {Purse} from "../../interact/crew";
 import {GetItem} from "../../interact/getItem";
 import Equipment from "../../items/Equipment";
+import {Weapon} from "../../items/Weapon";
 import armors from "../../items/armors";
 import cyberwareData from "../../../objects/cyberware";
 
@@ -11,16 +12,36 @@ export interface MarketViewProps {
     onLeave: () => void;
 }
 
-interface Stock { name: string; cost: number; detail: string; buy: (a: Actor) => string; }
-interface Fence { owner: Actor; kind: "weapon" | "armor"; idx: number; name: string; price: number; }
+interface Stock {
+    name: string;
+    cost: number;
+    detail: string;
+    /** Spec rows for the expandable info panel. */
+    info: Array<[string, string]>;
+    blurb?: string | undefined;
+    buy: (a: Actor) => string;
+}
+interface Fence { owner: Actor; kind: "weapon" | "armor"; idx: number; name: string; detail: string; price: number; }
 
-interface MarketViewState { notice: string; bought: string[]; version: number; }
+interface MarketViewState { notice: string; bought: string[]; version: number; open: string | null; }
+
+const weaponInfo = (w: Weapon): Array<[string, string]> => {
+    const rows: Array<[string, string]> = [
+        ["Class", `${w.weaponType}${w.weaponClass ? " · " + w.weaponClass : ""}`],
+        ["Damage", `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " · armor-piercing" : ""}`],
+        ["Fire", `ROF ${w.rateOfFire}${w.autofire ? " · autofire" : ""} · ${w.shots} shots`],
+        ["Range", `${w.range}m · ${w.hands}-handed`],
+    ];
+    if (w.accuracyBonus) { rows.push(["Accuracy", `+${w.accuracyBonus}`]); }
+    rows.push(["Build", `rarity ${w.rarity} · reliability ${w.reliability}${w.concealment ? " · concealable" : ""}`]);
+    return rows;
+};
 
 /**
  * A Black Market node: a SMALL random stock (this market, this run — adapt to
  * what's on the table), a fence that buys the crew's scavenged gear at street
- * rates, and one service slot. One visit, then it's gone — proper roguelike
- * shop economics instead of the old infinite catalog.
+ * rates, and one service slot. Every row folds open for the full spec sheet.
+ * One visit, then it's gone — roguelike shop economics.
  */
 export class MarketView extends React.Component<MarketViewProps, MarketViewState> {
 
@@ -29,7 +50,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
 
     constructor(props: MarketViewProps) {
         super(props);
-        this.state = {notice: "", bought: [], version: 0};
+        this.state = {notice: "", bought: [], version: 0, open: null};
         this.stock = MarketView.rollStock(props.party);
         this.service = MarketView.rollService();
     }
@@ -44,6 +65,8 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
             out.push({
                 name: w.name, cost: w.cost,
                 detail: `${w.weaponType} · ${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}`,
+                info: weaponInfo(w),
+                blurb: w.manufacturer ? `${w.manufacturer} — serial filed off.` : undefined,
                 buy: (a) => { a.inventory.weapons.push(GetItem.weapon(w.name)); return `${w.name} into the duffel.`; },
             });
         }
@@ -52,12 +75,23 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
             const r = wearable[(Math.random() * wearable.length) << 0]!;
             out.push({
                 name: r.name, cost: r.cost, detail: `${r.bodyPart} · SP ${r.stoppingPower}`,
+                info: [
+                    ["Slot", r.bodyPart],
+                    ["Stopping power", `SP ${r.stoppingPower}`],
+                    ["Build", `rarity ${r.rarity}`],
+                ],
                 buy: (a) => { a.inventory.armor.push(GetItem.armor(r.name)); return `${r.name} bagged.`; },
             });
         }
         const cw = cyberwareData[(Math.random() * cyberwareData.length) << 0]!;
         out.push({
             name: cw.name, cost: cw.cost, detail: `chrome · HL ${cw.humanityLoss} (installed on the spot)`,
+            info: [
+                ["Slot", cw.slot],
+                ["Humanity loss", `${cw.humanityLoss}`],
+                ["Install", "on the spot, no anaesthetic surcharge"],
+            ],
+            blurb: cw.description,
             buy: (a) => { a.installCyberware(GetItem.cyberware(cw.name)); return `${cw.name} installed. It itches.`; },
         });
         return out;
@@ -68,17 +102,20 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         if (r < 0.34) {
             return {
                 name: "Med-bay patch-up", cost: 90, detail: "service · squad heals 40%",
+                info: [["Effect", "every member heals 40% of max HP"]],
                 buy: () => "The med-bay hums. Everyone breathes easier.",
             };
         }
         if (r < 0.67) {
             return {
                 name: "Humanity therapy", cost: 110, detail: "service · squad +5 Humanity",
+                info: [["Effect", "every member regains 5 Humanity"]],
                 buy: () => "An hour of guided empathy calibration. It helps. It actually helps.",
             };
         }
         return {
             name: "Combat stims, clean", cost: 70, detail: "service · squad +6 HP now",
+            info: [["Effect", "every member heals 6 HP immediately"]],
             buy: () => "Pharma-grade, no comedown. The crew steadies.",
         };
     }
@@ -108,10 +145,18 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         this.props.party.forEach((owner) => {
             owner.inventory.weapons.forEach((w, idx) => {
                 if (w.name === "Fists") { return; }
-                out.push({owner, kind: "weapon", idx, name: w.name, price: Math.max(5, Math.floor(w.cost * 0.4))});
+                out.push({
+                    owner, kind: "weapon", idx, name: w.name,
+                    detail: `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""} · ${owner.name.split(" ")[0]}'s stash`,
+                    price: Math.max(5, Math.floor(w.cost * 0.4)),
+                });
             });
             owner.inventory.armor.forEach((a, idx) => {
-                out.push({owner, kind: "armor", idx, name: `${a.name} (SP ${a.stoppingPower})`, price: Math.max(5, Math.floor(a.cost * 0.4))});
+                out.push({
+                    owner, kind: "armor", idx, name: a.name,
+                    detail: `SP ${a.stoppingPower} · ${owner.name.split(" ")[0]}'s stash`,
+                    price: Math.max(5, Math.floor(a.cost * 0.4)),
+                });
             });
         });
         return out;
@@ -124,42 +169,77 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         this.setState({notice: `Fenced the ${f.name} for ${f.price}¥.`, version: this.state.version + 1});
     }
 
+    private toggleInfo(key: string) {
+        this.setState({open: this.state.open === key ? null : key});
+    }
+
+    private item(item: Stock, key: string) {
+        const leader = this.props.party[0]!;
+        const sold = this.state.bought.indexOf(item.name) >= 0;
+        const open = this.state.open === key;
+        return (
+            <div key={key} className={"mkItem" + (sold ? " sold" : "") + (open ? " open" : "")}>
+                <button className={"mkRow"} onClick={() => this.toggleInfo(key)}
+                        aria-expanded={open}>
+                    <span className={"mkChevron"}>›</span>
+                    <span className={"mkNameWrap"}>
+                        <span className={"mkName"}>{item.name}</span>
+                        <span className={"mkDetail"}>{item.detail}</span>
+                    </span>
+                </button>
+                <button className={"mkBuy"} disabled={sold || !Purse.canAfford(leader, item.cost)}
+                        onClick={() => this.buy(item)}>
+                    {sold ? "SOLD" : item.cost + "¥"}
+                </button>
+                <div className={"mkInfo"}>
+                    <div className={"mkInfoBody"}>
+                        {item.blurb && <p className={"mkBlurb"}>{item.blurb}</p>}
+                        <dl className={"mkSpecs"}>
+                            {item.info.map(([k, v], i) => (
+                                <div key={i} className={"mkSpec"}><dt>{k}</dt><dd>{v}</dd></div>
+                            ))}
+                        </dl>
+                    </div>
+                </div>
+            </div>);
+    }
+
     public override render() {
         const leader = this.props.party[0]!;
         const fence = this.fenceList();
         return (
-            <div className={"metaOverlay"}>
+            <div className={"metaOverlay mkWrap"}>
                 <div className={"metaHead"}>
                     <span className={"metaTitle"}>▤ Black Market</span>
                     <span className={"evEddies"}>{Math.floor(Purse.balance(leader))}¥</span>
                     <button className={"metaLeave"} onClick={this.props.onLeave}>Leave ▸</button>
                 </div>
-                <div className={"mkBody"}>
-                    {this.state.notice && <div className={"mkNotice"}>{this.state.notice}</div>}
-                    <h4 className={"mkHead"}>Tonight's stock</h4>
-                    <div className={"mkStock"}>
-                        {[...this.stock, this.service].map((item, i) => {
-                            const sold = this.state.bought.indexOf(item.name) >= 0;
-                            return (
-                                <div key={i} className={"mkItem" + (sold ? " sold" : "")}>
-                                    <span className={"mkName"}>{item.name}</span>
-                                    <span className={"mkDetail"}>{item.detail}</span>
-                                    <button className={"mkBuy"} disabled={sold || !Purse.canAfford(leader, item.cost)}
-                                            onClick={() => this.buy(item)}>
-                                        {sold ? "SOLD" : item.cost + "¥"}
-                                    </button>
-                                </div>);
-                        })}
-                    </div>
-                    <h4 className={"mkHead"}>The fence buys · 40% street rate</h4>
-                    {fence.length === 0 && <div className={"mkEmpty"}>Nothing in the duffel worth fencing.</div>}
-                    <div className={"mkStock"}>
-                        {fence.map((f, i) => (
-                            <div key={i} className={"mkItem"}>
-                                <span className={"mkName"}>{f.name}</span>
-                                <span className={"mkDetail"}>{f.owner.name.split(" ")[0]}'s stash</span>
-                                <button className={"mkBuy sellBtn"} onClick={() => this.sell(f)}>+{f.price}¥</button>
-                            </div>))}
+                <div className={"ovScroll"}>
+                    <div className={"ovInner"}>
+                        <div className={"mHero mk"}>
+                            <span className={"mHeroGlyph"}><i>▤</i></span>
+                            <span className={"mHeroKicker"}>Night market</span>
+                            <h2 className={"mHeroTitle"}>Tonight's Stock</h2>
+                            <p className={"mHeroSub"}>What fell off a truck this week. Tap a row for the spec sheet.</p>
+                        </div>
+                        {this.state.notice && <div className={"mkNotice"}>{this.state.notice}</div>}
+                        <div className={"mkStock"}>
+                            {[...this.stock, this.service].map((item, i) => this.item(item, "s" + i))}
+                        </div>
+                        <h4 className={"mkHead"}>The fence buys · 40% street rate</h4>
+                        {fence.length === 0 && <div className={"mkEmpty"}>Nothing in the duffel worth fencing.</div>}
+                        <div className={"mkStock"}>
+                            {fence.map((f, i) => (
+                                <div key={"f" + i} className={"mkItem"}>
+                                    <div className={"mkRow static"}>
+                                        <span className={"mkNameWrap"}>
+                                            <span className={"mkName"}>{f.name}</span>
+                                            <span className={"mkDetail"}>{f.detail}</span>
+                                        </span>
+                                    </div>
+                                    <button className={"mkBuy sellBtn"} onClick={() => this.sell(f)}>+{f.price}¥</button>
+                                </div>))}
+                        </div>
                     </div>
                 </div>
             </div>);
