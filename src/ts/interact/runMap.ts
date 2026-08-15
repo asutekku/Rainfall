@@ -27,9 +27,6 @@ export interface RunState {
     outcome: "active" | "won" | "lost";
 }
 
-// Column widths: an opening choice → forks → a single boss (14 nodes, ~one act).
-const WIDTHS = [2, 3, 3, 3, 2, 1];
-
 function weightedType(): NodeType {
     const r = Math.random();
     if (r < 0.55) { return "combat"; }
@@ -38,10 +35,22 @@ function weightedType(): NodeType {
     return "rest";
 }
 
+/** A fresh, varied column layout so no two runs share the same skeleton. */
+function randomWidths(): number[] {
+    const n = 5 + ((Math.random() * 3) << 0);   // 5-7 columns
+    const out: number[] = [];
+    for (let c = 0; c < n; c++) {
+        if (c === 0) { out.push(1 + ((Math.random() * 2) << 0)); }        // 1-2 opening choices
+        else if (c === n - 1) { out.push(1); }                            // single boss
+        else { out.push(2 + ((Math.random() * 2) << 0)); }               // 2-3 wide
+    }
+    return out;
+}
+
 export class RunMap {
     /** Build a fresh act: layered node graph, forking paths, single boss. */
     public static generate(): MapNode[][] {
-        const cols: MapNode[][] = WIDTHS.map((w, c) =>
+        const cols: MapNode[][] = randomWidths().map((w, c) =>
             Array.from({length: w}, (_x, r): MapNode =>
                 ({id: `n${c}_${r}`, type: "combat", col: c, row: r, next: []})));
         RunMap.assignTypes(cols);

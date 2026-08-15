@@ -37,7 +37,8 @@ jobs:
           bun install
 
       - name: Build bundle
-        run: bun run build
+        # Minified for the deploy — three.js makes the unminified bundle large.
+        run: bun run build:min
 
       - name: Assemble site
         run: |
