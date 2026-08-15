@@ -73,7 +73,7 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
         return {...s, stats: {...s.stats}, lifepath: {...(s.lifepath as Lifepath)}};
     }
 
-    private cur(): CharacterSpec { return this.state.squad[this.state.sel]; }
+    private cur(): CharacterSpec { return this.state.squad[this.state.sel]!; }
 
     private used(s: CharacterSpec): number {
         return STAT_KEYS.reduce((n, k) => n + ((s.stats as any)[k] || 0), 0);
@@ -82,7 +82,7 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
     /** Replace the selected member with the result of `mut`. */
     private update(mut: (s: CharacterSpec) => CharacterSpec): void {
         const squad = this.state.squad.slice();
-        squad[this.state.sel] = mut(Creator.clone(squad[this.state.sel]));
+        squad[this.state.sel] = mut(Creator.clone(squad[this.state.sel]!));
         this.setState({squad});
     }
 
@@ -211,7 +211,7 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                 <div className={"crStats"}>
                     {STAT_KEYS.map((k) => {
                         const v = (s.stats as any)[k];
-                        const lbl = STAT_LABEL[k];
+                        const lbl = STAT_LABEL[k]!;
                         return (
                             <div key={k} className={"crStat"} title={lbl[1]}>
                                 <span className={"crStatK"}>{lbl[0]}</span>
@@ -258,7 +258,7 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
             </div>);
     }
 
-    public render() {
+    public override render() {
         const s = this.cur();
         return (
             <div className={"creator"}>

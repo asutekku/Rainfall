@@ -6,7 +6,7 @@ export interface CyberwareProps {
 }
 
 export class CyberwarePanel extends React.Component<CyberwareProps, {}> {
-    public render() {
+    public override render() {
         const a = this.props.actor;
         const lp = a.lifepath;
         return (

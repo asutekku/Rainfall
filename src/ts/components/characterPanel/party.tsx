@@ -35,7 +35,7 @@ export class Party extends React.Component<PartyProps, PartyStats> {
         return this.state.selected !== null ? this.state.selected : '';
     }
 
-    public render() {
+    public override render() {
         return <div className={"panel"}>
             <h3>{this.props.name}</h3>
             <div className={"party"}>

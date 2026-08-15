@@ -1,5 +1,5 @@
 import * as React from "react";
-import * as ReactDOM from "react-dom";
+import {createRoot} from "react-dom/client";
 
 import {App} from "./components/app";
 import {Dom} from "./utils/Dom";
@@ -9,7 +9,8 @@ import {Logger} from "./utils/Logger";
 // only knows Logger.log(); this is the one place that binds it to the DOM.
 Logger.setSink(Dom.printLine);
 
-ReactDOM.render(
-    <App/>,
-    document.getElementById("root"),
-);
+// React 19 root API (replaces the removed ReactDOM.render).
+const container = document.getElementById("root");
+if (container) {
+    createRoot(container).render(<App/>);
+}

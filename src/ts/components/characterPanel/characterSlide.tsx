@@ -7,8 +7,8 @@ export interface CharCompProps {
     friendly: boolean;
     update: any;
     selected: string;
-    onToggleAuto?: (a: Actor) => void;
-    onCycleTemperament?: (a: Actor) => void;
+    onToggleAuto?: ((a: Actor) => void) | undefined;
+    onCycleTemperament?: ((a: Actor) => void) | undefined;
 }
 
 const TEMPER: { [k: string]: [string, string] } = {
@@ -27,7 +27,7 @@ export class CharacterComponent extends React.Component<CharCompProps, {}> {
 
     private controls(a: Actor) {
         if (!this.props.friendly || !this.props.onToggleAuto) { return null; }
-        const temper = TEMPER[a.temperament] || TEMPER.balanced;
+        const temper = TEMPER[a.temperament] || TEMPER["balanced"]!;
         return (
             <span className={"pcCtl"}>
                 <span className={"autoChip" + (a.auto ? " on" : "")}
@@ -44,7 +44,7 @@ export class CharacterComponent extends React.Component<CharCompProps, {}> {
             </span>);
     }
 
-    public render() {
+    public override render() {
         const a = this.props.actor;
         const selected = a.name === this.props.selected;
         return (

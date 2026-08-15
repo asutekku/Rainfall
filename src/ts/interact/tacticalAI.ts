@@ -18,9 +18,9 @@ import {rangeDV} from "./rangeTable";
  */
 
 export interface Plan {
-    moveTo?: Point;
-    target?: Actor;
-    aimed?: boolean;
+    moveTo?: Point | undefined;
+    target?: Actor | undefined;
+    aimed?: boolean | undefined;
     label: string;
 }
 
@@ -46,7 +46,7 @@ const PROFILES: { [k: string]: Profile } = {
     berserker:  {off: 1.7, def: 0.35, kill: 14, cover: 0.5, risk: 0.3, progress: 0.90, camp: 5.0},
 };
 
-const profileFor = (a: Actor): Profile => PROFILES[a.temperament] || PROFILES.balanced;
+const profileFor = (a: Actor): Profile => PROFILES[a.temperament] || PROFILES["balanced"]!;
 
 const d6 = (): number => Math.floor(Math.random() * 6) + 1;
 
@@ -181,7 +181,7 @@ export class TacticalAI {
     }
 
     /** Choose this turn's move + attack for `self`. */
-    public static plan(self: Actor, allies: Actor[], enemies: Actor[]): Plan {
+    public static plan(self: Actor, _allies: Actor[], enemies: Actor[]): Plan {
         const foes = enemies.filter((e) => e.canFight());
         if (!foes.length) { return {label: "hold"}; }
 
@@ -193,7 +193,7 @@ export class TacticalAI {
 
         const candidates = this.candidates(self, here, primary, foes, run);
 
-        let best = candidates[0];
+        let best = candidates[0]!;
         let bestScore = -Infinity;
         let bestTarget: Actor | undefined;
         let bestAimed = false;
@@ -250,7 +250,7 @@ export class TacticalAI {
     }
 
     /** Score a destination: expected damage dealt minus damage taken, plus positional value. */
-    private static score(self: Actor, spot: Point, foes: Actor[], prof: Profile): { score: number; target?: Actor; aimed: boolean } {
+    private static score(self: Actor, spot: Point, foes: Actor[], prof: Profile): { score: number; target?: Actor | undefined; aimed: boolean } {
         // best target reachable from this spot (normal vs aimed head shot chosen by EV)
         let offense = 0;
         let target: Actor | undefined;

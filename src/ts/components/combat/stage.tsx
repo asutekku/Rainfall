@@ -108,7 +108,7 @@ export class Stage extends React.Component<StageProps, StageState> {
         const dist = Math.round(Battlefield.distance(this.props.actor, e));
         const cls = this.props.actor.weapon.weaponClass;
         const outOfRange = cls !== "melee" && rangeDV(cls, dist) === null;
-        const temper = Stage.TEMPER[e.temperament] || Stage.TEMPER.balanced;
+        const temper = Stage.TEMPER[e.temperament] || Stage.TEMPER["balanced"]!;
         const sub = e.faction ? `${e.faction}${e.archetype ? " " + e.archetype : ""}` : e.role.name;
         return (
             <button key={i} className={"es" + (active ? " on" : "") + (e.canFight() ? "" : " dead")}
@@ -122,7 +122,7 @@ export class Stage extends React.Component<StageProps, StageState> {
             </button>);
     };
 
-    public render() {
+    public override render() {
         const combat = this.props.view === "Combat";
         const w = this.props.actor.weapon;
         return (

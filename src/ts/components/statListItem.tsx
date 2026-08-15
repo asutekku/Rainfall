@@ -11,7 +11,7 @@ export interface StatListItemState {
 }
 
 export class StatListItem extends React.Component<StatListItemProps, StatListItemState> {
-    public render() {
+    public override render() {
         return (
             <div className={this.props.tooltip ? "statCard tooltip" : "statCard"}>
                 {this.props.tooltip ? <span className={"tooltiptext"}>{this.props.tooltip}</span> : ""}

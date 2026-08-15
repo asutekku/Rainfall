@@ -25,7 +25,7 @@ export class Dom {
         node.id = "message_" + spanId;
         node.classList.add("actionMessage");
         node.innerHTML = `<span class="messageArrow">></span>${line}<br>`;
-        content.insertBefore(node, content.childNodes[0]);
+        content.insertBefore(node, content.childNodes[0] ?? null);
         if (content.childElementCount >= 50) {
             const oldNode = document.getElementById("message_" + spanIdToRemove)!;
             oldNode.remove();

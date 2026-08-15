@@ -45,7 +45,7 @@ export class Quests extends React.Component<QuestProps, QuestState> {
         this.setState({selection});
     };
 
-    public render() {
+    public override render() {
         return (
             <div className={"itemCollection"}>
                 <div className={"itemCollectionContainer"}>

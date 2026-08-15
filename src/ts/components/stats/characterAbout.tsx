@@ -41,7 +41,7 @@ export class CharacterAbout extends React.Component<AboutProps, AboutState> {
         </div>
     )
 
-    public render() {
+    public override render() {
         const a = this.props.actor;
         return (
             <div className={"characterInfo"}>

@@ -45,7 +45,7 @@ export class Downtime extends React.Component<DowntimeProps, DowntimeState> {
         this.setState({message: `Moved to ${Lifestyle.tier(tier).name}.`});
     };
 
-    public render() {
+    public override render() {
         const a = this.props.actor;
         return (
             <div className={"redPanel"}>

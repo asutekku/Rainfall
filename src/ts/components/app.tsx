@@ -65,11 +65,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
         };
     }
 
-    public componentWillUnmount() {
+    public override componentWillUnmount() {
         this.stopAuto();
     }
 
-    public render() {
+    public override render() {
         // Character creation is a full-screen takeover shown before / on demand.
         if (this.state.creating) {
             return <Creator initial={this.state.squadSpecs} canCancel={true}
@@ -162,7 +162,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     /** Cycle an auto squad member's AI playstyle. */
     private cycleTemperament = (a: Actor) => {
         const order = ["balanced", "aggressive", "flanker", "camper"];
-        a.temperament = order[(order.indexOf(a.temperament) + 1) % order.length];
+        a.temperament = order[(order.indexOf(a.temperament) + 1) % order.length]!;
         this.forceUpdate();
     };
 
@@ -279,10 +279,10 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     private getCurrentActor(): Actor {
-        return !this.state.activeChar ? this.state.party[0] : this.state.activeChar;
+        return !this.state.activeChar ? this.state.party[0]! : this.state.activeChar;
     }
 
     private getCurrentEnemy(): Actor {
-        return !this.state.activeEnemy ? this.state.currentEnemies[0] : this.state.activeEnemy;
+        return !this.state.activeEnemy ? this.state.currentEnemies[0]! : this.state.activeEnemy;
     }
 }

@@ -9,7 +9,7 @@ export class Armor extends Item {
     public maxStoppingPower: number;
     public rarity: number;
     public equipped: boolean;
-    public position: ObjectPosition;
+    public override position: ObjectPosition;
 
     constructor(
         bodypart: string,

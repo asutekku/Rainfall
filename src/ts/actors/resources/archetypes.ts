@@ -81,5 +81,5 @@ export function pickArchetype(level: number): Archetype {
     const band = rankBand(level);
     const rank = band[(Math.random() * band.length) << 0];
     const pool = ARCHETYPES.filter((a) => a.rank === rank);
-    return pool[(Math.random() * pool.length) << 0];
+    return pool[(Math.random() * pool.length) << 0]!;
 }

@@ -70,7 +70,7 @@ export class Player extends Actor {
      * - +1 to a rotating core stat every third level (cap 8)
      * - HP grows with any BODY/WILL gain, per the RED HP formula
      */
-    public onLevelUp(): void {
+    public override onLevelUp(): void {
         const redHP = (): number => 10 + 5 * Math.ceil((this.stats.bt + this.stats.will) / 2);
         const hpBefore = redHP();
 
@@ -80,7 +80,7 @@ export class Player extends Actor {
         if (this.level % 2 === 0 && r.dodge < 8) { r.dodge += 1; }
         if (this.level % 3 === 0) {
             const order = ["ref", "dex", "bt", "will", "cl"];
-            const stat = order[((this.level / 3) | 0) % order.length];
+            const stat = order[((this.level / 3) | 0) % order.length]!;
             if ((this.stats as any)[stat] < 8) { (this.stats as any)[stat] += 1; }
         }
 

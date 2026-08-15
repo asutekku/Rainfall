@@ -45,14 +45,14 @@ const rint = (min: number, max: number): number => Math.floor(Math.random() * (m
 export class Netrun {
     /** Generate a RED NET Architecture: a stack of floors ending in an objective. */
     public static generate(difficulty: string = "Standard"): NetArchitecture {
-        const spec: DiffSpec = DIFFICULTY[difficulty] || DIFFICULTY.Standard;
+        const spec: DiffSpec = DIFFICULTY[difficulty] || DIFFICULTY["Standard"]!;
         const count: number = rint(spec.min, spec.max);
         const floors: NetFloor[] = [];
         for (let i = 0; i < count; i++) {
             const isTop: boolean = i === count - 1;
             if (!isTop && Math.random() < spec.iceChance) {
-                const iceName: string = spec.ice[rint(0, spec.ice.length - 1)];
-                floors.push({type: "blackice", dv: spec.dv, ice: new Program(programData[iceName]), reward: 0, defeated: false});
+                const iceName: string = spec.ice[rint(0, spec.ice.length - 1)]!;
+                floors.push({type: "blackice", dv: spec.dv, ice: new Program(programData[iceName]!), reward: 0, defeated: false});
             } else {
                 // The top floor is the objective (a File or Control Node) with a bigger payout.
                 const type: FloorType = isTop
@@ -143,8 +143,8 @@ export class Netrun {
 
     private static bestAttacker(runner: Actor): Program {
         const attackers = runner.cyberdeck.filter((p) => p.programClass === "attacker");
-        if (!attackers.length) { return new Program(programData.Zap); }
-        return attackers.reduce((best, p) => (p.damage > best.damage ? p : best), attackers[0]);
+        if (!attackers.length) { return new Program(programData["Zap"]!); }
+        return attackers.reduce((best, p) => (p.damage > best.damage ? p : best), attackers[0]!);
     }
 
     private static bestDefenderSoak(runner: Actor): number {

@@ -23,7 +23,7 @@ const VIEWS: Array<[string, string]> = [
 ];
 
 export class Sidebar extends React.Component<SidebarProps, {}> {
-    public render() {
+    public override render() {
         return (
             <nav>
                 {VIEWS.map(([name, icon]) => (
