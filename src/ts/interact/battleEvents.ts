@@ -37,6 +37,8 @@ export interface ShotEvent {
     covered: boolean;
     /** this shot took the target out of the fight */
     dropped: boolean;
+    /** rounds leaving the barrel this attack (weapon rate of fire; 5 on autofire) — how many tracers to draw */
+    rounds: number;
 }
 
 /** Target out of the weapon's range band — the turn fizzles visibly. */

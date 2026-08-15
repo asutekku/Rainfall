@@ -62,6 +62,8 @@ export class Combat {
         }
         const melee: boolean = weapon.weaponClass === "melee";
         const covered: boolean = !melee && Battlefield.coverPenaltyAt(target.position, actor.position) > 0;
+        // rounds leaving the barrel, for the tracer animation (RED aimed shots are single, careful rounds)
+        const rounds: number = melee || aimed ? 1 : Math.max(1, Math.min(weapon.rateOfFire || 1, 3));
         if (!melee && rangeDV(weapon.weaponClass, distance) === null) {
             this.events.push({kind: "noshot", actor});
             this.messages.push(new MessageStr(`${actor.name}: no shot — out of range.`));
@@ -72,7 +74,7 @@ export class Combat {
         if (!this.didAttackHit(actor, target, distance, aimed)) {
             BattleRecorder.countShot(actor, false);
             this.events.push({kind: "shot", actor, target, hit: false, damage: 0, aimed,
-                autofire: false, melee, covered, dropped: false});
+                autofire: false, melee, covered, dropped: false, rounds});
             this.messages.push(new MessageStr(aimed ? 'MISS! (aimed)' : 'MISS!'));
             return;
         }
@@ -87,7 +89,7 @@ export class Combat {
         this.stats.dmg += dealt;
         BattleRecorder.countDamage(actor, target, dealt);
         this.events.push({kind: "shot", actor, target, hit: true, damage: dealt, aimed,
-            autofire: false, melee, covered, dropped: !target.canFight()});
+            autofire: false, melee, covered, dropped: !target.canFight(), rounds});
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
         if (aimed && dealt > 0) { this.messages.push(new MessageStr(`${actor.name} lands a head shot!`)); }
         this.registerIfDefeated(actor, target);
@@ -121,7 +123,7 @@ export class Combat {
         if (!check.success) {
             BattleRecorder.countShot(actor, false);
             this.events.push({kind: "shot", actor, target, hit: false, damage: 0, aimed: false,
-                autofire: true, melee: false, covered: cover > 0, dropped: false});
+                autofire: true, melee: false, covered: cover > 0, dropped: false, rounds: 5});
             this.messages.push(new MessageStr('MISS!'));
             return;
         }
@@ -140,7 +142,7 @@ export class Combat {
         this.stats.dmg += dealt;
         BattleRecorder.countDamage(actor, target, dealt);
         this.events.push({kind: "shot", actor, target, hit: true, damage: dealt, aimed: false,
-            autofire: true, melee: false, covered: cover > 0, dropped: !target.canFight()});
+            autofire: true, melee: false, covered: cover > 0, dropped: !target.canFight(), rounds: 5});
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
         this.registerIfDefeated(actor, target);
     }

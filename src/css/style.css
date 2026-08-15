@@ -1156,3 +1156,20 @@ progress::-moz-progress-bar { background:var(--rust); }
     .bsTag .bsHp { width:36px; }
     .bsTag { font-size:9px; }
 }
+
+/* ---------------------------------------------------------------------
+   Surveillance feed — one overwatch line per resolved turn.
+   --------------------------------------------------------------------- */
+.fe { display:flex; gap:7px; align-items:baseline; padding:2px 0; font-size:12px; line-height:1.45; }
+.fe .t { flex:none; font-size:9px; color:var(--faint); min-width:30px; text-align:right; letter-spacing:.05em; }
+.fe .n { flex:none; font-weight:600; letter-spacing:.03em; }
+.fe.squad .n { color:var(--cyan); }
+.fe.hostile .n { color:#c97f74; }
+.fe .x { color:var(--mid); min-width:0; }
+.fe.hostile .x { color:var(--dim); }
+.fe .x .d { font-style:normal; color:var(--crit); font-weight:600; }
+.fe .x .k { font-style:normal; color:var(--crit); font-weight:700; letter-spacing:.1em; }
+.fe .x .m { font-style:normal; color:var(--faint); }
+.fe.kill { border-left:2px solid var(--crit); padding-left:6px; background:rgba(224,83,63,.06); }
+.fe.sys { color:var(--dim); font-size:11px; }
+.fe.sys .x { color:var(--dim); }

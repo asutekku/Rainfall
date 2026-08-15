@@ -46,6 +46,9 @@ describe("Combat.takeTurn — manual orders", () => {
             expect(shot.hit).toBe(true);          // 6 + 20+ vs DV 15 at 10m
             expect(shot.damage).toBeGreaterThan(0);
             expect(shot.melee).toBe(false);
+            // tracer count mirrors the weapon's rate of fire (1-3 rounds per attack)
+            expect(shot.rounds).toBeGreaterThanOrEqual(1);
+            expect(shot.rounds).toBeLessThanOrEqual(3);
             expect(me.position.y).toBeCloseTo(10, 5);
             expect(foe.health).toBeLessThan(foe.maxHealth);
             expect(res.messages.length).toBeGreaterThan(0);
@@ -103,6 +106,7 @@ describe("Combat.takeTurn — manual orders", () => {
             const shot = res.events.find((e) => e.kind === "shot") as ShotEvent;
             expect(shot.autofire).toBe(true);
             expect(shot.hit).toBe(true);
+            expect(shot.rounds).toBe(5);
         });
     });
 

@@ -26,8 +26,26 @@ export class ActionLog extends React.Component<LogProps, LogState> {
         this.setState({selection});
     };
 
+    /** Surveillance line: mission clock · callsign · compressed action, damage numbers accented. */
+    private feedEntry(m: any, i: number): React.JSX.Element {
+        const parts = String(m.text).split(/(\d+ dmg|DOWN|KIA|miss|armor holds)/);
+        return (
+            <div key={i} className={"fe " + m.side + (m.kill ? " kill" : "")}>
+                {m.time && <span className={"t"}>{m.time}</span>}
+                {m.name && <b className={"n"}>{m.side === "hostile" ? "✦" : "◈"} {m.name}</b>}
+                <span className={"x"}>
+                    {parts.map((p, j) =>
+                        /^\d+ dmg$/.test(p) ? <i key={j} className={"d"}>{p}</i>
+                        : p === "DOWN" || p === "KIA" ? <i key={j} className={"k"}>{p}</i>
+                        : p === "miss" || p === "armor holds" ? <i key={j} className={"m"}>{p}</i>
+                        : p)}
+                </span>
+            </div>);
+    }
+
     public getMessages = (): React.JSX.Element[] => {
         return this.props.messages.map((m: any, i: number) => {
+            if (m && m.feed === "entry") { return this.feedEntry(m, i); }
             switch (m.type) {
                 case "combat" :
                     return <CombatMessage key={i} message={m}/>;
@@ -47,7 +65,7 @@ export class ActionLog extends React.Component<LogProps, LogState> {
     public override render() {
         return (
             <div className={"panel feed"}>
-                <h3>Feed</h3>
+                <h3>◉ Overwatch</h3>
                 <div className={"log"}>
                     {this.getMessages()}
                 </div>
