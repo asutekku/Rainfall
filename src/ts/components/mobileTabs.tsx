@@ -27,7 +27,7 @@ const TABS: Array<[MobileTab, string, string]> = [
  * nav rail up as a sheet.
  */
 export class MobileTabs extends React.Component<MobileTabsProps, {}> {
-    public render() {
+    public override render() {
         return (
             <nav className={"mtabs"} aria-label={"Sections"}>
                 {TABS.map(([id, icon, label]) => (

@@ -15,7 +15,14 @@ import {Utils} from "../utils/utils";
 import {Creator} from "./creation/creator";
 import {CharacterCreation, CharacterSpec} from "../actors/resources/CharacterCreation";
 import {MobileTab, MobileTabs} from "./mobileTabs";
+import {MapNode, RunMap, RunState, encounterSpec, spawnEncounter} from "../interact/runMap";
+import {MapView} from "./run/mapView";
+import {RunEndView} from "./run/runEndView";
+import {Store} from "./storePanel/store";
+import {Downtime} from "./downtime/downtime";
 
+/** Which run-loop screen is on top. "combat" falls through to the ops shell. */
+export type RunScreen = "map" | "combat" | "merchant" | "rest" | "end";
 
 export interface InterfaceAppState {
     activeMainPanel: string;
@@ -33,6 +40,10 @@ export interface InterfaceAppState {
     mobileMore: boolean;
     /** Feed lines that arrived while the Feed tab was off screen. */
     unread: number;
+    /** The Slay-the-Spire run in progress (null before a crew deploys). */
+    run: RunState | null;
+    /** Which run-loop screen is on top. */
+    screen: RunScreen;
 }
 
 export class App extends React.Component<{}, InterfaceAppState> {
@@ -62,6 +73,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
             mobileTab: "arena",
             mobileMore: false,
             unread: 0,
+            run: null,
+            screen: "combat",
         };
     }
 
@@ -72,8 +85,36 @@ export class App extends React.Component<{}, InterfaceAppState> {
     public override render() {
         // Character creation is a full-screen takeover shown before / on demand.
         if (this.state.creating) {
-            return <Creator initial={this.state.squadSpecs} canCancel={true}
+            return <Creator initial={this.state.squadSpecs} canCancel={this.state.run !== null}
                             onDeploy={this.deploySquad} onCancel={this.closeCreator}/>;
+        }
+        // Run-loop takeovers (map / merchant / rest / run-over) sit above combat.
+        const run = this.state.run;
+        if (run && this.state.screen === "map") {
+            return <MapView map={run.map} reachableIds={run.reachableIds} clearedIds={run.clearedIds}
+                            party={this.state.party} onPick={this.enterNode} onAbandon={this.openCreator}/>;
+        }
+        if (run && this.state.screen === "end") {
+            const kills = this.state.party.reduce((n, p) => n + p.kills, 0);
+            const eddies = this.state.party.reduce((n, p) => n + Math.floor(p.currency), 0);
+            return <RunEndView outcome={run.outcome === "won" ? "won" : "lost"}
+                               depth={run.depth} kills={kills} eddies={eddies}
+                               canRevive={run.outcome === "lost" && !run.reviveUsed}
+                               onRevive={this.reviveRun} onNewCrew={this.openCreator}/>;
+        }
+        if (run && this.state.screen === "merchant") {
+            return <div className={"metaOverlay"}>
+                <div className={"metaHead"}><span className={"metaTitle"}>▤ Black Market</span>
+                    <button className={"metaLeave"} onClick={this.leaveMeta}>Leave ▸</button></div>
+                <Store player={this.getCurrentActor()} messages={this.noop}/>
+            </div>;
+        }
+        if (run && this.state.screen === "rest") {
+            return <div className={"metaOverlay"}>
+                <div className={"metaHead"}><span className={"metaTitle"}>☾ Safehouse</span>
+                    <button className={"metaLeave"} onClick={this.leaveMeta}>Leave ▸</button></div>
+                <Downtime actor={this.getCurrentActor()}/>
+            </div>;
         }
         // Battle Stage shell: topbar (Hud) / nav rail / feed column (squad + feed) / stage (game).
         // On phones the same DOM re-flows into a tab console — see the mobile block
@@ -126,10 +167,13 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     private closeMore = () => this.setState({mobileMore: false});
 
-    /** Build the squad from the creation specs and drop into combat. */
+    private noop = () => { /* placeholder callback for reused panels */ };
+
+    /** Build the squad and start a fresh run on the map (not straight into combat). */
     private deploySquad = (specs: CharacterSpec[]) => {
         this.stopAuto();
         const party = specs.map((s) => new Player(s));
+        // Seed a placeholder wave so the combat shell never reads an empty array.
         const enemies = ActorController.getEnemies(2, App.levelOf(party));
         Battlefield.deploy(party, enemies);
         this.setState({
@@ -139,16 +183,89 @@ export class App extends React.Component<{}, InterfaceAppState> {
             activeChar: party[0],
             activeEnemy: enemies[0],
             creating: false,
+            run: App.freshRun(party),
+            screen: "map",
             activeMainPanel: "Combat",
             mobileTab: "arena",
             mobileMore: false,
             unread: 0,
-            messages: [{msg: "— crew deployed to the street —"} as any],
+            messages: [{msg: "— crew hits the street —"} as any],
         });
     };
 
-    /** Re-open the creator (nav "New Squad"). */
-    private openCreator = () => { this.stopAuto(); this.setState({creating: true}); };
+    /** A brand-new act with the squad parked at the opening choices. */
+    private static freshRun(_party: Actor[]): RunState {
+        const map = RunMap.generate();
+        return {
+            map, node: null, clearedIds: [], reachableIds: RunMap.entryIds(map),
+            reviveUsed: false, depth: 0, outcome: "active",
+        };
+    }
+
+    /** Player picked a node on the map: fight it, or open its merchant / rest screen. */
+    private enterNode = (node: MapNode) => {
+        const run = this.state.run;
+        if (!run) { return; }
+        if (node.type === "merchant") { this.setState({run: {...run, node}, screen: "merchant"}); return; }
+        if (node.type === "rest") { this.setState({run: {...run, node}, screen: "rest"}); return; }
+        // combat / elite / boss
+        const enemies = spawnEncounter(encounterSpec(node, App.levelOf(this.state.party)));
+        Battlefield.deploy(this.state.party, enemies);
+        const label = node.type === "boss" ? "BOSS — hold nothing back"
+            : node.type === "elite" ? "elite contact" : "firefight";
+        this.setState({
+            run: {...run, node},
+            screen: "combat",
+            currentEnemies: enemies,
+            activeEnemy: enemies[0],
+            activeChar: this.state.party[0],
+            activeMainPanel: "Combat",
+            mobileTab: "arena",
+            messages: [{msg: `— ${label} —`} as any, ...this.state.messages].slice(0, this.logLength),
+        }, this.startAuto);
+    };
+
+    /** Leave a merchant / rest node and move back to the map. */
+    private leaveMeta = () => {
+        const run = this.state.run;
+        if (run && run.node) { this.advance(run.node, [{msg: "— moving on —"}]); }
+    };
+
+    /** Mark a node cleared and either advance the map or end the run (boss = win). */
+    private advance = (node: MapNode, extra: any[]) => {
+        this.stopAuto();
+        const run = this.state.run;
+        if (!run) { return; }
+        const clearedIds = run.clearedIds.concat(node.id);
+        const depth = run.depth + 1;
+        const messages = [...extra, ...this.state.messages].slice(0, this.logLength);
+        if (node.type === "boss") {
+            this.setState({run: {...run, clearedIds, depth, node: null, outcome: "won"}, screen: "end", messages});
+        } else {
+            this.setState({run: {...run, clearedIds, depth, node: null, reachableIds: node.next}, screen: "map", messages});
+        }
+    };
+
+    /** Spend the one-per-run Trauma Team revive and resume the current fight. */
+    private reviveRun = () => {
+        const run = this.state.run;
+        if (!run || run.reviveUsed) { return; }
+        this.state.party.forEach((p) => p.revive());
+        this.setState({
+            run: {...run, reviveUsed: true, outcome: "active"},
+            screen: "combat",
+            messages: [{msg: "— Trauma Team revive (one per run) —"} as any, ...this.state.messages].slice(0, this.logLength),
+        }, this.startAuto);
+    };
+
+    private startAuto = () => {
+        if (this.autoTimer) { return; }
+        this.setState({auto: true});
+        this.autoTimer = setInterval(this.autoTick, 1200);
+    };
+
+    /** Re-open the creator (nav "New Squad" / abandon / new crew). */
+    private openCreator = () => { this.stopAuto(); this.setState({creating: true, run: null, screen: "combat"}); };
     private closeCreator = () => this.setState({creating: false});
 
     /** Highest level in a party — the yardstick for scaling enemy waves. */
@@ -167,6 +284,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     private combatController = (...messages: any): void => {
+        // In a run, combat is bounded by the current node (win/advance/wipe).
+        if (this.state.run && this.state.screen === "combat") {
+            this.runCombatStep(messages.flat());
+            return;
+        }
         let enemies = this.state.currentEnemies;
 
         // Removes dead enemies from the array
@@ -204,6 +326,33 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     /**
+     * One resolved round inside a run's combat node: end the run on a wipe,
+     * advance the map when the node's enemies are cleared, otherwise keep fighting.
+     */
+    private runCombatStep(msgs: any[]): void {
+        const party = this.state.party;
+        const alive = this.state.currentEnemies.filter((e) => e.health > 0);
+        const feed = [...msgs, ...this.state.messages].slice(0, this.logLength);
+
+        if (party.every((p) => !p.canFight())) {          // squad wiped → run over (revive offered)
+            this.stopAuto();
+            const run = this.state.run!;
+            this.setState({run: {...run, outcome: "lost"}, screen: "end", currentEnemies: alive, messages: feed});
+            return;
+        }
+        if (alive.length <= 0) {                           // node cleared → shop + advance
+            const shop: any[] = [];
+            party.forEach((p) => { if (p.canFight()) { Economy.autoEquip(p).forEach((m) => shop.push({msg: m})); } });
+            this.advance(this.state.run!.node!, [...shop, ...msgs]);
+            return;
+        }
+        this.setState((s) => ({                            // ongoing exchange
+            currentEnemies: alive, activeEnemy: alive[0], messages: feed,
+            unread: s.mobileTab === "feed" ? 0 : s.unread + Math.max(0, msgs.length),
+        }));
+    }
+
+    /**
      * A view was picked from the nav rail — on desktop that is the whole story;
      * on mobile the rail is the More sheet, so also close it and move to the
      * destination that actually shows the chosen view.
@@ -229,28 +378,35 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     private autoTick = () => {
+        // Auto only runs on the combat screen; a map/merchant/rest takeover pauses it.
+        if (this.state.run && this.state.screen !== "combat") { this.stopAuto(); return; }
         const party = this.state.party;
         const enemies = this.state.currentEnemies;
         if (!party.length || !enemies.length) { return; }
-        // Whole squad down? Nothing left to auto-play.
-        if (party.every((p) => !p.canFight())) { this.stopAuto(); return; }
+        // Whole squad down? In a run, resolve one more round so the run-over screen
+        // shows; in legacy endless mode there's nothing left to play.
+        if (party.every((p) => !p.canFight()) && !this.state.run) { this.stopAuto(); return; }
         // Full smart round: both sides move + act via the tactical AI.
         const msgs = Combat.autoRound(party, enemies);
         this.combatController(msgs);
     };
 
-    /** Fresh run: new party, new hostiles, cleared feed. */
+    /** Fresh run — a new act with the same crew, back on the map. */
     private restart = () => {
         this.stopAuto();
-        const party = [new Player(), new Player()];
+        const specs = this.state.squadSpecs.length ? this.state.squadSpecs
+            : [CharacterCreation.defaultSpec(), CharacterCreation.defaultSpec()];
+        const party = specs.map((s) => new Player(s));
         const enemies = ActorController.getEnemies(2, App.levelOf(party));
         Battlefield.deploy(party, enemies);
         this.setState({
             party,
             currentEnemies: enemies,
-            activeChar: undefined,
-            activeEnemy: undefined,
-            messages: [{msg: "— run restarted —"} as any, ...this.state.messages].slice(0, this.logLength),
+            activeChar: party[0],
+            activeEnemy: enemies[0],
+            run: App.freshRun(party),
+            screen: "map",
+            messages: [{msg: "— new job, same crew —"} as any],
         });
     };
 
