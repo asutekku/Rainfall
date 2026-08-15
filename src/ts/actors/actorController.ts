@@ -18,6 +18,13 @@ export class ActorController {
         return out;
     }
 
+    /** A wave of a specific threat rank (event ambushes: cops, scavs, psychos). */
+    public static getEnemiesOfRank(amount: number, rank: number, level: number): Actor[] {
+        const out: Actor[] = [];
+        for (let i = 0; i < amount; i++) { out.push(new Adversary(pickArchetypeOfRank(rank), level)); }
+        return out;
+    }
+
     /** A boss encounter: a forced rank-5 adversary plus one escort. */
     public static getBoss(level: number): Actor[] {
         return [

@@ -11,14 +11,14 @@ interface SidebarProps {
 }
 
 // Panel-switching views (glyph + label; label doubles as tooltip / accessible name).
+// Store and Downtime are gone on purpose: shops and rest are run NODES now —
+// a nav-reachable infinite catalog / free heal would break the roguelike loop.
 const VIEWS: Array<[string, string]> = [
     ["Character", "◈"],
     ["Combat", "✦"],
     ["Netrun", "⌁"],
-    ["Store", "▤"],
     ["Inventory", "▦"],
     ["Quests", "❖"],
-    ["Downtime", "☾"],
     ["Stats", "▥"],
 ];
 

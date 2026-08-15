@@ -38,6 +38,7 @@ export class RunController {
         }
         if (node.type === "merchant") { return {run: {...run, node}, screen: "merchant"}; }
         if (node.type === "rest") { return {run: {...run, node}, screen: "rest"}; }
+        if (node.type === "event") { return {run: {...run, node}, screen: "event"}; }
         // combat / elite / boss
         const enemies = spawnEncounter(encounterSpec(node, RunController.levelOf(state.party)));
         Battlefield.deploy(state.party, enemies);

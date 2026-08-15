@@ -13,6 +13,7 @@ const TYPE: { [k in NodeType]: [number, string, string] } = {
     elite: [0xf0a830, "Elite", "☠"],
     merchant: [0x7fd67f, "Black Market", "▤"],
     rest: [0x8be0ff, "Safehouse", "☾"],
+    event: [0xc56bff, "Encounter", "◈"],
     boss: [0xe0533f, "Boss", "⚑"],
 };
 
@@ -336,6 +337,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
     private static boxGeo = new THREE.BoxGeometry(1.35, 1.35, 1.35);
     private static torusGeo = new THREE.TorusGeometry(0.85, 0.3, 6, 10);
     private static dodecaGeo = new THREE.DodecahedronGeometry(1.05, 0);
+    private static knotGeo = new THREE.TorusKnotGeometry(0.7, 0.24, 48, 8);
     private static checkGeo = CityMap.buildCheckGeo();
 
     /** A chunky 3D checkmark for cleared waypoints. */
@@ -358,6 +360,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
             case "elite": return CityMap.tetraGeo;      // spike
             case "merchant": return CityMap.boxGeo;     // crate
             case "rest": return CityMap.torusGeo;       // safe ring
+            case "event": return CityMap.knotGeo;       // tangled question
             case "boss": return CityMap.dodecaGeo;      // heavy core
             default: return CityMap.icoGeo;             // firefight
         }
@@ -422,6 +425,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
             const current = id === run.position;
             const reachable = run.reachableIds.indexOf(id) >= 0;
             const cleared = run.clearedIds.indexOf(id) >= 0;
+            const revealed = run.revealedIds.indexOf(id) >= 0;
             const boss = m.node.type === "boss";
             const label = this.labels[id]!;
             const beamMat = m.beamMat;
@@ -466,6 +470,11 @@ export class CityMap extends React.Component<CityMapProps, {}> {
                 label.style.display = "block";
                 label.textContent = "Boss";
                 label.style.borderColor = css(t[0]);
+            } else if (revealed) {
+                // bought/earned intel: the type shows through the fog, dimmed —
+                // knowledge without motion (it's not tappable from here)
+                apply(t[0], 0.14, 0.55, 0.5, 1.3, 0.25);
+                beamMat.color.setHex(t[0]); beamMat.opacity = 0.35; beamMat.linewidth = 2;
             } else {
                 // fog of war: unknown until you stand next to it
                 apply(0x8b949e, 0.0, 0.5, 0.45, 1.05, 0.25);
@@ -476,7 +485,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
             const isCheck = !current && cleared;
             const geo = current ? CityMap.octaGeo
                 : isCheck ? CityMap.checkGeo
-                : (reachable || boss) ? CityMap.typeGeo(m.node.type)
+                : (reachable || boss || revealed) ? CityMap.typeGeo(m.node.type)
                 : CityMap.octaGeo;
             m.solid.geometry = geo;
             m.wire.geometry = geo;

@@ -11,7 +11,7 @@ import {City, Pt, generateCity} from "./cityGen";
  * relocates (so you can backtrack and take other branches). Clearing the boss
  * wins the run.
  */
-export type NodeType = "combat" | "elite" | "merchant" | "rest" | "boss";
+export type NodeType = "combat" | "elite" | "merchant" | "rest" | "event" | "boss";
 
 export interface RunNode {
     id: string;
@@ -29,6 +29,7 @@ export interface RunState {
     node: RunNode | null;             // node currently being resolved
     clearedIds: string[];
     reachableIds: string[];           // neighbours of `position`
+    revealedIds: string[];            // fog-of-war waypoints uncovered by intel
     reviveUsed: boolean;
     depth: number;
     outcome: "active" | "won" | "lost";
@@ -184,9 +185,11 @@ export class RunMap {
         const others = nodes.map((_n, i) => i).filter((i) => i !== entryIdx && i !== bossIdx);
         const shuffled = others.sort(() => Math.random() - 0.5);
         shuffled.forEach((i, k) => {
-            nodes[i]!.type = k === 0 ? "merchant" : k === 1 ? "rest"
-                : Math.random() < 0.22 ? "elite"
-                : Math.random() < 0.18 ? (Math.random() < 0.5 ? "merchant" : "rest")
+            const r = Math.random();
+            nodes[i]!.type = k === 0 ? "merchant" : k === 1 ? "rest" : k === 2 ? "event"
+                : r < 0.28 ? "event"
+                : r < 0.44 ? "elite"
+                : r < 0.54 ? (Math.random() < 0.5 ? "merchant" : "rest")
                 : "combat";
         });
 
@@ -196,6 +199,7 @@ export class RunMap {
             position: entry.id, node: null,
             clearedIds: [entry.id],
             reachableIds: adj[entry.id]!.slice(),
+            revealedIds: [],
             reviveUsed: false, depth: 0, outcome: "active",
         };
     }
@@ -244,7 +248,7 @@ export class RunMap {
     }
 }
 
-export interface EncounterSpec { boss: boolean; amount: number; level: number; }
+export interface EncounterSpec { boss: boolean; amount: number; level: number; rank?: number | undefined; }
 
 /** How hard a node's fight is, derived from its type and the party level. */
 export function encounterSpec(node: RunNode, level: number): EncounterSpec {
@@ -257,5 +261,7 @@ export function encounterSpec(node: RunNode, level: number): EncounterSpec {
 
 /** Mint the actual enemies for an encounter spec. */
 export function spawnEncounter(spec: EncounterSpec): Actor[] {
-    return spec.boss ? ActorController.getBoss(spec.level) : ActorController.getEnemies(spec.amount, spec.level);
+    if (spec.boss) { return ActorController.getBoss(spec.level); }
+    if (spec.rank !== undefined) { return ActorController.getEnemiesOfRank(spec.amount, spec.rank, spec.level); }
+    return ActorController.getEnemies(spec.amount, spec.level);
 }
