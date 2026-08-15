@@ -27,17 +27,42 @@ const dist2 = (ax: number, ay: number, bx: number, by: number): number => Math.h
 
 export interface Point { x: number; y: number; }
 
+/** What a cover point looks like on the street (visual only; all cover plays the same). */
+export type CoverKind = "car" | "crate" | "barrier" | "dumpster" | "pillar";
+
+export interface CoverSpot extends Point { kind: CoverKind; }
+
+const COVER_KINDS: CoverKind[] = ["car", "crate", "barrier", "dumpster", "pillar"];
+
 export class Battlefield {
 
-    /** Mid-field cover (crates, pillars). Advancing to one both closes range and shields you. */
-    public static readonly COVER: Point[] = [
-        {x: -8, y: 16}, {x: 7, y: 18}, {x: -2, y: 21}, {x: 13, y: 14}, {x: -15, y: 20},
+    /** Mid-field cover (wrecks, crates, barriers). Advancing to one both closes range and shields you. Re-rolled every deployment. */
+    public static COVER: CoverSpot[] = [
+        {x: -8, y: 16, kind: "car"}, {x: 7, y: 18, kind: "crate"}, {x: -2, y: 21, kind: "barrier"},
+        {x: 13, y: 14, kind: "dumpster"}, {x: -15, y: 20, kind: "pillar"},
     ];
 
-    /** Open a fresh engagement: squad near, hostiles far. */
+    /** Open a fresh engagement: new street furniture, squad near, hostiles far. */
     public static deploy(party: Actor[], enemies: Actor[]): void {
+        this.rollCover();
         this.line(party, SQUAD_Y);
         this.deployEnemies(enemies);
+    }
+
+    /**
+     * Scatter 5-7 cover points across the mid-field band, kept apart so each is
+     * its own tactical decision and off the deploy lines so nobody spawns in cover.
+     */
+    private static rollCover(): void {
+        const out: CoverSpot[] = [];
+        let guard = 80;
+        const want = 5 + Math.floor(Math.random() * 3);
+        while (out.length < want && guard-- > 0) {
+            const p = {x: -18 + Math.random() * 36, y: 10 + Math.random() * 17};
+            if (out.some((c) => dist2(c.x, c.y, p.x, p.y) < 6.5)) { continue; }
+            out.push({x: p.x, y: p.y, kind: COVER_KINDS[Math.floor(Math.random() * COVER_KINDS.length)]!});
+        }
+        if (out.length >= 3) { this.COVER = out; }
     }
 
     /** Place (or replace) a wave of hostiles on the far line. Used on spawn + respawn. */

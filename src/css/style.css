@@ -925,3 +925,97 @@ progress::-moz-progress-bar { background:var(--rust); }
 }
 
 @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
+
+/* ---------------------------------------------------------------------
+   3D battle arena (BattleScene) — street canyon, unit tags, floaters,
+   XCOM-style order bar.
+   --------------------------------------------------------------------- */
+.bs { position:relative; flex:1; min-height:0; border:1px solid var(--line);
+    background:#07080c; overflow:hidden; }
+.bs.picking { cursor:crosshair; }
+.bsCanvas { position:absolute; inset:0; }
+.bsCanvas canvas { display:block; }
+.bsOverlay { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
+
+/* unit tags: name + hp, projected over each figure */
+.bsTag { position:absolute; transform:translate(-50%,-100%); text-align:center;
+    font-size:10px; line-height:1.25; white-space:nowrap; }
+.bsTag b { display:block; font-weight:600; color:var(--mid);
+    text-shadow:0 1px 3px rgba(0,0,0,.9); }
+.bsTag.you b { color:var(--cyan); }
+.bsTag.ally b { color:var(--good); }
+.bsTag.foe b { color:#f0968a; }
+.bsTag.on b { color:var(--ink); }
+.bsTag .bsHp { display:block; width:44px; height:3px; margin:2px auto 0;
+    background:rgba(6,6,10,.8); border:1px solid var(--line2); }
+.bsTag .bsHp i { display:block; height:100%; background:var(--good); transition:width .25s; }
+.bsTag.foe .bsHp i { background:var(--crit); }
+.bsTag.hurt .bsHp i { background:var(--warn); }
+.bsTag.downed { opacity:.55; }
+.bsTag.downed b::after { content:" ✕"; color:var(--crit); }
+.bsTag.cov b::before { content:"▙ "; color:var(--cyan); font-size:8px; }
+
+/* combat floaters (damage numbers, MISS, IN COVER ...) */
+.bsFloat { position:absolute; transform:translate(-50%,-100%); font-weight:bold;
+    font-size:15px; letter-spacing:.04em; text-shadow:0 1px 4px rgba(0,0,0,.95);
+    animation:bsFloat 1.25s ease-out forwards; }
+@keyframes bsFloat {
+    0% { opacity:0; margin-top:6px; }
+    12% { opacity:1; }
+    75% { opacity:1; }
+    100% { opacity:0; margin-top:-34px; }
+}
+.bsFloat.f-dmg { color:#ff7a5c; }
+.bsFloat.f-dmg-big { color:#ff5a3c; font-size:21px; text-shadow:0 0 14px rgba(224,83,63,.8); }
+.bsFloat.f-miss { color:var(--dim); font-size:12px; }
+.bsFloat.f-soak { color:var(--mid); font-size:12px; }
+.bsFloat.f-buff { color:var(--cyan); text-shadow:0 0 10px rgba(55,225,231,.5); }
+.bsFloat.f-cov { color:var(--cyan); font-size:11px; }
+.bsFloat.f-down { color:var(--crit); font-size:17px; letter-spacing:.14em; }
+
+/* live to-hit chip over the targeted hostile */
+.bsHitChip { position:absolute; transform:translate(-50%,-130%); padding:2px 7px;
+    font-size:11px; font-weight:600; color:var(--ink); white-space:nowrap;
+    background:rgba(6,6,12,.88); border:1px solid var(--cyan); }
+
+/* initiative queue above the action bar */
+.turnRow { display:flex; gap:5px; align-items:center; padding:5px 8px 0;
+    overflow-x:auto; scrollbar-width:none; }
+.turnRow .trLabel { font-size:9px; letter-spacing:.14em; color:var(--faint); flex:none; }
+.tc { flex:none; font-size:10px; padding:1px 7px; border:1px solid var(--line2);
+    color:var(--mid); background:var(--bg2); }
+.tc.pal { border-color:#1f5f63; }
+.tc.foe { border-color:#5f2c26; color:#d8988c; }
+.tc.now { color:var(--ink); border-color:var(--cyan); background:var(--sel);
+    box-shadow:0 0 8px rgba(55,225,231,.25); }
+.tc.out { opacity:.35; text-decoration:line-through; }
+
+/* order bar */
+.orderActs { display:flex; gap:6px; padding:8px; align-items:center; flex-wrap:wrap; }
+.ordWho { color:var(--cyan); font-weight:600; font-size:12px; }
+.ordTgt { font-size:11px; color:var(--dim); border:1px dashed var(--line2); padding:4px 8px; }
+.ordTgt.has { color:var(--ink); border-style:solid; }
+.ordTgt .pct { margin-left:4px; }
+.ordTgt .pct.hi { color:var(--good); }
+.ordTgt .pct.mid { color:var(--warn); }
+.ordTgt .pct.lo { color:var(--crit); }
+.ordTgt .covTag { color:var(--cyan); font-style:normal; font-size:9px; letter-spacing:.1em; }
+.ob { background:var(--bg2); border:1px solid var(--line2); color:var(--mid);
+    font-size:11px; padding:5px 9px; letter-spacing:.05em; }
+.ob:hover:not(:disabled) { border-color:var(--cyan); color:var(--ink); }
+.ob:disabled { opacity:.4; cursor:default; }
+.ob.set { border-color:var(--cyan); color:var(--cyan); }
+.ob.go { border-color:var(--rust); color:var(--ink); background:#231512; }
+.ob.go:hover:not(:disabled) { border-color:var(--rustHot); background:#2c1a15; }
+.ob.slim { margin-left:10px; padding:2px 8px; }
+.nowTurn { color:var(--mid); }
+
+/* mobile: keep the order bar tappable */
+@media (max-width: 760px) {
+    .orderActs { gap:5px; padding:6px; }
+    .ob { padding:7px 8px; font-size:10px; }
+    .ordTgt { font-size:10px; padding:5px 6px; }
+    .turnRow .tc { font-size:9px; }
+    .bsTag .bsHp { width:36px; }
+    .bsTag { font-size:9px; }
+}
