@@ -2,15 +2,16 @@ import type {InterfaceAppState} from "../components/app";
 import {Actor} from "../actors/Actor";
 import {Battlefield} from "./battlefield";
 import {Economy} from "./economy";
-import {MapNode, RunMap, RunState, encounterSpec, spawnEncounter} from "./runMap";
+import {RunMap, RunNode, RunState, encounterSpec, spawnEncounter} from "./runMap";
 
 type Patch = Partial<InterfaceAppState>;
 
 /**
- * Pure-ish state machine for a Slay-the-Spire run. Each method takes the current
- * app state and returns a `setState` patch (performing the needed side effects on
- * actors/battlefield along the way), so `App` stays a thin React shell that just
- * applies patches and owns the auto-combat timer.
+ * Pure-ish state machine for a run. Movement is dungeon-style: the squad
+ * stands on a waypoint and may move to any adjacent one. Entering an uncleared
+ * node triggers its encounter/screen; entering a cleared node just relocates
+ * (free backtracking). Each method takes the current app state and returns a
+ * `setState` patch, so `App` stays a thin React shell owning the auto timer.
  */
 export class RunController {
     /** Party yardstick for scaling encounters (highest member level). */
@@ -18,19 +19,19 @@ export class RunController {
         return party.reduce((m, p) => Math.max(m, p.level), 1);
     }
 
-    /** A brand-new act with the squad parked at the opening choices. */
+    /** A brand-new run: fresh city, road-graph waypoints, squad at the entry. */
     public static freshRun(): RunState {
-        const map = RunMap.generate();
-        return {
-            map, node: null, clearedIds: [], reachableIds: RunMap.entryIds(map),
-            reviveUsed: false, depth: 0, outcome: "active",
-        };
+        return RunMap.generate();
     }
 
-    /** Enter a node: open its merchant/rest screen, or deploy and start its fight. */
-    public static enter(state: InterfaceAppState, node: MapNode, log: number): Patch {
+    /** Move onto an adjacent node: relocate, open its screen, or start its fight. */
+    public static enter(state: InterfaceAppState, node: RunNode, log: number): Patch {
         const run = state.run;
-        if (!run) { return {}; }
+        if (!run || run.reachableIds.indexOf(node.id) < 0) { return {}; }
+        if (run.clearedIds.indexOf(node.id) >= 0) {
+            // already cleared — free movement, no encounter
+            return {run: {...run, position: node.id, reachableIds: (run.adj[node.id] || []).slice()}};
+        }
         if (node.type === "merchant") { return {run: {...run, node}, screen: "merchant"}; }
         if (node.type === "rest") { return {run: {...run, node}, screen: "rest"}; }
         // combat / elite / boss
@@ -46,23 +47,30 @@ export class RunController {
         };
     }
 
-    /** Leave a merchant / rest node and move back onto the map. */
+    /** Leave a merchant / rest node (clears it) and stand on it, back on the map. */
     public static leaveMeta(state: InterfaceAppState, log: number): Patch | null {
         const run = state.run;
         return run && run.node ? RunController.advance(state, run.node, [{msg: "— moving on —"}], log) : null;
     }
 
-    /** Mark a node cleared; advance the map, or end the run when the boss falls. */
-    public static advance(state: InterfaceAppState, node: MapNode, extra: any[], log: number): Patch {
+    /** Mark a node cleared and stand on it; clearing the boss wins the run. */
+    public static advance(state: InterfaceAppState, node: RunNode, extra: any[], log: number): Patch {
         const run = state.run;
         if (!run) { return {}; }
-        const clearedIds = run.clearedIds.concat(node.id);
+        const clearedIds = run.clearedIds.indexOf(node.id) >= 0
+            ? run.clearedIds : run.clearedIds.concat(node.id);
         const depth = run.depth + 1;
         const messages = [...extra, ...state.messages].slice(0, log);
         if (node.type === "boss") {
-            return {run: {...run, clearedIds, depth, node: null, outcome: "won"}, screen: "end", messages};
+            return {run: {...run, clearedIds, depth, node: null, position: node.id, outcome: "won"}, screen: "end", messages};
         }
-        return {run: {...run, clearedIds, depth, node: null, reachableIds: node.next}, screen: "map", messages};
+        return {
+            run: {
+                ...run, clearedIds, depth, node: null,
+                position: node.id, reachableIds: (run.adj[node.id] || []).slice(),
+            },
+            screen: "map", messages,
+        };
     }
 
     /** One resolved round in a combat node: wipe → end, cleared → advance, else continue. */
@@ -96,5 +104,10 @@ export class RunController {
             run: {...run, reviveUsed: true, outcome: "active"}, screen: "combat",
             messages: [{msg: "— Trauma Team revive (one per run) —"} as any, ...state.messages].slice(0, log),
         };
+    }
+
+    /** Convenience for callers that only have an id. */
+    public static nodeById(run: RunState, id: string): RunNode | null {
+        return RunMap.find(run, id);
     }
 }

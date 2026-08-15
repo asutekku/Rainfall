@@ -601,6 +601,9 @@ progress::-moz-progress-bar { background:var(--rust); }
     #app[data-mtab="arena"] .arena { display:flex; flex:1; min-height:120px; }
     #app[data-mtab="arena"] #feedcol > .feed { display:flex; flex:none; height:clamp(130px,23vh,200px); }
     #app[data-mtab="arena"] .stageActions { display:block; flex:none; }
+    /* the city map is one contained box (overrides #stage display:contents) so
+       its absolute canvas fills the board area instead of escaping full-screen */
+    #app[data-mtab="arena"] #stage.cityStage { display:block; position:relative; order:3; flex:1 1 auto; min-height:180px; }
 
     /* Squad / Feed — the two panels that share the desktop feed column */
     #app[data-mtab="squad"] #feedcol > .panel:not(.feed) { display:flex; flex:1; min-height:0; }
@@ -753,15 +756,16 @@ progress::-moz-progress-bar { background:var(--rust); }
    Run loop — holographic city map, merchant/rest overlays, run-over screen
    ===================================================================== */
 /* the city map fills the centre stage: a WebGL canvas + an HTML label overlay */
-.cityStage { overflow:hidden; border:1px solid var(--line);
-    background:radial-gradient(1000px 520px at 50% 0%, #0c0c16, var(--bg)); }
-.cityCanvas { position:absolute; inset:0; }
+.cityStage { position:relative; overflow:hidden; border:1px solid var(--line); background:#06060d; }
+.cityCanvas { position:absolute; inset:0; z-index:0; }
 .cityCanvas canvas { display:block; }
-.cityOverlay { position:absolute; inset:0; pointer-events:none; }
+.cityStage::after { content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+    background:radial-gradient(ellipse at 50% 45%, transparent 52%, rgba(4,4,10,.66) 100%); }
+.cityOverlay { position:absolute; inset:0; z-index:2; pointer-events:none; }
 .cityLabel { position:absolute; transform:translate(-50%,-50%); white-space:nowrap;
     font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink);
     background:rgba(8,8,14,.72); border:1px solid var(--cyanDim); padding:2px 7px; text-shadow:0 0 8px rgba(55,225,231,.5); }
-.cityHint { position:absolute; left:12px; bottom:10px; color:var(--dim);
+.cityHint { position:absolute; left:12px; bottom:10px; z-index:2; color:var(--dim);
     font-size:11px; letter-spacing:.1em; text-transform:uppercase; pointer-events:none; }
 
 /* combat is fully auto — a passive status line, no action buttons */

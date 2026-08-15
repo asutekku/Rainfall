@@ -13,7 +13,7 @@ import {Battlefield} from "../interact/battlefield";
 import {Creator} from "./creation/creator";
 import {CharacterCreation, CharacterSpec} from "../actors/resources/CharacterCreation";
 import {MobileTab, MobileTabs} from "./mobileTabs";
-import {MapNode, RunState} from "../interact/runMap";
+import {RunNode, RunState} from "../interact/runMap";
 import {RunController} from "../interact/runController";
 import {RunEndView} from "./run/runEndView";
 import {MetaOverlay} from "./run/metaOverlay";
@@ -179,7 +179,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     /** Player picked a node: fight it, or open its merchant / rest screen. */
-    private enterNode = (node: MapNode) => {
+    private enterNode = (node: RunNode) => {
         this.setState(RunController.enter(this.state, node, this.logLength) as any,
             () => { if (this.state.screen === "combat") { this.startAuto(); } });
     };
