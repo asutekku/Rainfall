@@ -1,5 +1,5 @@
 import * as React from "react";
-import {BattleReport, CombatantTally, GearChange, HostileEntry, LootItem} from "../../interact/battleReport";
+import {BattleReport, CombatantTally, GearChange, LootItem} from "../../interact/battleReport";
 
 export interface DebriefViewProps {
     report: BattleReport;
@@ -16,10 +16,13 @@ const pct = (n: number, max: number): number => Math.max(0, Math.min(100, (n / M
 
 /**
  * The after-action report shown between a finished fight and the city map.
- * It reads the sealed `BattleReport`: who was on the field, how the squad
- * performed, what the payday was, and what came off the bodies. Salvage is
- * claimed here — anything left when the player moves on is auto-kitted by the
- * fixer, so hitting Continue immediately behaves exactly like the old flow.
+ *
+ * It surfaces only what the player can't already see: how the squad came out,
+ * the payday, and what came off the bodies. Anything the fight itself already
+ * told you (a hostile roster you just watched die, squad totals that are the
+ * sum of the rows right below them) is left out, which is what keeps the whole
+ * report inside a phone screen. Salvage is claimed here — whatever is left when
+ * the player moves on gets auto-kitted, so Continue matches the old flow.
  */
 export class DebriefView extends React.Component<DebriefViewProps, {}> {
 
@@ -44,14 +47,6 @@ export class DebriefView extends React.Component<DebriefViewProps, {}> {
         }
     };
 
-    private hostile = (h: HostileEntry, i: number) => (
-        <li key={i} className={"dbHostile" + (h.killed ? " down" : "")}>
-            <span className={"dbRank rank-" + h.rank} title={"threat rank " + h.rank}>✦</span>
-            <span className={"dbHName"}>{h.name}</span>
-            <span className={"dbHMeta"}>{h.label} · L{h.level}</span>
-            <span className={"dbHState"}>{h.killed ? "NEUTRALISED" : "STILL UP"}</span>
-        </li>);
-
     private member = (t: CombatantTally, i: number) => {
         const acc = t.shots > 0 ? Math.round((t.hits / t.shots) * 100) : 0;
         const lost = Math.max(0, t.hpBefore - t.hpAfter);
@@ -69,18 +64,14 @@ export class DebriefView extends React.Component<DebriefViewProps, {}> {
                         <u style={{width: pct(lost, t.maxHp) + "%"}}/>
                     </span>
                     <span className={"dbBarVal"}>{Math.max(0, t.hpAfter)}/{t.maxHp}</span>
-                    <span className={"dbBar xp"} title={`XP ${t.xp} / ${t.maxXp}`}>
-                        <i style={{width: pct(t.xp, t.maxXp) + "%"}}/>
+                    <span className={"dbBarVal xp"} title={`${t.xp} / ${t.maxXp} to next level`}>
+                        +{t.xpGained} XP
                     </span>
-                    <span className={"dbBarVal"}>+{t.xpGained} XP</span>
                 </div>
                 <div className={"dbTallies"}>
                     <span><i>DMG</i><b>{t.damageDealt}</b></span>
-                    <span><i>Taken</i><b>{t.damageTaken}</b></span>
-                    <span><i>Acc</i><b>{acc}%</b></span>
-                    <span><i>Shots</i><b>{t.hits}/{t.shots}</b></span>
+                    <span><i>Acc</i><b>{acc}%</b><em>{t.hits}/{t.shots}</em></span>
                     <span><i>Kills</i><b>{t.kills}</b></span>
-                    <span><i>Eddies</i><b>{t.eddies}¥</b></span>
                 </div>
             </li>);
     };
@@ -105,62 +96,59 @@ export class DebriefView extends React.Component<DebriefViewProps, {}> {
     };
 
     private gear = (c: GearChange, i: number) => (
+        // What it replaced is already implied by the delta, so the row only
+        // carries who, what they're holding now, and what it cost.
         <li key={i} className={"dbGear " + c.source}>
+            <span className={"dbGearIcon"} title={c.source === "salvage" ? "scavenged" : "bought"}>⚒</span>
             <span className={"dbGearWho"}>{c.actorName}</span>
-            <span className={"dbGearSwap"}>{c.from} <em>▸</em> <b>{c.to}</b></span>
+            <span className={"dbGearName"}>{c.to}</span>
             <span className={"dbGearDetail"}>{c.detail}</span>
             <span className={"dbGearDelta" + (c.delta > 0 ? " up" : "")}>
                 {c.delta > 0 ? "+" + c.delta : c.delta}{c.slot === "armor" ? " SP" : " dmg"}
             </span>
-            <span className={"dbGearCost"}>{c.cost > 0 ? "−" + c.cost + "¥" : "salvage"}</span>
+            <span className={"dbGearCost"}>{c.cost > 0 ? "−" + c.cost + "¥" : "free"}</span>
         </li>);
 
     public override render() {
         const r = this.props.report;
         const won = r.outcome === "victory";
         const held = r.loot.filter((l) => l.fate === "held");
+        const down = r.hostiles.filter((h) => h.killed).length;
+        const payday = r.eddies + r.fenced;
         return (
             <div className={"debrief " + (won ? "win" : "lose")}>
                 <div className={"debriefCard"}>
                     <div className={"debriefHead"}>
-                        <span className={"debriefTag"}>After-action report</span>
                         <h1>{won ? "ENGAGEMENT CLEAR" : "SQUAD DOWN"}</h1>
                         <p className={"debriefSub"}>
-                            {r.nodeLabel} · {r.rounds} round{r.rounds === 1 ? "" : "s"} · sector {this.props.depth + 1}
+                            {r.nodeLabel} · {won ? down : `${down} of ${r.hostiles.length}`} down
+                            {" · "}{r.rounds} round{r.rounds === 1 ? "" : "s"} · sector {this.props.depth + 1}
                         </p>
-                    </div>
-
-                    <div className={"debriefTotals"}>
-                        <span><i>Payday</i><b>{r.eddies + r.fenced}¥</b></span>
-                        <span><i>XP</i><b>{r.xp}</b></span>
-                        <span><i>Kills</i><b>{r.kills}/{r.hostiles.length}</b></span>
-                        <span><i>Damage</i><b>{r.damageDealt}</b></span>
-                        <span><i>Taken</i><b>{r.damageTaken}</b></span>
                     </div>
 
                     <div className={"debriefCols"}>
                         <div className={"debriefBlock"}>
                             <h2>Squad</h2>
-                            <ul className={"dbMembers"}>{r.party.map(this.member)}</ul>
+                            <ul className={"dbMembers" + (r.party.length > 2 ? " dense" : "")}>{r.party.map(this.member)}</ul>
                         </div>
 
                         <div className={"debriefBlock"}>
-                            <h2>Contacts</h2>
-                            <ul className={"dbHostiles"}>{r.hostiles.map(this.hostile)}</ul>
-
-                            <h2>Salvage</h2>
+                            <h2>Take <b className={"dbPayday"}>{payday}¥</b>
+                                {r.fenced > 0 && <em className={"dbFenced"}>{r.fenced}¥ fenced</em>}</h2>
                             {r.loot.length > 0
                                 ? <ul className={"dbLoots"}>{r.loot.map(this.loot)}</ul>
                                 : <p className={"dbEmpty"}>Nothing worth carrying off the bodies.</p>}
-
-                            <h2>Requisition</h2>
-                            {r.gear.length > 0 && <ul className={"dbGears"}>{r.gear.map(this.gear)}</ul>}
+                            {r.gear.length > 0 &&
+                                <ul className={"dbGears"}>
+                                    {r.gear.map(this.gear)}
+                                    {/* phones show the first few and count the rest — see style.css */}
+                                    {r.gear.length > 3 &&
+                                        <li className={"dbGearMore"}>+{r.gear.length - 3} more fitted</li>}
+                                </ul>}
                             {won && !r.kitted &&
                                 <button className={"dbKit"} onClick={this.props.onAutoKit}>
                                     ⚒ Auto-kit squad{held.length > 0 ? ` (uses ${held.length} salvaged)` : ""} — spends eddies
                                 </button>}
-                            {r.kitted && r.gear.length === 0 && <p className={"dbEmpty"}>No upgrades within budget.</p>}
-                            {!won && r.gear.length === 0 && <p className={"dbEmpty"}>No one left standing to kit out.</p>}
                         </div>
                     </div>
 
