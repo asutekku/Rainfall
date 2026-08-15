@@ -7,15 +7,18 @@ import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./message
 import {Skill} from "../items/Skill";
 import {rangeDV} from "./rangeTable";
 import {Check} from "./check";
-import {Battlefield} from "./battlefield";
+import {Battlefield, Point} from "./battlefield";
 import {TacticalAI, Plan} from "./tacticalAI";
 import {Economy} from "./economy";
 import {BattleRecorder} from "./battleReport";
+import {BattleEvent, TurnResult} from "./battleEvents";
 
 const Log = en_US.Log;
 
 export class Combat {
     private static messages: any = [];
+    /** Play-by-play of the turn being resolved, for the battle scene to animate. */
+    private static events: BattleEvent[] = [];
 
     /**
      * One exchange between two combatants, resolved by Cyberpunk RED order:
@@ -24,6 +27,7 @@ export class Combat {
      */
     public static basicAction(actor: Actor, target: Actor, _skill: Skill): any {
         this.messages = [];
+        this.events = [];
         if (!actor.canFight() && !actor.mortallyWounded) {
             this.messages.unshift(new MessageStr('That character is out of the fight.'));
             return this.messages.flat().reverse();
@@ -56,10 +60,19 @@ export class Combat {
             this.autofireAttack(actor, target, distance);   // RED: autofire can't make an Aimed Shot
             return;
         }
+        const melee: boolean = weapon.weaponClass === "melee";
+        const covered: boolean = !melee && Battlefield.coverPenaltyAt(target.position, actor.position) > 0;
+        if (!melee && rangeDV(weapon.weaponClass, distance) === null) {
+            this.events.push({kind: "noshot", actor});
+            this.messages.push(new MessageStr(`${actor.name}: no shot — out of range.`));
+            return;
+        }
         this.stats.shots += 1; if (aimed) { this.stats.aimed += 1; }
         const targetOldHP: number = target.health;
         if (!this.didAttackHit(actor, target, distance, aimed)) {
             BattleRecorder.countShot(actor, false);
+            this.events.push({kind: "shot", actor, target, hit: false, damage: 0, aimed,
+                autofire: false, melee, covered, dropped: false});
             this.messages.push(new MessageStr(aimed ? 'MISS! (aimed)' : 'MISS!'));
             return;
         }
@@ -73,6 +86,8 @@ export class Combat {
         const dealt: number = target.receiveDamage(damage, weapon.ap, aimed);
         this.stats.dmg += dealt;
         BattleRecorder.countDamage(actor, target, dealt);
+        this.events.push({kind: "shot", actor, target, hit: true, damage: dealt, aimed,
+            autofire: false, melee, covered, dropped: !target.canFight()});
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
         if (aimed && dealt > 0) { this.messages.push(new MessageStr(`${actor.name} lands a head shot!`)); }
         this.registerIfDefeated(actor, target);
@@ -96,6 +111,7 @@ export class Combat {
     private static autofireAttack(actor: Actor, target: Actor, distance: number): void {
         const dv: number | null = rangeDV(actor.weapon.weaponClass, distance);
         if (dv === null) {
+            this.events.push({kind: "noshot", actor});
             this.messages.push(new MessageStr('OUT OF RANGE'));
             return;
         }
@@ -104,6 +120,8 @@ export class Combat {
         const check = Check.resolve(actor, actor.attackBonus(actor.weapon), dv + cover);
         if (!check.success) {
             BattleRecorder.countShot(actor, false);
+            this.events.push({kind: "shot", actor, target, hit: false, damage: 0, aimed: false,
+                autofire: true, melee: false, covered: cover > 0, dropped: false});
             this.messages.push(new MessageStr('MISS!'));
             return;
         }
@@ -121,6 +139,8 @@ export class Combat {
         const dealt: number = target.receiveDamage(damage, actor.weapon.ap);
         this.stats.dmg += dealt;
         BattleRecorder.countDamage(actor, target, dealt);
+        this.events.push({kind: "shot", actor, target, hit: true, damage: dealt, aimed: false,
+            autofire: true, melee: false, covered: cover > 0, dropped: !target.canFight()});
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
         this.registerIfDefeated(actor, target);
     }
@@ -162,6 +182,7 @@ export class Combat {
         // Push straight to the combat feed. The legacy Messages.logMessage path
         // reads global State.player/currentEnemy singletons that the React app
         // never sets, so calling it mid-round would throw.
+        this.events.push({kind: "level", actor});
         this.messages.push(new MessageStr(`${actor.name} reaches level ${actor.level}.`));
     }
 
@@ -189,7 +210,9 @@ export class Combat {
     }
 
     private static resolveDeathSave(actor: Actor): void {
-        if (actor.deathSave()) {
+        const survived: boolean = actor.deathSave();
+        this.events.push({kind: "save", actor, survived});
+        if (survived) {
             this.messages.push(new MessageStr(`${actor.name} clings to life.`));
         } else {
             this.messages.push(new MessageStr(`${actor.name} flatlines.`));
@@ -217,8 +240,48 @@ export class Combat {
 
     // =====================================================================
     // Turn engine: movement + AI. A round advances every combatant in
-    // initiative order; each moves (via TacticalAI) then acts.
+    // initiative order, ONE unit at a time so the battle scene can animate
+    // each turn as it resolves.
     // =====================================================================
+
+    /**
+     * Start a fresh round: reset per-round trackers and roll initiative.
+     * Returns the acting order; feed each unit to takeTurn() in sequence.
+     */
+    public static beginRound(party: Actor[], enemies: Actor[]): Actor[] {
+        BattleRecorder.countRound();
+        const all: Actor[] = [...party, ...enemies].filter((a) => a.canFight() || a.mortallyWounded);
+        all.forEach((a) => { a.firstHitDone = false; a.deflectionUsed = false; });
+        return all
+            .map((a) => ({a, init: a.rollInitiative()}))
+            .sort((x, y) => y.init - x.init)
+            .map((o) => o.a);
+    }
+
+    /**
+     * Resolve one unit's turn. With an `order` the unit follows the player's
+     * move/target; otherwise the tactical AI plans it. Returns the events (for
+     * the battle scene) and the feed messages this turn produced.
+     */
+    public static takeTurn(c: Actor, party: Actor[], enemies: Actor[],
+                           order?: {moveTo?: Point | undefined; target?: Actor | undefined; aimed?: boolean | undefined}): TurnResult {
+        this.messages = [];
+        this.events = [];
+        const side: "party" | "enemy" = party.indexOf(c) >= 0 ? "party" : "enemy";
+        this.events.push({kind: "turn", actor: c, side});
+        if (c.alive && c.mortallyWounded) {
+            this.resolveDeathSave(c);
+        } else if (c.canFight()) {
+            const foes: Actor[] = side === "party" ? enemies : party;
+            const allies: Actor[] = side === "party" ? party : enemies;
+            const others: Actor[] = [...party, ...enemies].filter((a) => a !== c);
+            const plan: Plan = order
+                ? {moveTo: order.moveTo, target: order.target, aimed: order.aimed, label: "manual"}
+                : TacticalAI.plan(c, allies, foes);
+            this.applyPlan(c, plan, foes, others);
+        }
+        return {events: this.events, messages: this.messages.flat().reverse()};
+    }
 
     /** One full round with both sides played by the tactical AI. */
     public static autoRound(party: Actor[], enemies: Actor[]): any {
@@ -226,46 +289,33 @@ export class Combat {
     }
 
     /**
-     * One full round. If `controlled`/`action` are given, that unit performs the
-     * supplied action on its turn (manual play); every other combatant — allies
-     * and enemies alike — is driven by the tactical AI.
+     * One full round, resolved instantly (headless sim / legacy callers). If
+     * `controlled`/`action` are given, that unit performs the supplied action
+     * on its turn; everyone else is driven by the tactical AI.
      */
     public static round(party: Actor[], enemies: Actor[], controlled?: Actor, action?: any): any {
-        this.messages = [];
-        BattleRecorder.countRound();
-        const all: Actor[] = [...party, ...enemies].filter((a) => a.canFight() || a.mortallyWounded);
-        all.forEach((a) => { a.firstHitDone = false; a.deflectionUsed = false; });
-
-        const order: Actor[] = all
-            .map((a) => ({a, init: a.rollInitiative()}))
-            .sort((x, y) => y.init - x.init)
-            .map((o) => o.a);
-
-        for (const c of order) {
+        let out: any[] = [];
+        for (const c of this.beginRound(party, enemies)) {
             if (!c.alive) { continue; }
-            if (c.mortallyWounded) { this.resolveDeathSave(c); continue; }
-            if (!c.canFight()) { continue; }
-            const foes: Actor[] = party.indexOf(c) >= 0 ? enemies : party;
-            const allies: Actor[] = party.indexOf(c) >= 0 ? party : enemies;
-            const others: Actor[] = [...party, ...enemies].filter((a) => a !== c);
-            if (c === controlled && action) {
-                // Manual turn: apply the player's move + attack the same way an AI plan is applied.
-                this.applyPlan(c, {moveTo: action.moveTo, target: action.target, aimed: action.aimed, label: "manual"}, foes, others);
-                continue;
-            }
-            this.applyPlan(c, TacticalAI.plan(c, allies, foes), foes, others);
+            const manual = c === controlled && action ? action : undefined;
+            // newest turn first, matching the feed's newest-first ordering
+            out = this.takeTurn(c, party, enemies, manual).messages.concat(out);
         }
-        return this.messages.flat().reverse();
+        return out;
     }
 
     /** Apply a tactical plan: move (if any), then attack the chosen target. */
     private static applyPlan(self: Actor, plan: Plan, foes: Actor[], others: Actor[]): void {
         if (plan.moveTo) {
             const before: number = this.nearestFoeGap(self, foes);
+            const from: Point = {x: self.position.x, y: self.position.y};
             const moved: number = Battlefield.stepToward(self, plan.moveTo, self.runMeters(), others);
             if (moved >= 1) {
                 const after: number = this.nearestFoeGap(self, foes);
-                const verb: string = Battlefield.nearCover(self.position) ? "takes cover"
+                const inCover: boolean = Battlefield.nearCover(self.position);
+                this.events.push({kind: "move", actor: self, from,
+                    to: {x: self.position.x, y: self.position.y}, cover: inCover});
+                const verb: string = inCover ? "takes cover"
                     : after < before - 0.5 ? "advances" : after > before + 0.5 ? "falls back" : "repositions";
                 this.messages.push(new MessageStr(`${self.name} ${verb} (${Math.round(after)}m).`));
             }

@@ -9,7 +9,7 @@ import {Sidebar} from "./sidebar";
 import {Hud} from "./hud";
 import {ActorController} from "../actors/actorController";
 import {Combat} from "../interact/combat";
-import {Battlefield} from "../interact/battlefield";
+import {Battlefield, Point} from "../interact/battlefield";
 import {Creator} from "./creation/creator";
 import {CharacterCreation, CharacterSpec} from "../actors/resources/CharacterCreation";
 import {MobileTab, MobileTabs} from "./mobileTabs";
@@ -26,6 +26,7 @@ import {SectorClearView} from "./run/sectorClearView";
 import {MetaOverlay} from "./run/metaOverlay";
 import {Store} from "./storePanel/store";
 import {Downtime} from "./downtime/downtime";
+import {OrderCtx, PlaybackBundle} from "./combat/battleScene";
 
 /** Which run-loop screen is on top. "combat" falls through to the ops shell. */
 export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "end";
@@ -59,18 +60,37 @@ export interface InterfaceAppState {
     report: BattleReport | null;
     /** The crew's shared purse — every payday, hire and store buy runs through it. */
     crew: Crew;
+    /** Bumped when a new encounter starts — tells the 3D arena to build a fresh street. */
+    battleId: number;
+    /** The resolved turn currently being animated by the battle scene. */
+    playback: PlaybackBundle | null;
+    /** Order context while a manual squad member's turn waits for input. */
+    orders: OrderCtx | null;
+    /** Initiative queue: whose turn it is now ([0]) and who's coming up. */
+    turnOrder: Actor[];
 }
 
+/**
+ * Combat runs on a turn sequencer instead of a wall-clock interval: each unit's
+ * turn is resolved by the engine into an event script, animated by the battle
+ * scene, and only when the animation reports done does the next unit act.
+ * Manual squad members interrupt the flow with an orders phase (XCOM-style);
+ * auto mode (global or per-member) hands their turns to the tactical AI.
+ */
 export class App extends React.Component<{}, InterfaceAppState> {
 
     private logLength = 20;
-    private autoTimer: any = null;
+    private queue: Actor[] = [];             // initiative order, minus the acting unit
+    private pendingMsgs: any[] = [];         // feed lines held back until the animation lands
+    private playId = 0;
+    private turnTimer: number | null = null;
+    private viewPaused = false;              // combat hidden behind another panel — resume on return
 
     constructor(props: any) {
         super(props);
-        // Boot into character creation, pre-filled with a two-merc default squad
-        // (one-click Deploy still works). The specs also seed a valid party so the
-        // game state behind the creator is never empty.
+        // Boot into character creation, pre-filled with a ready-to-run merc
+        // (one-click Deploy still works). The spec also seeds a valid party so
+        // the game state behind the creator is never empty.
         const characterSpec = CharacterCreation.defaultSpec();
         const character = new Player(characterSpec);
         const party = [character];
@@ -95,11 +115,15 @@ export class App extends React.Component<{}, InterfaceAppState> {
             screen: "combat",
             report: null,
             crew: new Crew().activate(),
+            battleId: 1,
+            playback: null,
+            orders: null,
+            turnOrder: [],
         };
     }
 
     public override componentWillUnmount() {
-        this.stopAuto();
+        this.clearTurnTimer();
     }
 
     public override render() {
@@ -134,7 +158,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
                                onNewCharacter={this.openCreator}/>;
         }
         if (run && this.state.screen === "hire") {
-            return <MetaOverlay title={"☰ Fixer\u2019s Table"} onLeave={this.leaveMeta}>
+            return <MetaOverlay title={"☰ Fixer’s Table"} onLeave={this.leaveMeta}>
                 <HireBoard offers={this.state.offers} party={this.state.party}
                            funds={this.state.crew.funds} cap={RunController.SQUAD_CAP}
                            onHire={this.hireMerc}/>
@@ -173,8 +197,19 @@ export class App extends React.Component<{}, InterfaceAppState> {
                    party={this.state.party} enemies={this.state.currentEnemies}
                    view={this.state.activeMainPanel} screen={this.state.screen} run={this.state.run}
                    messages={this.combatController} onNotice={this.pushNotice}
+                   auto={this.state.auto}
+                   battleId={this.state.battleId}
+                   playback={this.state.playback}
+                   orders={this.state.orders}
+                   turnOrder={this.state.turnOrder}
                    onSelectAlly={this.getCharacter} onSelectEnemy={this.getEnemy}
-                   onGotoCombat={this.gotoCombat} onPickNode={this.enterNode}/>
+                   onGotoCombat={this.gotoCombat} onPickNode={this.enterNode}
+                   onPlaybackDone={this.onPlaybackDone}
+                   onPickMove={this.onPickMove} onClearMove={this.onClearMove}
+                   onPickTarget={this.onPickTarget}
+                   onToggleAim={this.onToggleAim}
+                   onExecute={this.executeOrders} onPass={this.passTurn}
+                   onToggleAuto={this.toggleAuto}/>
             <MobileTabs tab={this.state.mobileTab} more={this.state.mobileMore}
                         unread={this.state.unread}
                         onTab={this.selectMobileTab} onMore={this.toggleMore}/>
@@ -182,7 +217,9 @@ export class App extends React.Component<{}, InterfaceAppState> {
         </div>;
     }
 
-    private gotoCombat = () => this.setState({activeMainPanel: "Combat", mobileTab: "arena"});
+    private gotoCombat = () => {
+        this.setState({activeMainPanel: "Combat", mobileTab: "arena"}, this.resumeIfPaused);
+    };
 
     /** A panel wants a line in the feed — never a combat round. */
     private pushNotice = (msg: any) => this.setState((st) => ({
@@ -199,7 +236,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (tab === "arena") { next.activeMainPanel = "Combat"; }
         if (tab === "gear") { next.activeMainPanel = "Inventory"; }
         if (tab === "feed") { next.unread = 0; }
-        this.setState(next);
+        this.setState(next, this.resumeIfPaused);
     };
 
     private toggleMore = () => this.setState((s) => ({mobileMore: !s.mobileMore}));
@@ -210,7 +247,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     /** Build your character and hit the street. The crew gets hired on the way. */
     private deployCharacter = (spec: CharacterSpec) => {
-        this.stopAuto();
+        this.resetSequencer();
         const character = new Player(spec);
         // Never start alone: the fixer throws in a rookie with the job.
         const party = [character, new Merc(MercMarket.starter(1))];
@@ -224,13 +261,14 @@ export class App extends React.Component<{}, InterfaceAppState> {
             crew: new Crew().activate(), offers: [],
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
             messages: [{msg: `— ${character.name} hits the street with a rookie in tow —`} as any],
+            playback: null, orders: null, turnOrder: [],
         });
     };
 
     /** Player picked a node: fight it, or open its merchant / rest screen. */
     private enterNode = (node: RunNode) => {
         this.setState(RunController.enter(this.state, node, this.logLength) as any,
-            () => { if (this.state.screen === "combat") { this.startAuto(); } });
+            () => { if (this.state.screen === "combat") { this.beginBattle(); } });
     };
 
     /** Leave a merchant / rest node and advance the map. */
@@ -264,21 +302,27 @@ export class App extends React.Component<{}, InterfaceAppState> {
     /** Spend the one-per-run revive and resume the current fight. */
     private reviveRun = () => {
         const patch = RunController.revive(this.state, this.logLength);
-        if (patch) { this.setState(patch as any, this.startAuto); }
+        if (patch) { this.setState(patch as any, this.beginBattle); }
     };
 
-    private startAuto = () => {
-        if (this.autoTimer) { return; }
-        this.setState({auto: true});
-        this.autoTimer = setInterval(this.autoTick, 1200);
+    /** Re-open the creator (nav "New Character" / abandon). */
+    private openCreator = () => {
+        this.resetSequencer();
+        this.setState({creating: true, report: null, playback: null, orders: null, turnOrder: []});
     };
-
-    /** Re-open the creator (nav "New Squad" / abandon / new crew). */
-    private openCreator = () => { this.stopAuto(); this.setState({creating: true, report: null}); };
     private closeCreator = () => this.setState({creating: false});
 
     /** Flip a squad member between manual and AI control. */
-    private toggleActorAuto = (a: Actor) => { a.auto = !a.auto; this.forceUpdate(); };
+    private toggleActorAuto = (a: Actor) => {
+        a.auto = !a.auto;
+        // if that member was standing at the orders prompt, the AI takes over now
+        const o = this.state.orders;
+        if (a.auto && o && o.actor === a) {
+            this.setState({orders: null}, () => this.resolveTurn(a));
+        } else {
+            this.forceUpdate();
+        }
+    };
 
     /** Cycle an auto squad member's AI playstyle. */
     private cycleTemperament = (a: Actor) => {
@@ -288,18 +332,163 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     /**
-     * A resolved combat round (from auto-play or a manual action) — hand it to
-     * RunController, which advances the map, ends the run, or keeps the fight
-     * going, then pause auto once the fight leaves the combat screen.
+     * A resolved combat turn — hand its feed lines to RunController, which
+     * advances the map, ends the run, or keeps the fight going.
      */
     private combatController = (...messages: any): void => {
-        // Only a resolved combat round may drive the run machine. Panels (Quests,
+        // Only a resolved combat turn may drive the run machine. Panels (Quests,
         // Store) share this callback through Stage → MainPanel, and letting one of
         // their notices through after a fight was cleared sealed an already-sealed
         // ledger and stranded the run on an unrenderable "debrief" with no report.
         if (!this.state.run || this.state.screen !== "combat") { return; }
-        this.setState(RunController.step(this.state, messages.flat(), this.logLength) as any,
-            () => { if (this.state.screen !== "combat") { this.stopAuto(); } });
+        this.setState(RunController.step(this.state, messages.flat(), this.logLength) as any);
+    };
+
+    // =====================================================================
+    // Turn sequencer
+    // =====================================================================
+
+    private clearTurnTimer() {
+        if (this.turnTimer !== null) { window.clearTimeout(this.turnTimer); this.turnTimer = null; }
+    }
+
+    private resetSequencer() {
+        this.clearTurnTimer();
+        this.queue = [];
+        this.pendingMsgs = [];
+        this.viewPaused = false;
+    }
+
+    /** A combat node just opened: fresh street, fresh initiative, first turn. */
+    private beginBattle = () => {
+        this.resetSequencer();
+        this.setState({
+            battleId: this.state.battleId + 1,
+            playback: null, orders: null, turnOrder: [],
+            activeMainPanel: "Combat", mobileTab: "arena",
+        }, () => this.scheduleAdvance(500));
+    };
+
+    private scheduleAdvance(ms: number) {
+        this.clearTurnTimer();
+        this.turnTimer = window.setTimeout(this.advanceTurn, ms) as any;
+    }
+
+    private fightOver(): boolean {
+        return this.state.party.every((p) => !p.canFight())
+            || this.state.currentEnemies.every((e) => !e.canFight() && !e.mortallyWounded);
+    }
+
+    /** Hand the next unit its turn: orders prompt for manual members, AI otherwise. */
+    private advanceTurn = () => {
+        if (this.state.creating || this.state.screen !== "combat") { return; }
+        if (this.state.playback || this.state.orders) { return; }
+        if (!this.state.party.length || !this.state.currentEnemies.length) { return; }
+        if (this.fightOver()) { return; }
+        // combat is behind another panel — hold the fight until the player returns
+        if (this.state.activeMainPanel !== "Combat") { this.viewPaused = true; return; }
+
+        let unit: Actor | undefined;
+        for (let round = 0; round < 2 && !unit; round++) {
+            while (this.queue.length) {
+                const n = this.queue.shift()!;
+                if (n.alive && (n.canFight() || n.mortallyWounded)) { unit = n; break; }
+            }
+            if (!unit) {
+                this.queue = Combat.beginRound(this.state.party, this.state.currentEnemies);
+                if (!this.queue.length) { return; }
+            }
+        }
+        if (!unit) { return; }
+        this.setState({turnOrder: [unit, ...this.queue]});
+
+        const manual = this.state.party.indexOf(unit) >= 0 && !unit.auto && !this.state.auto && unit.canFight();
+        if (manual) {
+            const foes = this.state.currentEnemies.filter((e) => e.canFight());
+            const target = foes.length ? foes.reduce((a, b) =>
+                Battlefield.distance(unit!, a) <= Battlefield.distance(unit!, b) ? a : b) : null;
+            this.setState({
+                orders: {actor: unit, pendingMove: null, target, aimed: false},
+                activeChar: unit, activeEnemy: target || this.state.activeEnemy,
+            });
+        } else {
+            this.resolveTurn(unit);
+        }
+    };
+
+    /** Resolve one unit's turn through the engine and ship it to the animator. */
+    private resolveTurn = (unit: Actor, order?: {moveTo?: Point | undefined; target?: Actor | undefined; aimed?: boolean | undefined}) => {
+        const res = Combat.takeTurn(unit, this.state.party, this.state.currentEnemies, order);
+        this.pendingMsgs = res.messages;
+        this.playId += 1;
+        this.setState({playback: {id: this.playId, events: res.events}, orders: null});
+    };
+
+    /** The scene finished animating a turn: commit its feed lines, move on. */
+    private onPlaybackDone = (id: number) => {
+        if (id !== this.playId || !this.state.playback) { return; }
+        const msgs = this.pendingMsgs;
+        this.pendingMsgs = [];
+        const done = () => {
+            if (this.state.screen === "combat") {
+                this.scheduleAdvance(this.state.auto ? 160 : 300);
+            }
+        };
+        if (this.state.run && this.state.screen === "combat") {
+            const patch = RunController.step(this.state, msgs, this.logLength);
+            this.setState({...patch, playback: null} as any, done);
+        } else {
+            this.setState({
+                playback: null,
+                messages: [...msgs, ...this.state.messages].slice(0, this.logLength) as any,
+            }, done);
+        }
+    };
+
+    /** Combat resumes when the player returns to the arena panel. */
+    private resumeIfPaused = () => {
+        if (this.viewPaused && this.state.activeMainPanel === "Combat" && this.state.screen === "combat") {
+            this.viewPaused = false;
+            this.scheduleAdvance(250);
+        }
+    };
+
+    // ------------------------------------------------------------- orders --
+
+    private onPickMove = (p: Point) => {
+        const o = this.state.orders;
+        if (o) { this.setState({orders: {...o, pendingMove: p}}); }
+    };
+
+    private onClearMove = () => {
+        const o = this.state.orders;
+        if (o) { this.setState({orders: {...o, pendingMove: null}}); }
+    };
+
+    private onPickTarget = (a: Actor) => {
+        const o = this.state.orders;
+        if (o) { this.setState({orders: {...o, target: a}, activeEnemy: a}); }
+    };
+
+    private onToggleAim = () => {
+        const o = this.state.orders;
+        if (o) { this.setState({orders: {...o, aimed: !o.aimed}}); }
+    };
+
+    private executeOrders = () => {
+        const o = this.state.orders;
+        if (!o) { return; }
+        this.resolveTurn(o.actor, {
+            moveTo: o.pendingMove || undefined,
+            target: o.target && o.target.canFight() ? o.target : undefined,
+            aimed: o.aimed,
+        });
+    };
+
+    private passTurn = () => {
+        const o = this.state.orders;
+        if (!o) { return; }
+        this.resolveTurn(o.actor, {});
     };
 
     /**
@@ -312,36 +501,19 @@ export class App extends React.Component<{}, InterfaceAppState> {
             activeMainPanel: selection,
             mobileMore: false,
             mobileTab: selection === "Combat" ? "arena" : selection === "Inventory" ? "gear" : "panel",
+        }, this.resumeIfPaused);
+    };
+
+    /** Auto mode: the tactical AI plays the whole squad, back-to-back turns. */
+    private toggleAuto = () => {
+        const auto = !this.state.auto;
+        const o = this.state.orders;
+        this.setState({auto, activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false,
+            orders: auto ? null : o}, () => {
+            if (auto && o) { this.resolveTurn(o.actor); }       // the prompt-holder acts now
+            else if (auto) { this.resumeIfPaused(); }
         });
     };
-
-    /** Auto-combat: repeatedly resolve a full exchange between the active pair. */
-    private toggleAuto = () => {
-        if (this.state.auto) { this.stopAuto(); return; }
-        this.setState({auto: true, activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false});
-        this.autoTimer = setInterval(this.autoTick, 1200);
-    };
-
-    private stopAuto = () => {
-        if (this.autoTimer) { clearInterval(this.autoTimer); this.autoTimer = null; }
-        if (this.state.auto) { this.setState({auto: false}); }
-    };
-
-    private autoTick = () => {
-        // Auto only runs on the combat screen; a map/merchant/rest takeover pauses it.
-        if (this.state.run && this.state.screen !== "combat") { this.stopAuto(); return; }
-        const party = this.state.party;
-        const enemies = this.state.currentEnemies;
-        if (!party.length || !enemies.length) { return; }
-        // Whole squad down? In a run, resolve one more round so the run-over screen
-        // shows; in legacy endless mode there's nothing left to play.
-        if (party.every((p) => !p.canFight()) && !this.state.run) { this.stopAuto(); return; }
-        // Full smart round: both sides move + act via the tactical AI.
-        const msgs = Combat.autoRound(party, enemies);
-        this.combatController(msgs);
-    };
-
-    /** Fresh run — a new act with the same crew, back on the map. */
 
     /** Sign a candidate off the board. */
     private hireMerc = (id: string) => {
@@ -351,7 +523,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     /** Move the crew on to the next, harder sector. */
     private nextSector = () => {
-        this.stopAuto();
+        this.resetSequencer();
         this.setState(RunController.nextSector(this.state, this.logLength) as any);
     };
 
@@ -363,10 +535,9 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     /** A wipe is not the end of the character — start the next run with them. */
     private nextRun = () => {
-        this.stopAuto();
+        this.resetSequencer();
         this.setState(RunController.nextRun(this.state, this.logLength) as any);
     };
-
 
     private getCharacter = (actor: Actor) => {
         if (!actor) {
@@ -377,11 +548,14 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     private getEnemy = (actor: Actor) => {
-        if (!actor) {
-            this.setState({activeEnemy: this.state.currentEnemies[0]});
-        } else {
-            this.setState({activeEnemy: actor});
+        const chosen = actor || this.state.currentEnemies[0];
+        // during an orders phase, tapping a hostile anywhere retargets the order
+        const o = this.state.orders;
+        if (o && chosen && chosen.canFight()) {
+            this.setState({activeEnemy: chosen, orders: {...o, target: chosen}});
+            return;
         }
+        this.setState({activeEnemy: chosen});
     };
 
     /**

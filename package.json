@@ -10,7 +10,8 @@
     "build": "bun build ./src/ts/index.tsx --outfile dist/bundle.js --format=iife",
     "build:min": "bun build ./src/ts/index.tsx --outfile dist/bundle.js --format=iife --minify",
     "watch": "bun build ./src/ts/index.tsx --outfile dist/bundle.js --format=iife --watch",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "bun test tests"
   },
   "repository": {
     "type": "git",
