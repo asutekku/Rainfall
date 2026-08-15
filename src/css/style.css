@@ -802,4 +802,114 @@ progress::-moz-progress-bar { background:var(--rust); }
 .runEndActions .prim { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; }
 .runEndActions .prim:hover { background:#5cf0f5; }
 
+/* =====================================================================
+   after-action debrief — the screen between a finished fight and the map
+   ===================================================================== */
+.debrief { position:fixed; inset:0; z-index:47; overflow-y:auto; font-family:var(--mono);
+    background:radial-gradient(900px 600px at 50% 0%, #14141e, var(--bg)); }
+.debrief.win { background:radial-gradient(900px 600px at 50% 0%, #0f1f1c, var(--bg)); }
+.debriefCard { max-width:1000px; margin:0 auto; padding:26px 20px 34px; }
+
+.debriefHead { text-align:center; margin-bottom:18px; }
+.debriefTag { color:var(--dim); font-size:10px; letter-spacing:.22em; text-transform:uppercase; }
+.debriefHead h1 { margin:4px 0 2px; font-size:30px; letter-spacing:.08em; }
+.debrief.win h1 { color:var(--good); text-shadow:0 0 18px rgba(127,214,127,.45); }
+.debrief.lose h1 { color:var(--crit); text-shadow:0 0 18px rgba(224,83,63,.45); }
+.debriefSub { margin:0; color:var(--mid); font-size:12px; }
+
+.debriefTotals { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; margin-bottom:18px; }
+.debriefTotals span { display:flex; flex-direction:column; gap:3px; min-width:96px; padding:8px 16px;
+    background:var(--panel); border:1px solid var(--line); clip-path:var(--bevel); }
+.debriefTotals i { font-style:normal; color:var(--dim); font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
+.debriefTotals b { color:var(--cyan); font-size:17px; font-variant-numeric:tabular-nums; }
+
+.debriefCols { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+.debriefBlock h2 { margin:0 0 8px; color:var(--rust); font-size:11px; letter-spacing:.16em;
+    text-transform:uppercase; border-bottom:1px solid var(--line); padding-bottom:5px; }
+.debriefBlock h2 + ul + h2, .debriefBlock h2 + p + h2, .debriefBlock ul + h2, .debriefBlock p + h2,
+.debriefBlock button + h2 { margin-top:16px; }
+.debriefBlock ul { list-style:none; margin:0; padding:0; }
+.dbEmpty { margin:0 0 6px; color:var(--faint); font-size:11px; }
+
+/* squad performance */
+.dbMembers li { padding:9px 11px; margin-bottom:7px; background:var(--panel); border:1px solid var(--line); }
+.dbMember.down { border-color:rgba(224,83,63,.4); background:#170f11; }
+.dbWho { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.dbWho b { color:var(--ink); font-size:13px; }
+.dbRole { color:var(--dim); font-size:10px; letter-spacing:.06em; text-transform:uppercase; }
+.dbLevelUp { color:var(--bg); background:var(--warn); font-size:9px; font-weight:700; letter-spacing:.1em; padding:2px 6px; }
+.dbDown { color:var(--crit); font-size:9px; font-weight:700; letter-spacing:.1em; }
+.dbBars { display:grid; grid-template-columns:1fr auto 1fr auto; align-items:center; gap:7px; margin:8px 0 7px; }
+.dbBar { position:relative; display:flex; height:6px; background:var(--bg2); border:1px solid var(--line); overflow:hidden; }
+.dbBar i { display:block; height:100%; }
+.dbBar u { display:block; height:100%; text-decoration:none; }
+.dbBar.hp i { background:var(--good); }
+.dbBar.hp u { background:rgba(224,83,63,.55); }
+.dbBar.xp i { background:var(--cyanDim); }
+.dbBarVal { color:var(--mid); font-size:10px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.dbTallies { display:flex; flex-wrap:wrap; gap:4px 14px; }
+.dbTallies span { display:flex; align-items:baseline; gap:5px; }
+.dbTallies i { font-style:normal; color:var(--faint); font-size:9px; letter-spacing:.1em; text-transform:uppercase; }
+.dbTallies b { color:var(--mid); font-size:12px; font-variant-numeric:tabular-nums; }
+
+/* contacts */
+.dbHostile { display:flex; align-items:center; gap:8px; padding:5px 9px; margin-bottom:4px;
+    background:var(--panel); border:1px solid var(--line); font-size:11px; }
+.dbHostile.down { opacity:.62; }
+.dbHostile.down .dbHName { text-decoration:line-through; }
+.dbRank { color:var(--dim); font-size:9px; }
+.dbRank.rank-4, .dbRank.rank-5 { color:var(--rare); }
+.dbHName { color:var(--ink); }
+.dbHMeta { color:var(--dim); font-size:10px; }
+.dbHState { margin-left:auto; color:var(--crit); font-size:9px; letter-spacing:.1em; }
+.dbHostile.down .dbHState { color:var(--good); }
+
+/* salvage */
+.dbLoot { display:flex; align-items:center; gap:8px; padding:6px 9px; margin-bottom:5px;
+    background:var(--panel); border:1px solid var(--line); font-size:11px; }
+.dbLoot.rare { border-color:rgba(197,107,255,.45); }
+.dbLoot.taken { opacity:.55; }
+.dbLootIcon { color:var(--cyanDim); }
+.dbLootName { color:var(--ink); }
+.dbLoot.rare .dbLootName { color:var(--rare); }
+.dbLootDetail { color:var(--mid); font-size:10px; }
+.dbLootOwner { color:var(--faint); font-size:10px; }
+.dbLootActs { margin-left:auto; display:flex; gap:5px; }
+.dbLootActs button { font-family:var(--mono); font-size:10px; letter-spacing:.06em; padding:4px 9px; cursor:pointer;
+    color:var(--cyan); background:var(--panel2); border:1px solid var(--line2); }
+.dbLootActs button:hover { color:var(--bg); background:var(--cyan); border-color:var(--cyan); }
+.dbLootFate { margin-left:auto; color:var(--dim); font-size:9px; letter-spacing:.1em; }
+
+/* requisition */
+.dbGear { display:flex; align-items:center; gap:8px; padding:6px 9px; margin-bottom:5px;
+    background:var(--panel); border:1px solid var(--line); font-size:11px; }
+.dbGearWho { color:var(--mid); min-width:70px; }
+.dbGearSwap { color:var(--faint); }
+.dbGearSwap em { font-style:normal; color:var(--rust); }
+.dbGearSwap b { color:var(--ink); }
+.dbGearDetail { color:var(--mid); font-size:10px; }
+.dbGearDelta { margin-left:auto; color:var(--dim); font-variant-numeric:tabular-nums; }
+.dbGearDelta.up { color:var(--good); }
+.dbGearCost { color:var(--warn); font-size:10px; min-width:52px; text-align:right; }
+
+.dbKit { width:100%; font-family:var(--mono); font-size:11px; letter-spacing:.06em; padding:9px 12px; cursor:pointer;
+    color:var(--cyan); background:var(--panel); border:1px dashed var(--line2); }
+.dbKit:hover { color:var(--bg); background:var(--cyan); border-color:var(--cyan); }
+
+.debriefActions { display:flex; justify-content:center; gap:9px; margin-top:20px; }
+.debriefActions button { font-family:var(--mono); font-size:13px; padding:11px 22px; cursor:pointer;
+    color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
+.debriefActions button:hover { color:var(--ink); border-color:var(--cyanDim); }
+.debriefActions .prim { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; }
+.debriefActions .prim:hover { background:#5cf0f5; }
+
+@media (max-width: 860px) {
+    .debriefCols { grid-template-columns:1fr; }
+    .debriefCard { padding:18px 12px 28px; }
+    .debriefHead h1 { font-size:23px; }
+    .debriefTotals span { min-width:0; flex:1 1 30%; padding:7px 10px; }
+    .dbBars { grid-template-columns:1fr auto; }
+    .debriefActions { flex-direction:column; }
+}
+
 @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }

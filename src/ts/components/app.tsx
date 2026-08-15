@@ -16,12 +16,14 @@ import {MobileTab, MobileTabs} from "./mobileTabs";
 import {RunNode, RunState} from "../interact/runMap";
 import {RunController} from "../interact/runController";
 import {RunEndView} from "./run/runEndView";
+import {DebriefView} from "./run/debriefView";
+import {BattleReport} from "../interact/battleReport";
 import {MetaOverlay} from "./run/metaOverlay";
 import {Store} from "./storePanel/store";
 import {Downtime} from "./downtime/downtime";
 
 /** Which run-loop screen is on top. "combat" falls through to the ops shell. */
-export type RunScreen = "map" | "combat" | "merchant" | "rest" | "end";
+export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "end";
 
 export interface InterfaceAppState {
     activeMainPanel: string;
@@ -43,6 +45,8 @@ export interface InterfaceAppState {
     run: RunState | null;
     /** Which run-loop screen is on top. */
     screen: RunScreen;
+    /** The sealed after-action report while the debrief screen is up. */
+    report: BattleReport | null;
 }
 
 export class App extends React.Component<{}, InterfaceAppState> {
@@ -74,6 +78,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             unread: 0,
             run: null,
             screen: "combat",
+            report: null,
         };
     }
 
@@ -90,6 +95,12 @@ export class App extends React.Component<{}, InterfaceAppState> {
         // Run-loop takeovers that sit ABOVE the shell. The city map and combat
         // both render inside the shell (via Stage) so the nav / bottom bar stay.
         const run = this.state.run;
+        if (run && this.state.screen === "debrief" && this.state.report) {
+            return <DebriefView report={this.state.report} depth={run.depth}
+                                canRevive={run.outcome === "lost" && !run.reviveUsed}
+                                onClaim={this.claimLoot} onSell={this.sellLoot} onAutoKit={this.autoKit}
+                                onContinue={this.leaveDebrief} onRevive={this.reviveRun}/>;
+        }
         if (run && this.state.screen === "end") {
             const kills = this.state.party.reduce((n, p) => n + p.kills, 0);
             const eddies = this.state.party.reduce((n, p) => n + Math.floor(p.currency), 0);
@@ -172,7 +183,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         this.setState({
             squadSpecs: specs, party, currentEnemies: enemies,
             activeChar: party[0], activeEnemy: enemies[0],
-            creating: false, run: RunController.freshRun(), screen: "map",
+            creating: false, run: RunController.freshRun(), screen: "map", report: null,
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
             messages: [{msg: "— crew hits the street —"} as any],
         });
@@ -190,6 +201,28 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (patch) { this.setState(patch as any); }
     };
 
+    /** Debrief: equip a scavenged piece on the member who found it. */
+    private claimLoot = (id: string) => {
+        const report = this.state.report && RunController.claimLoot(this.state.report, id);
+        if (report) { this.setState({report}); }
+    };
+
+    /** Debrief: fence a scavenged piece for eddies. */
+    private sellLoot = (id: string) => {
+        const report = this.state.report && RunController.sellLoot(this.state.report, id);
+        if (report) { this.setState({report}); }
+    };
+
+    /** Debrief: let the fixer spend the payday on upgrades, on demand. */
+    private autoKit = () => {
+        if (this.state.report) { this.setState({report: RunController.autoKit(this.state, this.state.report)}); }
+    };
+
+    /** Leave the debrief: auto-kit whatever is left, then map / run-over screen. */
+    private leaveDebrief = () => {
+        this.setState(RunController.continueFromDebrief(this.state, this.logLength) as any);
+    };
+
     /** Spend the one-per-run revive and resume the current fight. */
     private reviveRun = () => {
         const patch = RunController.revive(this.state, this.logLength);
@@ -203,7 +236,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     /** Re-open the creator (nav "New Squad" / abandon / new crew). */
-    private openCreator = () => { this.stopAuto(); this.setState({creating: true, run: null, screen: "combat"}); };
+    private openCreator = () => { this.stopAuto(); this.setState({creating: true, run: null, screen: "combat", report: null}); };
     private closeCreator = () => this.setState({creating: false});
 
     /** Flip a squad member between manual and AI control. */
@@ -281,6 +314,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             activeEnemy: enemies[0],
             run: RunController.freshRun(),
             screen: "map",
+            report: null,
             messages: [{msg: "— new job, same crew —"} as any],
         });
     };

@@ -10,6 +10,7 @@ import {Check} from "./check";
 import {Battlefield} from "./battlefield";
 import {TacticalAI, Plan} from "./tacticalAI";
 import {Economy} from "./economy";
+import {BattleRecorder} from "./battleReport";
 
 const Log = en_US.Log;
 
@@ -58,10 +59,12 @@ export class Combat {
         this.stats.shots += 1; if (aimed) { this.stats.aimed += 1; }
         const targetOldHP: number = target.health;
         if (!this.didAttackHit(actor, target, distance, aimed)) {
+            BattleRecorder.countShot(actor, false);
             this.messages.push(new MessageStr(aimed ? 'MISS! (aimed)' : 'MISS!'));
             return;
         }
         this.stats.hits += 1;
+        BattleRecorder.countShot(actor, true);
         let damage: number = weapon.getDamage();
         if (damage > 0) {
             damage += this.spotWeakness(actor);   // Solo "Spot Weakness" (first hit only)
@@ -69,6 +72,7 @@ export class Combat {
         }
         const dealt: number = target.receiveDamage(damage, weapon.ap, aimed);
         this.stats.dmg += dealt;
+        BattleRecorder.countDamage(actor, target, dealt);
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
         if (aimed && dealt > 0) { this.messages.push(new MessageStr(`${actor.name} lands a head shot!`)); }
         this.registerIfDefeated(actor, target);
@@ -99,10 +103,12 @@ export class Combat {
         this.stats.shots += 1;
         const check = Check.resolve(actor, actor.attackBonus(actor.weapon), dv + cover);
         if (!check.success) {
+            BattleRecorder.countShot(actor, false);
             this.messages.push(new MessageStr('MISS!'));
             return;
         }
         this.stats.hits += 1;
+        BattleRecorder.countShot(actor, true);
         const maxMultiplier: number = actor.weapon.weaponClass === "rifle" ? 4 : 3;
         const multiplier: number = Math.max(1, Math.min(check.margin, maxMultiplier));
         const d1: number = Math.floor(Math.random() * 6) + 1;
@@ -114,6 +120,7 @@ export class Combat {
         const targetOldHP: number = target.health;
         const dealt: number = target.receiveDamage(damage, actor.weapon.ap);
         this.stats.dmg += dealt;
+        BattleRecorder.countDamage(actor, target, dealt);
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
         this.registerIfDefeated(actor, target);
     }
@@ -170,6 +177,7 @@ export class Combat {
         if (!target.canFight()) {
             actor.kills += 1;
             actor.experience += target.experience;
+            BattleRecorder.countXp(actor, target.experience);
             const eddies: number = Economy.loot(actor, target);   // eddies fund the gear economy
             if (actor.experience >= actor.maxExperience) {
                 Combat.gainLevel(actor, target);
@@ -224,6 +232,7 @@ export class Combat {
      */
     public static round(party: Actor[], enemies: Actor[], controlled?: Actor, action?: any): any {
         this.messages = [];
+        BattleRecorder.countRound();
         const all: Actor[] = [...party, ...enemies].filter((a) => a.canFight() || a.mortallyWounded);
         all.forEach((a) => { a.firstHitDone = false; a.deflectionUsed = false; });
 

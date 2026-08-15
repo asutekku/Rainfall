@@ -2,6 +2,7 @@ import {Actor} from "../actors/Actor";
 import {Armor} from "../items/Armor";
 import Equipment from "../items/Equipment";
 import {Weapon} from "../items/Weapon";
+import {BattleRecorder, GearChange} from "./battleReport";
 
 const WEAPONS: Weapon[] = Equipment.weapons;
 
@@ -50,20 +51,28 @@ export class Economy {
             killer.inventory.weapons.push(w);
             // Boss-tier hardware: armour-piercing, high availability, or off an elite foe.
             const rare = w.ap || w.rarity >= 4 || rank >= 4;
+            BattleRecorder.countSalvage(killer, w, "weapon", this.weaponDetail(w), this.weaponValue(w), rare);
             msgs.push(rare
                 ? `★ ${killer.name} scavenges a rare ${w.name}!`
                 : `${killer.name} scavenges a ${w.name}.`);
         }
         const worn = victim.equipment.upper;
         if (worn && worn.stoppingPower > 0 && Math.random() < chance) {
-            killer.inventory.armor.push(new Armor("upper", worn.name, "", 1, worn.stoppingPower, worn.cost || 0, ""));
+            const a = new Armor("upper", worn.name, "", 1, worn.stoppingPower, worn.cost || 0, "");
+            killer.inventory.armor.push(a);
             const rare = worn.stoppingPower >= 15 || rank >= 4;   // Flak / MetalGear tier
+            BattleRecorder.countSalvage(killer, a, "armor", `SP ${a.stoppingPower}`, a.stoppingPower, rare);
             msgs.push(rare
                 ? `★ ${killer.name} scavenges rare ${worn.name} (SP ${worn.stoppingPower})!`
                 : `${killer.name} scavenges ${worn.name} (SP ${worn.stoppingPower}).`);
         }
         this.prune(killer);
         return msgs;
+    }
+
+    /** Human-readable damage line for a weapon: "3d6+2 AP". */
+    public static weaponDetail(w: Weapon): string {
+        return `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}${w.autofire ? " AUTO" : ""}`;
     }
 
     /** Best scavenged weapon worth equipping: same-class edge, or a big cross-class jump. */
@@ -138,24 +147,21 @@ export class Economy {
 
     /**
      * Equip the best available weapon + armour, preferring free scavenged gear
-     * from inventory over buying. Returns purchase/equip notes.
+     * from inventory over buying. Returns the loadout changes it made (the
+     * debrief renders them; the feed prints `describe()` of each).
      */
-    public static autoEquip(actor: Actor): string[] {
-        const msgs: string[] = [];
+    public static autoEquip(actor: Actor): GearChange[] {
+        const changes: GearChange[] = [];
 
         // Weapon: scavenged (free) beats a store buy of equal-or-lower value.
         const invW = this.bestInventoryWeapon(actor);
         const buyW = this.bestWeaponUpgrade(actor);
         if (invW && (!buyW || this.weaponValue(invW.w) >= this.weaponValue(buyW))) {
             actor.inventory.weapons.splice(invW.idx, 1);
-            actor.weapon = invW.w;
-            actor.weapon.equipped = true;
-            msgs.push(`${actor.name} equips a scavenged ${actor.weapon.name}.`);
+            changes.push(this.equipWeapon(actor, invW.w, "salvage", 0));
         } else if (buyW) {
             actor.currency -= buyW.cost;
-            actor.weapon = buyW.clone();
-            actor.weapon.equipped = true;
-            msgs.push(`${actor.name} kits up: ${buyW.name} (${buyW.diceThrows}d6${buyW.damage ? "+" + buyW.damage : ""}).`);
+            changes.push(this.equipWeapon(actor, buyW.clone(), "bought", buyW.cost));
         }
 
         // Armour: scavenged SP (free) beats an affordable store tier of equal-or-lower SP.
@@ -163,13 +169,56 @@ export class Economy {
         const buyA = this.bestArmorUpgrade(actor);
         if (invA && (!buyA || invA.a.stoppingPower >= buyA.sp)) {
             actor.inventory.armor.splice(invA.idx, 1);
-            actor.equipment.upper = invA.a;
-            msgs.push(`${actor.name} dons scavenged ${invA.a.name} (SP ${invA.a.stoppingPower}).`);
+            changes.push(this.equipArmor(actor, invA.a, "salvage", 0));
         } else if (buyA) {
             actor.currency -= buyA.cost;
-            actor.equipment.upper = new Armor("upper", buyA.name, "", 1, buyA.sp, buyA.cost, "");
-            msgs.push(`${actor.name} suits up: ${buyA.name} (SP ${buyA.sp}).`);
+            changes.push(this.equipArmor(actor, new Armor("upper", buyA.name, "", 1, buyA.sp, buyA.cost, ""),
+                "bought", buyA.cost));
         }
-        return msgs;
+        return changes;
+    }
+
+    /** Put a weapon in an actor's hands, reporting what it replaced. */
+    public static equipWeapon(actor: Actor, weapon: Weapon, source: "salvage" | "bought", cost: number): GearChange {
+        const old = actor.weapon;
+        actor.weapon = weapon;
+        actor.weapon.equipped = true;
+        return {
+            actorName: actor.name, slot: "weapon", source,
+            from: old ? old.name : "—", to: weapon.name,
+            detail: this.weaponDetail(weapon),
+            delta: Math.round(this.weaponValue(weapon) - (old ? this.weaponValue(old) : 0)),
+            cost,
+        };
+    }
+
+    /** Strap armour onto an actor's torso slot, reporting what it replaced. */
+    public static equipArmor(actor: Actor, armor: Armor, source: "salvage" | "bought", cost: number): GearChange {
+        const old = actor.equipment.upper;
+        actor.equipment.upper = armor;
+        return {
+            actorName: actor.name, slot: "armor", source,
+            from: old ? old.name : "—", to: armor.name,
+            detail: `SP ${armor.stoppingPower}`,
+            delta: armor.stoppingPower - (old ? old.stoppingPower : 0),
+            cost,
+        };
+    }
+
+    /** What the fence pays for a piece the squad doesn't want: half sticker price. */
+    public static sellValue(cost: number): number {
+        return Math.max(5, Math.floor((cost || 0) / 2));
+    }
+
+    /** Feed line for a loadout change. */
+    public static describe(c: GearChange): string {
+        if (c.source === "salvage") {
+            return c.slot === "weapon"
+                ? `${c.actorName} equips a scavenged ${c.to}.`
+                : `${c.actorName} dons scavenged ${c.to} (${c.detail}).`;
+        }
+        return c.slot === "weapon"
+            ? `${c.actorName} kits up: ${c.to} (${c.detail}).`
+            : `${c.actorName} suits up: ${c.to} (${c.detail}).`;
     }
 }
