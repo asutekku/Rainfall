@@ -1,5 +1,6 @@
 import {Actor} from '../actors/Actor';
 import {Player} from '../actors/player';
+import {Logger} from '../utils/Logger';
 import {State} from '../utils/State';
 import {Utils} from '../utils/utils';
 import {MessageCombat} from './messageSchema';
@@ -13,8 +14,9 @@ export class Messages {
         Utils.span(`(${target.health + actor.weapon.getDamage() * 2} => 0)`, 'damageGreen');
     public static getHealth = (actor: Actor, target: Actor): string =>
         actor.health <= 0 ? Messages.damageCrit0(actor, target) : Messages.damageCrit(actor, target);
-    public static actorName = (actor: Actor): string => Utils.span(`[${actor.name}]`, `${actor.role.name.toLowerCase()}Color`);
-    public static damageType = (actor: Actor): string => (actor.weapon.weaponType === 'Melee' ? 'hit' : 'shot');
+    public static actorName = (actor: Actor): string =>
+        actor && actor.role ? Utils.span(`[${actor.name}]`, `${actor.role.name.toLowerCase()}Color`) : "";
+    public static damageType = (actor: Actor): string => (actor.weapon.weaponClass === 'melee' ? 'hit' : 'shot');
     public static causedDamage = (actor: Actor): string => Utils.span(actor.weapon.getDamage().toString(), 'hitRed');
     public static getPron = (actor: Actor) => ({
         pronounP: actor.gender === 'Female' ? 'her' : 'his',
@@ -61,7 +63,7 @@ export class Messages {
         const targetName: string = Utils.span(`[${target.name}]`, `${target.role.name.toLowerCase()}Color`);
         switch (Case) {
             case 'distance':
-                Utils.printLine(
+                Logger.log(
                     `The distance between you and ${targetName} is ${Math.floor(
                         Utils.distance(actor.position, target.position),
                     )}m.`,
@@ -82,14 +84,14 @@ export class Messages {
             v = Messages.getCombatStrings(State.player!, State.currentEnemy!);
         }
         if (!msgCase) {
-            Utils.printLine(Messages.fillTemplate(msg, v));
+            Logger.log(Messages.fillTemplate(msg, v));
         } else {
             switch (msgCase) {
                 case 'combat':
                     v = Messages.getCombatStrings(State.player!, State.currentEnemy!);
                     break;
             }
-            Utils.printLine(Messages.fillTemplate(msg, v));
+            Logger.log(Messages.fillTemplate(msg, v));
         }
     };
 

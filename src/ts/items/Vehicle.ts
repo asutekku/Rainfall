@@ -2,20 +2,44 @@ import {Actor} from "../actors/Actor";
 import {GameObject} from "./GameObject";
 import {ObjectPosition} from "../utils/ObjectPosition";
 
-export class Vehicle extends GameObject {
-    private name: string;
-    private price: number;
-    private health: number;
-    private maxSpeed: number;
-    private driver?: Actor;
-    private passengers: Actor[];
+export interface VehicleConfig {
+    name: string;
+    cost: number;
+    sdp: number;       // Structural Damage Points (RED)
+    sp: number;        // stopping power of the chassis
+    speed: number;     // top speed (used as a chase modifier)
+    ramDamage: number; // d6 of ramming damage
+    seats: number;
+}
 
-    constructor(name: string, price: number, health: number, maxSpeed: number) {
+export class Vehicle extends GameObject {
+    public name: string;
+    public cost: number;
+    public sdp: number;
+    public maxSdp: number;
+    public sp: number;
+    public speed: number;
+    public ramDamage: number;
+    public seats: number;
+    public driver: Actor | null;
+    public passengers: Actor[];
+
+    constructor(cfg: VehicleConfig) {
         super(new ObjectPosition(0, 0, 0));
-        this.name = name;
-        this.price = price;
-        this.health = health;
-        this.maxSpeed = maxSpeed;
+        this.name = cfg.name;
+        this.cost = cfg.cost;
+        this.sdp = cfg.sdp;
+        this.maxSdp = cfg.sdp;
+        this.sp = cfg.sp;
+        this.speed = cfg.speed;
+        this.ramDamage = cfg.ramDamage;
+        this.seats = cfg.seats;
+        this.driver = null;
         this.passengers = [];
+    }
+
+    /** RED: a vehicle with 0 SDP is Destroyed and can no longer move. */
+    public isDestroyed(): boolean {
+        return this.sdp <= 0;
     }
 }

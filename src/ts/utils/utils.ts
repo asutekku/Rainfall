@@ -1,23 +1,12 @@
 import {ObjectPosition} from "./ObjectPosition";
 
-let spanId: number = 0;
-let spanIdToRemove: number = 1;
-
+/**
+ * Pure, DOM-free helpers usable in any environment (browser, Node, tests).
+ * DOM/localStorage helpers live in ./Dom, message logging in ./Logger.
+ */
 export class Utils {
-    public static l(what: string): HTMLElement | null {
-        return document.getElementById(what);
-    }
-
-    public static create(what: string): HTMLElement | null {
-        return document.createElement(what);
-    }
-
     public static pickRandom(arr: any[]): any {
         return arr[Math.floor(Math.random() * arr.length)];
-    }
-
-    public static save(what: string, string: string): void {
-        return localStorage.setItem(what, string);
     }
 
     public static colorize(what: string): string {
@@ -29,27 +18,16 @@ export class Utils {
         return `<span style="color:${randomColor}">${what}</span>`;
     }
 
-    public static printLine(line: string): void {
-        spanId += 1;
-        const node = document.createElement("span");
-        const content = document.getElementById("actions")!;
-        node.id = "message_" + spanId;
-        node.classList.add("actionMessage");
-        node.innerHTML = `<span class="messageArrow">></span>${line}<br>`;
-        content.insertBefore(node, content.childNodes[0]);
-        if (content.childElementCount >= 50) {
-            const oldNode = document.getElementById("message_" + spanIdToRemove)!;
-            oldNode.remove();
-            spanIdToRemove += 1;
-        }
-    }
-
     public static span(line: string, spanClass?: string): string {
         return `<span class="${spanClass}">${line}</span>`;
     }
 
     public static dice(times: number, sides: number): number {
-        return (Math.floor(Math.random() * sides) + 1) * times;
+        let total = 0;
+        for (let i = 0; i < times; i++) {
+            total += Math.floor(Math.random() * sides) + 1;
+        }
+        return total;
     }
 
     public static chance(what: number): boolean {

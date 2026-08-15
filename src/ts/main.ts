@@ -2,8 +2,8 @@ import en_US from "../lang/en_US";
 import {Enemy} from "./actors/Enemy";
 import {Player} from "./actors/player";
 import {Messages} from "./interact/messages";
+import {Dom} from "./utils/Dom";
 import {State} from "./utils/State";
-import {Utils} from "./utils/utils";
 
 export class Rainfall {
     public static main(): void {
@@ -15,7 +15,7 @@ export class Rainfall {
         let deadMessageSent = false;
         // UI.initMap();
 
-        Utils.l("hitButton")!.onclick = () => {
+        Dom.l("hitButton")!.onclick = () => {
             if (State.player!.isAlive()) {
                 //Combat.basicAction(State.player!, State.currentEnemy!);
             } else if (deadMessageSent === false) {
@@ -26,7 +26,7 @@ export class Rainfall {
 
         // Functionality for the autoplay (because no one likes to click away)
         let running = false;
-        Utils.l("autoButton")!.onclick = () => {
+        Dom.l("autoButton")!.onclick = () => {
             let int: any;
             if (!running) {
                 running = true;

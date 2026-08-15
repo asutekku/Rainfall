@@ -6,6 +6,7 @@ export class Armor extends Item {
     public set: string;
     public level: number;
     public stoppingPower: number;
+    public maxStoppingPower: number;
     public rarity: number;
     public equipped: boolean;
     public position: ObjectPosition;
@@ -25,6 +26,7 @@ export class Armor extends Item {
         this.set = set;
         this.level = level;
         this.stoppingPower = stoppingPower;
+        this.maxStoppingPower = stoppingPower;
         this.rarity = 0;
         this.equipped = false;
     }

@@ -1,58 +1,69 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
-import {ProgressBar} from "../general/progressBar";
+import {Bar} from "../general/bar";
 
 export interface CharCompProps {
     actor: Actor;
     friendly: boolean;
     update: any;
     selected: string;
+    onToggleAuto?: (a: Actor) => void;
+    onCycleTemperament?: (a: Actor) => void;
 }
 
-interface CharCompState {
-    actor: Actor;
-    active: boolean;
-    friendly: boolean;
-}
+const TEMPER: { [k: string]: [string, string] } = {
+    aggressive: ["AGGRO", "t-aggro"], berserker: ["RUSH", "t-rush"], flanker: ["FLANK", "t-flank"],
+    camper: ["CAMP", "t-camp"], balanced: ["STEADY", "t-steady"],
+};
 
-export class CharacterComponent extends React.Component<CharCompProps, CharCompState> {
+export class CharacterComponent extends React.Component<CharCompProps, {}> {
 
-    public static getTarget(friendly: boolean, active: boolean) {
-        if (!friendly && active) {
-            return <span className={"itemContainer-bottom-right"}>{`Target`}</span>;
-        }
+    private badge(a: Actor) {
+        if (!a.canFight() || a.mortallyWounded) { return <span className={"badge bad"}>DOWN</span>; }
+        if (a.isSeriouslyWounded()) { return <span className={"badge warn"}>WND</span>; }
+        if (a.isCyberpsycho && a.isCyberpsycho()) { return <span className={"badge bad"}>PSY</span>; }
+        return null;
     }
 
-    constructor(props: CharCompProps) {
-        super(props);
-        this.state = {actor: this.props.actor, active: false, friendly: this.props.friendly};
+    private controls(a: Actor) {
+        if (!this.props.friendly || !this.props.onToggleAuto) { return null; }
+        const temper = TEMPER[a.temperament] || TEMPER.balanced;
+        return (
+            <span className={"pcCtl"}>
+                <span className={"autoChip" + (a.auto ? " on" : "")}
+                      title={"Toggle AI control"}
+                      onClick={(e) => { e.stopPropagation(); this.props.onToggleAuto!(a); }}>
+                    {a.auto ? "AUTO" : "MANUAL"}
+                </span>
+                {a.auto && (
+                    <span className={"temp " + temper[1]} title={"Click to change AI playstyle"}
+                          onClick={(e) => { e.stopPropagation(); this.props.onCycleTemperament!(a); }}>
+                        {temper[0]}
+                    </span>
+                )}
+            </span>);
     }
-
-    public handleClick = () => {
-        const state = !this.state.active;
-        this.setState({active: state});
-    };
 
     public render() {
+        const a = this.props.actor;
+        const selected = a.name === this.props.selected;
         return (
-            <div
-                className={this.state.actor.name === this.props.selected ? 'itemContainer-100 itemContainer-active' : 'itemContainer-100'}
-                onClick={() => {
-                    this.handleClick();
-                    return this.props.update(this.props.actor);
-                }}>
-                <div className={'itemContainerRow-top'}>
-                    <span className={"itemContainer-top-left"}>{this.props.actor.name}</span>
-                    <span className={"itemContainer-top-right"}>{`Lvl: ${this.props.actor.level}`}</span>
+            <div className={selected ? "pc on" : "pc"} onClick={() => this.props.update(a)}>
+                <img src={a.role.portrait} className={"pf"} alt={a.role.name}/>
+                <div className={"pcx"}>
+                    <div className={"pcn"}><b>{a.name}</b><span>Lvl {a.level}</span></div>
+                    <div className={"pcr"}>
+                        {a.role.name}
+                        {this.badge(a)}
+                        {!this.props.friendly && selected ? <span className={"badge tgt"}>TARGET</span> : null}
+                        {this.controls(a)}
+                    </div>
+                    <Bar value={a.health} max={a.maxHealth} kind={"hp"} showText={false}/>
+                    <div className={"pcGear"}>
+                        <span>{a.weapon.name} · {a.weapon.diceThrows}d6{a.weapon.damage ? "+" + a.weapon.damage : ""}{a.weapon.ap ? " AP" : ""}</span>
+                        <span className={"gearSp"}>SP {a.equipment.upper ? a.equipment.upper.stoppingPower : 0}</span>
+                    </div>
                 </div>
-                <div className={"itemContainerRow-middle"}>
-                    <span className={"itemContainer-middle"}>{`Role: ${this.props.actor.role.name}`}</span>
-                </div>
-                <div className={'itemContainerRow-bottom'}>
-                    <span className={"itemContainer-bottom-left"}>{`Weapon: ${this.props.actor.weapon.name}`}</span>
-                    {CharacterComponent.getTarget(this.props.friendly, this.state.actor.name === this.props.selected)}
-                </div>
-                <ProgressBar title={'Health'} value={this.props.actor.health} max={this.props.actor.maxHealth}/>
             </div>
         );
     }
