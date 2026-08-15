@@ -7,6 +7,7 @@ interface SidebarProps {
     onAuto: any;
     onRestart: any;
     onRespawn: any;
+    onCreate: any;
 }
 
 // Panel-switching views (glyph + label; label doubles as tooltip / accessible name).
@@ -38,6 +39,7 @@ export class Sidebar extends React.Component<SidebarProps, {}> {
                 <button title={this.props.auto ? "Auto: on" : "Auto"}
                         className={this.props.auto ? "act-on" : ""}
                         onClick={this.props.onAuto}>▸</button>
+                <button title={"New Squad"} onClick={this.props.onCreate}>✎</button>
                 <button title={"Respawn"} onClick={this.props.onRespawn}>✚</button>
                 <button title={"Restart"} onClick={this.props.onRestart}>⟳</button>
             </nav>);
