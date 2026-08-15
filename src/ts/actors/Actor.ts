@@ -76,7 +76,7 @@ export class Actor extends GameObject {
     public lifepath: Lifepath;
     public maxHealth: number;
     public maxExperience: number;
-    private skills: {
+    protected skills: {
         special: {
             authority: number;
             charismaticLeadership: number;
@@ -417,6 +417,24 @@ export class Actor extends GameObject {
         this.maxHealth += Math.floor(Math.pow(this.level, 1.5));
         // Only the ceiling rises; current HP is recovered by resting. This keeps a
         // mid-fight level-up from restoring a combatant (no more enemy self-heals).
+        this.onLevelUp();
+    }
+
+    /** Hook for spending RED Improvement Points on level-up (players override). */
+    public onLevelUp(): void { /* no-op for generic actors */ }
+
+    /** The ref-skill key backing the equipped weapon (for training it up). */
+    public weaponSkillKey(): string {
+        switch (this.weapon.skill) {
+            case "Handgun": return "handgun";
+            case "Shoulder Arms": return "rifle";
+            case "Heavy Weapons": return "heavyWeapons";
+            case "Melee Weapon": return "melee";
+            case "Brawling": return "brawling";
+            case "Archery": return "archery";
+            case "Thrown": return "athletics";
+            default: return "handgun";
+        }
     }
 
     /** Truly dead (a failed Death Save or an instant kill). */

@@ -57,4 +57,30 @@ export class Player extends Actor {
         this.vehicle = GetItem.vehicle("CityCar");
         this.currency = 1000; // starting eddies to cover early cost of living
     }
+
+    /**
+     * RED Improvement Points on level-up: a Player trains toward being a better
+     * fighter so leveling scales offence and defence, not just HP.
+     * - +1 to the equipped weapon's skill each level (cap 10)
+     * - +1 Evasion every other level (cap 8)
+     * - +1 to a rotating core stat every third level (cap 8)
+     * - HP grows with any BODY/WILL gain, per the RED HP formula
+     */
+    public onLevelUp(): void {
+        const redHP = (): number => 10 + 5 * Math.ceil((this.stats.bt + this.stats.will) / 2);
+        const hpBefore = redHP();
+
+        const r: any = this.skills.ref;
+        const key = this.weaponSkillKey();
+        if (r[key] < 10) { r[key] += 1; }
+        if (this.level % 2 === 0 && r.dodge < 8) { r.dodge += 1; }
+        if (this.level % 3 === 0) {
+            const order = ["ref", "dex", "bt", "will", "cl"];
+            const stat = order[((this.level / 3) | 0) % order.length];
+            if ((this.stats as any)[stat] < 8) { (this.stats as any)[stat] += 1; }
+        }
+
+        const gain = redHP() - hpBefore;   // HP from any BODY/WILL increase this level
+        if (gain > 0) { this.maxHealth += gain; this.health += gain; }
+    }
 }
