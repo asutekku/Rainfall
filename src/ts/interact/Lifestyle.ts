@@ -20,7 +20,7 @@ const TRAUMA_TEAM_UPKEEP: number = 100;
 
 export class Lifestyle {
     public static tier(key: string): HousingTier {
-        return HOUSING[key] || HOUSING.Streets;
+        return HOUSING[key] || HOUSING["Streets"]!;
     }
 
     /** Extra HP healed by resting in the actor's current housing. */

@@ -69,11 +69,11 @@ export class GetItem {
     }
 
     public static program(name: string): Program {
-        return new Program(programData[name]);
+        return new Program(programData[name]!);
     }
 
     public static vehicle(name: string): Vehicle {
-        return new Vehicle(vehicleData[name]);
+        return new Vehicle(vehicleData[name]!);
     }
 
     public static item() {
@@ -98,7 +98,7 @@ export class GetItem {
     }
 
     public static addItemToInventory(item: Item | Armor | Weapon | Medical, actor: Actor) {
-        actor.inventory[GetItem.inventoryBucket(item)].push(item);
+        actor.inventory[GetItem.inventoryBucket(item)]!.push(item);
     }
 
     /**

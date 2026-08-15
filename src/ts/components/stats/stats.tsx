@@ -38,7 +38,7 @@ export class Character extends React.Component<StatProps, StatState> {
         this.setState({selection});
     };
 
-    public render() {
+    public override render() {
         return (
             <div className={"itemCollection"}>
                 <div className={"itemCollectionContainer"}>

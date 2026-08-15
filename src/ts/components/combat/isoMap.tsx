@@ -18,8 +18,8 @@ export interface IsoMapProps {
     mini?: boolean;
     onSelect?: (a: Actor) => void;
     floaters?: Floater[];      // shown over the active enemy token (full map only)
-    onPick?: (p: Point) => void;   // arena click -> world point (move targeting)
-    pending?: Point;               // pending move destination marker
+    onPick?: ((p: Point) => void) | undefined;   // arena click -> world point (move targeting)
+    pending?: Point | undefined;               // pending move destination marker
 }
 
 interface Unit { actor: Actor; kind: string; }
@@ -48,7 +48,7 @@ export class IsoMap extends React.Component<IsoMapProps, {}> {
         const glyph = foe ? "✦" : u.kind === "you" ? "◈" : "◇";
         // temperament tag: foes always, allies only when on auto
         const showTemper = foe || a.auto;
-        const temper = TEMPER[a.temperament] || TEMPER.balanced;
+        const temper = TEMPER[a.temperament] || TEMPER["balanced"]!;
         return (
             <button key={u.kind + a.name}
                     className={"u " + u.kind + (active ? " on" : "") + (a.canFight() ? "" : " down")}
@@ -96,7 +96,7 @@ export class IsoMap extends React.Component<IsoMapProps, {}> {
         });
     }
 
-    public render() {
+    public override render() {
         const picking = !!this.props.onPick;
         return (
             <div className={"iso" + (this.props.mini ? " mini" : " full") + (picking ? " picking" : "")}

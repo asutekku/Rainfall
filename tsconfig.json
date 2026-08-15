@@ -1,17 +1,32 @@
 {
   "compilerOptions": {
     "outDir": "./build",
-    "module": "amd",
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "target": "es6",
     "lib": [
       "es2017",
-      "dom"
+      "dom",
+      "dom.iterable"
     ],
-    "allowJs": true,
-    "target": "es6",
-    "strict": true,
     "jsx": "react",
-    "moduleResolution": "node",
-    "noImplicitAny": true
+    "allowJs": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+
+    "strict": true,
+    "noImplicitAny": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "noUnusedLocals": true,
+    "noUnusedParameters": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noPropertyAccessFromIndexSignature": true,
+    "allowUnreachableCode": false,
+    "allowUnusedLabels": false
   },
   "include": [
     "./src/**/*",

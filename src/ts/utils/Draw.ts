@@ -3,8 +3,8 @@ export class Draw {
         const ctx = context;
         ctx.strokeStyle = color;
         ctx.beginPath();
-        ctx.moveTo(start[0], start[1]);
-        ctx.lineTo(end[0], end[1]);
+        ctx.moveTo(start[0]!, start[1]!);
+        ctx.lineTo(end[0]!, end[1]!);
         ctx.stroke();
     }
 

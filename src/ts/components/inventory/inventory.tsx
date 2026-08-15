@@ -21,7 +21,7 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
         this.setState({activeInventory: selection});
     };
 
-    public render() {
+    public override render() {
         return (
             <div className={'itemCollection'}>
                 <div className={'itemCollectionContainer'}>

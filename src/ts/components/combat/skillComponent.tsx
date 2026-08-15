@@ -21,7 +21,7 @@ export class SkillComponent extends React.Component<SkillProps, SkillState> {
         this.state = {active: false};
     }
 
-    public render() {
+    public override render() {
         return (
             <div className={'itemContainer-100'} onClick={this.handleClick}>
                 <div className={'itemContainerRow-top'}>

@@ -19,7 +19,7 @@ export class Hud extends React.Component<HudProps, HudState> {
         this.lastEddies = props.actor ? props.actor.currency : -1;
     }
 
-    public componentDidUpdate() {
+    public override componentDidUpdate() {
         const cur = this.props.actor ? this.props.actor.currency : 0;
         if (this.lastEddies >= 0 && cur > this.lastEddies) {
             const gain = cur - this.lastEddies;
@@ -30,7 +30,7 @@ export class Hud extends React.Component<HudProps, HudState> {
         this.lastEddies = cur;
     }
 
-    public componentWillUnmount() { if (this.timer) { clearTimeout(this.timer); } }
+    public override componentWillUnmount() { if (this.timer) { clearTimeout(this.timer); } }
 
     private mini(label: string, value: number, max: number, fill: string) {
         const pct = Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100));
@@ -44,7 +44,7 @@ export class Hud extends React.Component<HudProps, HudState> {
             </span>);
     }
 
-    public render() {
+    public override render() {
         const a = this.props.actor;
         if (!a) { return null; }
         const condition = a.mortallyWounded ? "MORTAL" : a.isSeriouslyWounded() ? "WOUNDED" : "OK";

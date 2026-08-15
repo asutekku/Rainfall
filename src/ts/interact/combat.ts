@@ -21,7 +21,7 @@ export class Combat {
      * Initiative decides who acts first; a Mortally Wounded combatant makes a
      * Death Save instead of acting; otherwise it attacks its foe.
      */
-    public static basicAction(actor: Actor, target: Actor, skill: Skill): any {
+    public static basicAction(actor: Actor, target: Actor, _skill: Skill): any {
         this.messages = [];
         if (!actor.canFight() && !actor.mortallyWounded) {
             this.messages.unshift(new MessageStr('That character is out of the fight.'));
@@ -134,23 +134,23 @@ export class Combat {
     }
 
     // Melee only!
-    public static parryAttack(actor: Actor, target: Actor) {
+    public static parryAttack(_actor: Actor, _target: Actor) {
     }
 
-    public static escapeFight(actor: Actor, target: Actor) {
+    public static escapeFight(_actor: Actor, _target: Actor) {
     }
 
-    public static mountVehicle(actor: Actor, target: Actor) {
+    public static mountVehicle(_actor: Actor, _target: Actor) {
     }
 
-    public static reloadWeapon(actor: Actor, target: Actor) {
+    public static reloadWeapon(_actor: Actor, _target: Actor) {
     }
 
     public static aidActor(actor: Actor, amount: number) {
         actor.health = Math.min(actor.maxHealth, actor.health + amount);
     }
 
-    public static gainLevel(actor: Actor, target: Actor) {
+    public static gainLevel(actor: Actor, _target: Actor) {
         actor.gainLevel();
         // Push straight to the combat feed. The legacy Messages.logMessage path
         // reads global State.player/currentEnemy singletons that the React app

@@ -60,7 +60,7 @@ export class Store extends React.Component<StoreProps, StoreState> {
                 }));
             case 'Hackerware':
                 return Object.keys(programData)
-                    .map((k) => programData[k])
+                    .map((k) => programData[k]!)
                     .filter((p) => p.cost > 0)
                     .map((p) => ({
                         name: p.name, cost: p.cost, detail: `${p.programClass}${p.damage ? ` · ${p.damage}d6` : ''}`,
@@ -86,7 +86,7 @@ export class Store extends React.Component<StoreProps, StoreState> {
     private cat = (title: string) =>
         <Category title={title} update={this.handleClick} active={this.state.activeInventory}/>
 
-    public render() {
+    public override render() {
         const stock = this.stock();
         return (
             <div className={'itemCollection'}>

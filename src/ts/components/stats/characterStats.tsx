@@ -22,7 +22,7 @@ export class CharacterStats extends React.Component<StatsProps, StatsState> {
         this.setState({actor: this.props.actor});
     };
 
-    public render() {
+    public override render() {
         return (
             <div className={'characterInfo'}>
                 <CharacterPortrait imgSource={this.props.actor.role.portrait}/>

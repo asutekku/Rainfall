@@ -3,8 +3,8 @@ export class Building {
     public height: number;
     public x: number;
     public y: number;
-    private name: string;
-    private floors: number;
+    public name: string;
+    public floors: number;
 
     constructor(name: string, width: number, height: number, floors: number) {
         this.name = name;

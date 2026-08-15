@@ -26,7 +26,7 @@ export class Netrun extends React.Component<NetrunProps, NetrunState> {
         this.setState({result});
     };
 
-    public render() {
+    public override render() {
         const a = this.props.actor;
         const r = this.state.result;
         return (

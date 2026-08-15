@@ -26,7 +26,7 @@ export class ActionLog extends React.Component<LogProps, LogState> {
         this.setState({selection});
     };
 
-    public getMessages = (): JSX.Element[] => {
+    public getMessages = (): React.JSX.Element[] => {
         return this.props.messages.map((m: any, i: number) => {
             switch (m.type) {
                 case "combat" :
@@ -44,7 +44,7 @@ export class ActionLog extends React.Component<LogProps, LogState> {
         });
     };
 
-    public render() {
+    public override render() {
         return (
             <div className={"panel feed"}>
                 <h3>Feed</h3>

@@ -32,7 +32,7 @@ export class InventoryItem extends React.Component<InventoryItemProps, ItemState
         }
     }
 
-    public render() {
+    public override render() {
         return <div className={this.state.classList} id={this.props.id} onClick={this.handleClick}>
             <span className="itemType">{this.props.type}</span>
             <span className="itemTitle">{this.props.item.name}</span>

@@ -28,10 +28,10 @@ const DV: { [weaponClass: string]: DVRow } = {
  * null if the target is out of range. Unknown classes fall back to pistol.
  */
 export function rangeDV(weaponClass: string, distance: number): number | null {
-    const row = DV[weaponClass] || DV.pistol;
+    const row = DV[weaponClass] || DV["pistol"]!;
     for (let i = 0; i < BANDS.length; i++) {
-        if (distance <= BANDS[i]) {
-            return row[i];
+        if (distance <= BANDS[i]!) {
+            return row[i] ?? null;
         }
     }
     return null;

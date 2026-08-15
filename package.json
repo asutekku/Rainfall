@@ -10,8 +10,7 @@
     "build": "bun build ./src/ts/index.tsx --outfile dist/bundle.js --format=iife",
     "build:min": "bun build ./src/ts/index.tsx --outfile dist/bundle.js --format=iife --minify",
     "watch": "bun build ./src/ts/index.tsx --outfile dist/bundle.js --format=iife --watch",
-    "typecheck": "tsc --noEmit",
-    "lint": "tslint -p tsconfig.json 'src/**/*.{ts,tsx}'"
+    "typecheck": "tsc --noEmit"
   },
   "repository": {
     "type": "git",
@@ -24,16 +23,12 @@
   },
   "homepage": "https://github.com/asutekku/Rainfall#readme",
   "dependencies": {
-    "@types/react": "^16.7.13",
-    "@types/react-dom": "^16.0.11",
-    "prop-types": "^15.6.2",
-    "react": "^16.6.3",
-    "react-dom": "^16.6.3",
-    "react-redux": "^6.0.0",
-    "redux": "^4.0.1",
-    "tslint": "^5.11.0"
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
-    "typescript": "^3.2.1"
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "typescript": "^7.0.2"
   }
 }

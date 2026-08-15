@@ -30,7 +30,7 @@ export class QuestComponent extends React.Component<QuestProps, QuestState> {
         this.props.quest.active = state;
     };
 
-    public render() {
+    public override render() {
         return (
             <div className={this.props.quest.active ? "itemContainer-100 itemContainer-active" : 'itemContainer-100'}>
                 <div className={'itemContainerRow-top'}>

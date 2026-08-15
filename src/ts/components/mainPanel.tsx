@@ -60,7 +60,7 @@ export class MainPanel extends React.Component<MainProps, MainState> {
         }
     }
 
-    public render() {
+    public override render() {
         return (
             <main className={"panel"}>
                 <h3>{this.props.activeView}</h3>

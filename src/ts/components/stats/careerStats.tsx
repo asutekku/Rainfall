@@ -4,7 +4,7 @@ import {Bar} from "../general/bar";
 
 export interface CareerStatsProps {
     party: Actor[];
-    enemy?: Actor;
+    enemy?: Actor | undefined;
 }
 
 /** Career telemetry: squad totals up top, then a per-member breakdown. */
@@ -41,7 +41,7 @@ export class CareerStats extends React.Component<CareerStatsProps, {}> {
             </div>);
     }
 
-    public render() {
+    public override render() {
         const party = this.props.party || [];
         const kills = party.reduce((n, a) => n + (a.kills || 0), 0);
         const eddies = party.reduce((n, a) => n + (a.currency || 0), 0);

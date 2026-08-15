@@ -9,7 +9,7 @@ export interface BarProps {
 }
 
 export class Bar extends React.Component<BarProps, {}> {
-    public render() {
+    public override render() {
         const max = Math.max(1, this.props.max);
         const pct = Math.max(0, Math.min(100, (this.props.value / max) * 100));
         const kind = this.props.kind || "generic";
