@@ -696,21 +696,65 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         if (!forced) { this.props.onPlaybackDone(id); }
     }
 
+    /**
+     * Walk path that skirts the cover objects instead of clipping through
+     * them: if the straight line passes over a cover footprint, insert a
+     * detour point pushed out perpendicular from that cover.
+     */
+    private routeAround(from: Point, to: Point): Point[] {
+        const AVOID = 2.1;
+        const dx = to.x - from.x, dy = to.y - from.y;
+        const len = Math.hypot(dx, dy) || 1;
+        const ux = dx / len, uy = dy / len;
+        let worst: {c: Point; t: number; perp: number} | null = null;
+        for (const c of Battlefield.COVER) {
+            if (Battlefield.gap(c, to) < 2.6 || Battlefield.gap(c, from) < 2.6) { continue; }
+            const t = ((c.x - from.x) * ux + (c.y - from.y) * uy) / len;
+            if (t < 0.08 || t > 0.92) { continue; }
+            const fx = from.x + ux * t * len, fy = from.y + uy * t * len;
+            const perp = Math.hypot(c.x - fx, c.y - fy);
+            if (perp < AVOID && (!worst || perp < worst.perp)) { worst = {c, t, perp}; }
+        }
+        if (!worst) { return [from, to]; }
+        const fx = from.x + ux * worst.t * len, fy = from.y + uy * worst.t * len;
+        let ax = fx - worst.c.x, ay = fy - worst.c.y;
+        const al = Math.hypot(ax, ay);
+        if (al < 0.01) { ax = -uy; ay = ux; } else { ax /= al; ay /= al; }
+        const detour = Battlefield.clamp({x: worst.c.x + ax * (AVOID + 0.5), y: worst.c.y + ay * (AVOID + 0.5)});
+        return [from, detour, to];
+    }
+
     private pushMoveActs(ev: MoveEvent, D: (n: number) => number) {
         const u = this.unitFor(ev.actor);
         if (!u) { return; }
-        const dist = Battlefield.gap(ev.from, ev.to);
-        const dur = D(Math.max(0.35, Math.min(2.0, dist / 7.5)));
+        const pts = this.routeAround(ev.from, ev.to);
+        const segLen: number[] = [];
+        let total = 0;
+        for (let i = 0; i < pts.length - 1; i++) {
+            const l = Battlefield.gap(pts[i]!, pts[i + 1]!);
+            segLen.push(l);
+            total += l;
+        }
+        const dur = D(Math.max(0.35, Math.min(2.2, total / 7.5)));
+        let seg = -1;
         this.acts.push({
             dur, t: 0,
             start: () => {
                 u.walking = true;
-                u.targetYaw = Math.atan2(ev.to.x - ev.from.x, ev.to.y - ev.from.y);
                 this.focusGoal.set(ev.to.x, 0, ev.to.y);
             },
             update: (k) => {
                 const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;   // easeInOut
-                u.visPos = {x: ev.from.x + (ev.to.x - ev.from.x) * e, y: ev.from.y + (ev.to.y - ev.from.y) * e};
+                let walked = e * total;
+                let i = 0;
+                while (i < segLen.length - 1 && walked > segLen[i]!) { walked -= segLen[i]!; i += 1; }
+                const a = pts[i]!, b = pts[i + 1]!;
+                const kk = segLen[i]! > 0 ? walked / segLen[i]! : 1;
+                u.visPos = {x: a.x + (b.x - a.x) * kk, y: a.y + (b.y - a.y) * kk};
+                if (i !== seg) {   // face down the new leg
+                    seg = i;
+                    u.targetYaw = Math.atan2(b.x - a.x, b.y - a.y);
+                }
             },
             end: () => {
                 u.visPos = {x: ev.to.x, y: ev.to.y};
@@ -1008,9 +1052,9 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             this.moveMark.visible = true;
             this.moveMark.position.set(o.pendingMove.x, 0, o.pendingMove.y);
             this.movePath.visible = true;
-            this.movePath.geometry.setFromPoints([
-                new THREE.Vector3(a.position.x, 0, a.position.y),
-                new THREE.Vector3(o.pendingMove.x, 0, o.pendingMove.y)]);
+            this.movePath.geometry.setFromPoints(
+                this.routeAround({x: a.position.x, y: a.position.y}, o.pendingMove)
+                    .map((p) => new THREE.Vector3(p.x, 0, p.y)));
             this.movePath.computeLineDistances();
         } else {
             this.moveMark.visible = this.movePath.visible = false;

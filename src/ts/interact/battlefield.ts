@@ -58,7 +58,8 @@ export class Battlefield {
         let guard = 80;
         const want = 5 + Math.floor(Math.random() * 3);
         while (out.length < want && guard-- > 0) {
-            const p = {x: -18 + Math.random() * 36, y: 10 + Math.random() * 17};
+            // keep the band off both deploy lines so nobody spawns inside a wreck
+            const p = {x: -18 + Math.random() * 36, y: 10 + Math.random() * 13};
             if (out.some((c) => dist2(c.x, c.y, p.x, p.y) < 6.5)) { continue; }
             out.push({x: p.x, y: p.y, kind: COVER_KINDS[Math.floor(Math.random() * COVER_KINDS.length)]!});
         }
@@ -148,8 +149,9 @@ export class Battlefield {
         return dist2(start.x, start.y, resolved.x, resolved.y);
     }
 
-    /** Is this point clear of every other live unit's cell? */
+    /** Is this point clear of every other live unit's cell and off the cover objects themselves? */
     private static isFree(p: Point, others: Actor[], self: Actor): boolean {
+        if (this.COVER.some((c) => dist2(c.x, c.y, p.x, p.y) < 1.5)) { return false; }
         return !others.some((o) => o !== self && o.canFight()
             && dist2(o.position.x, o.position.y, p.x, p.y) < MIN_SEP);
     }
