@@ -64,7 +64,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
     private markers: Marker[] = [];
     private routes: Route[] = [];
     private lineMats: LineMaterial[] = [];
-    private sharedMats!: { back: LineMaterial; traveled: LineMaterial; unknown: LineMaterial };
+    private sharedMats!: { walked: LineMaterial; unknown: LineMaterial; trail: LineMaterial };
     private posRing!: THREE.Mesh;
     private travelDot!: THREE.Mesh;
     private travelAnim: { node: RunNode; pts: THREE.Vector3[]; seg: number; segT: number; speed: number } | null = null;
@@ -133,8 +133,14 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         const c = this.props.run.city;
         const aspect = w / Math.max(1, h);
         const halfFov = Math.tan((50 * Math.PI / 180) / 2);
-        const r = c.activeRadius;
-        const needed = Math.max(r * 1.22, r / aspect * 1.1);
+        // fit to the actual waypoint bounds so no marker (or its label) clips
+        let hx = 24, hz = 24;
+        this.props.run.nodes.forEach((n) => {
+            hx = Math.max(hx, Math.abs(n.pos.x - c.activeCenter.x));
+            hz = Math.max(hz, Math.abs(n.pos.z - c.activeCenter.z));
+        });
+        hx += 14; hz += 16;
+        const needed = Math.max(hz * 1.35, hx / aspect * 1.08, c.activeRadius * 1.0);
         this.baseY = (needed / halfFov) * 1.06;
         this.camera.aspect = aspect;
         this.camera.updateProjectionMatrix();
@@ -264,9 +270,9 @@ export class CityMap extends React.Component<CityMapProps, {}> {
     /** Street-following route lines between linked waypoints (fat lines). */
     private buildRoutes() {
         this.sharedMats = {
-            back: this.makeLineMat({color: WHITE, width: 2, opacity: 0.4}),
-            traveled: this.makeLineMat({color: 0x1f9aa0, width: 1.5, opacity: 0.35}),
-            unknown: this.makeLineMat({color: 0x39414a, width: 1.5, opacity: 0.5}),
+            walked: this.makeLineMat({color: WHITE, width: 2.2, opacity: 0.55}),        // solid white = been there
+            unknown: this.makeLineMat({color: 0x4d5761, width: 2, opacity: 0.65}),      // grey = known network
+            trail: this.makeLineMat({color: 0xe0533f, width: 2.2, opacity: 0.6, dashed: true}),  // static dashes → objective
         };
         const run = this.props.run;
         const done = new Set<string>();
@@ -326,6 +332,36 @@ export class CityMap extends React.Component<CityMapProps, {}> {
 
     private static icoGeo = new THREE.IcosahedronGeometry(1, 0);
     private static octaGeo = new THREE.OctahedronGeometry(1, 0);
+    private static tetraGeo = new THREE.TetrahedronGeometry(1.25, 0);
+    private static boxGeo = new THREE.BoxGeometry(1.35, 1.35, 1.35);
+    private static torusGeo = new THREE.TorusGeometry(0.85, 0.3, 6, 10);
+    private static dodecaGeo = new THREE.DodecahedronGeometry(1.05, 0);
+    private static checkGeo = CityMap.buildCheckGeo();
+
+    /** A chunky 3D checkmark for cleared waypoints. */
+    private static buildCheckGeo(): THREE.ExtrudeGeometry {
+        const pts: Array<[number, number]> = [
+            [-0.9, 0.1], [-0.35, -0.45], [0.8, 0.7], [0.55, 0.95], [-0.35, 0.0], [-0.65, 0.35],
+        ];
+        const shape = new THREE.Shape();
+        shape.moveTo(pts[0]![0], pts[0]![1]);
+        for (let i = 1; i < pts.length; i++) { shape.lineTo(pts[i]![0], pts[i]![1]); }
+        shape.closePath();
+        const geo = new THREE.ExtrudeGeometry(shape, {depth: 0.35, bevelEnabled: false});
+        geo.center();
+        return geo;
+    }
+
+    /** The 3D silhouette for each waypoint type. */
+    private static typeGeo(type: NodeType): THREE.BufferGeometry {
+        switch (type) {
+            case "elite": return CityMap.tetraGeo;      // spike
+            case "merchant": return CityMap.boxGeo;     // crate
+            case "rest": return CityMap.torusGeo;       // safe ring
+            case "boss": return CityMap.dodecaGeo;      // heavy core
+            default: return CityMap.icoGeo;             // firefight
+        }
+    }
 
     private buildMarkers() {
         const ms = this.markerScale();
@@ -402,9 +438,6 @@ export class CityMap extends React.Component<CityMapProps, {}> {
                 m.baseScale = scale * ms;
                 m.spin = spin;
             };
-            const geo = current ? CityMap.octaGeo : CityMap.icoGeo;
-            m.solid.geometry = geo;
-            m.wire.geometry = geo;
 
             if (current) {
                 apply(WHITE, 0.35, 1.0, 0.9, 1.5, 0.9);
@@ -438,29 +471,45 @@ export class CityMap extends React.Component<CityMapProps, {}> {
                 apply(0x8b949e, 0.0, 0.5, 0.45, 1.05, 0.25);
                 beamMat.color.setHex(0x4a525c); beamMat.opacity = 0.3; beamMat.linewidth = 1.5;
             }
+            // silhouette: type shape when revealed, checkmark when cleared,
+            // octahedron for the squad and for fog-of-war unknowns
+            const isCheck = !current && cleared;
+            const geo = current ? CityMap.octaGeo
+                : isCheck ? CityMap.checkGeo
+                : (reachable || boss) ? CityMap.typeGeo(m.node.type)
+                : CityMap.octaGeo;
+            m.solid.geometry = geo;
+            m.wire.geometry = geo;
+            if (isCheck) {                     // extruded check reads best as a solid
+                wireMat.opacity = 0;
+                solidMat.opacity = reachable ? 0.65 : 0.35;
+            }
             m.group.scale.setScalar(m.baseScale);
             m.halo.scale.setScalar(2.8);   // relative to the group scale — wider than the shape
         });
 
         // routes: white marching dashes out of the current node; calm elsewhere
+        const trail = this.bossTrailKeys(run);
         this.routes.forEach((r) => {
             const touches = r.a === run.position || r.b === run.position;
             const otherId = r.a === run.position ? r.b : r.a;
             const otherCleared = run.clearedIds.indexOf(otherId) >= 0;
             const bothCleared = run.clearedIds.indexOf(r.a) >= 0 && run.clearedIds.indexOf(r.b) >= 0;
-            if (touches && !otherCleared) {
-                if (!r.own) { r.own = this.makeLineMat({color: WHITE, width: 3, opacity: 0.95, dashed: true}); }
+            if (touches) {
+                // goable right now = white marching dashes (fresh target or backtrack)
+                if (!r.own) { r.own = this.makeLineMat({color: WHITE, width: 3, opacity: otherCleared ? 0.7 : 0.95, dashed: true}); }
+                r.own.opacity = otherCleared ? 0.7 : 0.95;
                 r.line.material = r.own;
                 // march away from the squad: flip by which end the squad stands on
                 const start = r.pts[0]!;
                 const cur = this.nodeById(run.position);
                 r.dir = cur && Math.hypot(start.x - cur.pos.x, start.z - cur.pos.z) < 1.5 ? 1 : -1;
-            } else if (touches && otherCleared) {
-                r.line.material = this.sharedMats.back;
+            } else if (trail.has(r.key)) {
+                r.line.material = this.sharedMats.trail;   // the way toward the boss
             } else if (bothCleared) {
-                r.line.material = this.sharedMats.traveled;
+                r.line.material = this.sharedMats.walked;  // solid white = been there
             } else {
-                r.line.material = this.sharedMats.unknown;
+                r.line.material = this.sharedMats.unknown; // grey = known network
             }
         });
 
@@ -471,6 +520,36 @@ export class CityMap extends React.Component<CityMapProps, {}> {
 
     private nodeById(id: string): RunNode | null {
         return this.props.run.nodes.find((n) => n.id === id) || null;
+    }
+
+    /** Edge keys of the shortest run-graph path from the squad to the boss —
+     *  rendered as a red dashed objective trail so the far side is navigable. */
+    private bossTrailKeys(run: RunState): Set<string> {
+        const out = new Set<string>();
+        const boss = run.nodes.find((n) => n.type === "boss");
+        if (!boss || boss.id === run.position) { return out; }
+        const dist: { [id: string]: number } = {};
+        const prev: { [id: string]: string } = {};
+        const done: { [id: string]: boolean } = {};
+        run.nodes.forEach((n) => dist[n.id] = Infinity);
+        dist[run.position] = 0;
+        for (;;) {
+            let u: string | null = null, du = Infinity;
+            run.nodes.forEach((n) => { if (!done[n.id] && dist[n.id]! < du) { du = dist[n.id]!; u = n.id; } });
+            if (u === null) { break; }
+            done[u] = true;
+            (run.adj[u] || []).forEach((v) => {
+                const nd = du + this.routeLen(u!, v);
+                if (nd < dist[v]!) { dist[v] = nd; prev[v] = u!; }
+            });
+        }
+        let cur = boss.id;
+        let guard = run.nodes.length + 2;
+        while (cur !== run.position && prev[cur] !== undefined && guard-- > 0) {
+            out.add(edgeKey(cur, prev[cur]!));
+            cur = prev[cur]!;
+        }
+        return out;
     }
 
     private routeLen(a: string, b: string): number {
