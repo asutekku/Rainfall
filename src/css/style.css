@@ -750,42 +750,26 @@ progress::-moz-progress-bar { background:var(--rust); }
 }
 
 /* =====================================================================
-   Run loop — branching map, merchant/rest overlays, run-over screen
+   Run loop — holographic city map, merchant/rest overlays, run-over screen
    ===================================================================== */
-.runWrap { position:fixed; inset:0; z-index:45; display:flex; flex-direction:column;
-    background:radial-gradient(1100px 560px at 50% -10%, #12121c, var(--bg)); font-family:var(--mono); color:var(--ink); }
-.runHead { display:flex; align-items:center; gap:14px; padding:12px 20px; border-bottom:1px solid var(--line); flex-wrap:wrap; }
-.runHead .brand { font-weight:800; letter-spacing:.16em; color:var(--rustHot); }
-.runSub { color:var(--dim); font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
-.runSquad { display:flex; gap:10px; margin-left:16px; }
-.runPip { display:flex; flex-direction:column; gap:2px; min-width:74px; }
-.runPip b { font-size:10px; font-weight:600; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.runPip.down { opacity:.4; }
-.runEddies { margin-left:auto; color:var(--good); font-weight:700; letter-spacing:.03em; }
-.runAbandon { font-family:var(--mono); font-size:11px; color:var(--dim); background:var(--panel); border:1px solid var(--line2); padding:6px 10px; cursor:pointer; }
-.runAbandon:hover { color:var(--crit); border-color:var(--crit); }
+/* the city map fills the centre stage: a WebGL canvas + an HTML label overlay */
+.cityStage { overflow:hidden; border:1px solid var(--line);
+    background:radial-gradient(1000px 520px at 50% 0%, #0c0c16, var(--bg)); }
+.cityCanvas { position:absolute; inset:0; }
+.cityCanvas canvas { display:block; }
+.cityOverlay { position:absolute; inset:0; pointer-events:none; }
+.cityLabel { position:absolute; transform:translate(-50%,-50%); white-space:nowrap;
+    font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink);
+    background:rgba(8,8,14,.72); border:1px solid var(--cyanDim); padding:2px 7px; text-shadow:0 0 8px rgba(55,225,231,.5); }
+.cityHint { position:absolute; left:12px; bottom:10px; color:var(--dim);
+    font-size:11px; letter-spacing:.1em; text-transform:uppercase; pointer-events:none; }
 
-.runMap { position:relative; flex:1; min-height:0; margin:12px; }
-.runEdges { position:absolute; inset:0; width:100%; height:100%; pointer-events:none; }
-.redge { stroke:var(--line2); stroke-width:.28; }
-.redge.live { stroke:var(--cyanDim); stroke-width:.5; }
-
-.rn { position:absolute; transform:translate(-50%,-50%); display:flex; flex-direction:column;
-    align-items:center; gap:4px; width:60px; padding:0; background:transparent; border:0; cursor:pointer; color:var(--dim); }
-.rn .rnG { width:40px; height:40px; display:grid; place-items:center; font-size:18px;
-    border:1px solid var(--line2); background:var(--panel); color:var(--mid); transition:background .12s, border-color .12s, color .12s, box-shadow .12s; }
-.rn .rnL { font-size:9px; letter-spacing:.06em; text-transform:uppercase; opacity:0; transition:opacity .12s; white-space:nowrap; }
-.rn:disabled { cursor:default; opacity:.5; }
-.rn.on { color:var(--ink); }
-.rn.on .rnG { border-color:var(--cyan); color:var(--cyan); box-shadow:0 0 14px rgba(55,225,231,.35); }
-.rn.on .rnL, .rn:hover .rnL { opacity:1; }
-.rn.on:hover .rnG { background:var(--sel); }
-.rn.done .rnG { border-color:var(--faint); color:var(--faint); background:#0c0c12; }
-.rn.elite.on .rnG { border-color:var(--warn); color:var(--warn); box-shadow:0 0 14px rgba(240,168,48,.35); }
-.rn.merchant.on .rnG { border-color:var(--good); color:var(--good); box-shadow:0 0 14px rgba(127,214,127,.3); }
-.rn.rest.on .rnG { border-color:var(--cyanDim); color:var(--cyan); }
-.rn.boss .rnG { width:48px; height:48px; font-size:22px; border-color:var(--crit); color:var(--crit); }
-.rn.boss.on .rnG { box-shadow:0 0 20px rgba(224,83,63,.5); }
+/* combat is fully auto — a passive status line, no action buttons */
+.autoStatus { display:flex; align-items:center; gap:10px; padding:8px 12px;
+    color:var(--dim); font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
+.autoStatus .autoDot { color:var(--good); }
+.autoStatus .wpn { margin-left:auto; text-transform:none; letter-spacing:0; color:var(--mid); }
+.autoStatus .wpn b { color:var(--cyan); }
 
 /* merchant / rest — wrap an existing panel in a leave-able takeover */
 .metaOverlay { position:fixed; inset:0; z-index:46; display:flex; flex-direction:column; background:var(--bg); font-family:var(--mono); }
@@ -813,12 +797,5 @@ progress::-moz-progress-bar { background:var(--rust); }
 .runEndActions button:hover { color:var(--ink); border-color:var(--cyanDim); }
 .runEndActions .prim { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; }
 .runEndActions .prim:hover { background:#5cf0f5; }
-
-@media (max-width: 860px) {
-    .runSquad { display:none; }
-    .rn.on .rnL { opacity:1; }
-    .rn .rnG { width:34px; height:34px; font-size:15px; }
-    .rn.boss .rnG { width:42px; height:42px; }
-}
 
 @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }

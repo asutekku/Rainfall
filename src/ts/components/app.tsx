@@ -15,7 +15,6 @@ import {CharacterCreation, CharacterSpec} from "../actors/resources/CharacterCre
 import {MobileTab, MobileTabs} from "./mobileTabs";
 import {MapNode, RunState} from "../interact/runMap";
 import {RunController} from "../interact/runController";
-import {MapView} from "./run/mapView";
 import {RunEndView} from "./run/runEndView";
 import {MetaOverlay} from "./run/metaOverlay";
 import {Store} from "./storePanel/store";
@@ -88,12 +87,9 @@ export class App extends React.Component<{}, InterfaceAppState> {
             return <Creator initial={this.state.squadSpecs} canCancel={this.state.run !== null}
                             onDeploy={this.deploySquad} onCancel={this.closeCreator}/>;
         }
-        // Run-loop takeovers (map / merchant / rest / run-over) sit above combat.
+        // Run-loop takeovers that sit ABOVE the shell. The city map and combat
+        // both render inside the shell (via Stage) so the nav / bottom bar stay.
         const run = this.state.run;
-        if (run && this.state.screen === "map") {
-            return <MapView map={run.map} reachableIds={run.reachableIds} clearedIds={run.clearedIds}
-                            party={this.state.party} onPick={this.enterNode} onAbandon={this.openCreator}/>;
-        }
         if (run && this.state.screen === "end") {
             const kills = this.state.party.reduce((n, p) => n + p.kills, 0);
             const eddies = this.state.party.reduce((n, p) => n + Math.floor(p.currency), 0);
@@ -134,9 +130,10 @@ export class App extends React.Component<{}, InterfaceAppState> {
             </section>
             <Stage actor={this.getCurrentActor()} enemy={this.getCurrentEnemy()}
                    party={this.state.party} enemies={this.state.currentEnemies}
-                   view={this.state.activeMainPanel} messages={this.combatController}
+                   view={this.state.activeMainPanel} screen={this.state.screen} run={this.state.run}
+                   messages={this.combatController}
                    onSelectAlly={this.getCharacter} onSelectEnemy={this.getEnemy}
-                   onGotoCombat={this.gotoCombat}/>
+                   onGotoCombat={this.gotoCombat} onPickNode={this.enterNode}/>
             <MobileTabs tab={this.state.mobileTab} more={this.state.mobileMore}
                         unread={this.state.unread}
                         onTab={this.selectMobileTab} onMore={this.toggleMore}/>
