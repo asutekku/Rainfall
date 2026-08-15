@@ -20,6 +20,7 @@ import {rangeDV} from "./rangeTable";
 export interface Plan {
     moveTo?: Point;
     target?: Actor;
+    aimed?: boolean;
     label: string;
 }
 
@@ -57,10 +58,17 @@ function redRoll(): number {
     return first;
 }
 
-/** Effective stopping power the RED way: best of worn/subdermal, halved by AP. */
+/** Effective body stopping power the RED way: best of worn/subdermal, halved by AP. */
 function effectiveSP(target: Actor, ap: boolean): number {
     const worn = target.equipment.upper ? target.equipment.upper.stoppingPower : 0;
     let sp = Math.max(worn, target.cyberSP());
+    if (ap) { sp = Math.floor(sp / 2); }
+    return sp;
+}
+
+/** Head stopping power (headgear only; subdermal armour doesn't cover the head). */
+function headSP(target: Actor, ap: boolean): number {
+    let sp = target.equipment.headgear ? target.equipment.headgear.stoppingPower : 0;
     if (ap) { sp = Math.floor(sp / 2); }
     return sp;
 }
@@ -77,24 +85,31 @@ function sampleKineticDamage(w: Weapon): number {
     return total;
 }
 
+/** Net damage past armour for a landed hit — head shots use head SP and double what gets through. */
+function landedDamage(w: Weapon, target: Actor, aimed: boolean): number {
+    const dmg = sampleKineticDamage(w);
+    return aimed ? Math.max(0, dmg - headSP(target, w.ap)) * 2 : Math.max(0, dmg - effectiveSP(target, w.ap));
+}
+
 /** One simulated attack: net HP damage dealt (0 on miss / out of range / non-kinetic). */
-function sampleNet(attacker: Actor, target: Actor, distance: number, coverDV: number): number {
+function sampleNet(attacker: Actor, target: Actor, distance: number, coverDV: number, aimed: boolean): number {
     const w = attacker.weapon;
     if (w.damageType !== "kinetic" || w.diceThrows <= 0) { return 0; }
+    const aimPenalty = aimed ? -8 : 0;   // RED Aimed Shot: -8 to hit
 
     if (w.weaponClass === "melee") {
         if (distance > MELEE_REACH) { return 0; }
-        if (redRoll() + attacker.attackBonus(w) < redRoll() + target.evasion()) { return 0; }
-        return Math.max(0, sampleKineticDamage(w) - effectiveSP(target, w.ap));
+        if (redRoll() + attacker.attackBonus(w) + aimPenalty < redRoll() + target.evasion()) { return 0; }
+        return landedDamage(w, target, aimed);
     }
 
     const dv = rangeDV(w.weaponClass, distance);
     if (dv === null) { return 0; }
-    const total = redRoll() + attacker.attackBonus(w);
+    const total = redRoll() + attacker.attackBonus(w) + aimPenalty;
     const need = dv + coverDV;
     if (total < need) { return 0; }
 
-    if (w.autofire) {
+    if (w.autofire) {   // autofire can't aim; damage is 2d6 x margin, capped
         const maxMult = w.weaponClass === "rifle" ? 4 : 3;
         const mult = Math.max(1, Math.min(total - need, maxMult));
         const a = d6(); const b = d6();
@@ -102,14 +117,28 @@ function sampleNet(attacker: Actor, target: Actor, distance: number, coverDV: nu
         if (a === 6 && b === 6) { dmg += 5; }
         return Math.max(0, dmg - effectiveSP(target, w.ap));
     }
-    return Math.max(0, sampleKineticDamage(w) - effectiveSP(target, w.ap));
+    return landedDamage(w, target, aimed);
 }
 
-/** Mean net damage of `attacker` hitting `target` across the given distance + cover. */
-function expectedNet(attacker: Actor, target: Actor, distance: number, coverDV: number): number {
+/** Mean net damage across the given distance + cover, optionally aiming for the head. */
+function expectedNet(attacker: Actor, target: Actor, distance: number, coverDV: number, aimed: boolean): number {
     let sum = 0;
-    for (let i = 0; i < SAMPLES; i++) { sum += sampleNet(attacker, target, distance, coverDV); }
+    for (let i = 0; i < SAMPLES; i++) { sum += sampleNet(attacker, target, distance, coverDV, aimed); }
     return sum / SAMPLES;
+}
+
+/** Best expected damage and whether an aimed head shot beats a normal shot here. */
+function bestNet(attacker: Actor, target: Actor, distance: number, coverDV: number): { value: number; aimed: boolean } {
+    const normal = expectedNet(attacker, target, distance, coverDV, false);
+    // Aiming is a specialist move: worth the -8 only when body armour is genuinely
+    // stopping normal fire. If a normal shot already punches through (avg damage well
+    // over the target's SP), take it — the higher hit chance resolves faster.
+    const penetration = attacker.weapon.averageDamage() - effectiveSP(target, attacker.weapon.ap);
+    if (!TacticalAI.allowAimed || attacker.weapon.autofire || penetration >= 3) {
+        return {value: normal, aimed: false};
+    }
+    const aimed = expectedNet(attacker, target, distance, coverDV, true);
+    return aimed > normal ? {value: aimed, aimed: true} : {value: normal, aimed: false};
 }
 
 const pos = (a: Actor): Point => ({x: a.position.x, y: a.position.y});
@@ -138,6 +167,9 @@ function preferredGap(w: Weapon): number {
 
 export class TacticalAI {
 
+    /** A/B switch for the balance sim: whether the AI may choose aimed head shots. */
+    public static allowAimed = true;
+
     /** Roll a combat temperament for a spawned enemy (melee thugs rush by nature). */
     public static rollTemperament(weaponClass: string): string {
         if (weaponClass === "melee") { return Math.random() < 0.6 ? "berserker" : "aggressive"; }
@@ -164,12 +196,14 @@ export class TacticalAI {
         let best = candidates[0];
         let bestScore = -Infinity;
         let bestTarget: Actor | undefined;
+        let bestAimed = false;
         for (const spot of candidates) {
             const evalResult = this.score(self, spot, foes, prof);
             if (evalResult.score > bestScore) {
                 bestScore = evalResult.score;
                 best = spot;
                 bestTarget = evalResult.target;
+                bestAimed = evalResult.aimed;
             }
         }
 
@@ -177,6 +211,7 @@ export class TacticalAI {
         return {
             moveTo: moved ? best : undefined,
             target: bestTarget,
+            aimed: bestAimed,
             label: moved ? (Battlefield.nearCover(best) ? "cover" : "reposition") : "attack",
         };
     }
@@ -215,28 +250,31 @@ export class TacticalAI {
     }
 
     /** Score a destination: expected damage dealt minus damage taken, plus positional value. */
-    private static score(self: Actor, spot: Point, foes: Actor[], prof: Profile): { score: number; target?: Actor } {
-        // best target reachable from this spot
+    private static score(self: Actor, spot: Point, foes: Actor[], prof: Profile): { score: number; target?: Actor; aimed: boolean } {
+        // best target reachable from this spot (normal vs aimed head shot chosen by EV)
         let offense = 0;
         let target: Actor | undefined;
+        let aimed = false;
         let killBonus = 0;
         for (const foe of foes) {
             const dist = Battlefield.gap(spot, pos(foe));
             const cover = Battlefield.coverPenaltyAt(pos(foe), spot);
-            const dmg = expectedNet(self, foe, dist, cover);
-            if (dmg > offense) {
-                offense = dmg;
+            const shot = bestNet(self, foe, dist, cover);
+            if (shot.value > offense) {
+                offense = shot.value;
                 target = foe;
-                killBonus = dmg * 1.3 >= foe.health ? 1 : 0;
+                aimed = shot.aimed;
+                killBonus = shot.value * 1.3 >= foe.health ? 1 : 0;
             }
         }
 
-        // incoming threat from every foe if we stand here
+        // incoming threat from every foe if we stand here. Use their *normal* shot: an
+        // aimed shot is a gamble a foe may not take, and assuming it makes everyone turtle.
         let threat = 0;
         for (const foe of foes) {
             const dist = Battlefield.gap(spot, pos(foe));
             const cover = Battlefield.coverPenaltyAt(spot, pos(foe));
-            threat += expectedNet(foe, self, dist, cover);
+            threat += expectedNet(foe, self, dist, cover, false);
         }
 
         const hpFrac = self.health / Math.max(1, self.maxHealth);
@@ -257,6 +295,6 @@ export class TacticalAI {
             - campPenalty
             - W_MOVE * moveDist;
 
-        return {score, target};
+        return {score, target, aimed};
     }
 }

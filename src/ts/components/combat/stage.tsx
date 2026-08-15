@@ -51,10 +51,10 @@ export class Stage extends React.Component<StageProps, StageState> {
     };
 
     /** Resolve the manual turn: apply the pending move + optional attack, run the round. */
-    private commit(target: Actor | null) {
+    private commit(target: Actor | null, aimed: boolean = false) {
         const enemy = this.props.enemy;
         const before = enemy.health;
-        const action: any = {moveTo: this.state.pending || undefined, target: target || undefined};
+        const action: any = {moveTo: this.state.pending || undefined, target: target || undefined, aimed};
         const msgs = this.props.actor.auto
             ? Combat.autoRound(this.props.party, this.props.enemies)
             : Combat.round(this.props.party, this.props.enemies, this.props.actor, action);
@@ -72,6 +72,7 @@ export class Stage extends React.Component<StageProps, StageState> {
     }
 
     private attack = () => this.commit(this.props.enemy);
+    private aimedShot = () => this.commit(this.props.enemy, true);
     private wait = () => this.commit(null);
 
     private facedown = () => {
@@ -165,6 +166,7 @@ export class Stage extends React.Component<StageProps, StageState> {
                                 <button className={"act prim"} onClick={this.attack}>
                                     {w.autofire ? "Open Fire" : "Attack"}
                                 </button>
+                                {!w.autofire && <button className={"act"} onClick={this.aimedShot} title={"-8 to hit, hits the head: doubles what gets through"}>Aimed</button>}
                                 <button className={"act"} onClick={this.facedown}>Facedown</button>
                                 <button className={"act"} onClick={this.wait}>Wait</button>
                                 <button className={"act"} onClick={this.flee}>Flee</button>

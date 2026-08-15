@@ -44,25 +44,32 @@ export class Combat {
         return this.messages.flat().reverse();
     }
 
-    public static attack(actor: Actor, target: Actor): any {
+    /** Lightweight telemetry for balancing (read + reset by the headless sim). */
+    public static stats = {shots: 0, hits: 0, aimed: 0, dmg: 0};
+
+    public static attack(actor: Actor, target: Actor, aimed: boolean = false): any {
         const weapon = actor.weapon;
         const distance: number = Utils.distance(actor.position, target.position);
         if (weapon.autofire && weapon.weaponClass !== "melee") {
-            this.autofireAttack(actor, target, distance);
+            this.autofireAttack(actor, target, distance);   // RED: autofire can't make an Aimed Shot
             return;
         }
+        this.stats.shots += 1; if (aimed) { this.stats.aimed += 1; }
         const targetOldHP: number = target.health;
-        if (!this.didAttackHit(actor, target, distance)) {
-            this.messages.push(new MessageStr('MISS!'));
+        if (!this.didAttackHit(actor, target, distance, aimed)) {
+            this.messages.push(new MessageStr(aimed ? 'MISS! (aimed)' : 'MISS!'));
             return;
         }
+        this.stats.hits += 1;
         let damage: number = weapon.getDamage();
         if (damage > 0) {
             damage += this.spotWeakness(actor);   // Solo "Spot Weakness" (first hit only)
             damage += actor.backupDamage();        // Cop "Backup" support fire
         }
-        const dealt: number = target.receiveDamage(damage, weapon.ap);
+        const dealt: number = target.receiveDamage(damage, weapon.ap, aimed);
+        this.stats.dmg += dealt;
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
+        if (aimed && dealt > 0) { this.messages.push(new MessageStr(`${actor.name} lands a head shot!`)); }
         this.registerIfDefeated(actor, target);
     }
 
@@ -88,11 +95,13 @@ export class Combat {
             return;
         }
         const cover: number = Battlefield.coverPenaltyAt(target.position, actor.position);
+        this.stats.shots += 1;
         const check = Check.resolve(actor, actor.attackBonus(actor.weapon), dv + cover);
         if (!check.success) {
             this.messages.push(new MessageStr('MISS!'));
             return;
         }
+        this.stats.hits += 1;
         const maxMultiplier: number = actor.weapon.weaponClass === "rifle" ? 4 : 3;
         const multiplier: number = Math.max(1, Math.min(check.margin, maxMultiplier));
         const d1: number = Math.floor(Math.random() * 6) + 1;
@@ -103,6 +112,7 @@ export class Combat {
         }
         const targetOldHP: number = target.health;
         const dealt: number = target.receiveDamage(damage, actor.weapon.ap);
+        this.stats.dmg += dealt;
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
         this.registerIfDefeated(actor, target);
     }
@@ -179,9 +189,9 @@ export class Combat {
      * target's evasion; ranged compares the attack roll to the weapon's DV for
      * its class at the current distance (out of range = automatic miss).
      */
-    private static didAttackHit(actor: Actor, target: Actor, distance: number): boolean {
+    private static didAttackHit(actor: Actor, target: Actor, distance: number, aimed: boolean = false): boolean {
         const weapon = actor.weapon;
-        const atkMod: number = actor.attackBonus(weapon);
+        const atkMod: number = actor.attackBonus(weapon) + (aimed ? -8 : 0);   // RED Aimed Shot: -8 to hit
         if (weapon.weaponClass === "melee") {
             return Check.opposed(actor, atkMod, target.evasion()).success;
         }
@@ -227,7 +237,7 @@ export class Combat {
             const others: Actor[] = [...party, ...enemies].filter((a) => a !== c);
             if (c === controlled && action) {
                 // Manual turn: apply the player's move + attack the same way an AI plan is applied.
-                this.applyPlan(c, {moveTo: action.moveTo, target: action.target, label: "manual"}, foes, others);
+                this.applyPlan(c, {moveTo: action.moveTo, target: action.target, aimed: action.aimed, label: "manual"}, foes, others);
                 continue;
             }
             this.applyPlan(c, TacticalAI.plan(c, allies, foes), foes, others);
@@ -248,7 +258,7 @@ export class Combat {
             }
         }
         if (plan.target && plan.target.canFight()) {
-            this.attack(self, plan.target);
+            this.attack(self, plan.target, plan.aimed);
         }
     }
 
