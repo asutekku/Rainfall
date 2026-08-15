@@ -28,7 +28,17 @@ export interface CityMapProps {
     onPick: (node: RunNode) => void;
 }
 
-interface Marker { node: RunNode; sprite: THREE.Sprite; beam: THREE.Line; baseScale: number; pulse: boolean; }
+interface Marker {
+    node: RunNode;
+    group: THREE.Group;          // halo + solid + wire, all billboard-ish at the hover point
+    halo: THREE.Sprite;          // dark backing disc — the pick target (generous tap area)
+    solid: THREE.Mesh;
+    wire: THREE.Mesh;
+    beam: THREE.Line;
+    baseScale: number;
+    pulse: boolean;
+    spin: number;                // rad/s — fast for actionable, idle for ambient
+}
 interface Route { key: string; a: string; b: string; line: Line2; pts: THREE.Vector3[]; len: number; own: LineMaterial | null; dir: number; }
 
 /**
@@ -294,46 +304,59 @@ export class CityMap extends React.Component<CityMapProps, {}> {
 
     // ------------------------------------------------------------- markers --
 
-    /** Canvas-drawn billboard: dark plate, coloured ring, glyph. Reads on any background. */
-    private tex(key: string, ring: string, glyph: string, glyphColor: string, hollow: boolean): THREE.CanvasTexture {
-        const cached = this.texCache[key];
+    /** Soft dark halo disc — sits behind each 3D marker so it reads on any background. */
+    private haloTex(): THREE.CanvasTexture {
+        const cached = this.texCache["halo"];
         if (cached) { return cached; }
         const s = 128;
         const cv = document.createElement("canvas");
         cv.width = s; cv.height = s;
         const ctx = cv.getContext("2d")!;
-        ctx.clearRect(0, 0, s, s);
-        ctx.beginPath();
-        ctx.arc(s / 2, s / 2, s * 0.40, 0, Math.PI * 2);
-        ctx.fillStyle = hollow ? "rgba(8,8,14,0.55)" : "rgba(7,7,13,0.88)";
-        ctx.fill();
-        ctx.lineWidth = 5;
-        ctx.strokeStyle = ring;
-        ctx.stroke();
-        ctx.font = "bold 58px ui-monospace, Menlo, monospace";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = glyphColor;
-        ctx.fillText(glyph, s / 2, s / 2 + 3);
+        const g = ctx.createRadialGradient(s / 2, s / 2, s * 0.05, s / 2, s / 2, s * 0.5);
+        g.addColorStop(0, "rgba(6,6,13,0.92)");
+        g.addColorStop(0.72, "rgba(6,6,13,0.78)");
+        g.addColorStop(1, "rgba(6,6,13,0)");
+        ctx.fillStyle = g;
+        ctx.fillRect(0, 0, s, s);
         const t = new THREE.CanvasTexture(cv);
-        this.texCache[key] = t;
+        this.texCache["halo"] = t;
         return t;
     }
+
+    private static icoGeo = new THREE.IcosahedronGeometry(1, 0);
+    private static octaGeo = new THREE.OctahedronGeometry(1, 0);
 
     private buildMarkers() {
         const ms = this.markerScale();
         this.props.run.nodes.forEach((node) => {
             const p = new THREE.Vector3(node.pos.x, this.hoverY, node.pos.z);
-            const mat = new THREE.SpriteMaterial({map: this.tex("unknown", "#4a525c", "◇", "#8b949e", true), depthTest: false, transparent: true});
-            const sprite = new THREE.Sprite(mat);
-            sprite.position.copy(p);
-            sprite.renderOrder = 10;
-            sprite.userData["nodeId"] = node.id;
-            this.scene.add(sprite);
+            const group = new THREE.Group();
+            group.position.copy(p);
+
+            const halo = new THREE.Sprite(new THREE.SpriteMaterial({
+                map: this.haloTex(), depthTest: false, transparent: true, opacity: 0.7}));
+            halo.scale.setScalar(2.8);
+            halo.renderOrder = 9;
+            halo.userData["nodeId"] = node.id;
+            group.add(halo);
+
+            const solid = new THREE.Mesh(CityMap.icoGeo, new THREE.MeshBasicMaterial({
+                color: 0x8b949e, transparent: true, opacity: 0.15, depthTest: false}));
+            solid.renderOrder = 10;
+            solid.userData["nodeId"] = node.id;
+            group.add(solid);
+
+            const wire = new THREE.Mesh(CityMap.icoGeo, new THREE.MeshBasicMaterial({
+                color: 0x8b949e, wireframe: true, transparent: true, opacity: 0.55, depthTest: false}));
+            wire.renderOrder = 11;
+            wire.userData["nodeId"] = node.id;
+            group.add(wire);
+
+            this.scene.add(group);
             const beamGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p.x, 0, p.z), p]);
             const beam = new THREE.Line(beamGeo, new THREE.LineBasicMaterial({color: 0x4a525c, transparent: true, opacity: 0.2}));
             this.scene.add(beam);
-            this.markers.push({node, sprite, beam, baseScale: 3.1 * ms, pulse: false});
+            this.markers.push({node, group, halo, solid, wire, beam, baseScale: 3.1 * ms, pulse: false, spin: 0.25});
             const el = document.createElement("div");
             el.className = "cityLabel";
             this.overlay.current!.appendChild(el);
@@ -359,57 +382,59 @@ export class CityMap extends React.Component<CityMapProps, {}> {
             const reachable = run.reachableIds.indexOf(id) >= 0;
             const cleared = run.clearedIds.indexOf(id) >= 0;
             const boss = m.node.type === "boss";
-            const mat = m.sprite.material as THREE.SpriteMaterial;
             const label = this.labels[id]!;
             const beamMat = m.beam.material as THREE.LineBasicMaterial;
+            const solidMat = m.solid.material as THREE.MeshBasicMaterial;
+            const wireMat = m.wire.material as THREE.MeshBasicMaterial;
+            const haloMat = m.halo.material as THREE.SpriteMaterial;
             m.pulse = false;
             label.style.display = "none";
+            // apply(colour, solidOp, wireOp, haloOp, scale, spin)
+            const apply = (colour: number, so: number, wo: number, ho: number, scale: number, spin: number) => {
+                solidMat.color.setHex(colour); solidMat.opacity = so;
+                wireMat.color.setHex(colour); wireMat.opacity = wo;
+                haloMat.opacity = ho;
+                m.baseScale = scale * ms;
+                m.spin = spin;
+            };
+            const geo = current ? CityMap.octaGeo : CityMap.icoGeo;
+            m.solid.geometry = geo;
+            m.wire.geometry = geo;
 
             if (current) {
-                mat.map = this.tex("you", css(WHITE), "◆", css(WHITE), false);
-                mat.opacity = 1;
-                m.baseScale = 2.7 * ms;
+                apply(WHITE, 0.35, 1.0, 0.9, 1.5, 0.9);
                 beamMat.color.setHex(WHITE); beamMat.opacity = 0.5;
                 label.style.display = "block";
                 label.textContent = "You";
                 label.style.borderColor = css(WHITE);
             } else if (reachable && !cleared) {
                 // adjacency reveals the node's nature — this is a tappable target
-                mat.map = this.tex("t:" + m.node.type, css(t[0]), t[2], css(t[0]), false);
-                mat.opacity = 1;
-                m.baseScale = (boss ? 4.4 : 3.4) * ms;
+                apply(t[0], 0.32, 1.0, 0.9, boss ? 2.4 : 1.8, 1.3);
                 m.pulse = true;
                 beamMat.color.setHex(t[0]); beamMat.opacity = 0.55;
                 label.style.display = "block";
                 label.textContent = `${t[1]} · ${Math.round(this.routeLen(run.position, id))}m`;
                 label.style.borderColor = css(t[0]);
             } else if (reachable && cleared) {
-                mat.map = this.tex("clearedGo", "#9aa4ad", "✓", "#c6ccd2", false);
-                mat.opacity = 0.9;
-                m.baseScale = 2.1 * ms;
+                apply(0x9aa4ad, 0.16, 0.7, 0.6, 1.15, 0.45);
                 beamMat.color.setHex(0x9aa4ad); beamMat.opacity = 0.3;
             } else if (cleared) {
-                mat.map = this.tex("cleared", "#3d444d", "✓", "#79828c", false);
-                mat.opacity = 0.5;
-                m.baseScale = 1.9 * ms;
+                apply(0x3d444d, 0.1, 0.45, 0.35, 1.0, 0.2);
                 beamMat.color.setHex(0x3d444d); beamMat.opacity = 0.12;
             } else if (boss) {
                 // the goal stays on the map even through fog of war
-                mat.map = this.tex("bossFar", css(t[0]), t[2], css(t[0]), false);
-                mat.opacity = 0.65;
-                m.baseScale = 3.8 * ms;
+                apply(t[0], 0.2, 0.65, 0.7, 2.0, 0.35);
                 beamMat.color.setHex(t[0]); beamMat.opacity = 0.25;
                 label.style.display = "block";
                 label.textContent = "Boss";
                 label.style.borderColor = css(t[0]);
             } else {
                 // fog of war: unknown until you stand next to it
-                mat.map = this.tex("unknown", "#4a525c", "◇", "#8b949e", true);
-                mat.opacity = 0.55;
-                m.baseScale = 2.0 * ms;
+                apply(0x8b949e, 0.0, 0.5, 0.45, 1.05, 0.25);
                 beamMat.color.setHex(0x4a525c); beamMat.opacity = 0.15;
             }
-            m.sprite.scale.setScalar(m.baseScale);
+            m.group.scale.setScalar(m.baseScale);
+            m.halo.scale.setScalar(2.8);   // relative to the group scale — wider than the shape
         });
 
         // routes: white marching dashes out of the current node; calm elsewhere
@@ -515,7 +540,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
             -((ev.clientY - rect.top) / rect.height) * 2 + 1);
         const ray = new THREE.Raycaster();
         ray.setFromCamera(ndc, this.camera);
-        const hits = ray.intersectObjects(this.markers.map((m) => m.sprite));
+        const hits = ray.intersectObjects(this.markers.map((m) => m.halo));   // halo = generous tap area
         const first = hits[0];
         if (!first) { return; }
         const id = first.object.userData["nodeId"];
@@ -550,14 +575,18 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         this.camera.position.z = c.z + this.baseY * 0.24;
         this.camera.lookAt(c.x, 0, c.z);
 
-        // motion = actionable: breathing tappable markers, marching route dashes
+        // motion hierarchy: actionable markers spin fast + breathe, ambient ones idle
         const rect = this.renderer.domElement.getBoundingClientRect();
         this.markers.forEach((m) => {
             const s = m.baseScale * (m.pulse && !this.reduced ? 1 + Math.sin(this.t * 2.6) * 0.09 : 1);
-            m.sprite.scale.setScalar(s);
+            m.group.scale.setScalar(s);
+            if (!this.reduced) {
+                m.solid.rotation.y += m.spin * dt;
+                m.wire.rotation.y += m.spin * dt;
+            }
             const label = this.labels[m.node.id];
             if (label && label.style.display !== "none") {
-                const v = m.sprite.position.clone().project(this.camera);
+                const v = m.group.position.clone().project(this.camera);
                 const half = (label.offsetWidth || 90) / 2 + 6;   // keep the whole chip on screen
                 const lx = Math.max(half, Math.min(rect.width - half, (v.x * 0.5 + 0.5) * rect.width));
                 const ly = Math.max(18, Math.min(rect.height - 12, (-v.y * 0.5 + 0.5) * rect.height - 30));
