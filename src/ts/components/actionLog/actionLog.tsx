@@ -35,7 +35,9 @@ export class ActionLog extends React.Component<LogProps, LogState> {
                     return <DeathMessage key={i} dead={m.dead} killer={m.killer}/>;
                 default:
                     const msg = !m.playerName ? m.msg : m.playerName;
-                    return <Message text={msg} key={i}/>;
+                    const kind = /loots|¥/.test(msg) ? "msg-loot"
+                        : /kits up|suits up/.test(msg) ? "msg-gear" : undefined;
+                    return <Message text={msg} kind={kind} key={i}/>;
             }
         });
     };

@@ -59,6 +59,10 @@ export class CharacterComponent extends React.Component<CharCompProps, {}> {
                         {this.controls(a)}
                     </div>
                     <Bar value={a.health} max={a.maxHealth} kind={"hp"} showText={false}/>
+                    <div className={"pcGear"}>
+                        <span>{a.weapon.name} · {a.weapon.diceThrows}d6{a.weapon.damage ? "+" + a.weapon.damage : ""}{a.weapon.ap ? " AP" : ""}</span>
+                        <span className={"gearSp"}>SP {a.equipment.upper ? a.equipment.upper.stoppingPower : 0}</span>
+                    </div>
                 </div>
             </div>
         );

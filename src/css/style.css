@@ -73,7 +73,11 @@ header .mini b { color:var(--ink); font-weight:600; }
 header .mini .bar { display:inline-block; height:8px; background:#0b0b10;
     border:1px solid var(--line); position:relative; overflow:hidden; }
 header .mini .bar i { display:block; height:100%; }
-header .eddies { margin-left:auto; color:var(--good); font-weight:700; letter-spacing:.03em; }
+header .eddies { position:relative; margin-left:auto; color:var(--good); font-weight:700; letter-spacing:.03em; transition:text-shadow .2s; }
+header .eddies.looting { text-shadow:0 0 12px rgba(127,214,127,.8); }
+header .eddies .lootGain { position:absolute; right:0; top:-15px; font-style:normal; font-size:11px;
+    color:var(--warn); animation:lootFloat 1.4s ease-out forwards; white-space:nowrap; }
+@keyframes lootFloat { 0%{opacity:0;transform:translateY(4px)} 15%{opacity:1;transform:translateY(0)} 100%{opacity:0;transform:translateY(-12px)} }
 
 /* nav rail */
 nav {
@@ -280,6 +284,10 @@ main.panel > .panelBody { flex:1; min-height:0; overflow-y:auto; padding:12px; }
 .pc .pcn span { color:var(--dim); font-size:10px; }
 .pc .pcr { display:flex; align-items:center; gap:6px; margin:1px 0 4px;
     color:var(--faint); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+.pcGear { display:flex; justify-content:space-between; gap:8px; margin-top:4px;
+    color:var(--dim); font-size:10px; letter-spacing:.02em; }
+.pcGear span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.pcGear .gearSp { color:var(--mid); flex:none; }
 .pcCtl { display:inline-flex; align-items:center; gap:4px; margin-left:auto; }
 .autoChip { font-size:9px; letter-spacing:.06em; padding:0 4px; border:1px solid var(--line2); color:var(--dim); cursor:pointer; }
 .autoChip:hover { color:var(--mid); }
@@ -295,6 +303,8 @@ main.panel > .panelBody { flex:1; min-height:0; overflow-y:auto; padding:12px; }
    Feed (action log)
    --------------------------------------------------------------------- */
 .feed .log { flex:1; min-height:0; overflow-y:auto; padding:8px 10px; font-size:11.5px; line-height:1.7; }
+.actionMessage.msg-loot { color:var(--warn); }
+.actionMessage.msg-gear { color:var(--cyan); }
 .actionMessage, .actionMessage-first { color:var(--mid); padding-bottom:1px; margin-left:1em; text-indent:-1em; }
 .messageArrow { color:var(--rust); margin-right:6px; font-weight:bold; }
 .hitRed { color:var(--crit); }

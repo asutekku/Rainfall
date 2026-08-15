@@ -5,8 +5,32 @@ export interface HudProps {
     actor: Actor;
 }
 
-/** Ops-console topbar: brand + always-visible vitals + eddies, spanning the grid. */
-export class Hud extends React.Component<HudProps, {}> {
+interface HudState { loot: number; }
+
+/** Ops-console topbar: brand + always-visible vitals + eddies (with a loot pulse). */
+export class Hud extends React.Component<HudProps, HudState> {
+
+    private lastEddies = -1;
+    private timer: any = null;
+
+    constructor(props: HudProps) {
+        super(props);
+        this.state = {loot: 0};
+        this.lastEddies = props.actor ? props.actor.currency : -1;
+    }
+
+    public componentDidUpdate() {
+        const cur = this.props.actor ? this.props.actor.currency : 0;
+        if (this.lastEddies >= 0 && cur > this.lastEddies) {
+            const gain = cur - this.lastEddies;
+            this.setState({loot: gain});
+            if (this.timer) { clearTimeout(this.timer); }
+            this.timer = setTimeout(() => this.setState({loot: 0}), 1400);
+        }
+        this.lastEddies = cur;
+    }
+
+    public componentWillUnmount() { if (this.timer) { clearTimeout(this.timer); } }
 
     private mini(label: string, value: number, max: number, fill: string) {
         const pct = Math.max(0, Math.min(100, (value / Math.max(1, max)) * 100));
@@ -33,7 +57,10 @@ export class Hud extends React.Component<HudProps, {}> {
                 <span className={"mini"}>REP <b>{a.reputation}</b></span>
                 <span className={"mini"}>LUCK <b>{a.luck}/{a.maxLuck}</b></span>
                 <span className={"mini " + condClass}>{condition}</span>
-                <span className={"eddies"}>{a.currency}¥</span>
+                <span className={"eddies" + (this.state.loot ? " looting" : "")}>
+                    {this.state.loot ? <em className={"lootGain"}>+{this.state.loot}¥</em> : null}
+                    {a.currency}¥
+                </span>
             </header>);
     }
 }

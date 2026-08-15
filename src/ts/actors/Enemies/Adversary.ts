@@ -25,7 +25,8 @@ export class Adversary extends Actor {
 
         this.item = GetItem.item();
         this.items = [this.item];
-        this.weapon = GetItem.weaponOfClass(a.weapons, 3, a.minDice);
+        // cap the weapon's dice by rank so mooks can't roll a heavy cannon
+        this.weapon = GetItem.weaponOfClass(a.weapons, 3, a.minDice, a.rank <= 3 ? 5 : 6);
         this.temperament = a.temperament === "roll"
             ? TacticalAI.rollTemperament(this.weapon.weaponClass) : a.temperament;
 

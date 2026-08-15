@@ -40,13 +40,17 @@ export class GetItem {
         return Utils.pickRandom(street).clone();
     }
 
-    /** A random kinetic weapon drawn from the given classes (for faction loadouts). */
-    public static weaponOfClass(classes: string[], maxRarity: number = 3, minDice: number = 0): Weapon {
+    /**
+     * A random kinetic weapon drawn from the given classes (for faction loadouts).
+     * `maxDice` caps the d6 count so a street enemy can't roll an anti-materiel
+     * rocket out of the "rifle" bucket.
+     */
+    public static weaponOfClass(classes: string[], maxRarity: number = 3, minDice: number = 0, maxDice: number = 6): Weapon {
+        const inClass = (w: any) => classes.indexOf(w.weaponClass) !== -1 && w.damageType === "kinetic";
         const pool = weapons.filter((w) =>
-            classes.indexOf(w.weaponClass) !== -1 && w.damageType === "kinetic"
-            && w.rarity <= maxRarity && w.diceThrows >= minDice);
-        const list = pool.length ? pool : weapons.filter((w) =>
-            classes.indexOf(w.weaponClass) !== -1 && w.damageType === "kinetic" && w.rarity <= maxRarity);
+            inClass(w) && w.rarity <= maxRarity && w.diceThrows >= minDice && w.diceThrows <= maxDice);
+        const list = pool.length ? pool
+            : weapons.filter((w) => inClass(w) && w.rarity <= maxRarity && w.diceThrows <= maxDice);
         return Utils.pickRandom(list.length ? list : weapons.filter((w) => w.weaponClass === "pistol")).clone();
     }
 

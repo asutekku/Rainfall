@@ -183,7 +183,7 @@ export class Combat {
         if (actor.deathSave()) {
             this.messages.push(new MessageStr(`${actor.name} clings to life.`));
         } else {
-            this.messages.push(new DeathMessage(actor, actor));
+            this.messages.push(new MessageStr(`${actor.name} flatlines.`));
         }
     }
 
