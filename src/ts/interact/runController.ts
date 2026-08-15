@@ -46,7 +46,7 @@ export class RunController {
         if (node.type === "rest") { return {run: {...run, node}, screen: "rest"}; }
         if (node.type === "hire") {
             // A fixer's table mid-sector: short list, and he takes his cut.
-            return {run: {...run, node}, screen: "hire", offers: MercMarket.board(run.sector, 3, 1.25)};
+            return {run: {...run, node}, screen: "hire", offers: MercMarket.board(run.sector + 1, 3, 1.25)};
         }
         // combat / elite / boss
         const enemies = spawnEncounter(encounterSpec(node, run.sector, RunController.levelOf(state.party)));
@@ -167,7 +167,10 @@ export class RunController {
     public static autoKit(state: InterfaceAppState, report: BattleReport): BattleReport {
         if (report.kitted || report.outcome === "defeat") { return {...report, kitted: true}; }
         const changes: GearChange[] = [];
-        state.party.forEach((p) => { if (p.canFight()) { changes.push(...Economy.autoEquip(p)); } });
+        // Half the pot, tops. Unbounded auto-kit spent every payday down to zero,
+        // which made every merc tier above Rookie permanently unaffordable.
+        const budget = Math.floor(state.crew.funds / 2);
+        state.party.forEach((p) => { if (p.canFight()) { changes.push(...Economy.autoEquip(p, budget)); } });
         // Anything the fixer pulled out of a pack is no longer on offer.
         report.loot.forEach((l) => {
             if (l.fate !== "held") { return; }
@@ -179,8 +182,8 @@ export class RunController {
     }
 
     /** Trauma Team for a merc the crew wants back — paid for out of the purse. */
-    public static buyout(state: InterfaceAppState, report: BattleReport, name: string): BattleReport | null {
-        const merc = report.casualties.find((c) => c.name === name);
+    public static buyout(state: InterfaceAppState, report: BattleReport, id: string): BattleReport | null {
+        const merc = report.casualties.find((c) => c instanceof Merc && c.offerId === id);
         if (!merc) { return null; }
         const cost = merc instanceof Merc ? merc.buyoutCost() : 400;
         if (!state.crew.spend(cost)) { return null; }
@@ -196,6 +199,16 @@ export class RunController {
         const run = state.run;
         const report = state.report ? RunController.autoKit(state, state.report) : null;
         const notes: any[] = report ? report.gear.map((c) => ({msg: Economy.describe(c)})) : [];
+        // Trauma Team always comes for your character — the run-over screen says
+        // so, and without this they could be left mortally wounded for the rest of
+        // the run, rolling a death save every round until they were gone for good.
+        // The pickup isn't optional and it isn't free.
+        const you = state.party.find((p) => !p.hireable);
+        if (you && !you.canFight() && report && report.outcome === "victory") {
+            const bill = Purse.garnish(you, 400 + (run ? run.sector : 1) * 200);
+            you.revive();
+            notes.push({msg: `Trauma Team stabilises ${you.name} — billed ${bill}¥.`});
+        }
         const lost = report ? report.casualties : [];
         lost.forEach((c) => notes.unshift({msg: `${c.name} didn't make it off the street.`}));
         const party = lost.length ? state.party.filter((p) => lost.indexOf(p) < 0) : state.party;
@@ -226,7 +239,11 @@ export class RunController {
     /** Next sector: a new city, a harder one, with the crew you walked out with. */
     public static nextSector(state: InterfaceAppState, log: number): Patch {
         const sector = (state.run ? state.run.sector : 0) + 1;
-        state.party.forEach((p) => { if (p.canFight()) { p.health = p.maxHealth; } });
+        state.party.forEach((p) => {
+            if (!p.canFight()) { p.revive(); }
+            p.health = p.maxHealth;
+            Economy.repairArmor(p);
+        });
         return {
             run: RunController.freshRun(sector), screen: "map", report: null, offers: [],
             activeMainPanel: "Combat", mobileTab: "arena",

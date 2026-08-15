@@ -264,7 +264,7 @@ export function encounterSpec(node: RunNode, sector: number, partyLevel: number)
     // Flak-and-MetalGear tier only shows up once the crew can punch through it.
     const bossRank = Math.max(2, Math.min(5, 1 + Math.ceil(sector / 2)));
     switch (node.type) {
-        case "elite": return {boss: false, amount: 2, level: base + 1, rank: 0};
+        case "elite": return {boss: false, amount: 2, level: base + 1, rank: 3};
         case "boss": return {boss: true, amount: 1, level: base + 2, rank: bossRank};
         default: return {boss: false, amount: 1 + (Math.random() < 0.5 ? 1 : 0), level: base, rank: 0};
     }
@@ -272,7 +272,10 @@ export function encounterSpec(node: RunNode, sector: number, partyLevel: number)
 
 /** Mint the actual enemies for an encounter spec. */
 export function spawnEncounter(spec: EncounterSpec): Actor[] {
-    return spec.boss
-        ? ActorController.getBoss(spec.level, spec.rank)
+    if (spec.boss) { return ActorController.getBoss(spec.level, spec.rank); }
+    // rank > 0 forces the archetype tier, which is what makes an "elite contact"
+    // read as one rather than as two ordinary gangers a level higher.
+    return spec.rank > 0
+        ? ActorController.getEliteWave(spec.amount, spec.level, spec.rank)
         : ActorController.getEnemies(spec.amount, spec.level);
 }

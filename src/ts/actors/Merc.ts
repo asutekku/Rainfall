@@ -18,6 +18,8 @@ import type {MercOffer} from "../interact/mercMarket";
  */
 export class Merc extends Actor {
 
+    /** The market offer they came from — stable identity, unlike a rolled name. */
+    public offerId: string;
     /** What the crew paid for them — shown on the roster, and what a buyout is priced against. */
     public fee: number;
     /** Market tier: Rookie / Pro / Veteran / Legend. */
@@ -30,6 +32,7 @@ export class Merc extends Actor {
         this.role = new Role(offer.role);
         this.skill = this.role.skill;
         this.lifepath = CharacterCreation.randomLifepath();
+        this.offerId = offer.id;
         this.fee = offer.price;
         this.tier = offer.tier;
         this.auto = true;                     // hired guns fight themselves

@@ -114,6 +114,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (run && this.state.screen === "debrief" && this.state.report) {
             return <DebriefView report={this.state.report} sector={run.sector}
                                 canRevive={run.outcome === "lost" && !run.reviveUsed}
+                                canAct={run.outcome !== "lost" || !run.reviveUsed}
                                 funds={this.state.crew.funds}
                                 onClaim={this.claimLoot} onSell={this.sellLoot} onAutoKit={this.autoKit}
                                 onBuyout={this.buyoutMerc}
@@ -146,7 +147,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         }
         if (run && this.state.screen === "rest") {
             return <MetaOverlay title={"☾ Safehouse"} onLeave={this.leaveMeta}>
-                <Downtime actor={this.getCurrentActor()}/>
+                <Downtime actor={this.getCurrentActor()} party={this.state.party}/>
             </MetaOverlay>;
         }
         // Battle Stage shell: topbar (Hud) / nav rail / feed column (squad + feed) / stage (game).
@@ -159,10 +160,9 @@ export class App extends React.Component<{}, InterfaceAppState> {
             <Hud actor={this.getCurrentActor()} crew={this.state.crew}/>
             <Sidebar active={this.state.activeMainPanel}
                      auto={this.state.auto}
+                     inRun={this.state.run !== null}
                      activeSelection={this.updateSelection}
                      onAuto={this.toggleAuto}
-                     onRestart={this.restart}
-                     onRespawn={this.respawn}
                      onCreate={this.openCreator}/>
             <section id={"feedcol"}>
                 <Party name={"Squad"} party={this.state.party} activeSelection={this.getCharacter} friendly={true}
@@ -172,7 +172,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             <Stage actor={this.getCurrentActor()} enemy={this.getCurrentEnemy()}
                    party={this.state.party} enemies={this.state.currentEnemies}
                    view={this.state.activeMainPanel} screen={this.state.screen} run={this.state.run}
-                   messages={this.combatController}
+                   messages={this.combatController} onNotice={this.pushNotice}
                    onSelectAlly={this.getCharacter} onSelectEnemy={this.getEnemy}
                    onGotoCombat={this.gotoCombat} onPickNode={this.enterNode}/>
             <MobileTabs tab={this.state.mobileTab} more={this.state.mobileMore}
@@ -183,6 +183,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
     }
 
     private gotoCombat = () => this.setState({activeMainPanel: "Combat", mobileTab: "arena"});
+
+    /** A panel wants a line in the feed — never a combat round. */
+    private pushNotice = (msg: any) => this.setState((st) => ({
+        messages: [msg, ...st.messages].slice(0, this.logLength),
+    }));
 
     /**
      * Mobile destination switch. Arena and Gear also drive the desktop panel
@@ -269,7 +274,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     /** Re-open the creator (nav "New Squad" / abandon / new crew). */
-    private openCreator = () => { this.stopAuto(); this.setState({creating: true, run: null, screen: "combat", report: null}); };
+    private openCreator = () => { this.stopAuto(); this.setState({creating: true, report: null}); };
     private closeCreator = () => this.setState({creating: false});
 
     /** Flip a squad member between manual and AI control. */
@@ -288,7 +293,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
      * going, then pause auto once the fight leaves the combat screen.
      */
     private combatController = (...messages: any): void => {
-        if (!this.state.run) { return; }
+        // Only a resolved combat round may drive the run machine. Panels (Quests,
+        // Store) share this callback through Stage → MainPanel, and letting one of
+        // their notices through after a fight was cleared sealed an already-sealed
+        // ledger and stranded the run on an unrenderable "debrief" with no report.
+        if (!this.state.run || this.state.screen !== "combat") { return; }
         this.setState(RunController.step(this.state, messages.flat(), this.logLength) as any,
             () => { if (this.state.screen !== "combat") { this.stopAuto(); } });
     };
@@ -333,10 +342,6 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     /** Fresh run — a new act with the same crew, back on the map. */
-    private restart = () => {
-        this.stopAuto();
-        this.setState(RunController.nextRun(this.state, this.logLength) as any);
-    };
 
     /** Sign a candidate off the board. */
     private hireMerc = (id: string) => {
@@ -351,8 +356,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     /** Trauma Team for a downed merc, out of the crew purse. */
-    private buyoutMerc = (name: string) => {
-        const report = this.state.report && RunController.buyout(this.state, this.state.report, name);
+    private buyoutMerc = (id: string) => {
+        const report = this.state.report && RunController.buyout(this.state, this.state.report, id);
         if (report) { this.setState({report}); }
     };
 
@@ -362,13 +367,6 @@ export class App extends React.Component<{}, InterfaceAppState> {
         this.setState(RunController.nextRun(this.state, this.logLength) as any);
     };
 
-    /** Trauma Team pickup: fully revive and heal every squad member. */
-    private respawn = () => {
-        this.state.party.forEach((p) => p.revive());
-        this.setState({
-            messages: [{msg: "— squad revived (Trauma Team) —"} as any, ...this.state.messages].slice(0, this.logLength),
-        });
-    };
 
     private getCharacter = (actor: Actor) => {
         if (!actor) {
@@ -386,8 +384,15 @@ export class App extends React.Component<{}, InterfaceAppState> {
         }
     };
 
+    /**
+     * Always someone actually on the crew. A merc can leave the party between
+     * renders (bled out on the debrief), and the stale reference used to keep
+     * feeding the HUD, the store and the safehouse — so eddies were spent
+     * kitting out a corpse that had already been struck off.
+     */
     private getCurrentActor(): Actor {
-        return !this.state.activeChar ? this.state.party[0]! : this.state.activeChar;
+        const a = this.state.activeChar;
+        return a && this.state.party.indexOf(a) >= 0 ? a : this.state.party[0]!;
     }
 
     private getCurrentEnemy(): Actor {

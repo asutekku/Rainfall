@@ -7,11 +7,13 @@ export interface DebriefViewProps {
     report: BattleReport;
     sector: number;
     canRevive: boolean;
+    /** False on a wipe with no revive left: nothing bought here would survive. */
+    canAct: boolean;
     funds: number;
     onClaim: (id: string) => void;
     onSell: (id: string) => void;
     onAutoKit: () => void;
-    onBuyout: (name: string) => void;
+    onBuyout: (id: string) => void;
     onContinue: () => void;
     onRevive: () => void;
 }
@@ -88,7 +90,7 @@ export class DebriefView extends React.Component<DebriefViewProps, {}> {
                 <span className={"dbLootName"}>{l.rare ? "★ " : ""}{l.name}</span>
                 <span className={"dbLootDetail"}>{l.detail}</span>
                 <span className={"dbLootOwner"}>found by {l.owner.name}</span>
-                {held ? (
+                {held && this.props.canAct ? (
                     <span className={"dbLootActs"}>
                         <button onClick={() => this.props.onClaim(l.id)}>Equip</button>
                         <button onClick={() => this.props.onSell(l.id)}>Fence</button>
@@ -119,7 +121,8 @@ export class DebriefView extends React.Component<DebriefViewProps, {}> {
      * price and a name rather than a quiet line in the feed.
      */
     private casualty = (a: Actor, i: number) => {
-        const cost = a instanceof Merc ? a.buyoutCost() : 400;
+        const merc = a instanceof Merc ? a : null;
+        const cost = merc ? merc.buyoutCost() : 400;
         return (
             <li key={i} className={"dbCasualty"}>
                 <span className={"dbCasIcon"}>✚</span>
@@ -127,7 +130,7 @@ export class DebriefView extends React.Component<DebriefViewProps, {}> {
                 <span className={"dbCasRole"}>{a.role.name} · L{a.level}</span>
                 <button disabled={this.props.funds < cost}
                         title={this.props.funds < cost ? "Not enough eddies" : "Trauma Team pickup"}
-                        onClick={() => this.props.onBuyout(a.name)}>{cost}¥</button>
+                        onClick={() => merc && this.props.onBuyout(merc.offerId)}>{cost}¥</button>
             </li>);
     };
 
@@ -155,7 +158,7 @@ export class DebriefView extends React.Component<DebriefViewProps, {}> {
                         </div>
 
                         <div className={"debriefBlock"}>
-                            {r.casualties.length > 0 &&
+                            {r.casualties.length > 0 && (won || this.props.canRevive) &&
                                 <div className={"dbCasualties"}>
                                     <h2>Bleeding out</h2>
                                     <ul>{r.casualties.map(this.casualty)}</ul>

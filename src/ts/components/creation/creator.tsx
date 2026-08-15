@@ -107,9 +107,6 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
         });
     };
 
-    private setRank = (delta: number) => {
-        this.update((s) => ({...s, roleRank: Math.max(1, Math.min(10, (s.roleRank || 4) + delta))}));
-    };
 
     private randomize = () => {
         const rolled = CharacterCreation.randomSpec();
@@ -132,7 +129,7 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
         return [
             ["HP", "" + hp],
             ["Humanity", "" + (st.emp * 10)],
-            ["Run", (st.move * 2) + "m"],
+            ["Run", (st.move * 3) + "m"],
             ["Initiative", "+" + st.ref],
             ["Evasion", "+" + st.dex],
         ];
@@ -168,11 +165,7 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                 </div>
                 <div className={"crRoleInfo"}>
                     <div className={"crRoleAbil"}><b style={{color: r.color}}>{r.skill}</b>
-                        <span className={"crRank"}>Rank
-                            <button onClick={() => this.setRank(-1)}>−</button>
-                            <em>{s.roleRank}</em>
-                            <button onClick={() => this.setRank(1)}>+</button>
-                        </span>
+                        <span className={"crRank"}>Rank <em>{s.roleRank}</em></span>
                     </div>
                     <p>{r.skillDescription}</p>
                 </div>

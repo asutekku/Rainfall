@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {Merc} from "../../actors/Merc";
 import {default as roles} from "../../actors/resources/roles";
 import {MercOffer} from "../../interact/mercMarket";
 
@@ -22,7 +23,7 @@ export class HireBoard extends React.Component<HireBoardProps, {}> {
 
     private offer = (o: MercOffer) => {
         const role = ROLE_MAP[o.role] || ROLE_MAP["solo"];
-        const hired = this.props.party.some((p) => p.name === o.name);
+        const hired = this.props.party.some((p) => (p as Merc).offerId === o.id);
         const full = this.props.party.length >= this.props.cap;
         const broke = this.props.funds < o.price;
         return (

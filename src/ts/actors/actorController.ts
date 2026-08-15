@@ -18,6 +18,15 @@ export class ActorController {
         return out;
     }
 
+    /** A wave drawn from an exact archetype rank — the "elite contact" nodes. */
+    public static getEliteWave(amount: number, level: number, rank: number): Actor[] {
+        const out: Actor[] = [];
+        for (let i = 0; i < amount; i++) {
+            out.push(new Adversary(pickArchetypeOfRank(Math.max(1, Math.min(5, rank))), level));
+        }
+        return out;
+    }
+
     /**
      * A boss encounter: a forced high-rank adversary plus one escort. Rank is
      * the sector's job, not the level's — a rank-5 boss in Flak armour is
