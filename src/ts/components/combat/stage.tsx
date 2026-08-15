@@ -179,7 +179,8 @@ export class Stage extends React.Component<StageProps, {}> {
                     <React.Fragment>
                         <div className={"viewwrap"}>
                             <MainPanel activeView={this.props.view} currentActor={this.props.actor}
-                                       party={this.props.party} messages={this.props.messages}
+                                       party={this.props.party} screen={this.props.screen}
+                                       messages={this.props.messages}
                                        onNotice={this.props.onNotice}/>
                         </div>
                         <div className={"minimap"} title={"Return to combat"} onClick={this.props.onGotoCombat}>

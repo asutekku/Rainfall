@@ -51,28 +51,35 @@ export class SafehouseView extends React.Component<SafehouseViewProps, Safehouse
                     {done && <button className={"metaLeave"} onClick={() => this.props.onLeave([done])}>Move out ▸</button>}
                     {!done && <button className={"metaLeaveGhost"} onClick={() => this.props.onLeave(["— no time to rest —"])}>Skip ▸</button>}
                 </div>
-                <div className={"evBody"}>
-                    <p className={"evFlavor"}>
-                        A cold-water flat with a working lock and a mattress that's seen worse.
-                        One night. One call — make it count.
-                    </p>
-                    {!done && (
-                        <div className={"evOpts"}>
-                            <button className={"evOpt"} onClick={this.patch}>
-                                <span className={"evOptLabel"}>Patch up</span>
-                                <span className={"evOptMeta"}><em>squad heals 50%, stabilises the dying</em></span>
-                            </button>
-                            <button className={"evOpt"} onClick={this.drill}>
-                                <span className={"evOptLabel"}>Run combat drills</span>
-                                <span className={"evOptMeta"}><em>everyone +1 to their equipped weapon skill</em></span>
-                            </button>
-                            <button className={"evOpt"} onClick={this.decompress}>
-                                <span className={"evOptLabel"}>Decompress</span>
-                                <span className={"evOptMeta"}><em>squad +6 Humanity · Luck pools refill</em></span>
-                            </button>
+                <div className={"ovScroll"}>
+                    <div className={"ovInner"}>
+                        <div className={"mHero sh"}>
+                            <span className={"mHeroGlyph"}><i>☾</i></span>
+                            <span className={"mHeroKicker"}>One night off the street</span>
+                            <h2 className={"mHeroTitle"}>Safehouse</h2>
                         </div>
-                    )}
-                    {done && <div className={"evResult"}><p>{done}</p></div>}
+                        <p className={"evFlavor"}>
+                            A cold-water flat with a working lock and a mattress that's seen worse.
+                            One night. One call — make it count.
+                        </p>
+                        {!done && (
+                            <div className={"evOpts"}>
+                                <button className={"evOpt"} onClick={this.patch}>
+                                    <span className={"evOptLabel"}>Patch up</span>
+                                    <span className={"evOptMeta"}><em>squad heals 50%, stabilises the dying</em></span>
+                                </button>
+                                <button className={"evOpt"} onClick={this.drill}>
+                                    <span className={"evOptLabel"}>Run combat drills</span>
+                                    <span className={"evOptMeta"}><em>everyone +1 to their equipped weapon skill</em></span>
+                                </button>
+                                <button className={"evOpt"} onClick={this.decompress}>
+                                    <span className={"evOptLabel"}>Decompress</span>
+                                    <span className={"evOptMeta"}><em>squad +6 Humanity · Luck pools refill</em></span>
+                                </button>
+                            </div>
+                        )}
+                        {done && <div className={"evResult"}><p>{done}</p></div>}
+                    </div>
                 </div>
             </div>);
     }

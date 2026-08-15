@@ -7,8 +7,12 @@ export interface CharCompProps {
     friendly: boolean;
     update: any;
     selected: string;
+    /** This is YOUR character (pinned on top of the roster). */
+    isPlayer?: boolean | undefined;
     onToggleAuto?: ((a: Actor) => void) | undefined;
     onCycleTemperament?: ((a: Actor) => void) | undefined;
+    /** Open the member's full character sheet (the › affordance). */
+    onOpenSheet?: ((a: Actor) => void) | undefined;
 }
 
 const TEMPER: { [k: string]: [string, string] } = {
@@ -48,10 +52,15 @@ export class CharacterComponent extends React.Component<CharCompProps, {}> {
         const a = this.props.actor;
         const selected = a.name === this.props.selected;
         return (
-            <div className={selected ? "pc on" : "pc"} onClick={() => this.props.update(a)}>
+            <div className={(selected ? "pc on" : "pc") + (this.props.isPlayer ? " you" : "")}
+                 onClick={() => this.props.update(a)}>
                 <img src={a.role.portrait} className={"pf"} alt={a.role.name}/>
                 <div className={"pcx"}>
-                    <div className={"pcn"}><b>{a.name}</b><span>Lvl {a.level}</span></div>
+                    <div className={"pcn"}>
+                        <b>{a.name}</b>
+                        {this.props.isPlayer && <span className={"youChip"}>YOU</span>}
+                        <span>Lvl {a.level}</span>
+                    </div>
                     <div className={"pcr"}>
                         {a.role.name}
                         {this.badge(a)}
@@ -64,6 +73,10 @@ export class CharacterComponent extends React.Component<CharCompProps, {}> {
                         <span className={"gearSp"}>SP {a.equipment.upper ? a.equipment.upper.stoppingPower : 0}</span>
                     </div>
                 </div>
+                {this.props.friendly && this.props.onOpenSheet && (
+                    <button className={"pcSheet"} title={"Character sheet"}
+                            onClick={(e) => { e.stopPropagation(); this.props.onOpenSheet!(a); }}>›</button>
+                )}
             </div>
         );
     }

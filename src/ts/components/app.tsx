@@ -204,7 +204,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
                      onCreate={this.openCreator}/>
             <section id={"feedcol"}>
                 <Party name={"Squad"} party={this.state.party} activeSelection={this.getCharacter} friendly={true}
-                       onToggleAuto={this.toggleActorAuto} onCycleTemperament={this.cycleTemperament}/>
+                       onToggleAuto={this.toggleActorAuto} onCycleTemperament={this.cycleTemperament}
+                       onOpenSheet={this.openSheet}/>
                 <ActionLog actor={this.getCurrentActor()} messages={this.state.messages}/>
             </section>
             <Stage actor={this.getCurrentActor()} enemy={this.getCurrentEnemy()}
@@ -619,6 +620,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private nextRun = () => {
         this.resetSequencer();
         this.setState(RunController.nextRun(this.state, this.logLength) as any);
+    };
+
+    /** Open a squad member's full character sheet (from the roster's ›). */
+    private openSheet = (actor: Actor) => {
+        this.setState({activeChar: actor, activeMainPanel: "Character", mobileTab: "panel", mobileMore: false});
     };
 
     private getCharacter = (actor: Actor) => {

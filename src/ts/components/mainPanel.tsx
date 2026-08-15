@@ -15,6 +15,8 @@ interface MainProps {
     currentActor: Actor;
     currentEnemy?: Actor;
     party: Actor[];
+    /** Which run screen is up (gear equipping is locked mid-fight). */
+    screen: string;
     messages: any;
     /** A panel notice destined for the action feed. */
     onNotice: (msg: any) => void;
@@ -44,7 +46,8 @@ export class MainPanel extends React.Component<MainProps, MainState> {
     public renderView(view: string): any {
         switch (view) {
             case "Inventory":
-                return <Inventory player={this.props.currentActor}/>;
+                return <Inventory party={this.props.party} screen={this.props.screen}
+                                  onNotice={this.props.onNotice}/>;
             case 'Quests':
                 return <Quests messages={this.getMessage}/>;
             case 'Character':
@@ -63,9 +66,13 @@ export class MainPanel extends React.Component<MainProps, MainState> {
     }
 
     public override render() {
+        // The character sheet is reached per-member from the squad roster, so
+        // its header names the merc, not the panel.
+        const title = this.props.activeView === "Character"
+            ? `◈ ${this.props.currentActor.name}` : this.props.activeView;
         return (
             <main className={"panel"}>
-                <h3>{this.props.activeView}</h3>
+                <h3>{title}</h3>
                 <div className={"panelBody"}>
                     {this.renderView(this.props.activeView)}
                 </div>

@@ -13,8 +13,9 @@ interface SidebarProps {
 // Panel-switching views (glyph + label; label doubles as tooltip / accessible name).
 // Store and Downtime are gone on purpose: shops and rest are run NODES now —
 // a nav-reachable infinite catalog / free heal would break the roguelike loop.
+// "Character" left the rail on purpose too: the squad roster is the one way
+// in — tap a member's › to open their sheet. One list, one mental model.
 const VIEWS: Array<[string, string]> = [
-    ["Character", "◈"],
     ["Combat", "✦"],
     ["Netrun", "⌁"],
     ["Inventory", "▦"],
