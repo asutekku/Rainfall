@@ -601,6 +601,9 @@ progress::-moz-progress-bar { background:var(--rust); }
     #app[data-mtab="arena"] .arena { display:flex; flex:1; min-height:120px; }
     #app[data-mtab="arena"] #feedcol > .feed { display:flex; flex:none; height:clamp(130px,23vh,200px); }
     #app[data-mtab="arena"] .stageActions { display:block; flex:none; }
+    /* the city map is one contained box (overrides #stage display:contents) so
+       its absolute canvas fills the board area instead of escaping full-screen */
+    #app[data-mtab="arena"] #stage.cityStage { display:block; position:relative; order:3; flex:1 1 auto; min-height:180px; }
 
     /* Squad / Feed — the two panels that share the desktop feed column */
     #app[data-mtab="squad"] #feedcol > .panel:not(.feed) { display:flex; flex:1; min-height:0; }

@@ -62,10 +62,10 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         const cached = this.pos[node.id];
         if (cached) { return cached; }
         const cols = this.props.run.map.length;
-        const z = 26 - (cols <= 1 ? 0 : node.col / (cols - 1)) * 52;
+        const z = 18 - (cols <= 1 ? 0 : node.col / (cols - 1)) * 42;
         const col = this.props.run.map[node.col]!;
-        const x = col.length <= 1 ? 0 : (node.row / (col.length - 1) - 0.5) * 46;
-        const y = 15 + ((node.id.charCodeAt(node.id.length - 1) % 5)) * 0.8;
+        const x = col.length <= 1 ? 0 : (node.row / (col.length - 1) - 0.5) * 40;
+        const y = 27 + ((node.id.charCodeAt(node.id.length - 1) % 5)) * 0.8;   // hover above the skyline
         const v = new THREE.Vector3(x, y, z);
         this.pos[node.id] = v;
         return v;
@@ -80,8 +80,8 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         this.scene = new THREE.Scene();
         this.scene.fog = new THREE.Fog(0x08080b, 55, 150);
         this.camera = new THREE.PerspectiveCamera(52, w / h, 0.1, 400);
-        this.camera.position.set(0, 34, 62);
-        this.camera.lookAt(0, 6, 0);
+        this.camera.position.set(0, 62, 46);   // steep, more top-down
+        this.camera.lookAt(0, 5, 0);
 
         this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -111,25 +111,42 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         return g;
     }
 
-    /** Procedural wireframe high-rises as one merged LineSegments (cheap). */
+    /** Procedural high-rises: translucent solid volumes (InstancedMesh) with cyan edges on top. */
     private buildCity(): THREE.Object3D {
+        const group = new THREE.Group();
+        const boxes: Array<[number, number, number, number, number]> = []; // cx, cz, bw, bd, bh
         const verts: number[] = [];
         const step = 8;
         for (let gx = -72; gx <= 72; gx += step) {
             for (let gz = -60; gz <= 60; gz += step) {
-                if (Math.random() < 0.28) { continue; }                 // gaps for streets/plazas
-                const near = Math.abs(gx) < 26 && gz > 10;              // keep the near-camera area open
-                if (near && Math.random() < 0.6) { continue; }
-                const bw = step * (0.4 + Math.random() * 0.32);
-                const bd = step * (0.4 + Math.random() * 0.32);
-                const bh = 3 + Math.random() * Math.random() * 22;      // mostly low, a few towers
-                this.pushBox(verts, gx + (Math.random() - 0.5) * 2, gz + (Math.random() - 0.5) * 2, bw, bd, bh);
+                if (Math.random() < 0.26) { continue; }                 // gaps for streets/plazas
+                const bw = step * (0.42 + Math.random() * 0.3);
+                const bd = step * (0.42 + Math.random() * 0.3);
+                const bh = 3 + Math.random() * Math.random() * 24;      // mostly low, a few towers
+                const cx = gx + (Math.random() - 0.5) * 2;
+                const cz = gz + (Math.random() - 0.5) * 2;
+                boxes.push([cx, cz, bw, bd, bh]);
+                this.pushBox(verts, cx, cz, bw, bd, bh);
             }
         }
+        // translucent solid volumes (one instanced draw call, no depth write so edges read)
+        const faces = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
+            new THREE.MeshBasicMaterial({color: 0x0e3038, transparent: true, opacity: 0.24, depthWrite: false}),
+            boxes.length);
+        const mtx = new THREE.Matrix4();
+        const rot = new THREE.Quaternion();
+        boxes.forEach((b, i) => {
+            mtx.compose(new THREE.Vector3(b[0], b[4] / 2, b[1]), rot, new THREE.Vector3(b[2] * 2, b[4], b[3] * 2));
+            faces.setMatrixAt(i, mtx);
+        });
+        faces.instanceMatrix.needsUpdate = true;
+        faces.renderOrder = -1;
+        group.add(faces);
+        // cyan wireframe edges
         const geo = new THREE.BufferGeometry();
         geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
-        const mat = new THREE.LineBasicMaterial({color: 0x1f9aa0, transparent: true, opacity: 0.5});
-        return new THREE.LineSegments(geo, mat);
+        group.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color: 0x2fbfd0, transparent: true, opacity: 0.6})));
+        return group;
     }
 
     /** Push the 12 edges of a box (base on the ground) into a line-vertex buffer. */
@@ -224,10 +241,11 @@ export class CityMap extends React.Component<CityMapProps, {}> {
     private animate = () => {
         this.raf = requestAnimationFrame(this.animate);
         this.t += 0.016;
-        // gentle camera sway keeps the route readable while feeling alive
-        this.camera.position.x = Math.sin(this.t * 0.15) * 10;
-        this.camera.position.y = 34 + Math.sin(this.t * 0.23) * 2;
-        this.camera.lookAt(0, 7, 0);
+        // gentle top-down sway keeps the route readable while feeling alive
+        this.camera.position.x = Math.sin(this.t * 0.12) * 8;
+        this.camera.position.y = 62 + Math.sin(this.t * 0.2) * 3;
+        this.camera.position.z = 46;
+        this.camera.lookAt(0, 5, 0);
         // pulse reachable markers + spin all
         const rect = this.renderer.domElement.getBoundingClientRect();
         this.markers.forEach((m) => {
