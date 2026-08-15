@@ -34,7 +34,8 @@ interface Marker {
     halo: THREE.Sprite;          // dark backing disc — the pick target (generous tap area)
     solid: THREE.Mesh;
     wire: THREE.Mesh;
-    beam: THREE.Line;
+    beam: Line2;
+    beamMat: LineMaterial;
     baseScale: number;
     pulse: boolean;
     spin: number;                // rad/s — fast for actionable, idle for ambient
@@ -353,10 +354,14 @@ export class CityMap extends React.Component<CityMapProps, {}> {
             group.add(wire);
 
             this.scene.add(group);
-            const beamGeo = new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p.x, 0, p.z), p]);
-            const beam = new THREE.Line(beamGeo, new THREE.LineBasicMaterial({color: 0x4a525c, transparent: true, opacity: 0.2}));
+            // beam: a fat vertical line tying the marker to its street junction
+            const beamGeo = new LineGeometry();
+            beamGeo.setPositions([p.x, 0, p.z, p.x, this.hoverY, p.z]);
+            const beamMat = this.makeLineMat({color: 0x4a525c, width: 2, opacity: 0.3});
+            const beam = new Line2(beamGeo, beamMat);
+            beam.computeLineDistances();
             this.scene.add(beam);
-            this.markers.push({node, group, halo, solid, wire, beam, baseScale: 3.1 * ms, pulse: false, spin: 0.25});
+            this.markers.push({node, group, halo, solid, wire, beam, beamMat, baseScale: 3.1 * ms, pulse: false, spin: 0.25});
             const el = document.createElement("div");
             el.className = "cityLabel";
             this.overlay.current!.appendChild(el);
@@ -383,7 +388,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
             const cleared = run.clearedIds.indexOf(id) >= 0;
             const boss = m.node.type === "boss";
             const label = this.labels[id]!;
-            const beamMat = m.beam.material as THREE.LineBasicMaterial;
+            const beamMat = m.beamMat;
             const solidMat = m.solid.material as THREE.MeshBasicMaterial;
             const wireMat = m.wire.material as THREE.MeshBasicMaterial;
             const haloMat = m.halo.material as THREE.SpriteMaterial;
@@ -403,7 +408,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
 
             if (current) {
                 apply(WHITE, 0.35, 1.0, 0.9, 1.5, 0.9);
-                beamMat.color.setHex(WHITE); beamMat.opacity = 0.5;
+                beamMat.color.setHex(WHITE); beamMat.opacity = 0.8; beamMat.linewidth = 3;
                 label.style.display = "block";
                 label.textContent = "You";
                 label.style.borderColor = css(WHITE);
@@ -411,27 +416,27 @@ export class CityMap extends React.Component<CityMapProps, {}> {
                 // adjacency reveals the node's nature — this is a tappable target
                 apply(t[0], 0.32, 1.0, 0.9, boss ? 2.4 : 1.8, 1.3);
                 m.pulse = true;
-                beamMat.color.setHex(t[0]); beamMat.opacity = 0.55;
+                beamMat.color.setHex(t[0]); beamMat.opacity = 0.85; beamMat.linewidth = 3;
                 label.style.display = "block";
                 label.textContent = `${t[1]} · ${Math.round(this.routeLen(run.position, id))}m`;
                 label.style.borderColor = css(t[0]);
             } else if (reachable && cleared) {
                 apply(0x9aa4ad, 0.16, 0.7, 0.6, 1.15, 0.45);
-                beamMat.color.setHex(0x9aa4ad); beamMat.opacity = 0.3;
+                beamMat.color.setHex(0x9aa4ad); beamMat.opacity = 0.4; beamMat.linewidth = 2;
             } else if (cleared) {
                 apply(0x3d444d, 0.1, 0.45, 0.35, 1.0, 0.2);
-                beamMat.color.setHex(0x3d444d); beamMat.opacity = 0.12;
+                beamMat.color.setHex(0x3d444d); beamMat.opacity = 0.2; beamMat.linewidth = 1.5;
             } else if (boss) {
                 // the goal stays on the map even through fog of war
                 apply(t[0], 0.2, 0.65, 0.7, 2.0, 0.35);
-                beamMat.color.setHex(t[0]); beamMat.opacity = 0.25;
+                beamMat.color.setHex(t[0]); beamMat.opacity = 0.5; beamMat.linewidth = 2.5;
                 label.style.display = "block";
                 label.textContent = "Boss";
                 label.style.borderColor = css(t[0]);
             } else {
                 // fog of war: unknown until you stand next to it
                 apply(0x8b949e, 0.0, 0.5, 0.45, 1.05, 0.25);
-                beamMat.color.setHex(0x4a525c); beamMat.opacity = 0.15;
+                beamMat.color.setHex(0x4a525c); beamMat.opacity = 0.3; beamMat.linewidth = 1.5;
             }
             m.group.scale.setScalar(m.baseScale);
             m.halo.scale.setScalar(2.8);   // relative to the group scale — wider than the shape
