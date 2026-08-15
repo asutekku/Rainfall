@@ -802,4 +802,126 @@ progress::-moz-progress-bar { background:var(--rust); }
 .runEndActions .prim { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; }
 .runEndActions .prim:hover { background:#5cf0f5; }
 
+/* =====================================================================
+   after-action debrief — the screen between a finished fight and the map
+   Deliberately short: only what the fight didn't already show, so the whole
+   report lands inside a phone screen without scrolling.
+   ===================================================================== */
+.debrief { position:fixed; inset:0; z-index:47; overflow-y:auto; display:grid; place-items:center;
+    font-family:var(--mono); background:radial-gradient(900px 600px at 50% 10%, #14141e, var(--bg)); }
+.debrief.win { background:radial-gradient(900px 600px at 50% 10%, #0f1f1c, var(--bg)); }
+.debriefCard { width:100%; max-width:880px; padding:20px; }
+
+.debriefHead { text-align:center; margin-bottom:16px; }
+.debriefHead h1 { margin:0 0 3px; font-size:29px; letter-spacing:.08em; }
+.debrief.win h1 { color:var(--good); text-shadow:0 0 18px rgba(127,214,127,.45); }
+.debrief.lose h1 { color:var(--crit); text-shadow:0 0 18px rgba(224,83,63,.45); }
+.debriefSub { margin:0; color:var(--mid); font-size:12px; }
+
+.debriefCols { display:grid; grid-template-columns:1fr 1fr; gap:16px; align-items:start; }
+.debriefBlock h2 { display:flex; align-items:baseline; gap:8px; margin:0 0 8px; padding-bottom:5px;
+    color:var(--rust); font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+    border-bottom:1px solid var(--line); }
+.debriefBlock ul { list-style:none; margin:0; padding:0; }
+.debriefBlock ul + ul { margin-top:5px; }
+.dbPayday { color:var(--good); font-size:15px; letter-spacing:0; font-variant-numeric:tabular-nums; }
+.dbFenced { margin-left:auto; color:var(--dim); font-style:normal; font-size:10px; letter-spacing:.06em; }
+.dbEmpty { margin:0 0 6px; color:var(--faint); font-size:11px; }
+
+/* squad performance — the HP bar carries damage taken, accuracy carries shots */
+.dbMembers li { padding:8px 11px; margin-bottom:6px; background:var(--panel); border:1px solid var(--line); }
+.dbMember.down { border-color:rgba(224,83,63,.4); background:#170f11; }
+.dbWho { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.dbWho b { color:var(--ink); font-size:13px; }
+.dbRole { color:var(--dim); font-size:10px; letter-spacing:.06em; text-transform:uppercase; }
+.dbLevelUp { color:var(--bg); background:var(--warn); font-size:9px; font-weight:700; letter-spacing:.1em; padding:2px 6px; }
+.dbDown { color:var(--crit); font-size:9px; font-weight:700; letter-spacing:.1em; }
+.dbBars { display:grid; grid-template-columns:1fr auto auto; align-items:center; gap:8px; margin:7px 0 6px; }
+.dbBar { position:relative; display:flex; height:6px; background:var(--bg2); border:1px solid var(--line); overflow:hidden; }
+.dbBar i { display:block; height:100%; }
+.dbBar u { display:block; height:100%; text-decoration:none; }
+.dbBar.hp i { background:var(--good); }
+.dbBar.hp u { background:rgba(224,83,63,.55); }
+.dbBarVal { color:var(--mid); font-size:10px; font-variant-numeric:tabular-nums; white-space:nowrap; }
+.dbBarVal.xp { color:var(--cyanDim); }
+.dbTallies { display:flex; flex-wrap:wrap; gap:4px 16px; }
+.dbTallies span { display:flex; align-items:baseline; gap:5px; }
+.dbTallies i { font-style:normal; color:var(--faint); font-size:9px; letter-spacing:.1em; text-transform:uppercase; }
+.dbTallies b { color:var(--mid); font-size:12px; font-variant-numeric:tabular-nums; }
+.dbTallies em { color:var(--faint); font-style:normal; font-size:10px; }
+
+/* salvage — the one place a decision is asked for */
+.dbLoot { display:flex; align-items:center; gap:8px; padding:6px 9px; margin-bottom:5px;
+    background:var(--panel); border:1px solid var(--line); font-size:11px; }
+.dbLoot.rare { border-color:rgba(197,107,255,.45); }
+.dbLoot.taken { opacity:.55; }
+.dbLootIcon { color:var(--cyanDim); }
+.dbLootName { color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dbLoot.rare .dbLootName { color:var(--rare); }
+.dbLootDetail { color:var(--mid); font-size:10px; white-space:nowrap; }
+.dbLootOwner { color:var(--faint); font-size:10px; }
+.dbLootActs { margin-left:auto; display:flex; gap:5px; }
+.dbLootActs button { font-family:var(--mono); font-size:10px; letter-spacing:.06em; padding:4px 9px; cursor:pointer;
+    color:var(--cyan); background:var(--panel2); border:1px solid var(--line2); }
+.dbLootActs button:hover { color:var(--bg); background:var(--cyan); border-color:var(--cyan); }
+.dbLootFate { margin-left:auto; color:var(--dim); font-size:9px; letter-spacing:.1em; }
+
+/* what the squad is holding now */
+.dbGear { display:flex; align-items:center; gap:8px; padding:5px 9px; margin-bottom:4px;
+    background:var(--bg2); border:1px solid var(--line); font-size:11px; }
+.dbGearIcon { color:var(--faint); }
+.dbGear.bought .dbGearIcon { color:var(--warn); }
+.dbGearWho { color:var(--dim); white-space:nowrap; }
+.dbGearName { color:var(--ink); min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dbGearDetail { color:var(--mid); font-size:10px; }
+.dbGearDelta { margin-left:auto; color:var(--dim); white-space:nowrap; font-variant-numeric:tabular-nums; }
+.dbGearDelta.up { color:var(--good); }
+.dbGearCost { color:var(--warn); font-size:10px; min-width:46px; text-align:right; white-space:nowrap; }
+.dbGear.salvage .dbGearCost { color:var(--faint); }
+
+.dbGearMore { display:none; padding:4px 9px; color:var(--dim); font-size:10px; letter-spacing:.06em; }
+.dbKit { width:100%; margin-top:5px; font-family:var(--mono); font-size:11px; letter-spacing:.06em;
+    padding:8px 12px; cursor:pointer; color:var(--cyan); background:var(--panel); border:1px dashed var(--line2); }
+.dbKit:hover { color:var(--bg); background:var(--cyan); border-color:var(--cyan); }
+
+.debriefActions { display:flex; justify-content:center; gap:9px; margin-top:18px; }
+.debriefActions button { font-family:var(--mono); font-size:13px; padding:11px 22px; cursor:pointer;
+    color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
+.debriefActions button:hover { color:var(--ink); border-color:var(--cyanDim); }
+.debriefActions .prim { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; }
+.debriefActions .prim:hover { background:#5cf0f5; }
+
+@media (max-width: 860px) {
+    .debriefCols { grid-template-columns:1fr; gap:14px; }
+    .debriefCard { padding:14px 12px; }
+    .debriefHead { margin-bottom:12px; }
+    .debriefHead h1 { font-size:22px; }
+    .debriefSub { font-size:11px; }
+    .dbMembers li { padding:7px 9px; margin-bottom:5px; }
+    .dbTallies { gap:3px 14px; }
+    /* the finder's name is the widest thing on a loot row and the least urgent */
+    .dbLootOwner, .dbGearDetail { display:none; }
+    /* a full four-merc squad only gets the two lines that matter on a phone:
+       who took a hit, and who levelled. Damage / accuracy stay on desktop. */
+    .dbMembers.dense li { padding:6px 9px; margin-bottom:4px; }
+    .dbMembers.dense .dbRole, .dbMembers.dense .dbTallies { display:none; }
+    .dbMembers.dense .dbBars { margin:5px 0 0; }
+    /* the auto-kit list is the one unbounded block — cap it and count the rest */
+    .dbGears li:nth-child(n+4):not(.dbGearMore) { display:none; }
+    .dbGearMore { display:block; }
+    .debriefActions { flex-direction:column; margin-top:14px; }
+    .debriefActions button { padding:10px 16px; }
+}
+
+/* smallest phones — squeeze the chrome, never the content */
+@media (max-width: 380px) {
+    .debriefCard { padding:10px; }
+    .debriefHead { margin-bottom:9px; }
+    .debriefHead h1 { font-size:19px; }
+    .debriefCols { gap:10px; }
+    .dbLoot, .dbGear { padding:4px 8px; margin-bottom:3px; }
+    .debriefActions { margin-top:10px; }
+    .debriefActions button { padding:9px 14px; font-size:12px; }
+}
+
 @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
