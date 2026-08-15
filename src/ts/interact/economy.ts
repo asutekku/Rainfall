@@ -42,17 +42,25 @@ export class Economy {
     public static scavenge(killer: Actor, victim: Actor): string[] {
         if (killer.faction) { return []; }              // enemies don't keep loot
         const msgs: string[] = [];
-        const chance = 0.2 + 0.06 * (victim.rank || 1);
+        const rank = victim.rank || 1;
+        const chance = 0.2 + 0.06 * rank;
         if (victim.weapon && victim.weapon.name !== "Fists" && Math.random() < chance) {
             const w = victim.weapon.clone();
             w.equipped = false;
             killer.inventory.weapons.push(w);
-            msgs.push(`${killer.name} scavenges a ${w.name}.`);
+            // Boss-tier hardware: armour-piercing, high availability, or off an elite foe.
+            const rare = w.ap || w.rarity >= 4 || rank >= 4;
+            msgs.push(rare
+                ? `★ ${killer.name} scavenges a rare ${w.name}!`
+                : `${killer.name} scavenges a ${w.name}.`);
         }
         const worn = victim.equipment.upper;
         if (worn && worn.stoppingPower > 0 && Math.random() < chance) {
             killer.inventory.armor.push(new Armor("upper", worn.name, "", 1, worn.stoppingPower, worn.cost || 0, ""));
-            msgs.push(`${killer.name} scavenges ${worn.name} (SP ${worn.stoppingPower}).`);
+            const rare = worn.stoppingPower >= 15 || rank >= 4;   // Flak / MetalGear tier
+            msgs.push(rare
+                ? `★ ${killer.name} scavenges rare ${worn.name} (SP ${worn.stoppingPower})!`
+                : `${killer.name} scavenges ${worn.name} (SP ${worn.stoppingPower}).`);
         }
         this.prune(killer);
         return msgs;
