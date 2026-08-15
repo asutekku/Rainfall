@@ -225,7 +225,8 @@ export class Combat {
             const foes: Actor[] = party.indexOf(c) >= 0 ? enemies : party;
             const allies: Actor[] = party.indexOf(c) >= 0 ? party : enemies;
             if (c === controlled && action) {
-                if (action.target && action.target.canFight()) { this.attack(c, action.target); }
+                // Manual turn: apply the player's move + attack the same way an AI plan is applied.
+                this.applyPlan(c, {moveTo: action.moveTo, target: action.target, label: "manual"}, foes);
                 continue;
             }
             this.applyPlan(c, TacticalAI.plan(c, allies, foes), foes);

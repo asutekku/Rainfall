@@ -60,7 +60,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
                      onRestart={this.restart}
                      onRespawn={this.respawn}/>
             <section id={"feedcol"}>
-                <Party name={"Squad"} party={this.state.party} activeSelection={this.getCharacter} friendly={true}/>
+                <Party name={"Squad"} party={this.state.party} activeSelection={this.getCharacter} friendly={true}
+                       onToggleAuto={this.toggleActorAuto} onCycleTemperament={this.cycleTemperament}/>
                 <ActionLog actor={this.getCurrentActor()} messages={this.state.messages}/>
             </section>
             <Stage actor={this.getCurrentActor()} enemy={this.getCurrentEnemy()}
@@ -72,6 +73,16 @@ export class App extends React.Component<{}, InterfaceAppState> {
     }
 
     private gotoCombat = () => this.setState({activeMainPanel: "Combat"});
+
+    /** Flip a squad member between manual and AI control. */
+    private toggleActorAuto = (a: Actor) => { a.auto = !a.auto; this.forceUpdate(); };
+
+    /** Cycle an auto squad member's AI playstyle. */
+    private cycleTemperament = (a: Actor) => {
+        const order = ["balanced", "aggressive", "flanker", "camper"];
+        a.temperament = order[(order.indexOf(a.temperament) + 1) % order.length];
+        this.forceUpdate();
+    };
 
     private combatController = (...messages: any): void => {
         let enemies = this.state.currentEnemies;

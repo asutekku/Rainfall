@@ -1,8 +1,14 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
-import {Battlefield} from "../../interact/battlefield";
+import {Battlefield, Point} from "../../interact/battlefield";
 
 export interface Floater { id: number; text: string; kind: string; }
+
+// temperament -> [short label, css class]
+const TEMPER: { [k: string]: [string, string] } = {
+    aggressive: ["AGGRO", "t-aggro"], berserker: ["RUSH", "t-rush"], flanker: ["FLANK", "t-flank"],
+    camper: ["CAMP", "t-camp"], balanced: ["STEADY", "t-steady"],
+};
 
 export interface IsoMapProps {
     party: Actor[];
@@ -12,6 +18,8 @@ export interface IsoMapProps {
     mini?: boolean;
     onSelect?: (a: Actor) => void;
     floaters?: Floater[];      // shown over the active enemy token (full map only)
+    onPick?: (p: Point) => void;   // arena click -> world point (move targeting)
+    pending?: Point;               // pending move destination marker
 }
 
 interface Unit { actor: Actor; kind: string; }
@@ -38,6 +46,9 @@ export class IsoMap extends React.Component<IsoMapProps, {}> {
         const active = foe ? a.name === this.props.activeEnemy : a.name === this.props.activeAlly;
         const hpPct = Math.max(0, Math.min(100, (a.health / Math.max(1, a.maxHealth)) * 100));
         const glyph = foe ? "✦" : u.kind === "you" ? "◈" : "◇";
+        // temperament tag: foes always, allies only when on auto
+        const showTemper = foe || a.auto;
+        const temper = TEMPER[a.temperament] || TEMPER.balanced;
         return (
             <button key={u.kind + a.name}
                     className={"u " + u.kind + (active ? " on" : "") + (a.canFight() ? "" : " down")}
@@ -46,8 +57,23 @@ export class IsoMap extends React.Component<IsoMapProps, {}> {
                 <div className={"g"}>{glyph}</div>
                 <div className={"stem"}/>
                 <div className={"tag"}><b>{a.name}</b> <span>L{a.level}</span></div>
+                {showTemper && <div className={"utemp " + temper[1]}>{temper[0]}</div>}
                 {foe && <div className={"hp"}><i style={{width: hpPct + "%"}}/></div>}
             </button>);
+    }
+
+    private pick = (e: React.MouseEvent<HTMLDivElement>) => {
+        if (!this.props.onPick) { return; }
+        const rect = e.currentTarget.getBoundingClientRect();
+        const xPct = ((e.clientX - rect.left) / rect.width) * 100;
+        const yPct = ((e.clientY - rect.top) / rect.height) * 100;
+        this.props.onPick(Battlefield.unproject(xPct, yPct));
+    }
+
+    private marker() {
+        if (!this.props.pending) { return null; }
+        const p = Battlefield.project(this.props.pending);
+        return <span className={"pickMarker"} style={{left: p.x + "%", top: p.y + "%"}}>⊹</span>;
     }
 
     private floaters() {
@@ -71,11 +97,14 @@ export class IsoMap extends React.Component<IsoMapProps, {}> {
     }
 
     public render() {
+        const picking = !!this.props.onPick;
         return (
-            <div className={"iso" + (this.props.mini ? " mini" : " full")}>
+            <div className={"iso" + (this.props.mini ? " mini" : " full") + (picking ? " picking" : "")}
+                 onClick={this.pick}>
                 <div className={"floor"}/>
                 {this.cover()}
                 {this.layout().map((u) => this.token(u))}
+                {this.marker()}
                 {!this.props.mini && this.floaters()}
             </div>);
     }

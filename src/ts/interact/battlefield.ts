@@ -65,6 +65,17 @@ export class Battlefield {
         return {x: 50 + (c - r) * 6, y: 26 + (c + r) * 5};
     }
 
+    /** Inverse of project(): an arena click (percentage point) back to a metre position. */
+    public static unproject(xPct: number, yPct: number): Point {
+        const cMinusR = (xPct - 50) / 6;
+        const cPlusR = (yPct - 26) / 5;
+        const c = (cMinusR + cPlusR) / 2;
+        const r = (cPlusR - cMinusR) / 2;
+        const nx = (c - 1.5) / 5;
+        const ny = 1 - (r - 1) / 5.5;
+        return this.clamp({x: X_MIN + nx * (X_MAX - X_MIN), y: Y_MIN + ny * (Y_MAX - Y_MIN)});
+    }
+
     /** Distance in metres between two raw points. */
     public static gap(a: Point, b: Point): number {
         return dist2(a.x, a.y, b.x, b.y);

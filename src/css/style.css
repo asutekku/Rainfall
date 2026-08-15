@@ -177,9 +177,15 @@ nav button.act-on { color:var(--good); border-left-color:var(--good); background
 .iso .u.foe { color:var(--crit); } .iso .u.foe .g { box-shadow:0 0 14px rgba(224,83,63,.45); }
 .iso .u.on .g { outline:1px solid var(--cyan); outline-offset:2px; }
 .iso .u.down { opacity:.35; }
-.iso.mini .u .tag, .iso.mini .u .hp { display:none; }
+.iso .u .utemp { display:inline-block; margin-top:2px; font-size:8px; letter-spacing:.06em; padding:0 3px; border:1px solid; }
+.iso.mini .u .tag, .iso.mini .u .hp, .iso.mini .u .utemp { display:none; }
 .iso.mini .u .g { width:15px; height:15px; font-size:9px; }
 .iso.mini .u .stem { height:9px; }
+/* move targeting */
+.iso.picking { cursor:crosshair; }
+.iso.picking .u { pointer-events:none; }
+.iso .pickMarker { position:absolute; transform:translate(-50%,-50%); color:var(--cyan); font-size:22px;
+    text-shadow:0 0 10px var(--cyan); pointer-events:none; }
 /* floaters over the active enemy token */
 .isoFloat { position:absolute; transform:translate(-50%,-140%); pointer-events:none; }
 .isoFloat .floater { position:static; display:block; }
@@ -268,6 +274,11 @@ main.panel > .panelBody { flex:1; min-height:0; overflow-y:auto; padding:12px; }
 .pc .pcn span { color:var(--dim); font-size:10px; }
 .pc .pcr { display:flex; align-items:center; gap:6px; margin:1px 0 4px;
     color:var(--faint); font-size:10px; text-transform:uppercase; letter-spacing:.05em; }
+.pcCtl { display:inline-flex; align-items:center; gap:4px; margin-left:auto; }
+.autoChip { font-size:9px; letter-spacing:.06em; padding:0 4px; border:1px solid var(--line2); color:var(--dim); cursor:pointer; }
+.autoChip:hover { color:var(--mid); }
+.autoChip.on { color:var(--good); border-color:var(--good); }
+.pcr .temp { cursor:pointer; }
 
 .badge { font-size:9px; padding:0 4px; border:1px solid; letter-spacing:.05em; }
 .badge.warn { color:var(--warn); border-color:var(--warn); }

@@ -7,6 +7,8 @@ interface PartyProps {
     party: any;
     activeSelection: any;
     friendly: boolean;
+    onToggleAuto?: (a: Actor) => void;
+    onCycleTemperament?: (a: Actor) => void;
 }
 
 interface PartyStats {
@@ -39,7 +41,9 @@ export class Party extends React.Component<PartyProps, PartyStats> {
             <div className={"party"}>
                 {this.props.party.map((e: Actor, i: number) => (
                     <CharacterComponent actor={e} friendly={this.props.friendly} key={i}
-                                        update={this.handleClick} selected={this.getSelected()}/>
+                                        update={this.handleClick} selected={this.getSelected()}
+                                        onToggleAuto={this.props.onToggleAuto}
+                                        onCycleTemperament={this.props.onCycleTemperament}/>
                 ))}
             </div>
         </div>;

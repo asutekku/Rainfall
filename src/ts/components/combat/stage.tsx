@@ -3,7 +3,7 @@ import {Actor} from "../../actors/Actor";
 import {Combat} from "../../interact/combat";
 import {Facedown} from "../../interact/Facedown";
 import {Driving} from "../../interact/Driving";
-import {Battlefield} from "../../interact/battlefield";
+import {Battlefield, Point} from "../../interact/battlefield";
 import {rangeDV} from "../../interact/rangeTable";
 import {MainPanel} from "../mainPanel";
 import {IsoMap, Floater} from "./isoMap";
@@ -20,7 +20,7 @@ export interface StageProps {
     onGotoCombat: () => void;
 }
 
-interface StageState { floaters: Floater[]; note: string; }
+interface StageState { floaters: Floater[]; note: string; moveMode: boolean; pending: Point | null; }
 
 export class Stage extends React.Component<StageProps, StageState> {
 
@@ -28,7 +28,7 @@ export class Stage extends React.Component<StageProps, StageState> {
 
     constructor(props: StageProps) {
         super(props);
-        this.state = {floaters: [], note: ""};
+        this.state = {floaters: [], note: "", moveMode: false, pending: null};
     }
 
     private addFloater(text: string, kind: string) {
@@ -37,21 +37,42 @@ export class Stage extends React.Component<StageProps, StageState> {
         setTimeout(() => this.setState((s) => ({floaters: s.floaters.filter((f) => f.id !== id)})), 850);
     }
 
+    private toggleMove = () => {
+        this.setState((s) => ({moveMode: !s.moveMode, pending: s.moveMode ? null : s.pending}));
+    };
+
+    /** Arena click while in move mode: clamp the destination to this turn's run distance. */
+    private pickMove = (p: Point) => {
+        const from: Point = {x: this.props.actor.position.x, y: this.props.actor.position.y};
+        const gap = Battlefield.gap(from, p);
+        const run = this.props.actor.runMeters();
+        const dest = gap <= run ? p : {x: from.x + (p.x - from.x) * (run / gap), y: from.y + (p.y - from.y) * (run / gap)};
+        this.setState({pending: Battlefield.clamp(dest)});
+    };
+
+    /** Resolve the manual turn: apply the pending move + optional attack, run the round. */
+    private commit(target: Actor | null) {
+        const enemy = this.props.enemy;
+        const before = enemy.health;
+        const action: any = {moveTo: this.state.pending || undefined, target: target || undefined};
+        const msgs = this.props.actor.auto
+            ? Combat.autoRound(this.props.party, this.props.enemies)
+            : Combat.round(this.props.party, this.props.enemies, this.props.actor, action);
+        if (target) {
+            const dealt = Math.round(before - enemy.health);
+            this.addFloater(dealt > 0 ? "-" + dealt : "MISS", dealt > 0 ? (dealt >= 20 ? "dmg-big" : "dmg") : "miss");
+        }
+        this.setState({moveMode: false, pending: null, note: target && !enemy.canFight() ? `${enemy.name} is down.` : ""});
+        this.props.messages(msgs);
+    }
+
     private enemyArmor(a: Actor): number {
         const sp = a.equipment.upper ? a.equipment.upper.stoppingPower : 0;
         return Math.max(sp, a.cyberSP());
     }
 
-    private attack = () => {
-        const enemy = this.props.enemy;
-        const before = enemy.health;
-        // Manual: the selected fighter attacks; squadmates and enemies play the AI round.
-        const msgs = Combat.round(this.props.party, this.props.enemies, this.props.actor, {target: enemy});
-        const dealt = Math.round(before - enemy.health);
-        this.addFloater(dealt > 0 ? "-" + dealt : "MISS", dealt > 0 ? (dealt >= 20 ? "dmg-big" : "dmg") : "miss");
-        this.setState({note: !enemy.canFight() ? `${enemy.name} is down.` : ""});
-        this.props.messages(msgs);
-    };
+    private attack = () => this.commit(this.props.enemy);
+    private wait = () => this.commit(null);
 
     private facedown = () => {
         const fd = Facedown.resolve(this.props.actor, this.props.enemy);
@@ -112,7 +133,9 @@ export class Stage extends React.Component<StageProps, StageState> {
                     <div className={"arena"}>
                         <IsoMap party={this.props.party} enemies={this.props.enemies}
                                 activeAlly={this.props.actor.name} activeEnemy={this.props.enemy.name}
-                                onSelect={this.select} floaters={this.state.floaters}/>
+                                onSelect={this.select} floaters={this.state.floaters}
+                                onPick={this.state.moveMode ? this.pickMove : undefined}
+                                pending={this.state.pending || undefined}/>
                     </div>
                 ) : (
                     <React.Fragment>
@@ -129,18 +152,36 @@ export class Stage extends React.Component<StageProps, StageState> {
 
                 {combat && (
                     <div className={"stageActions"}>
-                        <div className={"acts"}>
-                            <button className={"act prim"} onClick={this.attack}>
-                                {w.autofire ? "Open Fire" : "Attack"}
-                            </button>
-                            <button className={"act"} onClick={this.facedown}>Facedown</button>
-                            <button className={"act"} onClick={this.flee}>Flee</button>
-                            <span className={"wpn"}>
-                                <b>{w.name}</b> · {w.diceThrows}d6{w.damage ? "+" + w.damage : ""}
-                                {w.ap ? " AP" : ""}{w.autofire ? " · AUTO" : ""} · acc {w.accuracyBonus >= 0 ? "+" : ""}{w.accuracyBonus}
-                            </span>
-                        </div>
-                        {this.state.note && <div className={"note"}>{this.state.note}</div>}
+                        {this.props.actor.auto ? (
+                            <div className={"acts"}>
+                                <button className={"act prim"} onClick={this.wait}>▸ Auto Turn</button>
+                                <span className={"wpn"}>{this.props.actor.name} is AI-controlled — plays its own turn.</span>
+                            </div>
+                        ) : (
+                            <div className={"acts"}>
+                                <button className={"act" + (this.state.moveMode ? " prim" : "")} onClick={this.toggleMove}>
+                                    {this.state.moveMode ? "Moving…" : "Move"}
+                                </button>
+                                <button className={"act prim"} onClick={this.attack}>
+                                    {w.autofire ? "Open Fire" : "Attack"}
+                                </button>
+                                <button className={"act"} onClick={this.facedown}>Facedown</button>
+                                <button className={"act"} onClick={this.wait}>Wait</button>
+                                <button className={"act"} onClick={this.flee}>Flee</button>
+                                <span className={"wpn"}>
+                                    <b>{w.name}</b> · {w.diceThrows}d6{w.damage ? "+" + w.damage : ""}
+                                    {w.ap ? " AP" : ""}{w.autofire ? " · AUTO" : ""} · acc {w.accuracyBonus >= 0 ? "+" : ""}{w.accuracyBonus}
+                                </span>
+                            </div>
+                        )}
+                        {this.state.moveMode && (
+                            <div className={"note"}>
+                                {this.state.pending
+                                    ? `Move to ${Math.round(Battlefield.gap({x: this.props.actor.position.x, y: this.props.actor.position.y}, this.state.pending))}m — Attack or Wait to commit.`
+                                    : "Click the arena to reposition (within your run range)."}
+                            </div>
+                        )}
+                        {!this.state.moveMode && this.state.note && <div className={"note"}>{this.state.note}</div>}
                     </div>
                 )}
             </section>);

@@ -7,7 +7,14 @@ export interface CharCompProps {
     friendly: boolean;
     update: any;
     selected: string;
+    onToggleAuto?: (a: Actor) => void;
+    onCycleTemperament?: (a: Actor) => void;
 }
+
+const TEMPER: { [k: string]: [string, string] } = {
+    aggressive: ["AGGRO", "t-aggro"], berserker: ["RUSH", "t-rush"], flanker: ["FLANK", "t-flank"],
+    camper: ["CAMP", "t-camp"], balanced: ["STEADY", "t-steady"],
+};
 
 export class CharacterComponent extends React.Component<CharCompProps, {}> {
 
@@ -16,6 +23,25 @@ export class CharacterComponent extends React.Component<CharCompProps, {}> {
         if (a.isSeriouslyWounded()) { return <span className={"badge warn"}>WND</span>; }
         if (a.isCyberpsycho && a.isCyberpsycho()) { return <span className={"badge bad"}>PSY</span>; }
         return null;
+    }
+
+    private controls(a: Actor) {
+        if (!this.props.friendly || !this.props.onToggleAuto) { return null; }
+        const temper = TEMPER[a.temperament] || TEMPER.balanced;
+        return (
+            <span className={"pcCtl"}>
+                <span className={"autoChip" + (a.auto ? " on" : "")}
+                      title={"Toggle AI control"}
+                      onClick={(e) => { e.stopPropagation(); this.props.onToggleAuto!(a); }}>
+                    {a.auto ? "AUTO" : "MANUAL"}
+                </span>
+                {a.auto && (
+                    <span className={"temp " + temper[1]} title={"Click to change AI playstyle"}
+                          onClick={(e) => { e.stopPropagation(); this.props.onCycleTemperament!(a); }}>
+                        {temper[0]}
+                    </span>
+                )}
+            </span>);
     }
 
     public render() {
@@ -30,6 +56,7 @@ export class CharacterComponent extends React.Component<CharCompProps, {}> {
                         {a.role.name}
                         {this.badge(a)}
                         {!this.props.friendly && selected ? <span className={"badge tgt"}>TARGET</span> : null}
+                        {this.controls(a)}
                     </div>
                     <Bar value={a.health} max={a.maxHealth} kind={"hp"} showText={false}/>
                 </div>

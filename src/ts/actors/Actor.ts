@@ -25,6 +25,7 @@ export class Actor extends GameObject {
     public alive: boolean;
     public position: ObjectPosition;
     public temperament: string;   // tactical AI personality: balanced|aggressive|flanker|camper|berserker
+    public auto: boolean;         // squad member played by the tactical AI instead of the player
     public equipment: {
         headgear: Armor | null;
         upper: Armor | null;
@@ -233,6 +234,7 @@ export class Actor extends GameObject {
         this.position = new ObjectPosition(0, 0, 0);
         this.kills = 0;
         this.temperament = "balanced";
+        this.auto = false;
         this.stats = {
             int: 1,
             ref: 1,
