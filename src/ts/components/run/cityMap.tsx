@@ -65,7 +65,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         const z = 18 - (cols <= 1 ? 0 : node.col / (cols - 1)) * 42;
         const col = this.props.run.map[node.col]!;
         const x = col.length <= 1 ? 0 : (node.row / (col.length - 1) - 0.5) * 40;
-        const y = 27 + ((node.id.charCodeAt(node.id.length - 1) % 5)) * 0.8;   // hover above the skyline
+        const y = 34 + ((node.id.charCodeAt(node.id.length - 1) % 5)) * 0.8;   // hover above the skyline
         const v = new THREE.Vector3(x, y, z);
         this.pos[node.id] = v;
         return v;
@@ -78,10 +78,10 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         const h = host.clientHeight || 500;
 
         this.scene = new THREE.Scene();
-        this.scene.fog = new THREE.Fog(0x08080b, 55, 150);
-        this.camera = new THREE.PerspectiveCamera(52, w / h, 0.1, 400);
-        this.camera.position.set(0, 62, 46);   // steep, more top-down
-        this.camera.lookAt(0, 5, 0);
+        this.scene.fog = new THREE.Fog(0x08080b, 90, 260);
+        this.camera = new THREE.PerspectiveCamera(50, w / h, 0.1, 500);
+        this.camera.position.set(0, 90, 24);   // near top-down, slight tilt
+        this.camera.lookAt(0, 0, 0);
 
         this.renderer = new THREE.WebGLRenderer({antialias: true, alpha: true});
         this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
@@ -101,37 +101,62 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         this.animate();
     }
 
-    /** Faint street grid on the ground plane. */
+    /** Dark ground plane with a faint reference grid. */
     private buildStreets(): THREE.Object3D {
         const g = new THREE.Group();
-        const grid = new THREE.GridHelper(160, 40, 0x1f9aa0, 0x14343a);
-        (grid.material as THREE.Material).opacity = 0.35;
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(360, 360),
+            new THREE.MeshBasicMaterial({color: 0x06060d}));
+        ground.rotation.x = -Math.PI / 2;
+        ground.position.y = -0.15;
+        g.add(ground);
+        const grid = new THREE.GridHelper(320, 64, 0x143038, 0x0d1a20);
+        (grid.material as THREE.Material).opacity = 0.25;
         (grid.material as THREE.Material).transparent = true;
         g.add(grid);
         return g;
     }
 
-    /** Procedural high-rises: translucent solid volumes (InstancedMesh) with cyan edges on top. */
+    /** Glowing cyan road network on the grid lines + rust city blocks between them. */
     private buildCity(): THREE.Object3D {
         const group = new THREE.Group();
-        const boxes: Array<[number, number, number, number, number]> = []; // cx, cz, bw, bd, bh
+        const XE = 82, ZE = 68, BLOCK = 18, ROADW = 2.6;
+        const xs = this.gridLines(XE, BLOCK);
+        const zs = this.gridLines(ZE, BLOCK);
+
+        // roads: glowing cyan strips along every grid line
+        const roadMat = new THREE.MeshBasicMaterial({color: 0x37e1e7, transparent: true, opacity: 0.5,
+            depthWrite: false, blending: THREE.AdditiveBlending});
+        const roads = new THREE.Group();
+        xs.forEach((gx) => {
+            const m = new THREE.Mesh(new THREE.PlaneGeometry(ROADW, ZE * 2), roadMat);
+            m.rotation.x = -Math.PI / 2; m.position.set(gx, 0.06, 0); roads.add(m);
+        });
+        zs.forEach((gz) => {
+            const m = new THREE.Mesh(new THREE.PlaneGeometry(XE * 2, ROADW), roadMat);
+            m.rotation.x = -Math.PI / 2; m.position.set(0, 0.06, gz); roads.add(m);
+        });
+        group.add(roads);
+
+        // one rust high-rise per block, inset from the roads, random height
+        const boxes: Array<[number, number, number, number, number]> = [];
         const verts: number[] = [];
-        const step = 8;
-        for (let gx = -72; gx <= 72; gx += step) {
-            for (let gz = -60; gz <= 60; gz += step) {
-                if (Math.random() < 0.26) { continue; }                 // gaps for streets/plazas
-                const bw = step * (0.42 + Math.random() * 0.3);
-                const bd = step * (0.42 + Math.random() * 0.3);
-                const bh = 3 + Math.random() * Math.random() * 24;      // mostly low, a few towers
-                const cx = gx + (Math.random() - 0.5) * 2;
-                const cz = gz + (Math.random() - 0.5) * 2;
+        for (let i = 0; i < xs.length - 1; i++) {
+            for (let j = 0; j < zs.length - 1; j++) {
+                if (Math.random() < 0.12) { continue; }              // occasional plaza
+                const inset = ROADW / 2 + 1.6;
+                const x0 = xs[i]! + inset, x1 = xs[i + 1]! - inset;
+                const z0 = zs[j]! + inset, z1 = zs[j + 1]! - inset;
+                const cx = (x0 + x1) / 2 + (Math.random() - 0.5) * 1.5;
+                const cz = (z0 + z1) / 2 + (Math.random() - 0.5) * 1.5;
+                const bw = ((x1 - x0) / 2) * (0.68 + Math.random() * 0.26);
+                const bd = ((z1 - z0) / 2) * (0.68 + Math.random() * 0.26);
+                const bh = 3 + Math.random() * Math.random() * 28;
                 boxes.push([cx, cz, bw, bd, bh]);
                 this.pushBox(verts, cx, cz, bw, bd, bh);
             }
         }
-        // translucent solid volumes (one instanced draw call, no depth write so edges read)
         const faces = new THREE.InstancedMesh(new THREE.BoxGeometry(1, 1, 1),
-            new THREE.MeshBasicMaterial({color: 0x0e3038, transparent: true, opacity: 0.24, depthWrite: false}),
+            new THREE.MeshBasicMaterial({color: 0x8a2e26, transparent: true, opacity: 0.4, depthWrite: false}),
             boxes.length);
         const mtx = new THREE.Matrix4();
         const rot = new THREE.Quaternion();
@@ -142,11 +167,17 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         faces.instanceMatrix.needsUpdate = true;
         faces.renderOrder = -1;
         group.add(faces);
-        // cyan wireframe edges
         const geo = new THREE.BufferGeometry();
         geo.setAttribute("position", new THREE.Float32BufferAttribute(verts, 3));
-        group.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color: 0x2fbfd0, transparent: true, opacity: 0.6})));
+        group.add(new THREE.LineSegments(geo, new THREE.LineBasicMaterial({color: 0xd06a52, transparent: true, opacity: 0.5})));
         return group;
+    }
+
+    private gridLines(extent: number, step: number): number[] {
+        const out: number[] = [];
+        const n = Math.floor(extent / step);
+        for (let i = -n; i <= n; i++) { out.push(i * step); }
+        return out;
     }
 
     /** Push the 12 edges of a box (base on the ground) into a line-vertex buffer. */
@@ -242,10 +273,10 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         this.raf = requestAnimationFrame(this.animate);
         this.t += 0.016;
         // gentle top-down sway keeps the route readable while feeling alive
-        this.camera.position.x = Math.sin(this.t * 0.12) * 8;
-        this.camera.position.y = 62 + Math.sin(this.t * 0.2) * 3;
-        this.camera.position.z = 46;
-        this.camera.lookAt(0, 5, 0);
+        this.camera.position.x = Math.sin(this.t * 0.1) * 6;
+        this.camera.position.y = 90 + Math.sin(this.t * 0.16) * 3;
+        this.camera.position.z = 24;
+        this.camera.lookAt(0, 0, 0);
         // pulse reachable markers + spin all
         const rect = this.renderer.domElement.getBoundingClientRect();
         this.markers.forEach((m) => {
@@ -256,8 +287,11 @@ export class CityMap extends React.Component<CityMapProps, {}> {
             const label = this.labels[m.node.id];
             if (label && reachable) {
                 const v = m.mesh.position.clone().project(this.camera);
-                label.style.left = ((v.x * 0.5 + 0.5) * rect.width) + "px";
-                label.style.top = ((-v.y * 0.5 + 0.5) * rect.height - 26) + "px";
+                // clamp inside the canvas so edge waypoints keep a readable label
+                const lx = Math.max(48, Math.min(rect.width - 48, (v.x * 0.5 + 0.5) * rect.width));
+                const ly = Math.max(18, Math.min(rect.height - 12, (-v.y * 0.5 + 0.5) * rect.height - 26));
+                label.style.left = lx + "px";
+                label.style.top = ly + "px";
             }
         });
         this.renderer.render(this.scene, this.camera);
