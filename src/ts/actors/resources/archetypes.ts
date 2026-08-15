@@ -83,3 +83,9 @@ export function pickArchetype(level: number): Archetype {
     const pool = ARCHETYPES.filter((a) => a.rank === rank);
     return pool[(Math.random() * pool.length) << 0]!;
 }
+
+/** Pick a random archetype of an exact rank (for forced elites / bosses). */
+export function pickArchetypeOfRank(rank: number): Archetype {
+    const pool = ARCHETYPES.filter((a) => a.rank === rank);
+    return (pool.length ? pool[(Math.random() * pool.length) << 0] : ARCHETYPES[0])!;
+}
