@@ -124,6 +124,12 @@ nav button.act-on { color:var(--good); border-left-color:var(--good); background
 .es .rng { color:var(--cyanDim); white-space:nowrap; font-variant-numeric:tabular-nums; }
 .es .rng.oor { color:var(--crit); }
 .es .sp { color:var(--dim); white-space:nowrap; }
+.es .temp { flex:none; font-size:9px; letter-spacing:.08em; padding:0 4px; border:1px solid; white-space:nowrap; }
+.t-aggro { color:var(--crit); border-color:var(--crit); }
+.t-rush { color:#ff6a4a; border-color:#ff6a4a; }
+.t-flank { color:var(--warn); border-color:var(--warn); }
+.t-camp { color:var(--cyanDim); border-color:var(--cyanDim); }
+.t-steady { color:var(--dim); border-color:var(--line2); }
 
 /* stage action bar (combat only) */
 .stageActions { flex:none; background:var(--panel); border:1px solid var(--line); border-top:1px solid var(--rust); }

@@ -72,17 +72,27 @@ export class Stage extends React.Component<StageProps, StageState> {
         this.setState({note: v ? (ok ? `Peeled out in the ${v.name}.` : `Couldn't shake them.`) : `No ride to flee in.`});
     };
 
+    private static TEMPER: { [k: string]: [string, string] } = {
+        aggressive: ["AGGRO", "t-aggro"],
+        berserker: ["RUSH", "t-rush"],
+        flanker: ["FLANK", "t-flank"],
+        camper: ["CAMP", "t-camp"],
+        balanced: ["STEADY", "t-steady"],
+    };
+
     private strip = (e: Actor, i: number) => {
         const hpPct = Math.max(0, Math.min(100, (e.health / Math.max(1, e.maxHealth)) * 100));
         const active = e.name === this.props.enemy.name;
         const dist = Math.round(Battlefield.distance(this.props.actor, e));
         const cls = this.props.actor.weapon.weaponClass;
         const outOfRange = cls !== "melee" && rangeDV(cls, dist) === null;
+        const temper = Stage.TEMPER[e.temperament] || Stage.TEMPER.balanced;
         return (
             <button key={i} className={"es" + (active ? " on" : "") + (e.canFight() ? "" : " dead")}
                     onClick={() => this.props.onSelectEnemy(e)}>
                 <span className={"d"}>✦</span>
                 <span className={"nm"}>{e.name} <span className={"lv"}>L{e.level}</span></span>
+                <span className={"temp " + temper[1]} title={"AI temperament"}>{temper[0]}</span>
                 <span className={"bar hp"}><i style={{width: hpPct + "%"}}/></span>
                 <span className={"rng" + (outOfRange ? " oor" : "")}>{dist}m</span>
                 <span className={"sp"}>SP {this.enemyArmor(e)}</span>
