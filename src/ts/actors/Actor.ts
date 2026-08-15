@@ -620,9 +620,13 @@ export class Actor extends GameObject {
         return this.stats.dex + this.skills.ref.dodge + this.woundPenalty();
     }
 
-    /** RED MOVE stat (metres per Move Action). Baseline 6; cyberlegs etc. can raise it later. */
+    /**
+     * RED MOVE stat (metres per Move Action). A configured character uses its
+     * chosen MOVE (2-8); an un-configured actor (base MOVE 1) falls back to the
+     * baseline 6 so enemy waves and legacy spawns move exactly as before.
+     */
     public moveStat(): number {
-        return Math.max(6, this.stats.ma.ma);
+        return this.stats.ma.ma >= 2 ? this.stats.ma.ma : 6;
     }
 
     /** Metres this actor can cover in a turn by Running (a Move Action at x2). */

@@ -12,6 +12,8 @@ import {Combat} from "../interact/combat";
 import {Battlefield} from "../interact/battlefield";
 import {Economy} from "../interact/economy";
 import {Utils} from "../utils/utils";
+import {Creator} from "./creation/creator";
+import {CharacterCreation, CharacterSpec} from "../actors/resources/CharacterCreation";
 
 
 export interface InterfaceAppState {
@@ -22,6 +24,8 @@ export interface InterfaceAppState {
     currentEnemies: Actor[];
     messages: Message[];
     auto: boolean;
+    creating: boolean;
+    squadSpecs: CharacterSpec[];
 }
 
 export class App extends React.Component<{}, InterfaceAppState> {
@@ -31,7 +35,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     constructor(props: any) {
         super(props);
-        const party = [new Player(), new Player()];
+        // Boot into character creation, pre-filled with a two-merc default squad
+        // (one-click Deploy still works). The specs also seed a valid party so the
+        // game state behind the creator is never empty.
+        const squadSpecs = [CharacterCreation.defaultSpec(), CharacterCreation.defaultSpec()];
+        const party = squadSpecs.map((s) => new Player(s));
         const enemies = ActorController.getEnemies(2, App.levelOf(party));
         Battlefield.deploy(party, enemies);
         this.state = {
@@ -42,6 +50,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
             currentEnemies: enemies,
             messages: [],
             auto: false,
+            creating: true,
+            squadSpecs,
         };
     }
 
@@ -50,6 +60,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
     }
 
     public render() {
+        // Character creation is a full-screen takeover shown before / on demand.
+        if (this.state.creating) {
+            return <Creator initial={this.state.squadSpecs} canCancel={true}
+                            onDeploy={this.deploySquad} onCancel={this.closeCreator}/>;
+        }
         // Battle Stage shell: topbar (Hud) / nav rail / feed column (squad + feed) / stage (game).
         return <div id={"app"} className={"ops"}>
             <Hud actor={this.getCurrentActor()}/>
@@ -58,7 +73,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
                      activeSelection={this.updateSelection}
                      onAuto={this.toggleAuto}
                      onRestart={this.restart}
-                     onRespawn={this.respawn}/>
+                     onRespawn={this.respawn}
+                     onCreate={this.openCreator}/>
             <section id={"feedcol"}>
                 <Party name={"Squad"} party={this.state.party} activeSelection={this.getCharacter} friendly={true}
                        onToggleAuto={this.toggleActorAuto} onCycleTemperament={this.cycleTemperament}/>
@@ -73,6 +89,28 @@ export class App extends React.Component<{}, InterfaceAppState> {
     }
 
     private gotoCombat = () => this.setState({activeMainPanel: "Combat"});
+
+    /** Build the squad from the creation specs and drop into combat. */
+    private deploySquad = (specs: CharacterSpec[]) => {
+        this.stopAuto();
+        const party = specs.map((s) => new Player(s));
+        const enemies = ActorController.getEnemies(2, App.levelOf(party));
+        Battlefield.deploy(party, enemies);
+        this.setState({
+            squadSpecs: specs,
+            party,
+            currentEnemies: enemies,
+            activeChar: party[0],
+            activeEnemy: enemies[0],
+            creating: false,
+            activeMainPanel: "Combat",
+            messages: [{msg: "— crew deployed to the street —"} as any],
+        });
+    };
+
+    /** Re-open the creator (nav "New Squad"). */
+    private openCreator = () => { this.stopAuto(); this.setState({creating: true}); };
+    private closeCreator = () => this.setState({creating: false});
 
     /** Highest level in a party — the yardstick for scaling enemy waves. */
     private static levelOf(party: Actor[]): number {

@@ -36,6 +36,10 @@ export class Player extends Actor {
         if (st.cool !== undefined) { this.stats.cl = st.cool; }
         if (st.int !== undefined) { this.stats.int = st.int; }
         if (st.tech !== undefined) { this.stats.tech = st.tech; }
+        // RED MOVE: metres per Move Action. Default 6 keeps the classic run distance.
+        this.stats.ma.ma = d(st.move, 6);
+        this.stats.ma.run = this.stats.ma.ma * 3;
+        this.stats.ma.leap = this.stats.ma.ma / 4;
 
         this.traumaTeam = true; // carries a Trauma Team subscription
         // RED: everyone runs armour. Start in a Light Armor Jacket (SP ~ RED Light Armorjack).

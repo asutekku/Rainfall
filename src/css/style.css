@@ -14,7 +14,7 @@
     /* accents */
     --rust:#b85c49; --rustHot:#d06a52; --cyan:#37e1e7; --cyanDim:#1f9aa0;
     /* state */
-    --good:#7fd67f; --warn:#f0a830; --crit:#e0533f;
+    --good:#7fd67f; --warn:#f0a830; --crit:#e0533f; --rare:#c56bff;
     /* interaction surfaces */
     --sel:#191622; --hover:#15151d;
     --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
@@ -174,11 +174,17 @@ nav button.act-on { color:var(--good); border-left-color:var(--good); background
     background:#181822; border:1px solid var(--line2); box-shadow:inset 0 0 6px rgba(0,0,0,.6); pointer-events:none; }
 .iso.mini .cover { width:11px; height:11px; }
 .iso .u { position:absolute; transform:translate(-50%,-100%); text-align:center; background:transparent; border:0; padding:0;
-    transition:left .5s ease, top .5s ease; }
+    z-index:1; transition:left .5s ease, top .5s ease; }
+.iso .u.on { z-index:3; } .iso .u:hover { z-index:4; }
 .iso .u .g { width:30px; height:30px; margin:0 auto; display:grid; place-items:center;
     border:1px solid currentColor; font-size:15px; background:rgba(5,5,10,.72); }
 .iso .u .stem { width:1px; height:20px; margin:0 auto; background:currentColor; opacity:.5; }
-.iso .u .tag { margin-top:5px; font-size:10px; color:var(--ink); white-space:nowrap; }
+/* Names declutter the arena: only the active unit and the player carry a
+   permanent name; adjacent tokens reveal theirs on hover so stacked melee
+   knots stay readable. */
+.iso .u .tag { margin-top:5px; font-size:10px; color:var(--ink); white-space:nowrap;
+    opacity:0; transition:opacity .15s; }
+.iso .u.on .tag, .iso .u.you .tag, .iso .u:hover .tag { opacity:1; }
 .iso .u .tag span { color:var(--dim); }
 .iso .u .hp { width:50px; height:4px; margin:3px auto 0; background:#0b0b10; border:1px solid var(--line); }
 .iso .u .hp i { display:block; height:100%; background:var(--crit); }
@@ -306,6 +312,7 @@ main.panel > .panelBody { flex:1; min-height:0; overflow-y:auto; padding:12px; }
 .actionMessage.msg-loot { color:var(--warn); }
 .actionMessage.msg-gear { color:var(--cyan); }
 .actionMessage.msg-scav { color:var(--good); }
+.actionMessage.msg-rare { color:var(--rare); font-weight:600; text-shadow:0 0 8px rgba(197,107,255,.45); }
 .actionMessage, .actionMessage-first { color:var(--mid); padding-bottom:1px; margin-left:1em; text-indent:-1em; }
 .messageArrow { color:var(--rust); margin-right:6px; font-weight:bold; }
 .hitRed { color:var(--crit); }
@@ -446,5 +453,100 @@ progress::-moz-progress-bar { background:var(--rust); }
     border:1px solid var(--line); border-left:3px solid var(--rust); pointer-events:none;
 }
 .tooltip:hover .tooltiptext { visibility:visible; }
+
+/* =====================================================================
+   Character creation — full-screen RED "Complete Package" squad builder
+   ===================================================================== */
+.creator { position:fixed; inset:0; z-index:50; display:flex; flex-direction:column;
+    background:radial-gradient(1200px 620px at 72% -12%, #12121c, var(--bg)); color:var(--ink); font-family:var(--mono); }
+.crHead { display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
+    padding:20px 26px; border-bottom:1px solid var(--line); }
+.crHead h1 { margin:0; font-size:22px; letter-spacing:.04em; }
+.crHead h1::before { content:"◤ "; color:var(--rust); }
+.crHead p { margin:3px 0 0; color:var(--dim); font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
+.crActions { display:flex; gap:8px; }
+.crActions button { font-family:var(--mono); font-size:12px; padding:8px 12px; cursor:pointer;
+    color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
+.crActions button:hover { color:var(--ink); border-color:var(--cyanDim); }
+.crActions .prim { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; letter-spacing:.03em; }
+.crActions .prim:hover { background:#5cf0f5; }
+
+.crBody { flex:1; min-height:0; display:flex; }
+.crRoster { width:210px; flex:none; padding:12px; border-right:1px solid var(--line);
+    overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
+.crMerc { display:flex; align-items:center; gap:9px; padding:8px; cursor:pointer; text-align:left;
+    color:var(--mid); background:var(--panel); border:1px solid var(--line); border-left:2px solid transparent; }
+.crMerc:hover { background:var(--hover); }
+.crMerc.on { border-left-color:var(--cyan); background:var(--sel); }
+.crMerc img { width:34px; height:34px; flex:none; object-fit:cover; border:1px solid var(--line2); background:#000; }
+.crMercX { display:flex; flex-direction:column; min-width:0; }
+.crMercX b { color:var(--ink); font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.crMercX i { font-size:10px; font-style:normal; letter-spacing:.05em; }
+.crAdd { padding:9px; cursor:pointer; color:var(--dim); background:transparent;
+    border:1px dashed var(--line2); font-family:var(--mono); font-size:11px; }
+.crAdd:hover { color:var(--cyan); border-color:var(--cyanDim); }
+
+.crEdit { flex:1; min-width:0; overflow-y:auto; padding:18px 26px; }
+.crEditHead { display:flex; justify-content:space-between; align-items:center; gap:12px; }
+.crId { display:flex; align-items:center; gap:8px; flex:1; }
+.crId input { flex:1; max-width:320px; font-family:var(--mono); font-size:16px; color:var(--ink);
+    background:var(--panel); border:1px solid var(--line2); padding:8px 10px; }
+.crId input:focus { outline:none; border-color:var(--cyan); }
+.crId button, .crRand { font-family:var(--mono); cursor:pointer; color:var(--mid);
+    background:var(--panel); border:1px solid var(--line2); padding:8px 10px; font-size:12px; }
+.crId button:hover, .crRand:hover { color:var(--cyan); border-color:var(--cyanDim); }
+.crDel:hover { color:var(--crit); border-color:var(--crit); }
+
+.crSect { margin:16px 0; }
+.crSect h4 { margin:0 0 9px; font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+    color:var(--dim); display:flex; align-items:center; gap:10px; }
+
+.crRoles { display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:7px; }
+.crRole { display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 4px; cursor:pointer;
+    color:var(--mid); background:var(--panel); border:1px solid var(--line); font-family:var(--mono); font-size:11px; }
+.crRole:hover { background:var(--hover); }
+.crRole img { width:40px; height:40px; object-fit:cover; border:1px solid var(--line2); filter:grayscale(.55); }
+.crRole.on { background:var(--sel); }
+.crRole.on img { filter:none; }
+.crRoleInfo { margin-top:10px; padding:10px 12px; background:var(--panel);
+    border:1px solid var(--line); border-left:2px solid var(--rust); }
+.crRoleAbil { display:flex; justify-content:space-between; align-items:center; }
+.crRoleAbil b { font-size:13px; }
+.crRoleInfo p { margin:6px 0 0; color:var(--mid); font-size:12px; line-height:1.5; }
+.crRank { display:flex; align-items:center; gap:6px; color:var(--dim);
+    font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
+.crRank em { font-style:normal; color:var(--ink); font-weight:700; min-width:14px; text-align:center; }
+
+.crBudget { color:var(--warn); font-size:12px; letter-spacing:0; text-transform:none; }
+.crBudget i { color:var(--dim); font-style:normal; }
+.crBudget.done { color:var(--good); }
+
+.crStats { display:grid; grid-template-columns:repeat(2,1fr); gap:6px 22px; }
+.crStat { display:flex; align-items:center; gap:8px; }
+.crStatK { width:42px; color:var(--mid); font-size:12px; letter-spacing:.06em; }
+.crStatV { width:16px; text-align:center; color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums; }
+.crStatBar { flex:1; height:5px; background:#0b0b10; border:1px solid var(--line); }
+.crStatBar i { display:block; height:100%; background:linear-gradient(90deg,var(--cyanDim),var(--cyan)); }
+/* shared square steppers (rank + stats) */
+.crRank button, .crStat button { width:22px; height:22px; cursor:pointer; color:var(--mid);
+    background:var(--panel2); border:1px solid var(--line2); font-family:var(--mono); }
+.crRank button:hover, .crStat button:hover:not(:disabled) { color:var(--cyan); border-color:var(--cyanDim); }
+.crStat button:disabled { opacity:.3; cursor:default; }
+
+.crDerived { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
+.crDerived span { display:flex; flex-direction:column; gap:2px; padding:7px 14px;
+    background:var(--panel); border:1px solid var(--line); }
+.crDerived i { font-style:normal; color:var(--dim); font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
+.crDerived b { color:var(--cyan); font-size:16px; font-variant-numeric:tabular-nums; }
+
+.crReroll { margin-left:auto; width:26px; height:22px; cursor:pointer; color:var(--mid);
+    background:var(--panel2); border:1px solid var(--line2); font-family:var(--mono); }
+.crReroll:hover { color:var(--cyan); border-color:var(--cyanDim); }
+.crLife { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:9px; }
+.crLife label { display:flex; flex-direction:column; gap:3px; }
+.crLife span { color:var(--dim); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
+.crLife select { font-family:var(--mono); font-size:12px; color:var(--ink);
+    background:var(--panel); border:1px solid var(--line2); padding:6px 8px; }
+.crLife select:focus { outline:none; border-color:var(--cyan); }
 
 @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
