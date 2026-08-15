@@ -115,11 +115,20 @@ export class RunMap {
         const paths: { [key: string]: Pt[] } = {};
         nodes.forEach((nd) => adj[nd.id] = []);
 
-        const link = (i: number, k: number): boolean => {
+        const link = (i: number, k: number, force: boolean = false): boolean => {
             const a = nodes[i]!, b = nodes[k]!;
             if (adj[a.id]!.indexOf(b.id) >= 0) { return true; }
             const route = RunMap.tracePath(routes[i]!, chosen[i]!, chosen[k]!, city.junctions);
             if (!route) { return false; }
+            // no tunnelling: a link may not pass THROUGH another waypoint's
+            // junction — that street belongs to the waypoint standing on it
+            if (!force) {
+                const mid = route.slice(1, -1);
+                const blocked = mid.some((p) => chosen.some((c, ci) =>
+                    ci !== i && ci !== k &&
+                    Math.hypot(p.x - city.junctions[c]!.x, p.z - city.junctions[c]!.z) < 1.0));
+                if (blocked) { return false; }
+            }
             adj[a.id]!.push(b.id);
             adj[b.id]!.push(a.id);
             paths[edgeKey(a.id, b.id)] = route;
@@ -150,14 +159,24 @@ export class RunMap {
         for (let guard = 0; guard < NODES * 2; guard++) {
             const comps = new Set(nodes.map((_n, i) => root(parent, i)));
             if (comps.size <= 1) { break; }
-            let bi = -1, bk = -1, bd = Infinity;
+            // cross-component pairs by road distance; prefer clean (non-tunnelling)
+            // links, fall back to a forced one only if no clean bridge exists
+            const pairs: Array<[number, number, number]> = [];
             nodes.forEach((_a, i) => nodes.forEach((_b, k) => {
                 if (k <= i || root(parent, i) === root(parent, k)) { return; }
                 const d = routes[i]!.dist[chosen[k]!]!;
-                if (isFinite(d) && d < bd) { bd = d; bi = i; bk = k; }
+                if (isFinite(d)) { pairs.push([i, k, d]); }
             }));
-            if (bi < 0 || !link(bi, bk)) { return null; }
-            parent[root(parent, bi)] = root(parent, bk);
+            pairs.sort((x, y) => x[2] - y[2]);
+            let bridged = false;
+            for (const [i, k] of pairs) {
+                if (link(i, k)) { parent[root(parent, i)] = root(parent, k); bridged = true; break; }
+            }
+            if (!bridged) {
+                const first = pairs[0];
+                if (!first || !link(first[0], first[1], true)) { return null; }
+                parent[root(parent, first[0])] = root(parent, first[1]);
+            }
         }
 
         // types: entry is pre-cleared ground; boss farthest; spread the rest

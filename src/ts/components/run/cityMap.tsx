@@ -64,7 +64,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
     private markers: Marker[] = [];
     private routes: Route[] = [];
     private lineMats: LineMaterial[] = [];
-    private sharedMats!: { back: LineMaterial; traveled: LineMaterial; unknown: LineMaterial };
+    private sharedMats!: { back: LineMaterial; traveled: LineMaterial; unknown: LineMaterial; trail: LineMaterial };
     private posRing!: THREE.Mesh;
     private travelDot!: THREE.Mesh;
     private travelAnim: { node: RunNode; pts: THREE.Vector3[]; seg: number; segT: number; speed: number } | null = null;
@@ -133,8 +133,14 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         const c = this.props.run.city;
         const aspect = w / Math.max(1, h);
         const halfFov = Math.tan((50 * Math.PI / 180) / 2);
-        const r = c.activeRadius;
-        const needed = Math.max(r * 1.22, r / aspect * 1.1);
+        // fit to the actual waypoint bounds so no marker (or its label) clips
+        let hx = 24, hz = 24;
+        this.props.run.nodes.forEach((n) => {
+            hx = Math.max(hx, Math.abs(n.pos.x - c.activeCenter.x));
+            hz = Math.max(hz, Math.abs(n.pos.z - c.activeCenter.z));
+        });
+        hx += 14; hz += 16;
+        const needed = Math.max(hz * 1.35, hx / aspect * 1.08, c.activeRadius * 1.0);
         this.baseY = (needed / halfFov) * 1.06;
         this.camera.aspect = aspect;
         this.camera.updateProjectionMatrix();
@@ -265,8 +271,9 @@ export class CityMap extends React.Component<CityMapProps, {}> {
     private buildRoutes() {
         this.sharedMats = {
             back: this.makeLineMat({color: WHITE, width: 2, opacity: 0.4}),
-            traveled: this.makeLineMat({color: 0x1f9aa0, width: 1.5, opacity: 0.35}),
-            unknown: this.makeLineMat({color: 0x39414a, width: 1.5, opacity: 0.5}),
+            traveled: this.makeLineMat({color: 0x37e1e7, width: 2.2, opacity: 0.55}),   // walked streets stay lit
+            unknown: this.makeLineMat({color: 0x4d5761, width: 2, opacity: 0.65}),
+            trail: this.makeLineMat({color: 0xe0533f, width: 2.2, opacity: 0.6, dashed: true}),  // static dashes → objective
         };
         const run = this.props.run;
         const done = new Set<string>();
@@ -443,6 +450,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         });
 
         // routes: white marching dashes out of the current node; calm elsewhere
+        const trail = this.bossTrailKeys(run);
         this.routes.forEach((r) => {
             const touches = r.a === run.position || r.b === run.position;
             const otherId = r.a === run.position ? r.b : r.a;
@@ -457,6 +465,8 @@ export class CityMap extends React.Component<CityMapProps, {}> {
                 r.dir = cur && Math.hypot(start.x - cur.pos.x, start.z - cur.pos.z) < 1.5 ? 1 : -1;
             } else if (touches && otherCleared) {
                 r.line.material = this.sharedMats.back;
+            } else if (trail.has(r.key)) {
+                r.line.material = this.sharedMats.trail;   // the way toward the boss
             } else if (bothCleared) {
                 r.line.material = this.sharedMats.traveled;
             } else {
@@ -471,6 +481,36 @@ export class CityMap extends React.Component<CityMapProps, {}> {
 
     private nodeById(id: string): RunNode | null {
         return this.props.run.nodes.find((n) => n.id === id) || null;
+    }
+
+    /** Edge keys of the shortest run-graph path from the squad to the boss —
+     *  rendered as a red dashed objective trail so the far side is navigable. */
+    private bossTrailKeys(run: RunState): Set<string> {
+        const out = new Set<string>();
+        const boss = run.nodes.find((n) => n.type === "boss");
+        if (!boss || boss.id === run.position) { return out; }
+        const dist: { [id: string]: number } = {};
+        const prev: { [id: string]: string } = {};
+        const done: { [id: string]: boolean } = {};
+        run.nodes.forEach((n) => dist[n.id] = Infinity);
+        dist[run.position] = 0;
+        for (;;) {
+            let u: string | null = null, du = Infinity;
+            run.nodes.forEach((n) => { if (!done[n.id] && dist[n.id]! < du) { du = dist[n.id]!; u = n.id; } });
+            if (u === null) { break; }
+            done[u] = true;
+            (run.adj[u] || []).forEach((v) => {
+                const nd = du + this.routeLen(u!, v);
+                if (nd < dist[v]!) { dist[v] = nd; prev[v] = u!; }
+            });
+        }
+        let cur = boss.id;
+        let guard = run.nodes.length + 2;
+        while (cur !== run.position && prev[cur] !== undefined && guard-- > 0) {
+            out.add(edgeKey(cur, prev[cur]!));
+            cur = prev[cur]!;
+        }
+        return out;
     }
 
     private routeLen(a: string, b: string): number {
