@@ -1,4 +1,5 @@
 import {Actor} from "../actors/Actor";
+import {Purse} from "./crew";
 
 export interface HousingTier {
     name: string;
@@ -39,14 +40,13 @@ export class Lifestyle {
      * true if everything was paid.
      */
     public static payUpkeep(actor: Actor): boolean {
-        actor.currency += actor.corpStipend(); // Corporate "Teamwork": corporate stipend
+        Purse.earn(actor, actor.corpStipend()); // Corporate "Teamwork": corporate stipend
         // Fixer "Operator" negotiates the rent down.
         const cost: number = Math.max(0, Lifestyle.upkeepCost(actor) - actor.operatorBonus() * 10);
-        if (actor.currency >= cost) {
-            actor.currency -= cost;
+        if (Purse.spend(actor, cost)) {
             return true;
         }
-        actor.currency = 0;
+        Purse.garnish(actor, cost);
         actor.housing = "Streets";
         actor.traumaTeam = false;
         return false;

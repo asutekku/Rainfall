@@ -60,6 +60,19 @@ const LIFE_GOAL: string[] = [
     "Leave a legacy on the Street", "Just survive one more night",
 ];
 
+// Signature stat lines per role — each totals STAT_BUDGET (62), each stat 2-8.
+const ROLE_STATS: { [role: string]: Required<NonNullable<CharacterSpec["stats"]>> } = {
+    solo:       {ref: 8, dex: 7, body: 7, will: 7, move: 6, int: 5, tech: 4, cool: 6, luck: 6, emp: 6},
+    rockerboy:  {ref: 6, dex: 6, body: 5, will: 7, move: 6, int: 6, tech: 4, cool: 8, luck: 6, emp: 8},
+    netrunner:  {ref: 7, dex: 6, body: 5, will: 6, move: 5, int: 8, tech: 8, cool: 6, luck: 6, emp: 5},
+    techie:     {ref: 6, dex: 7, body: 6, will: 6, move: 6, int: 7, tech: 8, cool: 5, luck: 6, emp: 5},
+    media:      {ref: 6, dex: 5, body: 5, will: 6, move: 6, int: 7, tech: 5, cool: 8, luck: 7, emp: 7},
+    cop:        {ref: 7, dex: 6, body: 7, will: 7, move: 6, int: 6, tech: 5, cool: 6, luck: 6, emp: 6},
+    corporate:  {ref: 6, dex: 5, body: 6, will: 6, move: 5, int: 8, tech: 6, cool: 8, luck: 6, emp: 6},
+    fixer:      {ref: 6, dex: 6, body: 5, will: 5, move: 6, int: 7, tech: 5, cool: 8, luck: 8, emp: 6},
+    nomad:      {ref: 7, dex: 6, body: 8, will: 6, move: 8, int: 5, tech: 6, cool: 5, luck: 6, emp: 5},
+};
+
 export class CharacterCreation {
     public static roles(): string[] {
         return ROLES.slice();
@@ -103,6 +116,17 @@ export class CharacterCreation {
             v[k] += 1; pool -= 1;
         }
         return v;
+    }
+
+    /**
+     * A role's signature stat line — what a merc of that trade looks like without
+     * anyone touching a point-buy screen. Every profile spends exactly
+     * STAT_BUDGET, so switching roles on the boot screen never produces an
+     * illegal build and "customise" always opens on a legal one.
+     */
+    public static statsForRole(role: string): Required<NonNullable<CharacterSpec["stats"]>> {
+        const p = ROLE_STATS[role];
+        return {...(p || ROLE_STATS["solo"]!)};
     }
 
     /** The classic "capable solo" starting build — the creator's default squad member. */

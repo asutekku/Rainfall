@@ -924,6 +924,104 @@ progress::-moz-progress-bar { background:var(--rust); }
     .debriefActions button { padding:9px 14px; font-size:12px; }
 }
 
+/* =====================================================================
+   hire board — the merc market, between sectors and at the fixer's table
+   ===================================================================== */
+.hireBoard { display:flex; flex-direction:column; min-height:0; font-family:var(--mono); }
+.hbHead { display:flex; align-items:baseline; gap:10px; margin-bottom:7px; }
+.hbCrew { color:var(--dim); font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
+.hbFunds { margin-left:auto; color:var(--good); font-size:14px; font-variant-numeric:tabular-nums; }
+.hbNote { margin:0 0 6px; color:var(--warn); font-size:10px; }
+.hbOffers { list-style:none; margin:0; padding:0; overflow-y:auto; min-height:0; }
+.hbOffer { display:flex; align-items:center; gap:9px; padding:6px 9px; margin-bottom:5px;
+    background:var(--panel); border:1px solid var(--line); border-left:2px solid var(--line2); font-size:11px; }
+.hbOffer.tier-pro { border-left-color:var(--cyanDim); }
+.hbOffer.tier-veteran { border-left-color:var(--warn); }
+.hbOffer.tier-legend { border-left-color:var(--rare); }
+.hbOffer.hired { opacity:.5; }
+.hbFace { width:26px; height:26px; object-fit:cover; border:1px solid var(--line2); filter:grayscale(.35); }
+.hbWho { display:flex; flex-direction:column; gap:1px; min-width:118px; }
+.hbWho b, .hbWho i { white-space:nowrap; }
+.hbWho b { color:var(--ink); }
+.hbWho i { font-style:normal; font-size:10px; }
+.hbTier { color:var(--mid); font-size:9px; letter-spacing:.12em; text-transform:uppercase; }
+.hbOffer.tier-legend .hbTier { color:var(--rare); }
+.hbTrait { color:var(--faint); font-size:10px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hbKit { margin-left:auto; color:var(--dim); font-size:10px; white-space:nowrap; }
+.hbBuy { font-family:var(--mono); font-size:11px; font-weight:700; padding:5px 11px; white-space:nowrap;
+    color:var(--bg); background:var(--cyan); border:1px solid var(--cyan); }
+.hbBuy:hover:enabled { background:#5cf0f5; }
+.hbBuy:disabled { color:var(--faint); background:var(--panel2); border-color:var(--line); cursor:not-allowed; }
+.hbHired { color:var(--good); font-size:9px; letter-spacing:.1em; white-space:nowrap; }
+.metaOverlay > .hireBoard { flex:1; min-height:0; width:100%; max-width:820px; margin:0 auto; padding:14px 20px; }
+
+/* casualties on the debrief — the one irreversible choice on that screen */
+.dbCasualties { margin-bottom:14px; }
+.dbCasualties ul { list-style:none; margin:0; padding:0; }
+.dbCasualties h2 { color:var(--crit); }
+.dbCasualty { display:flex; align-items:center; gap:8px; padding:6px 9px; margin-bottom:4px;
+    background:#170f11; border:1px solid rgba(224,83,63,.4); font-size:11px; }
+.dbCasIcon { color:var(--crit); }
+.dbCasName { color:var(--ink); }
+.dbCasRole { color:var(--dim); font-size:10px; }
+.dbCasualty button { margin-left:auto; font-family:var(--mono); font-size:10px; font-weight:700; padding:4px 10px;
+    color:var(--bg); background:var(--crit); border:1px solid var(--crit); white-space:nowrap; }
+.dbCasualty button:hover:enabled { background:#f0664f; }
+.dbCasualty button:disabled { color:var(--faint); background:var(--panel2); border-color:var(--line); cursor:not-allowed; }
+
+/* =====================================================================
+   sector clear — payday spent on people, then the next city over
+   ===================================================================== */
+.sectorClear { position:fixed; inset:0; z-index:47; overflow-y:auto; display:grid; place-items:center;
+    font-family:var(--mono); background:radial-gradient(900px 600px at 50% 10%, #0f1f1c, var(--bg)); }
+.scCard { width:100%; max-width:880px; padding:20px; }
+.scHead { text-align:center; margin-bottom:16px; }
+.scHead h1 { margin:0 0 3px; font-size:29px; letter-spacing:.08em; color:var(--good);
+    text-shadow:0 0 18px rgba(127,214,127,.45); }
+.scHead p { margin:0; color:var(--mid); font-size:12px; }
+.scCols { display:grid; grid-template-columns:1fr 1.15fr; gap:16px; align-items:start; }
+.scBlock h2 { display:flex; align-items:baseline; gap:8px; margin:0 0 8px; padding-bottom:5px;
+    color:var(--rust); font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+    border-bottom:1px solid var(--line); }
+.scBlock h2 b { color:var(--good); font-size:14px; letter-spacing:0; font-variant-numeric:tabular-nums; }
+.scMembers { list-style:none; margin:0; padding:0; }
+.scMember { display:flex; align-items:center; gap:9px; padding:6px 9px; margin-bottom:5px;
+    background:var(--panel); border:1px solid var(--line); font-size:11px; }
+.scMember img { width:26px; height:26px; object-fit:cover; border:1px solid var(--line2); filter:grayscale(.35); }
+.scWho { display:flex; flex-direction:column; gap:1px; }
+.scWho b { color:var(--ink); }
+.scWho i { font-style:normal; color:var(--dim); font-size:10px; }
+.scBar { margin-left:auto; width:70px; height:6px; background:var(--bg2); border:1px solid var(--line); }
+.scBar i { display:block; height:100%; background:var(--good); }
+/* the block heading already carries the purse — don't print it twice */
+.sectorClear .hbHead { display:none; }
+.scActions { display:flex; justify-content:center; margin-top:18px; }
+.scActions .prim { font-family:var(--mono); font-size:13px; font-weight:700; padding:11px 26px;
+    color:var(--bg); background:var(--cyan); border:1px solid var(--cyan); }
+.scActions .prim:hover { background:#5cf0f5; }
+
+/* run over — what the character keeps */
+.runEndKeeps { margin-bottom:20px; }
+.reKeepHead { display:block; margin-bottom:8px; color:var(--dim); font-size:10px;
+    letter-spacing:.14em; text-transform:uppercase; }
+.reKeepLost { display:block; margin-top:9px; color:var(--faint); font-size:10px; }
+
+/* boot screen: one character instead of a roster */
+.creator.solo .crBody { justify-content:center; }
+.creator.solo .crEdit { max-width:720px; }
+.crPortrait { width:46px; height:46px; object-fit:cover; border:1px solid var(--line2); filter:grayscale(.3); }
+.crAdvToggle { width:100%; margin:10px 0 0; font-family:var(--mono); font-size:11px; letter-spacing:.08em;
+    text-align:left; padding:9px 12px; color:var(--dim); background:var(--panel); border:1px dashed var(--line2); }
+.crAdvToggle:hover, .crAdvToggle.on { color:var(--cyan); border-color:var(--cyanDim); }
+
+@media (max-width: 860px) {
+    .scCols { grid-template-columns:1fr; gap:14px; }
+    .scCard { padding:14px 12px; }
+    .scHead h1 { font-size:22px; }
+    .hbTrait, .hbKit { display:none; }
+    .hbOffers { max-height:44vh; }
+}
+
 @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
 
 /* ---------------------------------------------------------------------

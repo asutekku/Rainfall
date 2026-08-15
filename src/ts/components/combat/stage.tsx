@@ -23,6 +23,7 @@ export interface StageProps {
     playback: PlaybackBundle | null;
     orders: OrderCtx | null;
     turnOrder: Actor[];
+    onNotice: (msg: any) => void;
     onSelectAlly: (a: Actor) => void;
     onSelectEnemy: (a: Actor) => void;
     onGotoCombat: () => void;
@@ -178,7 +179,8 @@ export class Stage extends React.Component<StageProps, {}> {
                     <React.Fragment>
                         <div className={"viewwrap"}>
                             <MainPanel activeView={this.props.view} currentActor={this.props.actor}
-                                       party={this.props.party} messages={this.props.messages}/>
+                                       party={this.props.party} messages={this.props.messages}
+                                       onNotice={this.props.onNotice}/>
                         </div>
                         <div className={"minimap"} title={"Return to combat"} onClick={this.props.onGotoCombat}>
                             <IsoMap party={this.props.party} enemies={this.props.enemies} mini={true}/>

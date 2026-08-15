@@ -18,16 +18,23 @@ import {RunController} from "../interact/runController";
 import {RunEndView} from "./run/runEndView";
 import {DebriefView} from "./run/debriefView";
 import {BattleReport} from "../interact/battleReport";
+import {Crew} from "../interact/crew";
+import {MercMarket, MercOffer} from "../interact/mercMarket";
+import {Merc} from "../actors/Merc";
+import {HireBoard} from "./run/hireBoard";
+import {SectorClearView} from "./run/sectorClearView";
 import {MetaOverlay} from "./run/metaOverlay";
 import {Store} from "./storePanel/store";
 import {Downtime} from "./downtime/downtime";
 import {OrderCtx, PlaybackBundle} from "./combat/battleScene";
 
 /** Which run-loop screen is on top. "combat" falls through to the ops shell. */
-export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "end";
+export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "end";
 
 export interface InterfaceAppState {
     activeMainPanel: string;
+    /** Your merc — the one who persists across runs. Never a casualty. */
+    character: Actor;
     activeChar: Actor | undefined;
     activeEnemy: Actor | undefined;
     party: Actor[];
@@ -35,7 +42,10 @@ export interface InterfaceAppState {
     messages: Message[];
     auto: boolean;
     creating: boolean;
-    squadSpecs: CharacterSpec[];
+    /** The spec your character was built from, so "new character" opens where you left it. */
+    characterSpec: CharacterSpec;
+    /** Candidates on the board while a hire screen is up. */
+    offers: MercOffer[];
     /** Which mobile destination is on screen. Ignored above the breakpoint. */
     mobileTab: MobileTab;
     /** More sheet open (mobile only). */
@@ -48,6 +58,8 @@ export interface InterfaceAppState {
     screen: RunScreen;
     /** The sealed after-action report while the debrief screen is up. */
     report: BattleReport | null;
+    /** The crew's shared purse — every payday, hire and store buy runs through it. */
+    crew: Crew;
     /** Bumped when a new encounter starts — tells the 3D arena to build a fresh street. */
     battleId: number;
     /** The resolved turn currently being animated by the battle scene. */
@@ -76,15 +88,17 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     constructor(props: any) {
         super(props);
-        // Boot into character creation, pre-filled with a two-merc default squad
-        // (one-click Deploy still works). The specs also seed a valid party so the
-        // game state behind the creator is never empty.
-        const squadSpecs = [CharacterCreation.defaultSpec(), CharacterCreation.defaultSpec()];
-        const party = squadSpecs.map((s) => new Player(s));
+        // Boot into character creation, pre-filled with a ready-to-run merc
+        // (one-click Deploy still works). The spec also seeds a valid party so
+        // the game state behind the creator is never empty.
+        const characterSpec = CharacterCreation.defaultSpec();
+        const character = new Player(characterSpec);
+        const party = [character];
         const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
         Battlefield.deploy(party, enemies);
         this.state = {
             activeMainPanel: "Character",
+            character,
             activeChar: undefined,
             activeEnemy: undefined,
             party,
@@ -92,13 +106,15 @@ export class App extends React.Component<{}, InterfaceAppState> {
             messages: [],
             auto: false,
             creating: true,
-            squadSpecs,
+            characterSpec,
+            offers: [],
             mobileTab: "arena",
             mobileMore: false,
             unread: 0,
             run: null,
             screen: "combat",
             report: null,
+            crew: new Crew().activate(),
             battleId: 1,
             playback: null,
             orders: null,
@@ -113,25 +129,40 @@ export class App extends React.Component<{}, InterfaceAppState> {
     public override render() {
         // Character creation is a full-screen takeover shown before / on demand.
         if (this.state.creating) {
-            return <Creator initial={this.state.squadSpecs} canCancel={this.state.run !== null}
-                            onDeploy={this.deploySquad} onCancel={this.closeCreator}/>;
+            return <Creator initial={this.state.characterSpec} canCancel={this.state.run !== null}
+                            onDeploy={this.deployCharacter} onCancel={this.closeCreator}/>;
         }
         // Run-loop takeovers that sit ABOVE the shell. The city map and combat
         // both render inside the shell (via Stage) so the nav / bottom bar stay.
         const run = this.state.run;
         if (run && this.state.screen === "debrief" && this.state.report) {
-            return <DebriefView report={this.state.report} depth={run.depth}
+            return <DebriefView report={this.state.report} sector={run.sector}
                                 canRevive={run.outcome === "lost" && !run.reviveUsed}
+                                canAct={run.outcome !== "lost" || !run.reviveUsed}
+                                funds={this.state.crew.funds}
                                 onClaim={this.claimLoot} onSell={this.sellLoot} onAutoKit={this.autoKit}
+                                onBuyout={this.buyoutMerc}
                                 onContinue={this.leaveDebrief} onRevive={this.reviveRun}/>;
         }
+        if (run && this.state.screen === "sector") {
+            return <SectorClearView sector={run.sector} funds={this.state.crew.funds}
+                                    party={this.state.party} offers={this.state.offers}
+                                    cap={RunController.SQUAD_CAP}
+                                    onHire={this.hireMerc} onContinue={this.nextSector}/>;
+        }
         if (run && this.state.screen === "end") {
-            const kills = this.state.party.reduce((n, p) => n + p.kills, 0);
-            const eddies = this.state.party.reduce((n, p) => n + Math.floor(p.currency), 0);
-            return <RunEndView outcome={run.outcome === "won" ? "won" : "lost"}
-                               depth={run.depth} kills={kills} eddies={eddies}
-                               canRevive={run.outcome === "lost" && !run.reviveUsed}
-                               onRevive={this.reviveRun} onNewCrew={this.openCreator}/>;
+            return <RunEndView character={this.state.character} sector={run.sector}
+                               depth={run.depth} kills={this.state.character.kills}
+                               canRevive={!run.reviveUsed}
+                               onRevive={this.reviveRun} onNextRun={this.nextRun}
+                               onNewCharacter={this.openCreator}/>;
+        }
+        if (run && this.state.screen === "hire") {
+            return <MetaOverlay title={"☰ Fixer’s Table"} onLeave={this.leaveMeta}>
+                <HireBoard offers={this.state.offers} party={this.state.party}
+                           funds={this.state.crew.funds} cap={RunController.SQUAD_CAP}
+                           onHire={this.hireMerc}/>
+            </MetaOverlay>;
         }
         if (run && this.state.screen === "merchant") {
             return <MetaOverlay title={"▤ Black Market"} onLeave={this.leaveMeta}>
@@ -140,7 +171,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         }
         if (run && this.state.screen === "rest") {
             return <MetaOverlay title={"☾ Safehouse"} onLeave={this.leaveMeta}>
-                <Downtime actor={this.getCurrentActor()}/>
+                <Downtime actor={this.getCurrentActor()} party={this.state.party}/>
             </MetaOverlay>;
         }
         // Battle Stage shell: topbar (Hud) / nav rail / feed column (squad + feed) / stage (game).
@@ -150,13 +181,12 @@ export class App extends React.Component<{}, InterfaceAppState> {
                     data-mtab={this.state.mobileTab}
                     data-more={this.state.mobileMore ? "1" : "0"}
                     data-view={this.state.activeMainPanel}>
-            <Hud actor={this.getCurrentActor()}/>
+            <Hud actor={this.getCurrentActor()} crew={this.state.crew}/>
             <Sidebar active={this.state.activeMainPanel}
                      auto={this.state.auto}
+                     inRun={this.state.run !== null}
                      activeSelection={this.updateSelection}
                      onAuto={this.toggleAuto}
-                     onRestart={this.restart}
-                     onRespawn={this.respawn}
                      onCreate={this.openCreator}/>
             <section id={"feedcol"}>
                 <Party name={"Squad"} party={this.state.party} activeSelection={this.getCharacter} friendly={true}
@@ -166,7 +196,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             <Stage actor={this.getCurrentActor()} enemy={this.getCurrentEnemy()}
                    party={this.state.party} enemies={this.state.currentEnemies}
                    view={this.state.activeMainPanel} screen={this.state.screen} run={this.state.run}
-                   messages={this.combatController}
+                   messages={this.combatController} onNotice={this.pushNotice}
                    auto={this.state.auto}
                    battleId={this.state.battleId}
                    playback={this.state.playback}
@@ -191,6 +221,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
         this.setState({activeMainPanel: "Combat", mobileTab: "arena"}, this.resumeIfPaused);
     };
 
+    /** A panel wants a line in the feed — never a combat round. */
+    private pushNotice = (msg: any) => this.setState((st) => ({
+        messages: [msg, ...st.messages].slice(0, this.logLength),
+    }));
+
     /**
      * Mobile destination switch. Arena and Gear also drive the desktop panel
      * state, so the Stage renders the right thing; Squad and Feed only surface
@@ -210,19 +245,22 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     private noop = () => { /* placeholder callback for reused panels */ };
 
-    /** Build the squad and start a fresh run on the map. Run logic lives in RunController. */
-    private deploySquad = (specs: CharacterSpec[]) => {
+    /** Build your character and hit the street. The crew gets hired on the way. */
+    private deployCharacter = (spec: CharacterSpec) => {
         this.resetSequencer();
-        const party = specs.map((s) => new Player(s));
+        const character = new Player(spec);
+        // Never start alone: the fixer throws in a rookie with the job.
+        const party = [character, new Merc(MercMarket.starter(1))];
         // Seed a placeholder wave so the combat shell never reads an empty array.
         const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
         Battlefield.deploy(party, enemies);
         this.setState({
-            squadSpecs: specs, party, currentEnemies: enemies,
-            activeChar: party[0], activeEnemy: enemies[0],
-            creating: false, run: RunController.freshRun(), screen: "map", report: null,
+            characterSpec: spec, character, party, currentEnemies: enemies,
+            activeChar: character, activeEnemy: enemies[0],
+            creating: false, run: RunController.freshRun(1), screen: "map", report: null,
+            crew: new Crew().activate(), offers: [],
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
-            messages: [{msg: "— crew hits the street —"} as any],
+            messages: [{msg: `— ${character.name} hits the street with a rookie in tow —`} as any],
             playback: null, orders: null, turnOrder: [],
         });
     };
@@ -267,11 +305,10 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (patch) { this.setState(patch as any, this.beginBattle); }
     };
 
-    /** Re-open the creator (nav "New Squad" / abandon / new crew). */
+    /** Re-open the creator (nav "New Character" / abandon). */
     private openCreator = () => {
         this.resetSequencer();
-        this.setState({creating: true, run: null, screen: "combat", report: null,
-            playback: null, orders: null, turnOrder: []});
+        this.setState({creating: true, report: null, playback: null, orders: null, turnOrder: []});
     };
     private closeCreator = () => this.setState({creating: false});
 
@@ -299,7 +336,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
      * advances the map, ends the run, or keeps the fight going.
      */
     private combatController = (...messages: any): void => {
-        if (!this.state.run) { return; }
+        // Only a resolved combat turn may drive the run machine. Panels (Quests,
+        // Store) share this callback through Stage → MainPanel, and letting one of
+        // their notices through after a fight was cleared sealed an already-sealed
+        // ledger and stranded the run on an unrenderable "debrief" with no report.
+        if (!this.state.run || this.state.screen !== "combat") { return; }
         this.setState(RunController.step(this.state, messages.flat(), this.logLength) as any);
     };
 
@@ -393,7 +434,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
                 this.scheduleAdvance(this.state.auto ? 160 : 300);
             }
         };
-        if (this.state.run) {
+        if (this.state.run && this.state.screen === "combat") {
             const patch = RunController.step(this.state, msgs, this.logLength);
             this.setState({...patch, playback: null} as any, done);
         } else {
@@ -474,33 +515,28 @@ export class App extends React.Component<{}, InterfaceAppState> {
         });
     };
 
-    /** Fresh run — a new act with the same crew, back on the map. */
-    private restart = () => {
-        this.resetSequencer();
-        const specs = this.state.squadSpecs.length ? this.state.squadSpecs
-            : [CharacterCreation.defaultSpec(), CharacterCreation.defaultSpec()];
-        const party = specs.map((s) => new Player(s));
-        const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
-        Battlefield.deploy(party, enemies);
-        this.setState({
-            party,
-            currentEnemies: enemies,
-            activeChar: party[0],
-            activeEnemy: enemies[0],
-            run: RunController.freshRun(),
-            screen: "map",
-            report: null,
-            playback: null, orders: null, turnOrder: [],
-            messages: [{msg: "— new job, same crew —"} as any],
-        });
+    /** Sign a candidate off the board. */
+    private hireMerc = (id: string) => {
+        const patch = RunController.hire(this.state, id, this.logLength);
+        if (patch) { this.setState(patch as any); }
     };
 
-    /** Trauma Team pickup: fully revive and heal every squad member. */
-    private respawn = () => {
-        this.state.party.forEach((p) => p.revive());
-        this.setState({
-            messages: [{msg: "— squad revived (Trauma Team) —"} as any, ...this.state.messages].slice(0, this.logLength),
-        });
+    /** Move the crew on to the next, harder sector. */
+    private nextSector = () => {
+        this.resetSequencer();
+        this.setState(RunController.nextSector(this.state, this.logLength) as any);
+    };
+
+    /** Trauma Team for a downed merc, out of the crew purse. */
+    private buyoutMerc = (id: string) => {
+        const report = this.state.report && RunController.buyout(this.state, this.state.report, id);
+        if (report) { this.setState({report}); }
+    };
+
+    /** A wipe is not the end of the character — start the next run with them. */
+    private nextRun = () => {
+        this.resetSequencer();
+        this.setState(RunController.nextRun(this.state, this.logLength) as any);
     };
 
     private getCharacter = (actor: Actor) => {
@@ -522,8 +558,15 @@ export class App extends React.Component<{}, InterfaceAppState> {
         this.setState({activeEnemy: chosen});
     };
 
+    /**
+     * Always someone actually on the crew. A merc can leave the party between
+     * renders (bled out on the debrief), and the stale reference used to keep
+     * feeding the HUD, the store and the safehouse — so eddies were spent
+     * kitting out a corpse that had already been struck off.
+     */
     private getCurrentActor(): Actor {
-        return !this.state.activeChar ? this.state.party[0]! : this.state.activeChar;
+        const a = this.state.activeChar;
+        return a && this.state.party.indexOf(a) >= 0 ? a : this.state.party[0]!;
     }
 
     private getCurrentEnemy(): Actor {
