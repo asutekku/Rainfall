@@ -453,6 +453,11 @@ progress::-moz-progress-bar { background:var(--rust); }
     border:1px solid var(--line); border-left:3px solid var(--rust); pointer-events:none;
 }
 .tooltip:hover .tooltiptext { visibility:visible; }
+/* touch has no hover: press or keyboard-focus opens the same tip */
+.tooltip:active .tooltiptext, .tooltip:focus-within .tooltiptext { visibility:visible; }
+
+/* Mobile tab bar — inert above the breakpoint, where the nav rail rules. */
+.mtabs, .mScrim { display:none; }
 
 /* =====================================================================
    Character creation — full-screen RED "Complete Package" squad builder
@@ -548,5 +553,200 @@ progress::-moz-progress-bar { background:var(--rust); }
 .crLife select { font-family:var(--mono); font-size:12px; color:var(--ink);
     background:var(--panel); border:1px solid var(--line2); padding:6px 8px; }
 .crLife select:focus { outline:none; border-color:var(--cyan); }
+
+/* =====================================================================
+   ARENA TAB CONSOLE — phones and small tablets.
+   The desktop DOM is untouched: #feedcol and #stage go display:contents so
+   their children become direct flex items of #app, and `order` rebuilds the
+   screen as rail → board → feed dock → actions → tabs. Which of those are on
+   screen is driven entirely by #app[data-mtab].
+   ===================================================================== */
+@media (max-width: 860px) {
+
+    html, body { font-size:13px; }
+    /* the shell is a fixed-height console — no page scroll, no rubber-banding */
+    html, body { overflow:hidden; }
+    body::after { display:none; }               /* vignette costs contrast on a small panel */
+
+    #app {
+        display:flex; flex-direction:column; gap:5px;
+        padding:5px 5px 0;
+        height:100vh; height:100dvh;
+        font-size:12px;
+    }
+    #feedcol, #stage { display:contents; }
+
+    /* --- topbar (scoped: the creator's banner is a <header> too) --- */
+    #app > header { order:1; flex:none; min-height:40px; height:auto; gap:8px; padding:0 8px;
+        overflow-x:auto; scrollbar-width:none; }
+    #app > header::-webkit-scrollbar { display:none; }
+    #app > header .brand { font-size:11px; letter-spacing:.08em; flex:none; }
+    #app > header .mini, #app > header .eddies { flex:none; white-space:nowrap; }
+    #app > header .mini:nth-of-type(4),
+    #app > header .mini:nth-of-type(5) { display:none; }   /* REP, LUCK */
+    #app > header .mini .bar { width:46px !important; }    /* inline-sized by Hud */
+
+    /* --- body regions: all off unless the active tab asks for them --- */
+    .strips, .arena, .viewwrap, .minimap, .stageActions,
+    #feedcol > .panel { display:none; }
+
+    .strips { order:2; }
+    .arena, .viewwrap { order:3; }
+    #feedcol > .panel:not(.feed) { order:3; }   /* squad */
+    #feedcol > .feed { order:4; }
+    .stageActions { order:5; }
+
+    /* Arena — target rail, board, docked feed, thumb actions */
+    #app[data-mtab="arena"] .strips { display:flex; flex:none; }
+    #app[data-mtab="arena"] .arena { display:flex; flex:1; min-height:120px; }
+    #app[data-mtab="arena"] #feedcol > .feed { display:flex; flex:none; height:clamp(130px,23vh,200px); }
+    #app[data-mtab="arena"] .stageActions { display:block; flex:none; }
+
+    /* Squad / Feed — the two panels that share the desktop feed column */
+    #app[data-mtab="squad"] #feedcol > .panel:not(.feed) { display:flex; flex:1; min-height:0; }
+    #app[data-mtab="feed"] #feedcol > .feed { display:flex; flex:1; min-height:0; }
+
+    /* Gear, and anything picked out of More */
+    #app[data-mtab="gear"] .viewwrap,
+    #app[data-mtab="panel"] .viewwrap { display:flex; flex:1; min-height:0; }
+
+    /* --- board ---
+       Battlefield.project() only ever puts tokens between 38% and 91% of the
+       arena's height, so on a phone the top third is dead space. Overscan the
+       map and pull it up: units then span ~21%-90% of the visible box, and the
+       floor is sized and centred to sit under them. */
+    .arena { overflow:hidden; }
+    .iso.full { height:132%; margin-top:-30%; }
+    .iso .floor { width:340px; height:340px; background-size:37px 37px; top:64%; }
+    /* temperament already rides the target rail — drop it here so labels stop colliding */
+    .iso .u .utemp { display:none; }
+    /* tokens crowd on a small board: keep names readable when they overlap */
+    .iso .u .tag { background:rgba(5,5,10,.74); padding:1px 4px; }
+    .iso .u .g { width:26px; height:26px; font-size:13px; }
+    .iso .u .tag { font-size:9px; }
+    .iso .u .hp { width:42px; }
+
+    /* --- enemy strips become a scrolling target rail --- */
+    .strips { flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; gap:5px; }
+    .strips::-webkit-scrollbar { display:none; }
+    .es { flex:0 0 auto; min-width:212px; min-height:46px; }
+
+    /* --- action bar in the thumb zone --- */
+    .stageActions .acts { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; padding:6px; }
+    .stageActions .act { min-height:46px; padding:8px 4px; font-size:10.5px; letter-spacing:.04em; }
+    .stageActions .act.prim { font-size:11.5px; }
+    .stageActions .acts .act:first-child:nth-last-child(2) { grid-column:1/-1; }  /* auto-turn */
+    .stageActions .wpn { grid-column:1/-1; margin-left:0; text-align:center; font-size:10px; }
+    .stageActions .note { font-size:11px; }
+
+    /* --- feed + squad --- */
+    .feed .log { font-size:11px; line-height:1.55; padding:6px 9px; }
+    .pc { padding:9px 10px; }
+    .pc .pf { width:42px; height:42px; }
+    .autoChip { min-height:24px; padding:0 7px; display:inline-flex; align-items:center; }
+
+    /* --- nav rail becomes the More sheet (the tab bar is a <nav> too: exclude it) --- */
+    nav:not(.mtabs) {
+        position:fixed; left:0; right:0; top:auto;
+        bottom:calc(56px + env(safe-area-inset-bottom));
+        z-index:60; max-height:66vh; overflow-y:auto;
+        flex-direction:column; align-items:stretch; gap:0; padding:4px 0;
+        border:1px solid var(--line); border-top:1px solid var(--rust);
+        box-shadow:0 -14px 34px rgba(0,0,0,.7);
+        transform:translateY(115%); visibility:hidden; transition:transform .26s ease;
+    }
+    #app[data-more="1"] nav:not(.mtabs) { transform:translateY(0); visibility:visible; }
+    nav:not(.mtabs) button {
+        width:auto; height:auto; min-height:52px;
+        display:flex; align-items:center; justify-content:flex-start; gap:14px;
+        padding:0 18px; font-size:15px; border-left:3px solid transparent;
+    }
+    nav:not(.mtabs) button::after { content:attr(title); font-size:13px; letter-spacing:.05em; }
+    nav:not(.mtabs) button.on { border-left-color:var(--rust); }
+    .navSep { width:auto; margin:5px 18px; align-self:stretch; }
+
+    .mScrim {
+        display:block; position:fixed; inset:0; z-index:55; border:0; padding:0;
+        background:rgba(3,3,6,.6); cursor:pointer;
+        opacity:0; pointer-events:none; transition:opacity .26s ease;
+    }
+    #app[data-more="1"] .mScrim { opacity:1; pointer-events:auto; }
+
+    /* --- the tab bar --- */
+    .mtabs {
+        order:9; flex:none; display:flex; z-index:61;
+        flex-direction:row; align-items:stretch; gap:0; overflow:visible;
+        height:calc(56px + env(safe-area-inset-bottom));
+        padding:0 0 env(safe-area-inset-bottom);
+        margin:0 -5px; background:var(--panel);
+        border:0; border-top:1px solid var(--line);
+    }
+    .mtabs button {
+        flex:1 1 0; width:auto; height:auto; min-height:56px; position:relative;
+        display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;
+        background:transparent; border:0; border-top:2px solid transparent;
+        color:var(--dim); font-family:var(--mono); font-size:9px;
+        letter-spacing:.08em; text-transform:uppercase;
+    }
+    .mtabs button .mtIcon { font-size:16px; line-height:1; }
+    .mtabs button.on { color:var(--cyan); border-top-color:var(--rust); background:var(--hover); }
+    .mtBadge {
+        position:absolute; top:6px; right:calc(50% - 20px);
+        min-width:15px; height:15px; padding:0 4px; border-radius:8px;
+        background:var(--rust); color:#fff; font-size:9px;
+        display:grid; place-items:center; font-variant-numeric:tabular-nums;
+    }
+
+    /* --- panels inside the stage --- */
+    main.panel > .panelBody { padding:9px; }
+    .title-submenu { min-height:44px; display:flex; align-items:center; justify-content:center; }
+    .characterInfo { gap:11px; }
+    .charPortraitContainer, .charPortrait { width:104px; height:104px; }
+    .characterAbout { min-width:0; }
+    .redStatGrid { grid-template-columns:repeat(2,1fr); }
+    .itemCollection-50, .combatCategroy, #inventoryItems { grid-template-columns:1fr; }
+    .redRow { flex-wrap:wrap; gap:2px 10px; }
+    .redRowName { min-width:0; flex:1 0 100%; }
+    .redBtn, .redBtnPrimary { min-height:44px; }
+    .storeItem { flex-wrap:wrap; gap:4px 10px; min-height:44px; }
+    .storeItemName { min-width:0; flex:1 0 100%; }
+    .storeStock { max-height:none; }
+    .tooltip .tooltiptext { width:min(240px,72vw); }
+
+    /* --- character creation: stack the roster over the editor --- */
+    .crHead { flex-direction:column; align-items:stretch; gap:11px; padding:13px 14px; }
+    .crHead h1 { font-size:18px; }
+    .crActions { flex-wrap:wrap; }
+    .crActions button { flex:1 1 auto; min-height:44px; }
+    .crBody { flex-direction:column; min-height:0; }
+    .crRoster {
+        width:auto; flex:none; flex-direction:row; gap:6px; padding:9px 12px;
+        border-right:0; border-bottom:1px solid var(--line);
+        overflow-x:auto; overflow-y:hidden;
+    }
+    .crMerc, .crAdd { flex:0 0 auto; min-width:150px; min-height:48px; }
+    .crEdit { padding:13px 14px; }
+    /* name row on one line, Randomize on the next — neither gets clipped */
+    .crEditHead { flex-wrap:wrap; }
+    .crId { flex:1 1 100%; }
+    .crId input { max-width:none; }
+    .crRand { flex:1 0 100%; }
+    .crRoles { grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); }
+    .crRole { min-height:74px; }
+    .crStats { grid-template-columns:1fr; gap:3px; }
+    .crStat button, .crRank button { width:40px; height:44px; }
+    .crReroll { width:44px; height:44px; }
+    .crDerived span { flex:1 1 auto; }
+    .crLife { grid-template-columns:1fr; }
+    .crLife select, .crId input { min-height:44px; }
+    .crId button, .crRand { min-height:44px; min-width:44px; }
+}
+
+/* Narrow phones: the action bar drops to two columns so labels stay readable. */
+@media (max-width: 380px) {
+    .stageActions .acts { grid-template-columns:repeat(2,1fr); }
+    .es { min-width:186px; }
+    .mtabs button { font-size:8.5px; }
+}
 
 @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }

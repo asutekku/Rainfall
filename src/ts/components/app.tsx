@@ -14,6 +14,7 @@ import {Economy} from "../interact/economy";
 import {Utils} from "../utils/utils";
 import {Creator} from "./creation/creator";
 import {CharacterCreation, CharacterSpec} from "../actors/resources/CharacterCreation";
+import {MobileTab, MobileTabs} from "./mobileTabs";
 
 
 export interface InterfaceAppState {
@@ -26,6 +27,12 @@ export interface InterfaceAppState {
     auto: boolean;
     creating: boolean;
     squadSpecs: CharacterSpec[];
+    /** Which mobile destination is on screen. Ignored above the breakpoint. */
+    mobileTab: MobileTab;
+    /** More sheet open (mobile only). */
+    mobileMore: boolean;
+    /** Feed lines that arrived while the Feed tab was off screen. */
+    unread: number;
 }
 
 export class App extends React.Component<{}, InterfaceAppState> {
@@ -52,6 +59,9 @@ export class App extends React.Component<{}, InterfaceAppState> {
             auto: false,
             creating: true,
             squadSpecs,
+            mobileTab: "arena",
+            mobileMore: false,
+            unread: 0,
         };
     }
 
@@ -66,7 +76,12 @@ export class App extends React.Component<{}, InterfaceAppState> {
                             onDeploy={this.deploySquad} onCancel={this.closeCreator}/>;
         }
         // Battle Stage shell: topbar (Hud) / nav rail / feed column (squad + feed) / stage (game).
-        return <div id={"app"} className={"ops"}>
+        // On phones the same DOM re-flows into a tab console — see the mobile block
+        // in style.css, which drives everything off data-mtab / data-more.
+        return <div id={"app"} className={"ops"}
+                    data-mtab={this.state.mobileTab}
+                    data-more={this.state.mobileMore ? "1" : "0"}
+                    data-view={this.state.activeMainPanel}>
             <Hud actor={this.getCurrentActor()}/>
             <Sidebar active={this.state.activeMainPanel}
                      auto={this.state.auto}
@@ -85,10 +100,31 @@ export class App extends React.Component<{}, InterfaceAppState> {
                    view={this.state.activeMainPanel} messages={this.combatController}
                    onSelectAlly={this.getCharacter} onSelectEnemy={this.getEnemy}
                    onGotoCombat={this.gotoCombat}/>
+            <MobileTabs tab={this.state.mobileTab} more={this.state.mobileMore}
+                        unread={this.state.unread}
+                        onTab={this.selectMobileTab} onMore={this.toggleMore}/>
+            <button className={"mScrim"} tabIndex={-1} aria-hidden={true} onClick={this.closeMore}/>
         </div>;
     }
 
-    private gotoCombat = () => this.setState({activeMainPanel: "Combat"});
+    private gotoCombat = () => this.setState({activeMainPanel: "Combat", mobileTab: "arena"});
+
+    /**
+     * Mobile destination switch. Arena and Gear also drive the desktop panel
+     * state, so the Stage renders the right thing; Squad and Feed only surface
+     * panels that are always mounted in the feed column.
+     */
+    private selectMobileTab = (tab: MobileTab) => {
+        const next: any = {mobileTab: tab, mobileMore: false};
+        if (tab === "arena") { next.activeMainPanel = "Combat"; }
+        if (tab === "gear") { next.activeMainPanel = "Inventory"; }
+        if (tab === "feed") { next.unread = 0; }
+        this.setState(next);
+    };
+
+    private toggleMore = () => this.setState((s) => ({mobileMore: !s.mobileMore}));
+
+    private closeMore = () => this.setState({mobileMore: false});
 
     /** Build the squad from the creation specs and drop into combat. */
     private deploySquad = (specs: CharacterSpec[]) => {
@@ -104,6 +140,9 @@ export class App extends React.Component<{}, InterfaceAppState> {
             activeEnemy: enemies[0],
             creating: false,
             activeMainPanel: "Combat",
+            mobileTab: "arena",
+            mobileMore: false,
+            unread: 0,
             messages: [{msg: "— crew deployed to the street —"} as any],
         });
     };
@@ -151,22 +190,36 @@ export class App extends React.Component<{}, InterfaceAppState> {
         // Sets the max amount of messages shown in the view
         if (joined.length >= this.logLength) joined.length = this.logLength;
 
+        // How many lines this exchange actually added — badges the Feed tab when
+        // the player is looking at something else.
+        const added = joined.length - this.state.messages.length;
+
         // Updates the state with new enemies and messages
-        this.setState({
-                currentEnemies: enemies, activeEnemy: enemies[0], messages: joined
-            }
+        this.setState((s) => ({
+                currentEnemies: enemies, activeEnemy: enemies[0], messages: joined,
+                unread: s.mobileTab === "feed" ? 0 : s.unread + Math.max(0, added),
+            })
         );
 
     };
 
+    /**
+     * A view was picked from the nav rail — on desktop that is the whole story;
+     * on mobile the rail is the More sheet, so also close it and move to the
+     * destination that actually shows the chosen view.
+     */
     private updateSelection = (selection: string) => {
-        this.setState({activeMainPanel: selection});
+        this.setState({
+            activeMainPanel: selection,
+            mobileMore: false,
+            mobileTab: selection === "Combat" ? "arena" : selection === "Inventory" ? "gear" : "panel",
+        });
     };
 
     /** Auto-combat: repeatedly resolve a full exchange between the active pair. */
     private toggleAuto = () => {
         if (this.state.auto) { this.stopAuto(); return; }
-        this.setState({auto: true, activeMainPanel: "Combat"});
+        this.setState({auto: true, activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false});
         this.autoTimer = setInterval(this.autoTick, 1200);
     };
 
