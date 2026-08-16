@@ -459,6 +459,9 @@ progress::-moz-progress-bar { background:var(--rust); }
 /* Mobile tab bar — inert above the breakpoint, where the nav rail rules. */
 .mtabs, .mScrim { display:none; }
 
+/* Phone battle HUD — inert above the breakpoint, where the feed column rules. */
+.bhud { display:none; }
+
 /* =====================================================================
    Character creation — full-screen RED "Complete Package" squad builder
    ===================================================================== */
@@ -595,13 +598,16 @@ progress::-moz-progress-bar { background:var(--rust); }
     .strips { order:2; }
     .arena, .viewwrap { order:3; }
     #feedcol > .panel:not(.feed) { order:3; }   /* squad */
+    .bhud { order:4; }
     #feedcol > .feed { order:4; }
     .stageActions { order:5; }
 
-    /* Arena — target rail, board, docked feed, thumb actions */
-    #app[data-mtab="arena"] .strips { display:flex; flex:none; }
+    /* Arena — board, vitals HUD, thumb actions. The target rail and the
+       docked log stay desktop-only: the HUD carries both jobs on a phone
+       (enemy rows are the tap-to-target surface, the Feed tab keeps the
+       full log behind its unread badge). */
     #app[data-mtab="arena"] .arena { display:flex; flex:1; min-height:120px; }
-    #app[data-mtab="arena"] #feedcol > .feed { display:flex; flex:none; height:clamp(130px,23vh,200px); }
+    #app[data-mtab="arena"] .bhud { display:grid; }
     #app[data-mtab="arena"] .stageActions { display:block; flex:none; }
     /* the city map is one contained box (overrides #stage display:contents) so
        its absolute canvas fills the board area instead of escaping full-screen */
@@ -631,12 +637,59 @@ progress::-moz-progress-bar { background:var(--rust); }
     .iso .u .tag { font-size:9px; }
     .iso .u .hp { width:42px; }
 
-    /* --- enemy strips become a scrolling target rail --- */
-    .strips { flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; gap:5px; }
-    .strips::-webkit-scrollbar { display:none; }
-    .es { flex:0 0 auto; min-width:212px; min-height:46px; }
+    /* --- battle HUD: squad + hostile vitals where the log used to dock ---
+       Everything is fixed-metric: the board is one height, every row is one
+       height, and the turn highlight is box-shadow + an absolute tag — a
+       fight can never move the layout. 4 rows fit per column; a longer
+       hostile list scrolls inside its own box. */
+    .bhud { grid-template-columns:1fr 1fr; gap:5px; flex:none; height:172px; }
+    .bhCol { min-width:0; display:flex; flex-direction:column;
+        background:var(--panel); border:1px solid var(--line); }
+    .bhCol h5 { flex:none; margin:0; padding:3px 7px; border-bottom:1px solid var(--line);
+        color:var(--dim); font-size:8.5px; font-weight:700; letter-spacing:.14em;
+        white-space:nowrap; overflow:hidden; font-variant-numeric:tabular-nums; }
+    .bhList { flex:1; min-height:0; overflow-y:auto; scrollbar-width:none; padding:3px; }
+    .bhList::-webkit-scrollbar { display:none; }
+    .bhRow { position:relative; display:block; width:100%; height:34px; margin:0 0 3px;
+        padding:2px 5px 3px; text-align:left; font-family:var(--mono); overflow:hidden;
+        background:var(--bg2); border:1px solid var(--line); border-left:3px solid var(--line2); }
+    .bhRow:last-child { margin-bottom:0; }
+    .bhRow.out { opacity:.38; }
+    /* the acting unit: thicker outline + TURN tag, both layout-neutral */
+    .bhRow.on { box-shadow:inset 0 0 0 1.5px var(--cyan), 0 0 8px rgba(55,225,231,.3); }
+    .bhRow.on::after { content:"TURN"; position:absolute; top:0; right:0; padding:1px 4px;
+        background:var(--cyan); color:var(--bg); font-size:7.5px; font-weight:800; letter-spacing:.12em; }
+    .bhRow.foe.on { box-shadow:inset 0 0 0 1.5px var(--crit), 0 0 8px rgba(224,83,63,.35); }
+    .bhRow.foe.on::after { background:var(--crit); color:var(--ink); }
+    /* the targeted hostile, when it isn't also the one acting */
+    .bhRow.tgt:not(.on) { box-shadow:inset 0 0 0 1px var(--cyanDim); }
+    .bhTop { display:flex; align-items:center; gap:3px; padding-right:28px; }
+    .bhName { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+        color:var(--ink); font-size:10px; font-weight:600; line-height:1.4; }
+    .bhRow.you .bhName { color:var(--cyan); }
+    .bhRow.foe .bhName { color:#f0968a; }
+    .bhTags { display:flex; gap:2px; flex:none; }
+    .bhTags i { font-style:normal; font-size:7.5px; font-weight:700; letter-spacing:.06em;
+        padding:0 2px; border:1px solid; line-height:1.5; }
+    .bhTags .s-bad { color:var(--crit); border-color:var(--crit); }
+    .bhTags .s-warn { color:var(--warn); border-color:var(--warn); }
+    .bhTags .s-down { color:var(--dim); border-color:var(--line2); }
+    .bhTags .s-dying { color:var(--ink); background:var(--crit); border-color:var(--crit); }
+    .bhTags .s-mrk { color:#ff2a2a; border-color:#ff2a2a; }
+    .bhBot { display:flex; align-items:center; gap:5px; margin-top:2px; }
+    .bhBar { flex:1; height:6px; background:#0b0b10; border:1px solid var(--line); overflow:hidden; }
+    .bhBar i { display:block; height:100%; transition:width .25s ease; }
+    .bhBar .h-good { background:linear-gradient(90deg,#4f9a4f,#7fd67f); }
+    .bhBar .h-warn { background:linear-gradient(90deg,#c1841f,#f0a830); }
+    .bhBar .h-crit { background:linear-gradient(90deg,#a3382b,#e0533f); }
+    .bhSp { flex:none; min-width:28px; text-align:right; color:var(--dim);
+        font-size:8.5px; font-variant-numeric:tabular-nums; }
 
     /* --- action bar in the thumb zone --- */
+    /* the status line is one fixed-height clipped row: a long name or weapon
+       spec must never wrap it taller and bounce the HUD above it */
+    .stageActions .autoStatus { height:32px; white-space:nowrap; overflow:hidden; }
+    .stageActions .autoStatus .wpn { min-width:0; overflow:hidden; text-overflow:ellipsis; }
     .stageActions .acts { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; padding:6px; }
     .stageActions .act { min-height:46px; padding:8px 4px; font-size:10.5px; letter-spacing:.04em; }
     .stageActions .act.prim { font-size:11.5px; }
@@ -755,7 +808,6 @@ progress::-moz-progress-bar { background:var(--rust); }
 /* Narrow phones: the action bar drops to two columns so labels stay readable. */
 @media (max-width: 380px) {
     .stageActions .acts { grid-template-columns:repeat(2,1fr); }
-    .es { min-width:186px; }
     .mtabs button { font-size:8.5px; }
 }
 
@@ -1250,9 +1302,10 @@ progress::-moz-progress-bar { background:var(--rust); }
     font-size:11px; font-weight:600; color:var(--ink); white-space:nowrap;
     background:rgba(6,6,12,.88); border:1px solid var(--cyan); }
 
-/* initiative queue above the action bar */
+/* initiative queue above the action bar — fixed height so chips arriving
+   at round one (or clearing on a wipe) never move the bar or the HUD */
 .turnRow { display:flex; gap:5px; align-items:center; padding:5px 8px 0;
-    overflow-x:auto; scrollbar-width:none; }
+    height:27px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
 .turnRow .trLabel { font-size:9px; letter-spacing:.14em; color:var(--faint); flex:none; }
 .tc { flex:none; font-size:10px; padding:1px 7px; border:1px solid var(--line2);
     color:var(--mid); background:var(--bg2); }
@@ -1378,6 +1431,7 @@ progress::-moz-progress-bar { background:var(--rust); }
    animation — every tab press gets the same re-tune without JS. */
 @media (max-width: 860px) and (prefers-reduced-motion: no-preference) {
     #app[data-mtab="arena"] .arena,
+    #app[data-mtab="arena"] .bhud,
     #app[data-mtab="arena"] #stage.cityStage,
     #app[data-mtab="squad"] #feedcol > .panel:not(.feed),
     #app[data-mtab="feed"] #feedcol > .feed,

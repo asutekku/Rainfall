@@ -7,6 +7,7 @@ import {aimPreview} from "../../interact/aimPreview";
 import {RunNode, RunState} from "../../interact/runMap";
 import {MainPanel} from "../mainPanel";
 import {BattleScene, OrderCtx, PlaybackBundle} from "./battleScene";
+import {BattleHud} from "./battleHud";
 import {CityMap} from "../run/cityMap";
 
 export interface StageProps {
@@ -84,10 +85,12 @@ export class Stage extends React.Component<StageProps, {}> {
             </button>);
     };
 
-    /** Initiative queue chips: whose turn it is, and who's up next. */
+    /** Initiative queue chips: whose turn it is, and who's up next. The row
+     *  renders even while empty (fight opening, wipe) at a fixed height, so
+     *  chips arriving can't push the layout around — the phone HUD sits
+     *  right on top of this bar. */
     private turnChips() {
         const order = this.props.turnOrder;
-        if (!order.length) { return null; }
         return (
             <div className={"turnRow"}>
                 <span className={"trLabel"}>INITIATIVE</span>
@@ -195,6 +198,13 @@ export class Stage extends React.Component<StageProps, {}> {
                         </div>
                     </React.Fragment>
                 )}
+
+                {/* phone battle HUD — replaces the docked log under the breakpoint */}
+                {inFight && <BattleHud party={this.props.party} enemies={this.props.enemies}
+                                       acting={orders ? orders.actor : this.props.turnOrder[0] || null}
+                                       target={orders ? orders.target : this.props.enemy}
+                                       onSelectAlly={this.props.onSelectAlly}
+                                       onSelectEnemy={this.props.onSelectEnemy}/>}
 
                 {inFight && (
                     <div className={"stageActions"}>
