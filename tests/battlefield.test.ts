@@ -5,17 +5,25 @@ import {fighter} from "./helpers";
 const KINDS: CoverKind[] = ["car", "crate", "barrier", "dumpster", "pillar"];
 
 describe("Battlefield deployment", () => {
-    test("deploy puts the squad on the near line and hostiles on the far band", () => {
-        const party = [fighter(), fighter()];
-        const enemies = [fighter(), fighter(), fighter()];
-        Battlefield.deploy(party, enemies);
-        party.forEach((p) => expect(p.position.y).toBe(5));
-        enemies.forEach((e) => {
-            expect(e.position.y).toBeGreaterThanOrEqual(25);
-            expect(e.position.y).toBeLessThanOrEqual(35);
-        });
-        // spread, not stacked
-        expect(party[0]!.position.x).not.toBe(party[1]!.position.x);
+    test("deploy: squad on the near line, hostiles in a legal formation clear of cover", () => {
+        for (let i = 0; i < 10; i++) {   // formations are random — sample several
+            const party = [fighter(), fighter()];
+            const enemies = [fighter(), fighter(), fighter()];
+            Battlefield.deploy(party, enemies);
+            party.forEach((p) => expect(p.position.y).toBe(5));
+            enemies.forEach((e) => {
+                expect(e.position.x).toBeGreaterThanOrEqual(-24);
+                expect(e.position.x).toBeLessThanOrEqual(24);
+                expect(e.position.y).toBeGreaterThanOrEqual(10);
+                expect(e.position.y).toBeLessThanOrEqual(44);
+                // nobody spawns standing on a cover object
+                for (const c of Battlefield.COVER) {
+                    expect(Math.hypot(c.x - e.position.x, c.y - e.position.y)).toBeGreaterThanOrEqual(1.4);
+                }
+            });
+            // spread, not stacked
+            expect(party[0]!.position.x).not.toBe(party[1]!.position.x);
+        }
     });
 
     test("every deployment rolls fresh, well-spaced, typed cover", () => {

@@ -119,6 +119,13 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
     private camDist = 46;
     private focus = new THREE.Vector3(0, 0, 18);
     private focusGoal = new THREE.Vector3(0, 0, 18);
+    // engagement framing: yaw/zoom/elevation ease toward these each frame
+    private camYaw = 0;
+    private camYawG = 0;
+    private camZoom = 1;
+    private camZoomG = 1;
+    private camEl = 0.62;
+    private camElG = 0.62;
     private rain: THREE.LineSegments | null = null;
     private rainVel: number[] = [];
     private signMats: Array<{mat: THREE.MeshBasicMaterial; base: number; flicker: boolean; phase: number}> = [];
@@ -212,6 +219,18 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         this.props.enemies.forEach((a) => this.units.push(this.buildUnit(a, "foe")));
         this.units.forEach((u) => this.snapUnit(u));
         this.syncOrderMarkers();
+        // opening dolly: start tight on the hostiles, sweep out to the overview
+        const foes = this.props.enemies.filter((e) => e.canFight());
+        if (foes.length) {
+            const cx = foes.reduce((s, f) => s + f.position.x, 0) / foes.length;
+            const cy = foes.reduce((s, f) => s + f.position.y, 0) / foes.length;
+            this.focus.set(cx, 0, cy);
+            this.camZoom = 0.5;
+            this.camYaw = 0.4;
+            this.camEl = 0.5;
+        }
+        this.frameOverview();
+        this.focusGoal.set(0, 0, 18);
     }
 
     // -------------------------------------------------------------- street --
@@ -635,6 +654,29 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         return this.units.find((u) => u.actor === a) || null;
     }
 
+    // ------------------------------------------------------------- framing --
+
+    /** Duel frame: rotate so the two combatants sit across the screen, zoom to fit them. */
+    private frameDuel(a: Point, b: Point) {
+        this.focusGoal.set((a.x + b.x) / 2, 0, (a.y + b.y) / 2);
+        const sep = Math.hypot(b.x - a.x, b.y - a.y);
+        let yaw = Math.atan2(b.x - a.x, b.y - a.y) - Math.PI / 2;
+        while (yaw > Math.PI) { yaw -= Math.PI * 2; }
+        while (yaw < -Math.PI) { yaw += Math.PI * 2; }
+        // fold to the near-side equivalent so the camera never swings behind the far wall
+        if (yaw > Math.PI / 2) { yaw -= Math.PI; } else if (yaw < -Math.PI / 2) { yaw += Math.PI; }
+        this.camYawG = Math.max(-1.15, Math.min(1.15, yaw));
+        this.camZoomG = Math.max(0.4, Math.min(1, (sep / 2 + 7) / 27.5));
+        this.camElG = 0.5;
+    }
+
+    /** Back out to the tactical overview. */
+    private frameOverview() {
+        this.camYawG = 0;
+        this.camZoomG = 1;
+        this.camElG = 0.62;
+    }
+
     // ------------------------------------------------------------- playback --
 
     private beginPlayback(pb: PlaybackBundle) {
@@ -698,6 +740,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
 
     private finishPlayback(id: number, forced: boolean = false) {
         this.acts = [];
+        this.frameOverview();
         this.units.forEach((u) => this.snapUnit(u));
         if (this.playingId === id) { this.playingId = 0; }
         this.doneId = id;
@@ -749,6 +792,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             dur, t: 0,
             start: () => {
                 u.walking = true;
+                this.frameOverview();
                 this.focusGoal.set(ev.to.x, 0, ev.to.y);
             },
             update: (k) => {
@@ -777,10 +821,10 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         const target = this.unitFor(ev.target);
         if (!shooter || !target) { return; }
 
-        // square up (both units face each other in melee; shooter otherwise)
+        // square up: shooter turns, camera rotates in to frame the exchange
         this.acts.push({dur: D(0.16), t: 0, start: () => {
             shooter.targetYaw = Math.atan2(target.visPos.x - shooter.visPos.x, target.visPos.y - shooter.visPos.y);
-            this.focusGoal.set((shooter.visPos.x + target.visPos.x) / 2, 0, (shooter.visPos.y + target.visPos.y) / 2);
+            this.frameDuel(shooter.visPos, target.visPos);
         }});
 
         if (ev.melee) {
@@ -843,6 +887,8 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         this.acts.push({dur: D(0.2), t: 0, start: () => {
             thrower.targetYaw = Math.atan2(ev.at.x - thrower.visPos.x, ev.at.y - thrower.visPos.y);
             this.focusGoal.set(ev.at.x, 0, ev.at.y);
+            this.camZoomG = 0.62;   // lean in for the boom
+            this.camElG = 0.55;
         }});
 
         // the throw: a tumbling grenade on a parabola, then the street lights up
@@ -1511,13 +1557,23 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             this.blastRing.scale.setScalar(BLAST_RADIUS * (1 + Math.sin(this.t * 4) * 0.04));
         }
 
-        // camera: XCOM-ish elevated view from the squad side, easing toward the action
+        // camera rig: an elevated view from the squad side that eases between an
+        // overview and an engagement frame (yaw'd so shooter and target sit on
+        // opposite sides of the screen, zoomed to fit them)
         this.focus.lerp(this.focusGoal, Math.min(1, dt * 3));
-        const el = 0.62;                       // elevation angle
+        const ease = Math.min(1, dt * 2.4);
+        this.camYaw += (this.camYawG - this.camYaw) * ease;
+        this.camZoom += (this.camZoomG - this.camZoom) * ease;
+        this.camEl += (this.camElG - this.camEl) * ease;
+        const dist = this.camDist * this.camZoom;
         const drift = this.reduced ? 0 : Math.sin(this.t * 0.12) * 1.6;
-        let cx = this.focus.x * 0.55 + drift;
-        const cz = this.focus.z - Math.cos(el) * this.camDist;
-        let cy = Math.sin(el) * this.camDist;
+        // duel frames look at the action dead-centre; the overview biases ahead
+        const duel = Math.min(1, Math.abs(this.camYaw) / 0.25 + (1 - this.camZoom) * 2);
+        const lookX = this.focus.x * (0.8 + 0.2 * duel);
+        const lookZ = this.focus.z + 4 * (1 - duel);
+        let cx = lookX + drift - Math.sin(this.camYaw) * Math.cos(this.camEl) * dist;
+        const cz = lookZ - Math.cos(this.camYaw) * Math.cos(this.camEl) * dist;
+        let cy = Math.sin(this.camEl) * dist;
         if (this.shakeT > 0 && !this.reduced) {
             this.shakeT = Math.max(0, this.shakeT - dt);
             const amp = this.shakeT * 1.6;
@@ -1525,7 +1581,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             cy += (Math.random() - 0.5) * amp;
         }
         this.camera.position.set(cx, cy, cz);
-        this.camera.lookAt(this.focus.x * 0.8, 1, this.focus.z + 4);
+        this.camera.lookAt(lookX, 1 + duel * 0.4, lookZ);
 
         this.renderer.render(this.scene, this.camera);
     };

@@ -623,15 +623,19 @@ export class Actor extends GameObject {
         }
     }
 
+    /** House rule: everyone on these streets can actually shoot. A flat to-hit
+     *  boost over tabletop RED so fights resolve instead of whiffing for rounds. */
+    public static readonly STREET_INSTINCT: number = 3;
+
     /**
-     * RED attack modifier: DEX (melee) or REF (ranged) + weapon skill + weapon
+     * Attack modifier: DEX (melee) or REF (ranged) + weapon skill + weapon
      * accuracy, minus the Seriously Wounded penalty, plus a Solo's Precision
-     * Attack bonus.
+     * Attack bonus — and the street-instinct house bonus on top.
      */
     public attackBonus(weapon: Weapon): number {
         const stat: number = weapon.weaponClass === "melee" ? this.stats.dex : this.stats.ref;
         const cyber: number = weapon.weaponClass === "melee" ? 0 : this.cyberAttackBonus();
-        return stat + this.skillFor(weapon) + weapon.accuracyBonus
+        return stat + this.skillFor(weapon) + weapon.accuracyBonus + Actor.STREET_INSTINCT
             + this.woundPenalty() + this.precisionAttackBonus() + cyber + this.fearPenalty;
     }
 

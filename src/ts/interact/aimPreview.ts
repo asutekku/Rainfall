@@ -25,7 +25,8 @@ const D10: Array<[number, number]> = (() => {
     return out;
 })();
 
-const pAtLeast = (need: number): number =>
+/** P(exploding d10 ≥ need) — exported so the AI can reason about its own odds. */
+export const pAtLeast = (need: number): number =>
     D10.reduce((p, [v, pr]) => v >= need ? p + pr : p, 0);
 
 /** P(attacker roll + atk >= defender roll + def), both dice exploding. */

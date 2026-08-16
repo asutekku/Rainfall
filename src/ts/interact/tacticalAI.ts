@@ -1,5 +1,6 @@
 import {Actor} from "../actors/Actor";
 import {Weapon} from "../items/Weapon";
+import {pAtLeast} from "./aimPreview";
 import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "./battlefield";
 import {rangeDV} from "./rangeTable";
 
@@ -138,6 +139,14 @@ function bestNet(attacker: Actor, target: Actor, distance: number, coverDV: numb
     const penetration = attacker.weapon.averageDamage() - effectiveSP(target, attacker.weapon.ap);
     if (!TacticalAI.allowAimed || attacker.weapon.autofire || penetration >= 3) {
         return {value: normal, aimed: false};
+    }
+    // ... and only for shooters who can actually land it. A low-skill ganger
+    // spamming -8 head shots is a whiff war, not a tactic: gate on the real
+    // odds of the aimed shot connecting.
+    const dv = attacker.weapon.weaponClass === "melee" ? null : rangeDV(attacker.weapon.weaponClass, distance);
+    if (dv !== null) {
+        const aimChance = pAtLeast(dv + coverDV - (attacker.attackBonus(attacker.weapon) - 8));
+        if (aimChance < 0.35) { return {value: normal, aimed: false}; }
     }
     const aimed = expectedNet(attacker, target, distance, coverDV, true);
     return aimed > normal ? {value: aimed, aimed: true} : {value: normal, aimed: false};
@@ -328,6 +337,12 @@ export class TacticalAI {
         const stationary = moveDist < 1 ? 1 : 0;
         const campPenalty = prof.camp * stationary * Math.max(0, 1 - offense / 3);
 
+        // gunfighters keep their distance: crowding well inside the weapon's
+        // preferred band is penalised, so fights hold shape instead of
+        // collapsing into a point-blank knot around one crate.
+        const crowding = self.weapon.weaponClass === "melee" ? 0
+            : Math.max(0, preferredGap(self.weapon) * 0.6 - nearestGap) * 0.45;
+
         const score =
             prof.off * offense
             + prof.kill * killBonus
@@ -335,6 +350,7 @@ export class TacticalAI {
             - prof.def * threat * (1 + (1 - hpFrac) * prof.risk)
             - prof.progress * nearestGap
             - campPenalty
+            - crowding
             - W_MOVE * moveDist;
 
         return {score, target, aimed};
