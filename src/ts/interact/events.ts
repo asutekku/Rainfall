@@ -489,9 +489,13 @@ export const EVENTS: GameEvent[] = [
             {
                 label: "Walk through them", detail: "COOL check — make them blink",
                 check: {stat: "cool", dv: 13, label: "facedown"},
-                run: (_ctx, ok) => ok
-                    ? {lines: ["You don't slow down. The shotgun wavers. The chains drop."]}
-                    : {lines: ["The shotgun doesn't waver."], combat: {boss: false, amount: 3, level: 1, rank: 1}},
+                run: (ctx, ok) => {
+                    if (ok) {
+                        ctx.leader.gainReputation(1);
+                        return {lines: ["You don't slow down. The shotgun wavers. The chains drop.", "The street saw it happen (+1 REP)."]};
+                    }
+                    return {lines: ["The shotgun doesn't waver."], combat: {boss: false, amount: 3, level: 1, rank: 1}};
+                },
             },
             {
                 label: "Open fire",
@@ -506,7 +510,10 @@ export const EVENTS: GameEvent[] = [
             {
                 label: "Take the bounty",
                 detail: "a rank-4 horror — big loot, no backup",
-                run: () => ({lines: ["You go in before MaxTac takes the credit."], combat: {boss: false, amount: 1, level: 3, rank: 4}}),
+                run: (ctx) => {
+                    ctx.leader.gainReputation(1);
+                    return {lines: ["You go in before MaxTac takes the credit. Word spreads fast (+1 REP)."], combat: {boss: false, amount: 1, level: 3, rank: 4}};
+                },
             },
             {label: "Let MaxTac earn their pay", run: () => ({lines: ["Twenty minutes of screaming. You walk faster."]})},
         ],

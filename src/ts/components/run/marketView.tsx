@@ -6,6 +6,8 @@ import Equipment from "../../items/Equipment";
 import {Weapon} from "../../items/Weapon";
 import armors from "../../items/armors";
 import cyberwareData from "../../../objects/cyberware";
+import {randomMed} from "../../items/consumables";
+import {Medical} from "../../items/Scrap";
 
 export interface MarketViewProps {
     party: Actor[];
@@ -21,7 +23,7 @@ interface Stock {
     blurb?: string | undefined;
     buy: (a: Actor) => string;
 }
-interface Fence { owner: Actor; kind: "weapon" | "armor"; idx: number; name: string; detail: string; price: number; }
+interface Fence { owner: Actor; kind: "weapon" | "armor" | "medical" | "misc"; idx: number; name: string; detail: string; price: number; }
 
 interface MarketViewState { notice: string; bought: string[]; version: number; open: string | null; }
 
@@ -83,6 +85,19 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 buy: (a) => { a.inventory.armor.push(GetItem.armor(r.name)); return `${r.name} bagged.`; },
             });
         }
+        const med = randomMed();
+        out.push({
+            name: med.name, cost: med.cost, detail: `consumable · ${med.restorePoints >= 999 ? "full heal" : "heals " + med.restorePoints + " HP"}`,
+            info: [
+                ["Effect", med.restorePoints >= 999 ? "restores a member to full HP" : `restores ${med.restorePoints} HP`],
+                ["Use", "from the Gear tab, between fights"],
+            ],
+            blurb: med.description,
+            buy: (a) => {
+                a.inventory.medical.push(new Medical(med.name, med.cost, med.restorePoints, med.description));
+                return `${med.name} into the med pouch.`;
+            },
+        });
         const cw = cyberwareData[(Math.random() * cyberwareData.length) << 0]!;
         out.push({
             name: cw.name, cost: cw.cost, detail: `chrome · HL ${cw.humanityLoss} (installed on the spot)`,
@@ -158,12 +173,20 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                     price: Math.max(5, Math.floor(a.cost * 0.4)),
                 });
             });
+            owner.inventory.misc.forEach((m, idx) => {
+                out.push({
+                    owner, kind: "misc", idx, name: m.name,
+                    detail: `junk · ${owner.name.split(" ")[0]}'s stash`,
+                    price: Math.max(2, Math.floor((m.cost || 0) * 0.4)),
+                });
+            });
         });
         return out;
     }
 
     private sell(f: Fence) {
         if (f.kind === "weapon") { f.owner.inventory.weapons.splice(f.idx, 1); }
+        else if (f.kind === "misc") { f.owner.inventory.misc.splice(f.idx, 1); }
         else { f.owner.inventory.armor.splice(f.idx, 1); }
         Purse.earn(f.owner, f.price);
         this.setState({notice: `Fenced the ${f.name} for ${f.price}¥.`, version: this.state.version + 1});

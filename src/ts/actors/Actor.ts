@@ -500,6 +500,22 @@ export class Actor extends GameObject {
         return this.skills.tech.firstAid;
     }
 
+    /** The skills that matter in this game's loop, for the character sheet. */
+    public skillSheet(): Array<[string, number]> {
+        const r = this.skills.ref;
+        return [
+            ["Handgun", r.handgun],
+            ["Shoulder Arms", r.rifle],
+            ["Heavy Weapons", r.heavyWeapons],
+            ["Melee", r.melee],
+            ["Brawling", r.brawling],
+            ["Dodge", r.dodge],
+            ["First Aid", this.skills.tech.firstAid],
+            ["Interface", this.interfaceRank()],
+            ["Drive", r.driving],
+        ];
+    }
+
     /**
      * Stabilise a Mortally Wounded character: Death Saves stop and, if they were
      * at 0 HP, they cling to 1. They are conscious but still badly hurt.

@@ -12,7 +12,7 @@ import {Utils} from "../utils/utils";
  * relocates (so you can backtrack and take other branches). Clearing the boss
  * wins the run.
  */
-export type NodeType = "combat" | "elite" | "merchant" | "rest" | "hire" | "event" | "boss";
+export type NodeType = "combat" | "elite" | "merchant" | "rest" | "hire" | "event" | "net" | "boss";
 
 export interface RunNode {
     id: string;
@@ -188,7 +188,7 @@ export class RunMap {
         const others = nodes.map((_n, i) => i).filter((i) => i !== entryIdx && i !== bossIdx);
         const shuffled = others.sort(() => Math.random() - 0.5);
         // one guaranteed shop, safehouse and fixer's table; the rest is trouble
-        const extra: NodeType[] = ["merchant", "rest", "hire"];
+        const extra: NodeType[] = ["merchant", "rest", "hire", "net", "net"];
         shuffled.forEach((i, k) => {
             nodes[i]!.type = k === 0 ? "merchant" : k === 1 ? "rest" : k === 2 ? "hire" : k === 3 ? "event"
                 : Math.random() < 0.24 ? "event"

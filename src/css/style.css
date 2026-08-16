@@ -944,6 +944,7 @@ progress::-moz-progress-bar { background:var(--rust); }
 .mHero.ev .mHeroGlyph { color:var(--rare); border-color:var(--rare); box-shadow:0 0 24px rgba(197,107,255,.25), inset 0 0 14px rgba(197,107,255,.12); }
 .mHero.mk .mHeroGlyph { color:var(--good); border-color:var(--good); box-shadow:0 0 24px rgba(127,214,127,.22), inset 0 0 14px rgba(127,214,127,.1); }
 .mHero.sh .mHeroGlyph { color:#8be0ff; border-color:#8be0ff; box-shadow:0 0 24px rgba(139,224,255,.22), inset 0 0 14px rgba(139,224,255,.1); }
+.mHero.net .mHeroGlyph { color:#2ee6a8; border-color:#2ee6a8; box-shadow:0 0 24px rgba(46,230,168,.24), inset 0 0 14px rgba(46,230,168,.1); }
 .mHeroKicker { color:var(--dim); font-size:10px; letter-spacing:.22em; text-transform:uppercase; }
 .mHeroTitle { margin:0; font-size:22px; letter-spacing:.04em; color:var(--ink); text-wrap:balance; animation:heroIn .5s .08s ease both; }
 .mHeroSub { margin:0; color:var(--mid); font-size:12px; max-width:46ch; }
@@ -991,6 +992,16 @@ progress::-moz-progress-bar { background:var(--rust); }
 .evEddies { color:var(--warn); font-variant-numeric:tabular-nums; font-weight:700; }
 .metaLeaveGhost { font-family:var(--mono); color:var(--dim); background:none; border:1px solid var(--line2); padding:7px 14px; cursor:pointer; }
 .metaLeaveGhost:hover { color:var(--mid); border-color:var(--cyanDim); }
+
+/* NET access node */
+.netWrap .metaTitle { color:#2ee6a8; }
+.evOpt.netSel { border-color:#2ee6a8; box-shadow:inset 0 0 12px rgba(46,230,168,.12); }
+.metaLeave.netGo { align-self:center; margin-top:8px; background:#2ee6a8; border-color:#2ee6a8; color:var(--bg); }
+.metaLeave.netGo:hover { filter:brightness(1.15); background:#2ee6a8; }
+.netWrap .evResult { border-left-color:#2ee6a8; }
+.netGood { color:var(--good); font-weight:700; letter-spacing:.06em; }
+.netBad { color:var(--crit); font-weight:700; letter-spacing:.06em; }
+.netLog { color:var(--dim); font-size:11px; }
 
 /* black market node — expandable spec rows */
 .mkNotice { color:var(--cyan); font-size:12px; padding:9px 12px; margin-bottom:12px; background:var(--panel); border-left:2px solid var(--cyan); }
@@ -1046,6 +1057,23 @@ progress::-moz-progress-bar { background:var(--rust); }
 .gearRow.eq .gearSlot { color:var(--cyan); border-color:var(--cyanDim); }
 .gearRow .mkNameWrap { flex:1; }
 .gearEquip { margin-left:auto; flex:none; font-size:10px; letter-spacing:.08em; padding:7px 12px; }
+
+/* character sheet — skills tab */
+.skillList { display:flex; flex-direction:column; gap:5px; font-family:var(--mono); }
+.skillHint { color:var(--dim); font-size:11px; line-height:1.5; margin-bottom:8px; }
+.skillRow { display:flex; align-items:center; gap:10px; padding:7px 10px; background:var(--panel); border:1px solid var(--line); }
+.skillRow.on { border-left:2px solid var(--cyan); }
+.skillName { flex:none; width:118px; color:var(--mid); font-size:12px; }
+.skillRow.on .skillName { color:var(--cyan); }
+.skillMeter { flex:1; display:flex; gap:3px; }
+.skillMeter i { flex:1; height:8px; max-width:16px; background:var(--bg2); border:1px solid var(--line); }
+.skillMeter i.sOn { background:var(--cyanDim); border-color:var(--cyan); }
+.skillRow.on .skillMeter i.sOn { background:var(--cyan); }
+.skillLvl { flex:none; width:20px; text-align:right; color:var(--ink); font-variant-numeric:tabular-nums; font-weight:700; }
+
+/* med items on the gear tab */
+.gearSlot.med { color:var(--good); border-color:var(--good); }
+.useBtn { background:var(--good); border-color:var(--good); }
 
 /* squad roster: YOU on top, crew below */
 .pc.you { border-left:2px solid var(--rust); }

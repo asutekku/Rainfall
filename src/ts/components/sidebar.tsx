@@ -3,40 +3,28 @@ import * as React from 'react';
 interface SidebarProps {
     active: string;
     auto: boolean;
-    /** A run is in progress: the panels that belong to map nodes leave the rail. */
-    inRun: boolean;
     activeSelection: any;
     onAuto: any;
     onCreate: any;
 }
 
 // Panel-switching views (glyph + label; label doubles as tooltip / accessible name).
-// Store and Downtime are gone on purpose: shops and rest are run NODES now —
-// a nav-reachable infinite catalog / free heal would break the roguelike loop.
-// "Character" left the rail on purpose too: the squad roster is the one way
-// in — tap a member's › to open their sheet. One list, one mental model.
+// Deliberately short. Store, Downtime and the NET are run NODES — putting them
+// on the rail made them free and unlimited from anywhere, which is the same as
+// deleting the merchant, safehouse and NET-access nodes. "Character" is reached
+// through the squad roster (tap a member's ›), and Quests was a mock — cut
+// until there's a real contract system to put behind it.
 const VIEWS: Array<[string, string]> = [
     ["Combat", "✦"],
-    ["Netrun", "⌁"],
     ["Inventory", "▦"],
-    ["Quests", "❖"],
     ["Stats", "▥"],
 ];
-
-/**
- * Panels a run reaches through its own map nodes. Leaving them on the rail made
- * the black market, the safehouse and the NET free and unlimited from anywhere,
- * which is the same as deleting the merchant and rest nodes — and the netrun
- * payout in particular was an on-demand eddies faucet worth several sectors of
- * income per minute of clicking.
- */
-const NODE_ONLY: string[] = ["Netrun", "Store", "Downtime"];
 
 export class Sidebar extends React.Component<SidebarProps, {}> {
     public override render() {
         return (
             <nav>
-                {VIEWS.filter(([name]) => !(this.props.inRun && NODE_ONLY.indexOf(name) >= 0)).map(([name, icon]) => (
+                {VIEWS.map(([name, icon]) => (
                     <button
                         key={name}
                         title={name}

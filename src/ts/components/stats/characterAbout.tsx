@@ -67,7 +67,6 @@ export class CharacterAbout extends React.Component<AboutProps, AboutState> {
                     </div>
                     <StatListItem name={"Reputation:"} value={`${a.reputation}/10`}/>
                     <StatListItem name={"Luck:"} value={`${a.luck}/${a.maxLuck}`}/>
-                    <StatListItem name={"Housing:"} value={a.housing}/>
                     <StatListItem name={"Eddies:"} value={`${Purse.balance(a)}¥`}/>
 
                     <div className={"redStatGrid"}>

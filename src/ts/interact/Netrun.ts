@@ -95,7 +95,7 @@ export class Netrun {
                 }
                 if (passed) {
                     cleared += 1; eddies += floor.reward; floor.defeated = true;
-                    log.push(`Cleared ${floor.type} (DV ${floor.dv}) +${floor.reward}eb`);
+                    log.push(`Cleared ${floor.type} (DV ${floor.dv}) +${floor.reward}¥`);
                 } else {
                     log.push(`Locked out at ${floor.type} (DV ${floor.dv})`);
                     break;

@@ -5,6 +5,7 @@ import {Weapon} from "../items/Weapon";
 import {BattleRecorder, GearChange} from "./battleReport";
 import {Purse} from "./crew";
 import {GetItem} from "./getItem";
+import {randomJunk, randomMed} from "../items/consumables";
 
 const WEAPONS: Weapon[] = Equipment.weapons;
 
@@ -68,6 +69,16 @@ export class Economy {
                 ? `★ ${killer.name} scavenges rare ${worn.name} (SP ${worn.stoppingPower})!`
                 : `${killer.name} scavenges ${worn.name} (SP ${worn.stoppingPower}).`);
         }
+        // pocket loot: meds the crew can actually use, junk the fence will take
+        if (Math.random() < 0.16) {
+            const med = randomMed();
+            killer.inventory.medical.push(med);
+            msgs.push(`${killer.name} pockets a ${med.name}.`);
+        } else if (Math.random() < 0.15) {
+            const junk = randomJunk();
+            killer.inventory.misc.push(junk);
+            msgs.push(`${killer.name} pockets a ${junk.name} — fence fodder.`);
+        }
         this.prune(killer);
         return msgs;
     }
@@ -107,6 +118,10 @@ export class Economy {
         if (w.length > 6) { w.sort((a, b) => this.weaponValue(b) - this.weaponValue(a)); w.length = 6; }
         const a = actor.inventory.armor;
         if (a.length > 6) { a.sort((x, y) => y.stoppingPower - x.stoppingPower); a.length = 6; }
+        const m = actor.inventory.medical;
+        if (m.length > 8) { m.sort((x: any, y: any) => (y.cost || 0) - (x.cost || 0)); m.length = 8; }
+        const j = actor.inventory.misc;
+        if (j.length > 8) { j.sort((x: any, y: any) => (y.cost || 0) - (x.cost || 0)); j.length = 8; }
     }
 
     /** Shopping value of a weapon: mean damage, with a bonus for armour-piercing. */

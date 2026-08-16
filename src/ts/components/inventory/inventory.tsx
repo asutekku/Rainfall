@@ -2,6 +2,7 @@ import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {Armor} from "../../items/Armor";
 import {Weapon} from "../../items/Weapon";
+import {Medical} from "../../items/Scrap";
 
 export interface InventoryProps {
     party: Actor[];
@@ -50,6 +51,15 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
         a.weapon = w;
         w.equipped = true;
         this.notice(`${a.name.split(" ")[0]} swaps to the ${w.name}.`);
+    }
+
+    private useMed(a: Actor, idx: number) {
+        if (!this.canEquip()) { return; }
+        const med = a.inventory.medical.splice(idx, 1)[0] as Medical;
+        const healed = a.heal(Math.min(med.restorePoints, a.maxHealth));
+        this.notice(healed > 0
+            ? `${a.name.split(" ")[0]} uses the ${med.name} (+${healed} HP).`
+            : `${a.name.split(" ")[0]} burns the ${med.name} on nothing — already at full health.`);
     }
 
     private equipArmor(a: Actor, idx: number) {
@@ -106,11 +116,12 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
     private stash(a: Actor) {
         const lock = !this.canEquip();
         const weapons = a.inventory.weapons.filter((w) => w.name !== "Fists");
-        const misc = [...a.inventory.misc || [], ...a.inventory.medical || []];
+        const meds = a.inventory.medical as Medical[];
+        const misc = a.inventory.misc || [];
         return (
             <div className={"gearSect"}>
                 <h4 className={"mkHead"}>Stash{lock && <em className={"gearLock"}> · locked mid-fight</em>}</h4>
-                {weapons.length === 0 && a.inventory.armor.length === 0 && misc.length === 0 &&
+                {weapons.length === 0 && a.inventory.armor.length === 0 && meds.length === 0 && misc.length === 0 &&
                     <div className={"mkEmpty"}>Empty duffel. Scavenge fights or hit a Black Market.</div>}
                 {weapons.map((w, i) => {
                     const idx = a.inventory.weapons.indexOf(w);
@@ -135,12 +146,23 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                         <button className={"mkBuy gearEquip"} disabled={lock}
                                 onClick={() => this.equipArmor(a, i)}>WEAR</button>
                     </div>))}
+                {meds.map((m, i) => (
+                    <div key={"h" + i} className={"gearRow"}>
+                        <span className={"gearSlot med"}>✚</span>
+                        <span className={"mkNameWrap"}>
+                            <span className={"mkName"}>{m.name}</span>
+                            <span className={"mkDetail"}>{m.restorePoints >= 999 ? "full heal" : `heals ${m.restorePoints} HP`}</span>
+                        </span>
+                        <button className={"mkBuy gearEquip useBtn"} disabled={lock || a.health >= a.maxHealth}
+                                title={a.health >= a.maxHealth ? "already at full health" : undefined}
+                                onClick={() => this.useMed(a, i)}>USE</button>
+                    </div>))}
                 {misc.map((m: any, i: number) => (
                     <div key={"m" + i} className={"gearRow"}>
                         <span className={"gearSlot"}>◌</span>
                         <span className={"mkNameWrap"}>
                             <span className={"mkName"}>{m.name}</span>
-                            <span className={"mkDetail"}>{m.description || "misc"}</span>
+                            <span className={"mkDetail"}>junk · a fence pays for this</span>
                         </span>
                     </div>))}
             </div>);
