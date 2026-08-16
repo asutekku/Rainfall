@@ -27,6 +27,10 @@ export class Adversary extends Actor {
         this.items = [this.item];
         if (a.frags !== undefined) { this.frags = a.frags; }
         if (a.parts) { this.kitParts = a.parts; }
+        if (a.ability) { this.ability = a.ability; }
+        this.smokes = a.smokes || 0;
+        this.flashes = a.flashes || 0;
+        this.emps = a.emps || 0;
         // cap the weapon's dice by rank so mooks can't roll a heavy cannon
         this.weapon = GetItem.weaponOfClass(a.weapons, 3, a.minDice, a.rank <= 3 ? 5 : 6);
         this.temperament = a.temperament === "roll"

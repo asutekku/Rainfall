@@ -19,6 +19,8 @@ export interface RunNode {
     type: NodeType;
     junction: number;   // index into city.junctions
     pos: Pt;
+    /** holdout objective: survive this many rounds and the hostiles disengage */
+    holdout?: number;
 }
 
 export interface RunState {
@@ -254,7 +256,14 @@ export class RunMap {
     }
 }
 
-export interface EncounterSpec { boss: boolean; amount: number; level: number; rank: number; }
+export interface EncounterSpec {
+    boss: boolean;
+    amount: number;
+    level: number;
+    rank: number;
+    /** firefights sometimes come with a clock: survive N rounds instead of clearing */
+    holdout?: number;
+}
 
 /**
  * How hard a node's fight is. The sector drives it, not the party's level:
@@ -271,8 +280,12 @@ export function encounterSpec(node: RunNode, sector: number, partyLevel: number)
     switch (node.type) {
         case "elite": return {boss: false, amount: 3, level: base + 1, rank: 3};
         case "boss": return {boss: true, amount: 1, level: base + 2, rank: bossRank};
-        // never fewer than 3 — a 2v1 auto-resolves before the street even loads
-        default: return {boss: false, amount: 3 + (Math.random() < 0.35 ? 1 : 0), level: base, rank: 0};
+        // never fewer than 3 — a 2v1 auto-resolves before the street even loads.
+        // A quarter of firefights carry a holdout clock: survive, don't sweep.
+        default: return {
+            boss: false, amount: 3 + (Math.random() < 0.35 ? 1 : 0), level: base, rank: 0,
+            ...(Math.random() < 0.25 ? {holdout: 4} : {}),
+        };
     }
 }
 

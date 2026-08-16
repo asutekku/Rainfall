@@ -100,6 +100,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private battleStart = 0;                 // mission-clock zero for the current fight
     private roundNo = 0;
     private markRound = 0;                   // round separator waiting to land in the feed
+    private markHoldLeft = -1;               // holdout rounds left, shown on the separator
+    private reinforced = false;              // the once-per-battle reinforcement wave arrived
 
     constructor(props: any) {
         super(props);
@@ -480,6 +482,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
         this.viewPaused = false;
         this.roundNo = 0;
         this.markRound = 0;
+        this.markHoldLeft = -1;
+        this.reinforced = false;
     }
 
     /** A combat node just opened: fresh street, fresh initiative, first turn. */
@@ -526,7 +530,14 @@ export class App extends React.Component<{}, InterfaceAppState> {
                 this.queue = Combat.beginRound(this.state.party, this.state.currentEnemies);
                 if (!this.queue.length) { return; }
                 this.roundNo += 1;
-                if (this.roundNo > 1) { this.markRound = this.roundNo; }
+                const hold = this.holdoutRounds();
+                if (this.roundNo > 1) {
+                    this.markRound = this.roundNo;
+                    this.markHoldLeft = hold > 0 ? Math.max(0, hold - this.roundNo + 1) : -1;
+                }
+                // survived the clock: the hostiles disengage and the street is held
+                if (this.maybeEndHoldout(hold)) { return; }
+                this.maybeReinforce();
             }
         }
         if (!unit) { return; }
@@ -546,6 +557,56 @@ export class App extends React.Component<{}, InterfaceAppState> {
         }
     };
 
+    /** The holdout clock on the current combat node (0 = plain firefight). */
+    private holdoutRounds(): number {
+        const node = this.state.run && this.state.run.node;
+        return node && node.holdout ? node.holdout : 0;
+    }
+
+    /** Holdout survived: the hostiles disengage, the squad keeps the street. */
+    private maybeEndHoldout(hold: number): boolean {
+        if (hold <= 0 || this.roundNo <= hold) { return false; }
+        if (!this.state.party.some((p) => p.canFight())) { return false; }
+        this.state.currentEnemies.forEach((e) => { if (e.canFight()) { e.routed = true; } });
+        const lines = [FeedLog.sys("— clock beaten: hostiles disengage — street held —")];
+        const patch = RunController.step(this.state, lines, this.logLength);
+        this.setState({...patch, playback: null, turnOrder: [], orders: null} as any);
+        return true;
+    }
+
+    /**
+     * Elite and boss fights call for backup once, at the top of round 2: one or
+     * two low-rank guns from the same faction jog in from the far end of the
+     * street. Kept modest on purpose — pressure, not a second army.
+     */
+    private maybeReinforce(): void {
+        const node = this.state.run && this.state.run.node;
+        if (!node || (node.type !== "elite" && node.type !== "boss")) { return; }
+        if (this.reinforced || this.roundNo !== 2) { return; }
+        const foes = this.state.currentEnemies;
+        const lead = foes.find((e) => e.canFight());
+        if (!lead) { return; }
+        this.reinforced = true;
+        const n = node.type === "boss" ? 2 : Math.random() < 0.5 ? 2 : 1;
+        const rank = node.type === "boss" ? 2 : 1;
+        const fresh = ActorController.getReinforcements(lead.faction, n, RunController.levelOf(this.state.party), rank);
+        fresh.forEach((a, i) => {
+            a.position.x = (i - (n - 1) / 2) * 6 + (Math.random() - 0.5) * 3;
+            a.position.y = 41 + Math.random() * 2;
+            a.position.z = 0;
+            a.grenades = 0;
+            a.resetBattleState();
+        });
+        this.queue.push(...fresh);
+        Battlefield.WAVE += fresh.length;   // morale counts the latecomers too
+        const faction = (lead.faction || "hostile").toUpperCase();
+        this.setState({
+            currentEnemies: [...foes, ...fresh],
+            messages: [FeedLog.sys(`⚠ REINFORCEMENTS — ${n} more ${faction} inbound`),
+                ...this.state.messages].slice(0, this.logLength) as any,
+        });
+    }
+
     /** Resolve one unit's turn through the engine and ship it to the animator. */
     private resolveTurn = (unit: Actor, order?: {moveTo?: Point | undefined; target?: Actor | undefined; aimed?: boolean | undefined; grenadeAt?: Point | undefined}) => {
         const res = Combat.takeTurn(unit, this.state.party, this.state.currentEnemies, order);
@@ -564,7 +625,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
             ...FeedLog.keepLegacy(this.pendingMsgs, time),
             ...FeedLog.fromTurn(this.pendingEvents, time),
         ];
-        if (this.markRound) { lines.push(FeedLog.round(this.markRound)); this.markRound = 0; }
+        if (this.markRound) {
+            lines.push(FeedLog.round(this.markRound, this.markHoldLeft));
+            this.markRound = 0;
+            this.markHoldLeft = -1;
+        }
         this.pendingMsgs = [];
         this.pendingEvents = [];
         const done = () => {

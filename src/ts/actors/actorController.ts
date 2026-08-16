@@ -36,6 +36,17 @@ export class ActorController {
         return out;
     }
 
+    /** Mid-battle backup: a few low-rank guns from the wave's own faction. */
+    public static getReinforcements(faction: string | undefined, amount: number,
+                                    level: number, rank: number): Actor[] {
+        const r = Math.max(1, Math.min(5, rank));
+        const out: Actor[] = [];
+        for (let i = 0; i < amount; i++) {
+            out.push(new Adversary(faction ? pickRankedFrom(faction, r) : pickArchetypeOfRank(r), level));
+        }
+        return out;
+    }
+
     /**
      * A boss encounter: a forced high-rank adversary plus one escort drawn
      * from the boss's own faction where it fields one. Rank is the sector's

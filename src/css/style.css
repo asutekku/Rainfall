@@ -1314,6 +1314,8 @@ progress::-moz-progress-bar { background:var(--rust); }
 .ob.frag.set { border-color:var(--warn); background:#241a0d; box-shadow:0 0 8px rgba(240,168,48,.25); }
 .bsFloat.f-tick { color:#ff9a70; font-size:12px; }
 .bsFloat.f-mark { color:#ff2a2a; font-size:12px; letter-spacing:.12em; text-shadow:0 0 10px rgba(255,42,42,.6); }
+.bsFloat.f-crit { color:#ffb050; font-size:13px; letter-spacing:.12em; text-shadow:0 0 10px rgba(255,176,80,.6); }
+.bsFloat.f-hack { color:#66e9ff; font-size:13px; letter-spacing:.1em; text-shadow:0 0 12px rgba(102,233,255,.65); }
 
 /* faction contact banner over the opening dolly */
 .bsBanner { position:absolute; left:50%; top:16%; transform:translateX(-50%);

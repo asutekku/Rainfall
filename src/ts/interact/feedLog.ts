@@ -1,5 +1,7 @@
 import {Actor} from "../actors/Actor";
-import {BattleEvent, BlastEvent, MarkEvent, MoveEvent, SaveEvent, ShotEvent} from "./battleEvents";
+import {AbilityEvent, BattleEvent, BleedEvent, BlastEvent, CoverGoneEvent, CritEvent, HackEvent,
+    MarkEvent, MoveEvent, SaveEvent, ShotEvent, SkipEvent, StabilizeEvent,
+    SuppressEvent} from "./battleEvents";
 
 /**
  * The surveillance feed. Combat used to dump every engine message into the
@@ -72,8 +74,45 @@ export class FeedLog {
             bits.push(`paints ${disambiguate(mark.target, turn.actor)} with a laser`);
         }
 
-        const shot = events.find((e) => e.kind === "shot") as ShotEvent | undefined;
-        if (shot) {
+        const bleed = events.find((e) => e.kind === "bleed") as BleedEvent | undefined;
+        if (bleed) {
+            bits.push(bleed.dropped ? `bleeds out — ${bleed.damage} dmg — DOWN` : `bleeds — ${bleed.damage} dmg`);
+            if (bleed.dropped) { kill = true; }
+        }
+
+        const skip = events.find((e) => e.kind === "skip") as SkipEvent | undefined;
+        if (skip) { bits.push(skip.reason === "stunned" ? "reels — stunned" : "pinned down"); }
+
+        if (events.some((e) => e.kind === "reload")) { bits.push("reloads"); }
+
+        const supp = events.find((e) => e.kind === "suppress") as SuppressEvent | undefined;
+        if (supp) {
+            const tgt = disambiguate(supp.target, turn.actor);
+            bits.push(supp.pinned ? `hoses ${tgt} — PINNED` : `hoses ${tgt} — no effect`);
+        }
+
+        const stab = events.find((e) => e.kind === "stabilize") as StabilizeEvent | undefined;
+        if (stab) {
+            const tgt = disambiguate(stab.target, turn.actor);
+            bits.push(stab.saved ? `drags ${tgt} back from the brink` : `patches ${tgt} up`);
+        }
+
+        const hack = events.find((e) => e.kind === "hack") as HackEvent | undefined;
+        if (hack) {
+            const tgt = disambiguate(hack.target, turn.actor);
+            bits.push(`shorts ${tgt}'s chrome — ${hack.damage} dmg${hack.stunned ? " · LOCKED" : ""}`
+                + (hack.dropped ? ` — ${tgt} DOWN` : ""));
+            if (hack.dropped) { kill = true; }
+        }
+
+        const ability = events.find((e) => e.kind === "ability") as AbilityEvent | undefined;
+        if (ability) { bits.push(ability.name === "leap" ? "LEAPS — the street cracks" : "opens up — sustained fire"); }
+
+        if (events.some((e) => e.kind === "rout")) { bits.push("breaks and runs"); }
+
+        // volleys can fire twice in one turn — every shot gets its clause
+        const shots = events.filter((e) => e.kind === "shot") as ShotEvent[];
+        for (const shot of shots) {
             const verb = shot.melee ? "strikes" : shot.autofire ? "bursts at"
                 : shot.aimed ? "headshots" : "fires at";
             const tgt = disambiguate(shot.target, turn.actor);
@@ -89,16 +128,41 @@ export class FeedLog {
             }
         }
 
-        const blast = events.find((e) => e.kind === "blast") as BlastEvent | undefined;
-        if (blast) {
-            if (!blast.victims.length) {
-                bits.push("lobs a frag — nobody caught");
+        const blasts = events.filter((e) => e.kind === "blast") as BlastEvent[];
+        for (const blast of blasts) {
+            const label = blast.gtype === "frag" ? "lobs a frag"
+                : blast.gtype === "smoke" ? "pops smoke"
+                : blast.gtype === "flash" ? "lobs a flashbang"
+                : blast.gtype === "emp" ? "lobs an EMP"
+                : blast.gtype === "car" ? "the car goes up"
+                : "SLAMS down";
+            if (blast.gtype === "smoke") {
+                bits.push(label);
+            } else if (!blast.victims.length) {
+                bits.push(`${label} — nobody caught`);
             } else {
-                const roll = blast.victims.map((v) =>
-                    `${disambiguate(v.target, turn.actor)} ${v.damage} dmg${v.dropped ? " DOWN" : ""}`).join(", ");
-                bits.push(`lobs a frag — ${roll}`);
+                const roll = blast.victims.map((v) => {
+                    const t = disambiguate(v.target, turn.actor);
+                    if (blast.gtype === "flash") { return `${t}${v.stunned ? " STUNNED" : " shrugs it off"}`; }
+                    return `${t} ${v.damage} dmg${v.stunned ? " STUNNED" : ""}${v.dropped ? " DOWN" : ""}`;
+                }).join(", ");
+                bits.push(`${label} — ${roll}`);
                 if (blast.victims.some((v) => v.dropped)) { kill = true; }
             }
+        }
+
+        const wrecked = events.filter((e) => e.kind === "coverGone") as CoverGoneEvent[];
+        if (wrecked.length) {
+            bits.push(wrecked.some((w) => w.exploded) ? "cover destroyed — car detonates"
+                : `cover destroyed (${wrecked.map((w) => w.ckind).join(", ")})`);
+        }
+
+        // lasting injuries inflicted this turn, tagged onto the attacker's line
+        const crits = events.filter((e) => e.kind === "crit") as CritEvent[];
+        for (const crit of crits) {
+            const who = disambiguate(crit.actor, turn.actor);
+            bits.push(crit.effect === "bleeding" ? `${who} left bleeding`
+                : crit.effect === "crippled" ? `${who}'s leg torn up` : `${who} knocked senseless`);
         }
 
         if (events.some((e) => e.kind === "noshot")) { bits.push("no firing line"); }
@@ -135,9 +199,10 @@ export class FeedLog {
         return out;
     }
 
-    /** Round separator. */
-    public static round(n: number): FeedEntry {
-        return entry("sys", null, null, `— round ${n} —`);
+    /** Round separator (holdout fights show how much longer to survive). */
+    public static round(n: number, holdLeft: number = -1): FeedEntry {
+        return entry("sys", null, null, holdLeft >= 0
+            ? `— round ${n} — hold ${holdLeft} more —` : `— round ${n} —`);
     }
 
     /** Battle-open contact report: who the squad just walked into. */

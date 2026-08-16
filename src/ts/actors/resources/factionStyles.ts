@@ -60,6 +60,7 @@ const STYLES: { [faction: string]: FactionStyle } = {
     "Trauma Team": {accent: 0xff3b30, body: 0xd8dde3, head: 0xc7ccd4, parts: ["backpack", "cross", "visorFull"], formation: "flank"},
     "Cyberpsycho": {accent: 0x66ffc2, body: 0x2a2d33, head: 0x1a1f28, parts: ["chrome", "optics"], formation: "close"},
     "MaxTac":      {accent: 0x3fa0ff, body: 0x14161c, head: 0x0e1015, parts: ["pauldrons", "visorFull", "coat"], formation: "flank"},
+    "Chrome":      {accent: 0x8ff7ff, body: 0x525a63, head: 0x3d444d, parts: ["chrome", "optics", "pauldrons"], formation: "close"},
 };
 
 /** The visual identity for a faction (safe default for factionless legacy goons). */

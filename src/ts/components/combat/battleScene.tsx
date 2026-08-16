@@ -2,7 +2,8 @@ import * as React from "react";
 import * as THREE from "three";
 import {Actor} from "../../actors/Actor";
 import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "../../interact/battlefield";
-import {BattleEvent, BlastEvent, MoveEvent, ShotEvent} from "../../interact/battleEvents";
+import {AbilityEvent, BattleEvent, BlastEvent, CoverGoneEvent, HackEvent, MoveEvent, RoutEvent,
+    ShotEvent, StabilizeEvent, SuppressEvent} from "../../interact/battleEvents";
 import {aimPreview} from "../../interact/aimPreview";
 import {Streetscape, generateStreetscape} from "../../interact/streetscape";
 import {FactionStyle, styleFor} from "../../actors/resources/factionStyles";
@@ -81,6 +82,7 @@ interface UnitView {
     walk: number;             // walk-cycle phase
     walking: boolean;
     sprinting: boolean;       // all-out melee close: faster gait, forward lean
+    air: number;              // metres off the ground (boss leap)
     fallen: number;           // 0..1 blended fall
     faded: boolean;           // flatlined → nearly invisible
     flinch: number;           // >0 = seconds of flinch left
@@ -132,6 +134,8 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
     private camElG = 0.62;
     private rain: THREE.LineSegments | null = null;
     private rainVel: number[] = [];
+    private smokeClouds: Array<{x: number; y: number; sprites: THREE.Sprite[]; phase: number; dying: boolean}> = [];
+    private coverViews: Map<string, THREE.Group> = new Map();
     private signMats: Array<{mat: THREE.MeshBasicMaterial; base: number; flicker: boolean; phase: number}> = [];
     private ventSprites: Array<{s: THREE.Sprite; phase: number}> = [];
 
@@ -156,6 +160,15 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
     public override componentDidUpdate(prev: BattleSceneProps) {
         if (!this.renderer) { return; }
         if (this.props.battleId !== this.builtBattle) { this.rebuild(); }
+        // reinforcements: new hostiles joined an ongoing fight — dress and place them
+        for (const a of this.props.enemies) {
+            if (!this.unitFor(a)) {
+                const u = this.buildUnit(a, "foe");
+                this.units.push(u);
+                this.snapUnit(u);
+                this.spawnPulse(u, u.accent);
+            }
+        }
         const pb = this.props.playback;
         if (pb && pb.id !== this.playingId && pb.id !== this.doneId) { this.beginPlayback(pb); }
         if (prev.orders !== this.props.orders) { this.syncOrderMarkers(); }
@@ -217,6 +230,11 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             this.dropLaser(u);
         });
         this.units = [];
+        this.smokeClouds.forEach((c) => c.sprites.forEach((s) => {
+            this.scene.remove(s);
+            (s.material as THREE.Material).dispose();
+        }));
+        this.smokeClouds = [];
         this.scape = generateStreetscape(this.props.battleId * 7919 + 13, Battlefield.COVER);
         this.signMats = [];
         this.ventSprites = [];
@@ -505,8 +523,14 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             g.add(grp);
         });
 
-        // the actual cover objects (gameplay!)
-        s.covers.forEach((c) => g.add(this.buildCover(c.x, c.y, c.kind, c.rot)));
+        // the actual cover objects (gameplay!) — tracked by position so a blast
+        // can wipe one off the street mid-fight
+        this.coverViews = new Map();
+        s.covers.forEach((c) => {
+            const grp = this.buildCover(c.x, c.y, c.kind, c.rot);
+            this.coverViews.set(this.coverKey(c.x, c.y), grp);
+            g.add(grp);
+        });
         return g;
     }
 
@@ -740,7 +764,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             actor: a, side, color, accent: color, group, body, legL, legR, gunTip: tip, ring, ringMat, pick,
             tag, hpFill, visPos: {x: a.position.x, y: a.position.y},
             yaw: side === "foe" ? Math.PI : 0, targetYaw: side === "foe" ? Math.PI : 0,
-            crouch: 0, walk: 0, walking: false, sprinting: false, fallen: 0, faded: false, flinch: 0,
+            crouch: 0, walk: 0, walking: false, sprinting: false, air: 0, fallen: 0, faded: false, flinch: 0,
             laser: null,
         };
         return u;
@@ -858,8 +882,10 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
     private snapUnit(u: UnitView) {
         u.visPos = {x: u.actor.position.x, y: u.actor.position.y};
         u.walking = false;
-        if (!u.actor.canFight()) { u.fallen = 1; }
-        if (!u.actor.alive) { u.faded = true; }
+        u.air = 0;
+        // routed units ran off standing up — everyone else down is down
+        if (!u.actor.canFight() && !u.actor.routed) { u.fallen = 1; }
+        if (!u.actor.alive || u.actor.routed) { u.faded = true; }
     }
 
     private unitFor(a: Actor): UnitView | null {
@@ -923,6 +949,100 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                             this.floater(t, "⊕ PAINTED", "mark");
                         }});
                     }
+                    break;
+                }
+                case "crit": {   // a lasting injury lands with its own beat
+                    const u = this.unitFor(ev.actor);
+                    if (u) {
+                        const label = ev.effect === "bleeding" ? "BLEEDING"
+                            : ev.effect === "crippled" ? "LEG HIT" : "STUNNED";
+                        this.acts.push({dur: D(0.4), t: 0, start: () => {
+                            this.floater(u, label, "crit");
+                            if (ev.effect === "bleeding") { this.spawnSparks(this.unitAnchor(u, 1.2), 0xc02020, 6); }
+                        }});
+                    }
+                    break;
+                }
+                case "bleed": {
+                    const u = this.unitFor(ev.actor);
+                    if (u) {
+                        this.acts.push({dur: D(0.5), t: 0, start: () => {
+                            this.floater(u, String(ev.damage), "tick");
+                            this.spawnSparks(this.unitAnchor(u, 1.1), 0xc02020, 4);
+                            if (ev.dropped) { this.floater(u, "DOWN", "down"); }
+                        }});
+                    }
+                    break;
+                }
+                case "skip": {
+                    const u = this.unitFor(ev.actor);
+                    if (u) {
+                        this.acts.push({dur: D(0.45), t: 0, start: () =>
+                            this.floater(u, ev.reason === "stunned" ? "✶ STUNNED" : "▼ PINNED", "miss")});
+                    }
+                    break;
+                }
+                case "reload": {
+                    const u = this.unitFor(ev.actor);
+                    if (u) {
+                        this.acts.push({dur: D(0.5), t: 0, start: () => {
+                            this.floater(u, "RELOADING", "miss");
+                            u.crouch = 1;   // dip while the mag swaps
+                        }});
+                    }
+                    break;
+                }
+                case "suppress": this.pushSuppressActs(ev as SuppressEvent, D); break;
+                case "stabilize": {
+                    const s = this.unitFor((ev as StabilizeEvent).actor);
+                    const t = this.unitFor((ev as StabilizeEvent).target);
+                    if (s && t) {
+                        this.acts.push({dur: D(0.9), t: 0, start: () => {
+                            this.focusGoal.set(t.visPos.x, 0, t.visPos.y);
+                            s.crouch = 1;   // kneel over them
+                            this.spawnPulse(t, 0x7fd67f);
+                            this.floater(t, (ev as StabilizeEvent).saved ? "＋ BACK UP" : "＋ PATCHED", "buff");
+                        }, end: () => {
+                            if ((ev as StabilizeEvent).saved) { t.fallen = 0; t.faded = false; }
+                        }});
+                    }
+                    break;
+                }
+                case "rout": this.pushRoutActs(ev as RoutEvent, D); break;
+                case "ability": {
+                    const a = ev as AbilityEvent;
+                    const u = this.unitFor(a.actor);
+                    if (u && a.name === "leap" && a.to) { this.pushLeapActs(u, a.to, D); }
+                    else if (u) {
+                        this.acts.push({dur: D(0.5), t: 0, start: () =>
+                            this.floater(u, "⌖ SUSTAINED FIRE", "mark")});
+                    }
+                    break;
+                }
+                case "hack": {
+                    const h = ev as HackEvent;
+                    const s = this.unitFor(h.actor);
+                    const t = this.unitFor(h.target);
+                    if (s && t) {
+                        this.acts.push({dur: D(0.8), t: 0, start: () => {
+                            this.frameDuel(s.visPos, t.visPos);
+                            this.spawnSparks(this.unitAnchor(t, 1.5), 0x66e9ff, 14);
+                            this.spawnPulse(t, 0x66e9ff);
+                            this.floater(t, "⚡ SHORTED " + (h.damage > 0 ? h.damage : ""), "hack");
+                            if (h.stunned) {
+                                window.setTimeout(() => this.floater(t, "SYSTEMS LOCKED", "hack"), 300);
+                            }
+                            if (h.dropped) {
+                                window.setTimeout(() => this.floater(t, "DOWN", "down"), 500);
+                            }
+                        }});
+                    }
+                    break;
+                }
+                case "coverGone": {
+                    const cg = ev as CoverGoneEvent;
+                    this.acts.push({dur: D(cg.exploded ? 0.5 : 0.3), t: 0, start: () =>
+                        this.destroyCoverView(cg)});
                     break;
                 }
                 case "noshot": {
@@ -1109,27 +1229,44 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         });
     }
 
-    /** Frag throw: face the point, arc the grenade over, detonate, count the cost. */
+    /** Ordnance: arc the throw over, then let the payload speak (frag/smoke/flash/EMP). */
     private pushBlastActs(ev: BlastEvent, D: (n: number) => number) {
         const thrower = this.unitFor(ev.actor);
         if (!thrower) { return; }
         const at = new THREE.Vector3(ev.at.x, 0.15, ev.at.y);
 
+        // secondary explosions and slams aren't thrown — they just happen
+        if (ev.gtype === "car") {
+            this.acts.push({dur: D(1.0), t: 0, start: () => this.explode(at, ev)});
+            return;
+        }
+        if (ev.gtype === "slam") {
+            this.acts.push({dur: D(0.8), t: 0, start: () => {
+                this.shakeT = 0.5;
+                this.spawnFlash(at.clone().setY(0.8), 0xbfd6ff);
+                this.slamRing(at, 0x8ff7ff);
+                this.billVictims(ev);
+            }});
+            return;
+        }
+
         this.acts.push({dur: D(0.2), t: 0, start: () => {
             thrower.targetYaw = Math.atan2(ev.at.x - thrower.visPos.x, ev.at.y - thrower.visPos.y);
             this.focusGoal.set(ev.at.x, 0, ev.at.y);
-            this.camZoomG = 0.62;   // lean in for the boom
+            this.camZoomG = ev.gtype === "smoke" ? 0.75 : 0.62;   // lean in for the boom
             this.camElG = 0.55;
         }});
 
-        // the throw: a tumbling grenade on a parabola, then the street lights up
+        // the throw: a tumbling grenade on a parabola, then the street answers
+        const shell = ev.gtype === "smoke" ? 0x5f7264 : ev.gtype === "flash" ? 0xd8dde3
+            : ev.gtype === "emp" ? 0x2a6f7d : 0x9aa4ad;
         let nade: THREE.Mesh | null = null;
         const flightDur = D(0.8);
         this.acts.push({
             dur: flightDur, t: 0,
             start: () => {
                 nade = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.16),
-                    new THREE.MeshBasicMaterial({color: 0x9aa4ad}));
+                    new THREE.MeshBasicMaterial({color: shell}));
                 this.scene.add(nade);
             },
             update: (k) => {
@@ -1145,19 +1282,109 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                     nade.geometry.dispose();
                     (nade.material as THREE.Material).dispose();
                 }
-                this.explode(at, ev);
+                if (ev.gtype === "smoke") { this.smokeBurst(at); }
+                else if (ev.gtype === "flash") { this.flashBurst(at, ev); }
+                else if (ev.gtype === "emp") { this.empBurst(at, ev); }
+                else { this.explode(at, ev); }
             },
         });
         const anyDown = ev.victims.some((v) => v.dropped);
-        this.acts.push({dur: D(0.9 + (anyDown ? 0.5 : 0)), t: 0});
+        this.acts.push({dur: D((ev.gtype === "smoke" ? 0.5 : 0.9) + (anyDown ? 0.5 : 0)), t: 0});
+    }
+
+    /** Stagger the damage/status floaters off each victim of a blast. */
+    private billVictims(ev: BlastEvent) {
+        ev.victims.forEach((v, i) => {
+            const u = this.unitFor(v.target);
+            if (!u) { return; }
+            window.setTimeout(() => {
+                if (ev.gtype === "flash") {
+                    this.floater(u, v.stunned ? "✶ STUNNED" : "SHRUGS IT OFF", v.stunned ? "crit" : "soak");
+                } else if (v.damage <= 0) {
+                    this.floater(u, v.dodged ? "DIVES CLEAR" : "ARMOR", "soak");
+                } else {
+                    this.floater(u, (v.dodged ? "½ " : "") + String(v.damage), v.damage >= 15 ? "dmg-big" : "dmg");
+                    if (v.stunned) { this.floater(u, "✶ STUNNED", "crit"); }
+                }
+                if (v.dropped) { this.floater(u, "DOWN", "down"); }
+                u.flinch = ev.gtype === "flash" ? 0.1 : 0.25;
+            }, 120 + i * 140);
+        });
+    }
+
+    /** Expanding shockwave ring on the asphalt. */
+    private slamRing(at: THREE.Vector3, color: number, radius: number = 4) {
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 48), new THREE.MeshBasicMaterial({
+            color, transparent: true, opacity: 0.95, side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending, depthWrite: false}));
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(at.x, 0.06, at.z);
+        this.scene.add(ring);
+        let life = 0.6;
+        this.fx.push({update: (dt) => {
+            life -= dt;
+            ring.scale.addScalar(dt * radius * 2.6);
+            (ring.material as THREE.MeshBasicMaterial).opacity = Math.max(0, life / 0.6 * 0.95);
+            if (life <= 0) { this.scene.remove(ring); (ring.material as THREE.Material).dispose(); return false; }
+            return true;
+        }});
+    }
+
+    /** Smoke round lands: a hanging cloud that lives as long as its zone does. */
+    private smokeBurst(at: THREE.Vector3) {
+        const sprites: THREE.Sprite[] = [];
+        for (let i = 0; i < 9; i++) {
+            const s = new THREE.Sprite(new THREE.SpriteMaterial({
+                map: BattleScene.glowTex(), color: 0x8b95a0, transparent: true, opacity: 0, depthWrite: false}));
+            s.position.set(at.x + (Math.random() - 0.5) * 6, 0.7 + Math.random() * 2.4,
+                at.z + (Math.random() - 0.5) * 6);
+            s.scale.setScalar(2.6 + Math.random() * 2.6);
+            this.scene.add(s);
+            sprites.push(s);
+        }
+        this.smokeClouds.push({x: at.x, y: at.z, sprites, phase: Math.random() * 10, dying: false});
+    }
+
+    /** Flashbang: a wall of white, no wounds. */
+    private flashBurst(at: THREE.Vector3, ev: BlastEvent) {
+        this.shakeT = 0.2;
+        const s = new THREE.Sprite(new THREE.SpriteMaterial({
+            map: BattleScene.glowTex(), color: 0xffffff, transparent: true, opacity: 1,
+            blending: THREE.AdditiveBlending, depthWrite: false}));
+        s.position.set(at.x, 1.4, at.z);
+        s.scale.setScalar(4);
+        this.scene.add(s);
+        let life = 0.35;
+        this.fx.push({update: (dt) => {
+            life -= dt;
+            s.scale.addScalar(dt * 26);
+            (s.material as THREE.SpriteMaterial).opacity = Math.max(0, life / 0.35);
+            if (life <= 0) { this.scene.remove(s); (s.material as THREE.Material).dispose(); return false; }
+            return true;
+        }});
+        this.billVictims(ev);
+    }
+
+    /** EMP: a cyan discharge that only chrome feels. */
+    private empBurst(at: THREE.Vector3, ev: BlastEvent) {
+        this.shakeT = 0.25;
+        this.spawnFlash(at.clone().setY(1.2), 0x66e9ff);
+        this.spawnSparks(at.clone().setY(1.2), 0x66e9ff, 20);
+        this.slamRing(at, 0x66e9ff, 5);
+        ev.victims.forEach((v) => {
+            const u = this.unitFor(v.target);
+            if (u) { this.spawnSparks(this.unitAnchor(u, 1.5), 0x66e9ff, 8); }
+        });
+        this.billVictims(ev);
     }
 
     /** The boom: flash, shockwave ring, sparks, smoke, a scorch that stays, camera shake. */
     private explode(at: THREE.Vector3, ev: BlastEvent) {
-        this.shakeT = 0.55;
-        this.spawnFlash(at.clone().setY(1.2), 0xffd9a0);
-        this.spawnSparks(at.clone().setY(1.0), 0xffa04d, 26);
-        this.spawnSparks(at.clone().setY(0.6), 0xff5a3c, 14);
+        const car = ev.gtype === "car";
+        this.shakeT = car ? 0.7 : 0.55;
+        this.spawnFlash(at.clone().setY(1.2), car ? 0xffb060 : 0xffd9a0);
+        this.spawnSparks(at.clone().setY(1.0), 0xffa04d, car ? 34 : 26);
+        this.spawnSparks(at.clone().setY(0.6), 0xff5a3c, car ? 20 : 14);
 
         // expanding shockwave ring on the asphalt
         const ring = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 48), new THREE.MeshBasicMaterial({
@@ -1202,16 +1429,102 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         if (this.streetGroup) { this.streetGroup.add(scorch); } else { this.scene.add(scorch); }
 
         // the bill, staggered off each victim
-        ev.victims.forEach((v, i) => {
-            const u = this.unitFor(v.target);
-            if (!u) { return; }
-            window.setTimeout(() => {
-                if (v.damage <= 0) { this.floater(u, v.dodged ? "DIVES CLEAR" : "ARMOR", "soak"); }
-                else { this.floater(u, (v.dodged ? "½ " : "") + String(v.damage), v.damage >= 15 ? "dmg-big" : "dmg"); }
-                if (v.dropped) { this.floater(u, "DOWN", "down"); }
-                u.flinch = 0.25;
-            }, 120 + i * 140);
+        this.billVictims(ev);
+    }
+
+    /** Suppression: a ten-round hose of tracers over the target's head, then the verdict. */
+    private pushSuppressActs(ev: SuppressEvent, D: (n: number) => number) {
+        const s = this.unitFor(ev.actor);
+        const t = this.unitFor(ev.target);
+        if (!s || !t) { return; }
+        this.acts.push({dur: D(0.16), t: 0, start: () => {
+            s.targetYaw = Math.atan2(t.visPos.x - s.visPos.x, t.visPos.y - s.visPos.y);
+            this.frameDuel(s.visPos, t.visPos);
+        }});
+        const hose = {hit: false, autofire: true, rounds: 10} as unknown as ShotEvent;
+        let elapsed = 0;
+        let spawned = 0;
+        const sp = Math.max(0.4, this.props.speed || 1);
+        this.acts.push({
+            dur: D(1.0), t: 0,
+            update: (_k, dt) => {
+                elapsed += dt * sp;
+                while (spawned < 10 && elapsed > spawned * 0.07) {
+                    this.spawnTracer(s, t, hose, 0.35);
+                    spawned += 1;
+                }
+            },
+            end: () => {
+                this.floater(t, ev.pinned ? "▼ PINNED" : "HOLDS STEADY", ev.pinned ? "crit" : "soak");
+                if (ev.pinned) { t.crouch = 1; }
+            },
         });
+    }
+
+    /** Morale breaks: sprint for the street's edge and vanish into the rain. */
+    private pushRoutActs(ev: RoutEvent, D: (n: number) => number) {
+        const u = this.unitFor(ev.actor);
+        if (!u) { return; }
+        const from = {x: u.visPos.x, y: u.visPos.y};
+        const dist = Battlefield.gap(from, ev.to);
+        this.acts.push({
+            dur: D(Math.max(0.6, Math.min(1.7, dist / 11))), t: 0,
+            start: () => {
+                u.walking = true;
+                u.sprinting = true;
+                u.targetYaw = Math.atan2(ev.to.x - from.x, ev.to.y - from.y);
+                this.floater(u, "MORALE BROKEN", "miss");
+            },
+            update: (k) => {
+                u.visPos = {x: from.x + (ev.to.x - from.x) * k, y: from.y + (ev.to.y - from.y) * k};
+            },
+            end: () => {
+                u.walking = false;
+                u.sprinting = false;
+                u.faded = true;
+            },
+        });
+    }
+
+    /** Boss leap: a monstrous arc onto the target's position, slam on landing. */
+    private pushLeapActs(u: UnitView, to: {x: number; y: number}, D: (n: number) => number) {
+        const from = {x: u.visPos.x, y: u.visPos.y};
+        this.acts.push({
+            dur: D(0.8), t: 0,
+            start: () => {
+                this.focusGoal.set(to.x, 0, to.y);
+                this.camZoomG = 0.55;
+                this.camElG = 0.5;
+                this.floater(u, "⚠ LEAP", "crit");
+                u.targetYaw = Math.atan2(to.x - from.x, to.y - from.y);
+            },
+            update: (k) => {
+                u.visPos = {x: from.x + (to.x - from.x) * k, y: from.y + (to.y - from.y) * k};
+                u.air = Math.sin(k * Math.PI) * 4.2;
+            },
+            end: () => {
+                u.air = 0;
+                u.visPos = {x: to.x, y: to.y};
+            },
+        });
+    }
+
+    /** A cover object dies: debris, dust — and its mesh leaves the street. */
+    private destroyCoverView(cg: CoverGoneEvent) {
+        const key = this.coverKey(cg.at.x, cg.at.y);
+        const grp = this.coverViews.get(key);
+        if (grp && this.streetGroup) {
+            this.streetGroup.remove(grp);
+            this.coverViews.delete(key);
+        }
+        const at = new THREE.Vector3(cg.at.x, 0.6, cg.at.y);
+        this.spawnSparks(at, cg.exploded ? 0xffa04d : 0x9aa4ad, cg.exploded ? 18 : 10);
+        this.spawnFlash(at.clone().setY(1), cg.exploded ? 0xffb060 : 0x7d8794);
+        if (!this.reduced) { this.shakeT = Math.max(this.shakeT, 0.25); }
+    }
+
+    private coverKey(x: number, y: number): string {
+        return Math.round(x * 10) + "|" + Math.round(y * 10);
     }
 
     /**
@@ -1702,6 +2015,33 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         // effects
         this.fx = this.fx.filter((f) => f.update(dt));
 
+        // smoke clouds: swell in, drift while their zone lives, thin out after
+        for (let i = this.smokeClouds.length - 1; i >= 0; i--) {
+            const cloud = this.smokeClouds[i]!;
+            if (!cloud.dying && !Battlefield.SMOKE.some((z) =>
+                Math.hypot(z.x - cloud.x, z.y - cloud.y) < 2)) {
+                cloud.dying = true;
+            }
+            let gone = true;
+            cloud.sprites.forEach((s, j) => {
+                const m = s.material as THREE.SpriteMaterial;
+                m.opacity = cloud.dying ? Math.max(0, m.opacity - dt * 0.25)
+                    : Math.min(0.36, m.opacity + dt * 0.5);
+                if (m.opacity > 0.01) { gone = false; }
+                if (!this.reduced) {
+                    s.position.y += Math.sin(this.t * 0.7 + cloud.phase + j) * dt * 0.12;
+                    s.position.x += Math.sin(this.t * 0.3 + j * 2.1) * dt * 0.05;
+                }
+            });
+            if (cloud.dying && gone) {
+                cloud.sprites.forEach((s) => {
+                    this.scene.remove(s);
+                    (s.material as THREE.Material).dispose();
+                });
+                this.smokeClouds.splice(i, 1);
+            }
+        }
+
         // ambient: sign flicker, vent smoke, rain
         if (!this.reduced) {
             for (const s of this.signMats) {
@@ -1724,12 +2064,13 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             // outside playback, trust the engine's position
             if (!this.playingId) {
                 u.visPos = {x: a.position.x, y: a.position.y};
-                if (!a.canFight() && u.fallen < 1) { u.fallen = Math.min(1, u.fallen + dt * 2.5); }
+                if (a.routed) { u.faded = true; }
+                else if (!a.canFight() && u.fallen < 1) { u.fallen = Math.min(1, u.fallen + dt * 2.5); }
                 if (!a.alive) { u.faded = true; }
-            } else if (!a.canFight() && u.fallen < 1) {
+            } else if (!a.canFight() && !a.routed && u.fallen < 1) {
                 u.fallen = Math.min(1, u.fallen + dt * 2.5);
             }
-            u.group.position.set(u.visPos.x, 0, u.visPos.y);
+            u.group.position.set(u.visPos.x, u.air, u.visPos.y);
 
             // facing: outside a move/shot, idle-face the nearest live foe
             let dy = u.targetYaw - u.yaw;
@@ -1742,17 +2083,20 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             const wantCrouch = a.canFight() && Battlefield.nearCover(u.visPos) && !u.walking ? 1 : 0;
             u.crouch += (wantCrouch - u.crouch) * Math.min(1, dt * 6);
 
-            // walk cycle (sprints pump harder, faster, lower)
+            // walk cycle (sprints pump harder and faster; a shot leg drags)
+            const limp = a.crippled && !u.sprinting;
             if (u.walking) {
-                u.walk += dt * (u.sprinting ? 16 : 11);
+                u.walk += dt * (u.sprinting ? 16 : limp ? 7 : 11);
                 const swing = u.sprinting ? 0.95 : 0.75;
-                u.legL.rotation.x = Math.sin(u.walk) * swing;
-                u.legR.rotation.x = -Math.sin(u.walk) * swing;
+                u.legL.rotation.x = Math.sin(u.walk) * swing * (limp ? 1.1 : 1);
+                u.legR.rotation.x = -Math.sin(u.walk) * swing * (limp ? 0.35 : 1);   // the bad leg drags
                 u.body.position.y = Math.abs(Math.sin(u.walk)) * (u.sprinting ? 0.09 : 0.06);
+                u.body.rotation.z = limp ? Math.sin(u.walk) * 0.08 : 0;              // lurching roll
             } else {
                 u.legL.rotation.x *= 1 - Math.min(1, dt * 10);
                 u.legR.rotation.x *= 1 - Math.min(1, dt * 10);
                 u.body.position.y = 0;
+                u.body.rotation.z *= 1 - Math.min(1, dt * 8);
             }
 
             // flinch kick (sprinters otherwise hold a forward lean)

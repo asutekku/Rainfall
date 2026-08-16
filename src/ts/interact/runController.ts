@@ -64,10 +64,14 @@ export class RunController {
                     [{msg: `— they make ${face.name.split(" ")[0]} — weapons drop, and the crew walks through —`}], log);
             }
         }
-        const enemies = spawnEncounter(encounterSpec(node, run.sector, RunController.levelOf(state.party)));
+        const spec = encounterSpec(node, run.sector, RunController.levelOf(state.party));
+        const enemies = spawnEncounter(spec);
         Battlefield.deploy(state.party, enemies);
+        // holdout fights carry their clock on the node so the sequencer sees it
+        if (spec.holdout) { node.holdout = spec.holdout; } else { delete node.holdout; }
         const label = node.type === "boss" ? "BOSS — hold nothing back"
-            : node.type === "elite" ? "elite contact" : "firefight";
+            : node.type === "elite" ? "elite contact"
+            : spec.holdout ? `holdout — survive ${spec.holdout} rounds` : "firefight";
         BattleRecorder.begin(state.party, enemies, node.type, label);
         return {
             run: {...run, node}, screen: "combat",
@@ -166,7 +170,8 @@ export class RunController {
         const party = state.party;
         const run = state.run;
         if (!run) { return {}; }
-        const alive = state.currentEnemies.filter((e) => e.health > 0);
+        // routed enemies ran off the field — the fight is over without their bodies
+        const alive = state.currentEnemies.filter((e) => e.health > 0 && !e.routed);
         const feed = [...msgs, ...state.messages].slice(0, log);
 
         if (party.every((p) => !p.canFight())) {          // squad wiped → debrief, then run over
