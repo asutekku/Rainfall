@@ -53,9 +53,6 @@ export class Battlefield {
         // frags are carried, not conjured: the squad throws what it bought or
         // scavenged. Heavier hostiles sometimes bring one of their own.
         enemies.forEach((e) => { e.grenades = (e.rank || 1) >= 3 && Math.random() < 0.4 ? 1 : 0; });
-        // Solos divide their Combat Awareness pool as the fight opens — without
-        // this call the Role Ability is a row of zeroes (both sides get it).
-        party.concat(enemies).forEach((a) => { if (a.isSolo()) { a.allocateCombatAwareness(); } });
     }
 
     /**

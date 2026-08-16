@@ -40,7 +40,8 @@ export class RunController {
         if (!run || run.reachableIds.indexOf(node.id) < 0) { return {}; }
         if (run.clearedIds.indexOf(node.id) >= 0) {
             // already cleared — free movement, no encounter
-            return {run: {...run, position: node.id, reachableIds: (run.adj[node.id] || []).slice()}};
+            return {run: RunController.scout(
+                {...run, position: node.id, reachableIds: (run.adj[node.id] || []).slice()}, state.party)};
         }
         if (node.type === "merchant") { return {run: {...run, node}, screen: "merchant"}; }
         if (node.type === "rest") { return {run: {...run, node}, screen: "rest"}; }
@@ -51,6 +52,18 @@ export class RunController {
             return {run: {...run, node}, screen: "hire", offers: MercMarket.board(run.sector + 1, 3, 1.25)};
         }
         // combat / elite / boss
+        if (node.type === "combat") {
+            // Rockerboy "Charismatic Impact": street crews sometimes make the
+            // legend and stand down — the fight is won before it starts (no
+            // loot, no XP: not getting shot at is the payout).
+            const face = state.party.filter((p) => p.canFight() && p.standDownChance() > 0)
+                .sort((a, b) => b.standDownChance() - a.standDownChance())[0];
+            if (face && Math.random() < face.standDownChance()) {
+                face.gainReputation(1);
+                return RunController.advance(state, node,
+                    [{msg: `— they make ${face.name.split(" ")[0]} — weapons drop, and the crew walks through —`}], log);
+            }
+        }
         const enemies = spawnEncounter(encounterSpec(node, run.sector, RunController.levelOf(state.party)));
         Battlefield.deploy(state.party, enemies);
         const label = node.type === "boss" ? "BOSS — hold nothing back"
@@ -85,7 +98,7 @@ export class RunController {
             if (node.type === "elite") { state.character.gainReputation(1); }
             // Techie "Maker": between stops they service the crew's armour.
             const patched = RunController.makerPass(state.party);
-            if (patched > 0) { extra = [...extra, {msg: `— the Techie hammers ${patched} SP back into the squad's armour —`}]; }
+            if (patched > 0) { extra = [...extra, {msg: `— the Techie patches ${patched} SP back into the squad's armour —`}]; }
         }
         const messages = [...extra, ...state.messages].slice(0, log);
         if (node.type === "boss") {
@@ -96,31 +109,56 @@ export class RunController {
             };
         }
         return {
-            run: {
+            run: RunController.scout({
                 ...run, clearedIds, depth, node: null,
                 position: node.id, reachableIds: (run.adj[node.id] || []).slice(),
-            },
+            }, state.party),
             screen: "map", messages,
         };
     }
 
-    /** Techie Maker pass: each Techie repairs every member's worn armour by rank SP. */
+    /**
+     * Techie "Maker": between stops they patch up HALF of each piece's lost SP.
+     * A second Techie doesn't stack — one pair of hands on the workbench.
+     */
     private static makerPass(party: Actor[]): number {
+        if (!party.some((t) => t.isTechie() && t.canFight())) { return 0; }
         let total = 0;
-        party.forEach((t) => {
-            const fix = t.makerRepair();
-            if (fix <= 0 || !t.canFight()) { return; }
-            party.forEach((m) => {
-                [m.equipment.upper, m.equipment.headgear].forEach((a: any) => {
-                    if (a && a.stoppingPower < a.maxStoppingPower) {
-                        const d = Math.min(fix, a.maxStoppingPower - a.stoppingPower);
-                        a.stoppingPower += d;
-                        total += d;
-                    }
-                });
+        party.forEach((m) => {
+            [m.equipment.upper, m.equipment.headgear].forEach((a: any) => {
+                if (a && a.stoppingPower < a.maxStoppingPower) {
+                    const d = Math.ceil((a.maxStoppingPower - a.stoppingPower) / 2);
+                    a.stoppingPower += d;
+                    total += d;
+                }
             });
         });
         return total;
+    }
+
+    /**
+     * Media "Credibility": their sources see one street further than the crew's
+     * own eyes — every waypoint within intel range of where the squad stands is
+     * uncovered on the holo-map. Knowledge, once bought, doesn't fade.
+     */
+    public static scout(run: RunState, party: Actor[]): RunState {
+        const range = party.reduce((m, p) => Math.max(m, p.canFight() ? p.intelRange() : 1), 1);
+        if (range <= 1) { return run; }
+        const revealed = new Set(run.revealedIds);
+        let frontier: string[] = [run.position];
+        const visited = new Set(frontier);
+        for (let hop = 1; hop <= range; hop++) {
+            const next: string[] = [];
+            frontier.forEach((id) => (run.adj[id] || []).forEach((n) => {
+                if (!visited.has(n)) { visited.add(n); next.push(n); }
+            }));
+            // hop 1 is plain adjacency (already visible to everyone) — the
+            // Media's edge starts one street beyond that
+            if (hop >= 2) { next.forEach((n) => revealed.add(n)); }
+            frontier = next;
+        }
+        return revealed.size === run.revealedIds.length ? run
+            : {...run, revealedIds: Array.from(revealed)};
     }
 
     /** One resolved round in a combat node: wipe or clear → debrief, else continue. */
@@ -270,21 +308,18 @@ export class RunController {
     /** Next sector: a new city, a harder one, with the crew you walked out with. */
     public static nextSector(state: InterfaceAppState, log: number): Patch {
         const sector = (state.run ? state.run.sector : 0) + 1;
-        let stipend = 0;
         state.party.forEach((p) => {
             if (!p.canFight()) { p.revive(); }
             p.health = p.maxHealth;
             p.refreshLuck();               // a cleared sector resets the luck pool
             Economy.repairArmor(p);
-            stipend += p.corpStipend();    // Corporate "Teamwork": the quarterly wire lands
         });
-        if (stipend > 0) { Purse.earn(state.character, stipend); }
         return {
-            run: RunController.freshRun(sector), screen: "map", report: null, offers: [],
+            run: RunController.scout(RunController.freshRun(sector), state.party),
+            screen: "map", report: null, offers: [],
             eventId: null, usedEvents: [],       // new streets, fresh encounter pool
             activeMainPanel: "Combat", mobileTab: "arena",
             messages: [
-                ...(stipend > 0 ? [{msg: `— corporate stipend wired in: +${stipend}¥ —`} as any] : []),
                 {msg: `— sector ${sector}: new streets, worse people —`} as any,
                 ...state.messages].slice(0, log),
         };
@@ -302,9 +337,11 @@ export class RunController {
         Economy.stripToBasics(character);
         character.grenades = 2;   // basics include two frags
         const crew = new Crew().activate();
+        const party = [character, new Merc(MercMarket.starter(1))];
         return {
-            character, party: [character, new Merc(MercMarket.starter(1))], crew,
-            run: RunController.freshRun(1), screen: "map", report: null, offers: [],
+            character, party, crew,
+            run: RunController.scout(RunController.freshRun(1), party),
+            screen: "map", report: null, offers: [],
             eventId: null, usedEvents: [],
             activeChar: character, activeMainPanel: "Combat", mobileTab: "arena",
             messages: [{msg: "— Trauma Team drops you back on the street. New crew, old scars. —"} as any].slice(0, log),

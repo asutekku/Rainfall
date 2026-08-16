@@ -299,7 +299,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         this.setState({
             characterSpec: spec, character, party, currentEnemies: enemies,
             activeChar: character, activeEnemy: enemies[0],
-            creating: false, run: RunController.freshRun(1), screen: "map", report: null,
+            creating: false, run: RunController.scout(RunController.freshRun(1), party), screen: "map", report: null,
             crew: new Crew().activate(), offers: [],
             eventId: null, usedEvents: [],
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
@@ -318,7 +318,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         Battlefield.deploy(g.party, enemies);
         this.setState({
             creating: false, characterSpec: g.spec, character: g.character, party: g.party,
-            crew: g.crew, run: g.run, usedEvents: g.usedEvents, screen: "map",
+            crew: g.crew, run: RunController.scout(g.run, g.party), usedEvents: g.usedEvents, screen: "map",
             currentEnemies: enemies, activeChar: g.character, activeEnemy: enemies[0],
             report: null, eventId: null, offers: [],
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,

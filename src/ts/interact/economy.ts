@@ -238,6 +238,15 @@ export class Economy {
         return Math.max(5, Math.floor((cost || 0) / 2));
     }
 
+    /**
+     * Corporate "Teamwork": the sticker price after the company account takes
+     * its cut. With no standing Corporate in the crew this IS the sticker price.
+     */
+    public static marketPrice(cost: number, party: Actor[]): number {
+        const discount = party.reduce((m, p) => Math.max(m, p.canFight() ? p.corpDiscount() : 0), 0);
+        return Math.ceil(cost * (1 - discount));
+    }
+
     /** Patch worn armour back up to its rating — what a safehouse stop is for. */
     public static repairArmor(actor: Actor): void {
         [actor.equipment.upper, actor.equipment.headgear].forEach((a) => {
