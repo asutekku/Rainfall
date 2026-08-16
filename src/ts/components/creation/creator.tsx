@@ -299,15 +299,12 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                         <p>{career ? `Run ${career.runs + 1} — the crew gets hired on the way`
                                    : "Your merc — the crew gets hired on the way"}</p>
                     </div>
-                    <div className={"crActions"}>
-                        {!career && <button onClick={this.randomize}>⚄ Randomize</button>}
-                        {!career && <button onClick={this.reset}>⟲ Reset</button>}
-                        <button onClick={this.props.onCancel}>✕ Cancel</button>
-                        <button className={"prim"}
-                                onClick={() => this.props.onDeploy(this.state.spec, !!career)}>
-                            {career ? `Send ${career.name.split(" ")[0]} back out ▸` : "Hit the Street ▸"}
-                        </button>
-                    </div>
+                    {/* Editor tools stay by the thing they edit. Cancel and Deploy
+                        are navigation, and navigation lives in the bar below. */}
+                    {!career && <div className={"crTools"}>
+                        <button onClick={this.randomize}>⚄ Randomize</button>
+                        <button onClick={this.reset}>⟲ Reset</button>
+                    </div>}
                 </header>
                 <div className={"crBody"}>
                     <main className={"crEdit"}>
@@ -326,6 +323,15 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                             {this.state.advanced && this.lifepath(s)}
                         </>}
                     </main>
+                </div>
+                <div className={"metaFoot"}>
+                    <div className={"metaFootInner"}>
+                        <button className={"metaLeaveGhost"} onClick={this.props.onCancel}>✕ Cancel</button>
+                        <button className={"metaLeave"}
+                                onClick={() => this.props.onDeploy(this.state.spec, !!career)}>
+                            {career ? `Send ${career.name.split(" ")[0]} back out ▸` : "Hit the Street ▸"}
+                        </button>
+                    </div>
                 </div>
             </div>);
     }

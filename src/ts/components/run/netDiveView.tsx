@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {MetaFoot} from "./metaOverlay";
 import {Purse} from "../../interact/crew";
 import {Netrun as NetEngine, NetrunResult} from "../../interact/Netrun";
 
@@ -71,7 +72,6 @@ export class NetDiveView extends React.Component<NetDiveViewProps, NetDiveViewSt
                 <div className={"metaHead"}>
                     <span className={"metaTitle"}>⌁ NET Access</span>
                     <span className={"evEddies"}>{Math.floor(Purse.balance(this.props.party[0]!))}¥</span>
-                    {!r && <button className={"metaLeaveGhost"} onClick={() => this.props.onLeave(["— left the jack-point cold —"])}>Walk on ▸</button>}
                 </div>
                 <div className={"ovScroll"}>
                     <div className={"ovInner"}>
@@ -94,7 +94,6 @@ export class NetDiveView extends React.Component<NetDiveViewProps, NetDiveViewSt
                                         <span className={"evOptMeta"}><em>{blurb}</em></span>
                                     </button>
                                 ))}
-                                <button className={"metaLeave netGo"} onClick={this.dive}>⌁ Jack in ▸</button>
                             </div>
                         )}
                         {r && (
@@ -104,13 +103,21 @@ export class NetDiveView extends React.Component<NetDiveViewProps, NetDiveViewSt
                                     {" — "}{r.floorsCleared}/{r.totalFloors} floors · {r.eddiesGained}¥
                                 </p>
                                 {r.log.slice(-6).map((l, i) => <p key={i} className={"netLog"}>{l}</p>)}
-                                <button className={"metaLeave"} onClick={() => this.props.onLeave(this.summary(r))}>
-                                    Jack out ▸
-                                </button>
                             </div>
                         )}
                     </div>
                 </div>
+                <MetaFoot>
+                    {r
+                        ? <button className={"metaLeave"} onClick={() => this.props.onLeave(this.summary(r))}>
+                            Jack out ▸
+                        </button>
+                        : <>
+                            <button className={"metaLeaveGhost"}
+                                    onClick={() => this.props.onLeave(["— left the jack-point cold —"])}>Walk on ▸</button>
+                            <button className={"metaLeave netGo"} onClick={this.dive}>⌁ Jack in ▸</button>
+                        </>}
+                </MetaFoot>
             </div>);
     }
 }

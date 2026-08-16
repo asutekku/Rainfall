@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {MetaFoot} from "./metaOverlay";
 import {AugOffer} from "../../interact/chrome";
 
 export interface AugPickViewProps {
@@ -58,13 +59,13 @@ export class AugPickView extends React.Component<AugPickViewProps, {}> {
                         <div className={"augCards"}>
                             {this.props.offers.map(this.card)}
                         </div>
-                        <div className={"augSkipRow"}>
-                            <button className={"metaLeave"} onClick={() => this.props.onPick(null)}>
-                                Keep your soul — skip ▸
-                            </button>
-                        </div>
                     </div>
                 </div>
+                <MetaFoot>
+                    <button className={"metaLeaveGhost"} onClick={() => this.props.onPick(null)}>
+                        Keep your soul — skip ▸
+                    </button>
+                </MetaFoot>
             </div>);
     }
 }

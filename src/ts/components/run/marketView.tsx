@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {MetaFoot} from "./metaOverlay";
 import {AugOffer, Chrome} from "../../interact/chrome";
 import {Purse} from "../../interact/crew";
 import {Economy} from "../../interact/economy";
@@ -333,7 +334,6 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 <div className={"metaHead"}>
                     <span className={"metaTitle"}>▤ Black Market</span>
                     <span className={"evEddies"}>{Math.floor(Purse.balance(leader))}¥</span>
-                    <button className={"metaLeave"} onClick={this.props.onLeave}>Leave ▸</button>
                 </div>
                 <div className={"ovScroll"}>
                     <div className={"ovInner"}>
@@ -368,6 +368,9 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                         </div>
                     </div>
                 </div>
+                <MetaFoot>
+                    <button className={"metaLeave"} onClick={this.props.onLeave}>Leave the market ▸</button>
+                </MetaFoot>
             </div>);
     }
 }
