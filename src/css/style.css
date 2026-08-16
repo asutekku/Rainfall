@@ -586,9 +586,11 @@ progress::-moz-progress-bar { background:var(--rust); }
     #app > header .mini:nth-of-type(5) { display:none; }   /* REP, LUCK */
     #app > header .mini .bar { width:46px !important; }    /* inline-sized by Hud */
 
-    /* --- body regions: all off unless the active tab asks for them --- */
+    /* --- body regions: all off unless the active tab asks for them ---
+       (#stage.cityStage included: without it the holo-map's absolute canvas
+       escapes display:contents and blankets every other tab full-screen) */
     .strips, .arena, .viewwrap, .minimap, .stageActions,
-    #feedcol > .panel { display:none; }
+    #feedcol > .panel, #stage.cityStage { display:none; }
 
     .strips { order:2; }
     .arena, .viewwrap { order:3; }
@@ -1328,4 +1330,57 @@ progress::-moz-progress-bar { background:var(--rust); }
     12% { opacity:1; transform:translateX(-50%) translateY(0); }
     82% { opacity:1; }
     100% { opacity:0; transform:translateX(-50%) translateY(4px); }
+}
+
+/* =====================================================================
+   CATEGORY-SWITCH PIZZAZZ — every panel that takes the screen arrives
+   like a holo-console re-tuning: a scan wipe down the glass, one breath
+   of over-driven chroma, and an RGB-split stutter on the control that
+   fired it. One-shot, ~a third of a second, honest to reduced-motion.
+   ===================================================================== */
+@media (prefers-reduced-motion: no-preference) {
+
+    @keyframes panelIn {
+        0%   { opacity:.15; transform:translateY(9px);
+               clip-path:inset(0 0 96% 0);
+               filter:saturate(2.4) brightness(1.8) hue-rotate(14deg); }
+        38%  { opacity:1; clip-path:inset(0 0 0 0); }
+        62%  { transform:translateY(0);
+               filter:saturate(1.4) brightness(1.12) hue-rotate(0deg); }
+        100% { opacity:1; transform:none; filter:none; }
+    }
+
+    @keyframes tabGlitch {
+        0%, 100% { text-shadow:none; transform:none; }
+        18% { text-shadow:-2px 0 rgba(255,72,140,.85), 2px 0 rgba(64,240,255,.85);
+              transform:translateX(1px) skewX(-4deg); }
+        36% { text-shadow:2px 0 rgba(255,72,140,.6), -2px 0 rgba(64,240,255,.6);
+              transform:translateX(-1px); }
+        54% { text-shadow:-1px 0 rgba(255,72,140,.4), 1px 0 rgba(64,240,255,.4); }
+        72% { text-shadow:none; transform:none; }
+    }
+
+    /* Desktop / shared: these remount on a category or screen change (the
+       viewwrap is keyed by view; map ↔ combat swaps the whole stage), so a
+       fresh mount replays the tune-in. Full-screen overlays get it too. */
+    .viewwrap, .cityStage, .arena, .metaOverlay {
+        animation:panelIn .34s cubic-bezier(.22,.9,.3,1) both;
+    }
+
+    /* The control that fired the switch stutters once. */
+    .mtabs button.on,
+    nav:not(.mtabs) button.on { animation:tabGlitch .3s steps(1) 1; }
+}
+
+/* Phone tabs: the regions toggle display, and none -> shown restarts the
+   animation — every tab press gets the same re-tune without JS. */
+@media (max-width: 860px) and (prefers-reduced-motion: no-preference) {
+    #app[data-mtab="arena"] .arena,
+    #app[data-mtab="arena"] #stage.cityStage,
+    #app[data-mtab="squad"] #feedcol > .panel:not(.feed),
+    #app[data-mtab="feed"] #feedcol > .feed,
+    #app[data-mtab="gear"] .viewwrap,
+    #app[data-mtab="panel"] .viewwrap {
+        animation:panelIn .34s cubic-bezier(.22,.9,.3,1) both;
+    }
 }

@@ -185,7 +185,9 @@ export class Stage extends React.Component<StageProps, {}> {
                     </div>
                 ) : (
                     <React.Fragment>
-                        <div className={"viewwrap"}>
+                        {/* keyed by view so switching categories remounts the panel
+                            and replays the holo re-tune animation */}
+                        <div className={"viewwrap"} key={this.props.view}>
                             <MainPanel activeView={this.props.view} currentActor={this.props.actor}
                                        party={this.props.party} screen={this.props.screen}
                                        messages={this.props.messages}
