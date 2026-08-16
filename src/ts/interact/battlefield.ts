@@ -73,11 +73,41 @@ export class Battlefield {
         if (out.length >= 3) { this.COVER = out; }
     }
 
-    /** Place (or replace) a wave of hostiles on the far line. Used on spawn + respawn. */
+    /**
+     * Place (or replace) a wave of hostiles. Each engagement opens differently:
+     * a far skirmish line, a split flanking ambush, a loose scatter through the
+     * mid-street, or a close-quarters brawl already inside pistol range.
+     */
     public static deployEnemies(enemies: Actor[]): void {
+        const style = Math.floor(Math.random() * 4);
+        const placed: Actor[] = [];
         enemies.forEach((e, i) => {
-            // stagger depth by index so a wave isn't a flat wall: 25 / 30 / 35m ...
-            this.place(e, this.spread(i, enemies.length, 10), ENEMY_Y + ((i % 3) - 1) * 5);
+            let x = 0, y = ENEMY_Y;
+            switch (style) {
+                case 1: {   // flank ambush: halves tucked against both walls, mid-depth
+                    const side = i % 2 === 0 ? -1 : 1;
+                    x = side * (12 + Math.random() * 8);
+                    y = 15 + Math.random() * 11;
+                    break;
+                }
+                case 2: {   // loose scatter through the far half of the street
+                    x = -18 + Math.random() * 36;
+                    y = 24 + Math.random() * 16;
+                    break;
+                }
+                case 3: {   // close contact: the fight starts inside pistol range
+                    x = this.spread(i, enemies.length, 9);
+                    y = 19 + Math.random() * 5;
+                    break;
+                }
+                default: {  // classic staggered far line: 25 / 30 / 35m
+                    x = this.spread(i, enemies.length, 10);
+                    y = ENEMY_Y + ((i % 3) - 1) * 5;
+                }
+            }
+            const spot = this.resolveFree(this.clamp({x, y}), placed, e);
+            this.place(e, spot.x, spot.y);
+            placed.push(e);
         });
     }
 

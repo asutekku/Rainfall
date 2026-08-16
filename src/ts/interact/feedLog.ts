@@ -34,6 +34,15 @@ export function callsign(a: Actor): string {
     return (parts[parts.length - 1] || a.name).toUpperCase();
 }
 
+/** Callsign for `a`, with a first-name initial when it collides with `other`'s. */
+function disambiguate(a: Actor, other: Actor): string {
+    const sign = callsign(a);
+    if (a !== other && sign === callsign(other)) {
+        return `${a.name.trim()[0]!.toUpperCase()}. ${sign}`;
+    }
+    return sign;
+}
+
 /** mm:ss mission clock from a battle-start timestamp. */
 export function missionClock(startedAt: number): string {
     const s = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
@@ -54,14 +63,14 @@ export class FeedLog {
         const move = events.find((e) => e.kind === "move") as MoveEvent | undefined;
         if (move) {
             const dist = Math.round(Math.hypot(move.to.x - move.from.x, move.to.y - move.from.y));
-            bits.push(move.cover ? `into cover (${dist}m)` : `moves ${dist}m`);
+            bits.push(move.cover ? `moves ${dist}m into cover` : `moves ${dist}m`);
         }
 
         const shot = events.find((e) => e.kind === "shot") as ShotEvent | undefined;
         if (shot) {
             const verb = shot.melee ? "strikes" : shot.autofire ? "bursts at"
                 : shot.aimed ? "headshots" : "fires at";
-            const tgt = callsign(shot.target);
+            const tgt = disambiguate(shot.target, turn.actor);
             if (!shot.hit) {
                 bits.push(`${verb} ${tgt} — miss`);
             } else if (shot.damage <= 0) {
@@ -80,7 +89,7 @@ export class FeedLog {
                 bits.push("lobs a frag — nobody caught");
             } else {
                 const roll = blast.victims.map((v) =>
-                    `${callsign(v.target)} ${v.damage} dmg${v.dropped ? " DOWN" : ""}`).join(", ");
+                    `${disambiguate(v.target, turn.actor)} ${v.damage} dmg${v.dropped ? " DOWN" : ""}`).join(", ");
                 bits.push(`lobs a frag — ${roll}`);
                 if (blast.victims.some((v) => v.dropped)) { kill = true; }
             }

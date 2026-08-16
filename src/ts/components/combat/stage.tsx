@@ -138,16 +138,16 @@ export class Stage extends React.Component<StageProps, {}> {
             </div>);
     }
 
+    /** Auto is the whole show for now — manual control stays parked off-stage. */
     private statusBar() {
         const w = this.props.actor.weapon;
         const active = this.props.turnOrder[0];
         return (
             <div className={"autoStatus"}>
-                <span className={"autoDot"}>▸</span> {this.props.auto ? "AUTO" : "RESOLVING"}
+                <span className={"autoDot"}>▸</span> {this.props.auto ? "LIVE" : "RESOLVING"}
                 {active ? <span className={"nowTurn"}> — {active.name}'s turn</span> : null}
-                <button className={"ob slim"} onClick={this.props.onToggleAuto}>
-                    {this.props.auto ? "❚❚ TAKE CONTROL" : "▸ AUTO"}
-                </button>
+                {!this.props.auto &&
+                    <button className={"ob slim"} onClick={this.props.onToggleAuto}>▸ AUTO</button>}
                 <span className={"wpn"}>
                     <b>{w.name}</b> · {w.diceThrows}d6{w.damage ? "+" + w.damage : ""}
                     {w.ap ? " AP" : ""}{w.autofire ? " · AUTO" : ""}
