@@ -56,15 +56,100 @@ export interface BlastVictim {
     /** dove clear for half damage */
     dodged: boolean;
     dropped: boolean;
+    /** flashbang/EMP left them reeling — they lose their next turn */
+    stunned?: boolean;
 }
 
-/** A frag goes off: everyone inside the radius — both sides — eats the roll. */
+/** What kind of ordnance went off (drives visuals, feed wording and effects). */
+export type BlastType = "frag" | "smoke" | "flash" | "emp" | "car" | "slam";
+
+/** Something goes off at a point: frag, smoke, flashbang, EMP, car, boss slam. */
 export interface BlastEvent {
     kind: "blast";
     actor: Actor;
     at: Point;
     radius: number;
+    gtype: BlastType;
     victims: BlastVictim[];
+}
+
+/** A big hit left a lasting mark — battle-scoped critical injury. */
+export interface CritEvent {
+    kind: "crit";
+    actor: Actor;                                      // the one who got hurt
+    effect: "bleeding" | "crippled" | "stunned";
+}
+
+/** Turn-start bleed tick from an open wound. */
+export interface BleedEvent {
+    kind: "bleed";
+    actor: Actor;
+    damage: number;
+    dropped: boolean;
+}
+
+/** The unit sits its turn out (stunned or suppressed into cover). */
+export interface SkipEvent {
+    kind: "skip";
+    actor: Actor;
+    reason: "stunned" | "pinned";
+}
+
+/** Dry magazine: the turn's attack becomes a reload. */
+export interface ReloadEvent {
+    kind: "reload";
+    actor: Actor;
+}
+
+/** Autofire hosing a position: no damage, but a pinned target hides next turn. */
+export interface SuppressEvent {
+    kind: "suppress";
+    actor: Actor;
+    target: Actor;
+    pinned: boolean;
+}
+
+/** Field medicine: stop the bleeding, drag the dying back to their feet. */
+export interface StabilizeEvent {
+    kind: "stabilize";
+    actor: Actor;
+    target: Actor;
+    /** target was mortally wounded and is back up (at 1 HP) */
+    saved: boolean;
+}
+
+/** Morale breaks: the unit sprints off the field and out of the fight. */
+export interface RoutEvent {
+    kind: "rout";
+    actor: Actor;
+    to: Point;
+}
+
+/** A cover object is destroyed (cars go up in a secondary explosion). */
+export interface CoverGoneEvent {
+    kind: "coverGone";
+    at: Point;
+    ckind: string;
+    exploded: boolean;
+}
+
+/** A rank-5 signature move. */
+export interface AbilityEvent {
+    kind: "ability";
+    actor: Actor;
+    name: "leap" | "volley";
+    /** leap landing point */
+    to?: Point;
+}
+
+/** Netrunner quickhack: Short Circuit through a chromed target's systems. */
+export interface HackEvent {
+    kind: "hack";
+    actor: Actor;
+    target: Actor;
+    damage: number;
+    stunned: boolean;
+    dropped: boolean;
 }
 
 /** Mortally Wounded unit rolls its Death Save instead of acting. */
@@ -87,7 +172,8 @@ export interface MarkEvent {
 }
 
 export type BattleEvent = TurnEvent | MoveEvent | ShotEvent | NoShotEvent | BlastEvent | SaveEvent
-    | LevelEvent | MarkEvent;
+    | LevelEvent | MarkEvent | CritEvent | BleedEvent | SkipEvent | ReloadEvent | SuppressEvent
+    | StabilizeEvent | RoutEvent | CoverGoneEvent | AbilityEvent | HackEvent;
 
 /** One resolved turn: the animation script plus the text feed it produced. */
 export interface TurnResult {

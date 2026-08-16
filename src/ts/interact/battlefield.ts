@@ -25,6 +25,13 @@ const MIN_SEP = 2.5;     // metres: no two units share a cell — melee is adjac
 
 export const BLAST_RADIUS = 6;    // metres: frag grenade kill zone
 export const GRENADE_RANGE = 22;  // metres: how far a frag can be thrown
+export const SMOKE_RADIUS = 5;    // metres: smoke cloud footprint
+export const SMOKE_ROUNDS = 2;    // rounds a smoke cloud hangs in the air
+export const FLASH_RADIUS = 5;    // metres: flashbang burst
+export const EMP_RADIUS = 5;      // metres: EMP discharge
+
+/** A hanging smoke cloud: hides whoever stands inside it, spoils laser locks. */
+export interface SmokeZone extends Point { r: number; rounds: number; }
 
 const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
 const dist2 = (ax: number, ay: number, bx: number, by: number): number => Math.hypot(ax - bx, ay - by);
@@ -46,9 +53,20 @@ export class Battlefield {
         {x: 13, y: 14, kind: "dumpster"}, {x: -15, y: 20, kind: "pillar"},
     ];
 
+    /** Live smoke clouds. Cleared each deployment, thinned one step per round. */
+    public static SMOKE: SmokeZone[] = [];
+
+    /**
+     * The hostile wave's original headcount (reinforcements add to it). Morale
+     * needs it because the app prunes dead enemies from its live list.
+     */
+    public static WAVE: number = 0;
+
     /** Open a fresh engagement: new street furniture, squad near, hostiles far. */
     public static deploy(party: Actor[], enemies: Actor[]): void {
         this.rollCover();
+        this.SMOKE = [];
+        this.WAVE = enemies.length;
         this.line(party, SQUAD_Y);
         this.deployEnemies(enemies);
         // frags are carried, not conjured: the squad throws what it bought or
@@ -58,7 +76,44 @@ export class Battlefield {
             e.grenades = e.frags !== undefined ? e.frags
                 : (e.rank || 1) >= 3 && Math.random() < 0.4 ? 1 : 0;
         });
-        [...party, ...enemies].forEach((a) => { a.marking = null; });   // no stale laser locks
+        // battle-scoped injuries, stances, locks and magazines start clean
+        [...party, ...enemies].forEach((a) => a.resetBattleState());
+    }
+
+    /** Is a point inside any hanging smoke? */
+    public static inSmoke(p: Point): boolean {
+        return this.SMOKE.some((s) => dist2(s.x, s.y, p.x, p.y) <= s.r);
+    }
+
+    /** Pop a fresh cloud. */
+    public static addSmoke(at: Point): void {
+        this.SMOKE.push({x: at.x, y: at.y, r: SMOKE_RADIUS, rounds: SMOKE_ROUNDS});
+    }
+
+    /** A round passed: clouds thin and the spent ones drift away. */
+    public static tickSmoke(): void {
+        this.SMOKE = this.SMOKE
+            .map((s) => ({...s, rounds: s.rounds - 1}))
+            .filter((s) => s.rounds > 0);
+    }
+
+    /**
+     * A blast levels the street furniture around it. Removes the caught cover
+     * from play and reports what was lost (cars go up in a secondary explosion).
+     */
+    public static destroyCoverNear(at: Point, radius: number): CoverSpot[] {
+        const gone = this.COVER.filter((c) => dist2(c.x, c.y, at.x, at.y) <= radius);
+        if (gone.length) {
+            this.COVER = this.COVER.filter((c) => gone.indexOf(c) < 0);
+        }
+        return gone;
+    }
+
+    /** Where a broken unit runs: the nearest street edge, away from the squad. */
+    public static routExit(from: Point): Point {
+        const x = from.x < 0 ? X_MIN : X_MAX;
+        // bolt for the far corner on their own side of the street
+        return {x, y: Math.min(Y_MAX, Math.max(from.y + 8, 36))};
     }
 
     /**
@@ -163,16 +218,20 @@ export class Battlefield {
 
     /**
      * Extra DV to hit a target at `targetPos` from `fromPos`: partial cover when
-     * a cover point sits close to the target and between it and the attacker.
+     * a cover point sits close to the target and between it and the attacker,
+     * plus concealment when the target stands inside smoke (capped together).
      */
     public static coverPenaltyAt(targetPos: Point, fromPos: Point): number {
+        let dv = 0;
         for (const c of this.COVER) {
             if (dist2(c.x, c.y, targetPos.x, targetPos.y) <= COVER_RADIUS
                 && dist2(c.x, c.y, fromPos.x, fromPos.y) < dist2(targetPos.x, targetPos.y, fromPos.x, fromPos.y)) {
-                return COVER_DV;
+                dv = COVER_DV;
+                break;
             }
         }
-        return 0;
+        if (this.inSmoke(targetPos)) { dv += COVER_DV; }
+        return Math.min(dv, 6);
     }
 
     /** Is a position tucked next to any cover point (regardless of angle)? */

@@ -22,12 +22,20 @@ export interface Plan {
     moveTo?: Point | undefined;
     target?: Actor | undefined;
     aimed?: boolean | undefined;
-    /** throw a frag at this point instead of shooting */
+    /** throw ordnance at this point instead of shooting */
     grenadeAt?: Point | undefined;
+    /** which grenade leaves the belt (defaults to frag) */
+    grenadeType?: "frag" | "smoke" | "flash" | "emp" | undefined;
     /** all-out double move that forfeits the attack (melee closing distance) */
     sprint?: boolean | undefined;
     /** sniper telegraph: paint this target now, fire the steadied shot next turn */
     markTarget?: Actor | undefined;
+    /** spend the turn patching this ally up (adjacent) */
+    stabilizeTarget?: Actor | undefined;
+    /** netrunner quickhack on a chromed target */
+    hackTarget?: Actor | undefined;
+    /** hose a dug-in target with autofire to pin them */
+    suppressTarget?: Actor | undefined;
     label: string;
 }
 
@@ -200,7 +208,15 @@ export class TacticalAI {
         const foes = enemies.filter((e) => e.canFight());
         if (!foes.length) { return {label: "hold"}; }
 
-        // a clustered enemy squad is worth a frag — but never danger-close
+        // a teammate bleeding out on the pavement outranks every gunfight
+        const medic = this.stabilizePlan(self, _allies);
+        if (medic) { return medic; }
+
+        // a netrunner with a clear head shorts the biggest chrome in view
+        const hack = this.hackPlan(self, foes);
+        if (hack) { return hack; }
+
+        // ordnance: frags on clusters, EMP on chrome, flash on knots, smoke to survive
         const frag = this.grenadePlan(self, _allies, foes);
         if (frag) { return frag; }
 
@@ -220,6 +236,18 @@ export class TacticalAI {
         if (self.weapon.weaponClass === "sniper") {
             const sniper = this.sniperPlan(self, foes);
             if (sniper) { return sniper; }
+        }
+
+        // a dug-in target that autofire can't crack is worth pinning instead:
+        // a whole magazine of noise buys a turn where they can't shoot back
+        if (self.weapon.autofire && self.mag >= 10) {
+            const dist = Battlefield.gap(here, primary);
+            const coverDV = Battlefield.coverPenaltyAt(primary, here);
+            if (coverDV > 0 && !nearest.pinned
+                && expectedNet(self, nearest, dist, coverDV, false) < 1.2
+                && Math.random() < 0.6) {
+                return {suppressTarget: nearest, label: "suppress"};
+            }
         }
 
         const candidates = this.candidates(self, here, primary, foes, run);
@@ -248,22 +276,54 @@ export class TacticalAI {
     }
 
     /**
+     * Field medicine: an ally is mortally wounded (or bleeding) within reach
+     * and we're healthy enough to break contact — go pull them back.
+     */
+    private static stabilizePlan(self: Actor, allies: Actor[]): Plan | null {
+        if (self.health < self.maxHealth * 0.35) { return null; }   // no medics about to drop themselves
+        const here = pos(self);
+        const hurt = allies.filter((a) => a !== self && a.alive
+                && ((a.mortallyWounded && !a.routed) || (a.canFight() && a.bleeding > 0)))
+            .sort((a, b) => Battlefield.gap(here, pos(a)) - Battlefield.gap(here, pos(b)))[0];
+        if (!hurt) { return null; }
+        const gap = Battlefield.gap(here, pos(hurt));
+        if (gap > self.runMeters() + 3) { return null; }   // out of reach this turn
+        // dying teammates are always worth the trip; mere bleeders only when close
+        if (!hurt.mortallyWounded && gap > 8) { return null; }
+        const moveTo = gap > 3 ? pointToward(here, pos(hurt), self.runMeters()) : undefined;
+        return {moveTo, stabilizeTarget: hurt, label: "medic"};
+    }
+
+    /** Netrunner Short Circuit: cooldown up, chromed target in range → burn it. */
+    private static hackPlan(self: Actor, foes: Actor[]): Plan | null {
+        if (!self.isNetrunner() || self.hackCooldown > 0) { return null; }
+        const here = pos(self);
+        const chromed = foes.filter((f) => f.chromed() && Battlefield.gap(here, pos(f)) <= 25)
+            .sort((a, b) => (b.rank || 1) - (a.rank || 1))[0];
+        if (!chromed) { return null; }
+        return {hackTarget: chromed, label: "hack"};
+    }
+
+    /**
      * Sniper doctrine: fire the steadied shot at a live laser lock, otherwise
      * pick the juiciest target, settle into cover if there's some close by,
      * and paint it — the visible telegraph IS the counterplay window.
      */
     private static sniperPlan(self: Actor, foes: Actor[]): Plan | null {
         const here = pos(self);
-        const locked = self.marking && self.marking.canFight() ? self.marking : null;
+        const locked = self.marking && self.marking.canFight()
+            && !Battlefield.inSmoke(pos(self.marking)) ? self.marking : null;
         if (locked) {
             const dist = Battlefield.gap(here, pos(locked));
             const cover = Battlefield.coverPenaltyAt(pos(locked), here);
             return {target: locked, aimed: bestNet(self, locked, dist, cover).aimed, label: "deadeye"};
         }
-        // best expected-damage target from where we stand
+        // best expected-damage target from where we stand — a laser can't paint
+        // through a smoke cloud, so smoked targets are off the menu
         let mark: Actor | undefined;
         let best = -1;
         for (const foe of foes) {
+            if (Battlefield.inSmoke(pos(foe))) { continue; }
             const v = expectedNet(self, foe, Battlefield.gap(here, pos(foe)),
                 Battlefield.coverPenaltyAt(pos(foe), here), false);
             if (v > best) { best = v; mark = foe; }
@@ -283,34 +343,63 @@ export class TacticalAI {
         return {moveTo, markTarget: mark, label: "mark"};
     }
 
-    /**
-     * Frag check: find a blast point that catches 2+ hostiles while every
-     * friendly (thrower included) stays a safety margin outside the radius.
-     */
-    private static grenadePlan(self: Actor, allies: Actor[], foes: Actor[]): Plan | null {
-        if ((self.grenades || 0) <= 0) { return null; }
+    /** The best cluster point for a blast of `radius`, with friendlies kept clear. */
+    private static clusterPoint(self: Actor, allies: Actor[], foes: Actor[],
+                                radius: number, minCaught: number,
+                                eligible: (f: Actor) => boolean = () => true): Point | null {
         const here = pos(self);
-        // candidate blast points: each foe, and midpoints of foe pairs
-        const points: Point[] = foes.map(pos);
-        for (let i = 0; i < foes.length; i++) {
-            for (let j = i + 1; j < foes.length; j++) {
-                const a = pos(foes[i]!), b = pos(foes[j]!);
-                if (Battlefield.gap(a, b) <= BLAST_RADIUS * 1.8) {
+        const pool = foes.filter(eligible);
+        const points: Point[] = pool.map(pos);
+        for (let i = 0; i < pool.length; i++) {
+            for (let j = i + 1; j < pool.length; j++) {
+                const a = pos(pool[i]!), b = pos(pool[j]!);
+                if (Battlefield.gap(a, b) <= radius * 1.8) {
                     points.push({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2});
                 }
             }
         }
         let best: Point | null = null;
-        let bestCaught = 1;   // require 2+ — a frag on a lone target wastes it
+        let bestCaught = minCaught - 1;
         for (const p of points) {
             if (Battlefield.gap(here, p) > GRENADE_RANGE) { continue; }
             const friendlyClose = [self, ...allies].some((a) =>
-                a.canFight() && Battlefield.gap(pos(a), p) <= BLAST_RADIUS + 2);
+                a.canFight() && Battlefield.gap(pos(a), p) <= radius + 2);
             if (friendlyClose) { continue; }
-            const caught = foes.filter((f) => Battlefield.gap(pos(f), p) <= BLAST_RADIUS).length;
+            const caught = pool.filter((f) => Battlefield.gap(pos(f), p) <= radius).length;
             if (caught > bestCaught) { bestCaught = caught; best = p; }
         }
-        return best ? {grenadeAt: best, label: "frag"} : null;
+        return best;
+    }
+
+    /**
+     * Ordnance doctrine, in priority order: EMP a chromed knot (or one big
+     * borg), frag a cluster, flashbang a cluster when frags are out, and pop
+     * defensive smoke when hurt in the open.
+     */
+    private static grenadePlan(self: Actor, allies: Actor[], foes: Actor[]): Plan | null {
+        if ((self.emps || 0) > 0) {
+            // EMP earns its slot on a single chromed heavy, not just clusters
+            const emp = this.clusterPoint(self, allies, foes, BLAST_RADIUS - 1, 1,
+                (f) => f.chromed() && ((f.rank || 1) >= 4 || foes.filter((o) => o.chromed()).length >= 2));
+            if (emp) { return {grenadeAt: emp, grenadeType: "emp", label: "emp"}; }
+        }
+        if ((self.grenades || 0) > 0) {
+            const frag = this.clusterPoint(self, allies, foes, BLAST_RADIUS, 2);
+            if (frag) { return {grenadeAt: frag, grenadeType: "frag", label: "frag"}; }
+        }
+        if ((self.flashes || 0) > 0) {
+            const flash = this.clusterPoint(self, allies, foes, BLAST_RADIUS - 1, 2);
+            if (flash) { return {grenadeAt: flash, grenadeType: "flash", label: "flash"}; }
+        }
+        if ((self.smokes || 0) > 0) {
+            // hurting and exposed: disappear behind a cloud where you stand
+            const here = pos(self);
+            if (self.health < self.maxHealth * 0.5
+                && !Battlefield.nearCover(here) && !Battlefield.inSmoke(here)) {
+                return {grenadeAt: {x: here.x, y: here.y}, grenadeType: "smoke", label: "smoke"};
+            }
+        }
+        return null;
     }
 
     /** Candidate destinations reachable this turn. */
