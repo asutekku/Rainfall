@@ -1,0 +1,166 @@
+import {Actor} from "../actors/Actor";
+import {Merc} from "../actors/Merc";
+import {Player} from "../actors/player";
+import {CharacterSpec} from "../actors/resources/CharacterCreation";
+import {Armor} from "../items/Armor";
+import {Medical, Scrap} from "../items/Scrap";
+import {Crew} from "./crew";
+import {GetItem} from "./getItem";
+import type {MercOffer} from "./mercMarket";
+import type {RunState} from "./runMap";
+
+/**
+ * Run persistence. A run is checkpointed to localStorage whenever the squad
+ * stands on the map (never mid-fight or mid-overlay), and the boot screen
+ * offers to continue it. Death deletes the save — a lost run stays lost.
+ *
+ * The snapshot is rebuilt through the same constructors that made the
+ * originals (Player from its spec, Merc from its retained market offer),
+ * then the mutated state is stamped on top — so behaviour-bearing class
+ * instances never travel through JSON, only plain data does.
+ */
+
+interface ArmorSnap { part: string; name: string; sp: number; maxSp: number; cost: number; }
+
+interface MemberSnap {
+    kind: "player" | "merc";
+    offer: MercOffer | null;              // mercs only
+    level: number; experience: number; maxExperience: number;
+    health: number; maxHealth: number;
+    luck: number; maxLuck: number;
+    humanity: number; maxHumanity: number;
+    reputation: number; kills: number; grenades: number;
+    temperament: string; auto: boolean;
+    mortallyWounded: boolean; cyberpsychosis: boolean;
+    stats: any; skills: any;
+    weapon: string;
+    upper: ArmorSnap | null; headgear: ArmorSnap | null;
+    invWeapons: string[];
+    invArmor: ArmorSnap[];
+    invMeds: Array<{name: string; cost: number; restore: number; desc: string}>;
+    invMisc: Array<{name: string; cost: number; desc: string}>;
+    chrome: string[];
+}
+
+interface SaveData {
+    v: 1;
+    spec: CharacterSpec;
+    members: MemberSnap[];
+    funds: number;
+    usedEvents: string[];
+    run: RunState;                        // plain data throughout (node saved as null)
+}
+
+export interface RestoredGame {
+    character: Actor;
+    party: Actor[];
+    crew: Crew;
+    run: RunState;
+    usedEvents: string[];
+    spec: CharacterSpec;
+}
+
+const KEY = "rainfall.run.v1";
+
+const armorSnap = (a: Armor | null): ArmorSnap | null => a ? {
+    part: a.bodyPart, name: a.name, sp: a.stoppingPower, maxSp: a.maxStoppingPower, cost: a.cost || 0,
+} : null;
+
+const rebuildArmor = (s: ArmorSnap): Armor => {
+    const a = new Armor(s.part, s.name, "", 1, s.maxSp, s.cost, "");
+    a.stoppingPower = s.sp;
+    a.maxStoppingPower = s.maxSp;
+    return a;
+};
+
+const memberSnap = (m: Actor): MemberSnap => ({
+    kind: m instanceof Merc ? "merc" : "player",
+    offer: m instanceof Merc ? m.offer : null,
+    level: m.level, experience: m.experience, maxExperience: m.maxExperience,
+    health: m.health, maxHealth: m.maxHealth,
+    luck: m.luck, maxLuck: m.maxLuck,
+    humanity: m.humanity, maxHumanity: m.maxHumanity,
+    reputation: m.reputation, kills: m.kills, grenades: m.grenades,
+    temperament: m.temperament, auto: m.auto,
+    mortallyWounded: m.mortallyWounded, cyberpsychosis: m.cyberpsychosis,
+    stats: JSON.parse(JSON.stringify(m.stats)),
+    skills: m.snapshotSkills(),
+    weapon: m.weapon.name,
+    upper: armorSnap(m.equipment.upper as Armor | null),
+    headgear: armorSnap(m.equipment.headgear as Armor | null),
+    invWeapons: m.inventory.weapons.map((w) => w.name),
+    invArmor: m.inventory.armor.map((a) => armorSnap(a)!),
+    invMeds: m.inventory.medical.map((x: any) => ({name: x.name, cost: x.cost || 0, restore: x.restorePoints || 0, desc: x.description || ""})),
+    invMisc: m.inventory.misc.map((x: any) => ({name: x.name, cost: x.cost || 0, desc: x.description || ""})),
+    chrome: m.cybernetics.map((c) => c.name),
+});
+
+/** Stamp the mutable state from a snapshot onto a freshly constructed actor. */
+const stamp = (a: Actor, s: MemberSnap): Actor => {
+    a.level = s.level; a.experience = s.experience; a.maxExperience = s.maxExperience;
+    a.maxHealth = s.maxHealth; a.health = s.health;
+    a.maxLuck = s.maxLuck; a.luck = s.luck;
+    a.maxHumanity = s.maxHumanity; a.humanity = s.humanity;
+    a.reputation = s.reputation; a.kills = s.kills; a.grenades = s.grenades;
+    a.temperament = s.temperament; a.auto = s.auto;
+    a.mortallyWounded = s.mortallyWounded; a.cyberpsychosis = s.cyberpsychosis;
+    a.stats = s.stats;
+    a.restoreSkills(s.skills);
+    // chrome first: passives (cyberSP, initiative) read the list live, and the
+    // direct assignment avoids re-charging Humanity for an install already paid
+    a.cybernetics = s.chrome.map((n) => GetItem.cyberware(n));
+    a.weapon = GetItem.weapon(s.weapon);
+    a.weapon.equipped = true;
+    a.equipment.upper = s.upper ? rebuildArmor(s.upper) : null;
+    a.equipment.headgear = s.headgear ? rebuildArmor(s.headgear) : null;
+    a.inventory.weapons = s.invWeapons.map((n) => { const w = GetItem.weapon(n); w.equipped = false; return w; });
+    a.inventory.armor = s.invArmor.map(rebuildArmor);
+    a.inventory.medical = s.invMeds.map((x) => new Medical(x.name, x.cost, x.restore, x.desc));
+    a.inventory.misc = s.invMisc.map((x) => new Scrap(x.name, x.cost, x.desc));
+    return a;
+};
+
+export class SaveGame {
+
+    /** A resumable run exists (cheap check for the boot screen). */
+    public static exists(): boolean {
+        try { return !!window.localStorage.getItem(KEY); } catch { return false; }
+    }
+
+    /** Checkpoint the run. Call only from safe moments (standing on the map). */
+    public static save(spec: CharacterSpec, party: Actor[], crew: Crew, run: RunState, usedEvents: string[]): void {
+        try {
+            const data: SaveData = {
+                v: 1, spec,
+                members: party.map(memberSnap),
+                funds: crew.funds,
+                usedEvents: usedEvents.slice(),
+                run: {...run, node: null},
+            };
+            window.localStorage.setItem(KEY, JSON.stringify(data));
+        } catch { /* quota or private mode — a missing save is not worth crashing over */ }
+    }
+
+    /** Rebuild the whole game from the checkpoint; null if absent or unreadable. */
+    public static load(): RestoredGame | null {
+        try {
+            const raw = window.localStorage.getItem(KEY);
+            if (!raw) { return null; }
+            const data = JSON.parse(raw) as SaveData;
+            if (data.v !== 1 || !data.members.length || !data.run) { return null; }
+            const party = data.members.map((s) =>
+                stamp(s.kind === "merc" && s.offer ? new Merc(s.offer) : new Player(data.spec), s));
+            const crew = new Crew(data.funds).activate();
+            const run: RunState = {...data.run, node: null, outcome: "active"};
+            return {character: party[0]!, party, crew, run, usedEvents: data.usedEvents || [], spec: data.spec};
+        } catch {
+            SaveGame.clear();     // a corrupt save is worse than no save
+            return null;
+        }
+    }
+
+    /** Death, or a new character: the run is gone. */
+    public static clear(): void {
+        try { window.localStorage.removeItem(KEY); } catch { /* ignore */ }
+    }
+}

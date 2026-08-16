@@ -47,7 +47,8 @@ export class Economy {
         if (killer.faction) { return []; }              // enemies don't keep loot
         const msgs: string[] = [];
         const rank = victim.rank || 1;
-        const chance = 0.2 + 0.06 * rank;
+        // Nomads strip a wreck to the frame — their finds come up more often.
+        const chance = 0.2 + 0.06 * rank + (killer.isNomad() ? 0.12 : 0);
         if (victim.weapon && victim.weapon.name !== "Fists" && Math.random() < chance) {
             const w = victim.weapon.clone();
             w.equipped = false;
@@ -68,6 +69,10 @@ export class Economy {
             msgs.push(rare
                 ? `★ ${killer.name} scavenges rare ${worn.name} (SP ${worn.stoppingPower})!`
                 : `${killer.name} scavenges ${worn.name} (SP ${worn.stoppingPower}).`);
+        }
+        if (Math.random() < 0.08) {
+            killer.grenades += 1;
+            msgs.push(`${killer.name} pockets a frag grenade.`);
         }
         // pocket loot: meds the crew can actually use, junk the fence will take
         if (Math.random() < 0.16) {

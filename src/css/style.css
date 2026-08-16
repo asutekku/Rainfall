@@ -648,6 +648,11 @@ progress::-moz-progress-bar { background:var(--rust); }
     .pc .pf { width:42px; height:42px; }
     .autoChip { min-height:24px; padding:0 7px; display:inline-flex; align-items:center; }
 
+    /* More-sheet dedupe: Combat and Inventory already live on the tab bar
+       as Arena and Gear — showing them again in More is pure noise */
+    nav:not(.mtabs) button[title="Combat"],
+    nav:not(.mtabs) button[title="Inventory"] { display:none; }
+
     /* --- nav rail becomes the More sheet (the tab bar is a <nav> too: exclude it) --- */
     nav:not(.mtabs) {
         position:fixed; left:0; right:0; top:auto;
@@ -1058,6 +1063,9 @@ progress::-moz-progress-bar { background:var(--rust); }
 .gearRow .mkNameWrap { flex:1; }
 .gearEquip { margin-left:auto; flex:none; font-size:10px; letter-spacing:.08em; padding:7px 12px; }
 
+.roleEdge { margin:4px 0 8px; padding:7px 10px; color:var(--cyan); font-size:11.5px; line-height:1.5;
+    background:var(--panel); border-left:2px solid var(--cyanDim); }
+
 /* character sheet — skills tab */
 .skillList { display:flex; flex-direction:column; gap:5px; font-family:var(--mono); }
 .skillHint { color:var(--dim); font-size:11px; line-height:1.5; margin-bottom:8px; }
@@ -1074,6 +1082,7 @@ progress::-moz-progress-bar { background:var(--rust); }
 /* med items on the gear tab */
 .gearSlot.med { color:var(--good); border-color:var(--good); }
 .useBtn { background:var(--good); border-color:var(--good); }
+.useBtn.crit { background:var(--crit); border-color:var(--crit); color:var(--ink); }
 
 /* squad roster: YOU on top, crew below */
 .pc.you { border-left:2px solid var(--rust); }

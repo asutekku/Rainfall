@@ -98,6 +98,18 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 return `${med.name} into the med pouch.`;
             },
         });
+        out.push({
+            name: "Crate of frags", cost: 120, detail: "ordnance · +1 grenade per member",
+            info: [
+                ["Effect", "every standing member pockets one frag grenade"],
+                ["Use", "thrown in battle — 6d6 in a blast radius, armour halved"],
+            ],
+            blurb: "Militech surplus, crate stencils sanded off.",
+            buy: () => {
+                party.forEach((m) => { if (m.canFight()) { m.grenades += 1; } });
+                return "Frags handed round. Everyone stands a little straighter.";
+            },
+        });
         const cw = cyberwareData[(Math.random() * cyberwareData.length) << 0]!;
         out.push({
             name: cw.name, cost: cw.cost, detail: `chrome · HL ${cw.humanityLoss} (installed on the spot)`,
@@ -155,7 +167,14 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         this.setState({notice: line, bought: this.state.bought.concat(item.name)});
     }
 
+    /** Street rate: 40%, plus 5% per rank of the crew's best Fixer ("Operator"). */
+    private fenceRate(): number {
+        const op = this.props.party.reduce((m, p) => Math.max(m, p.operatorBonus()), 0);
+        return 0.4 + op * 0.05;
+    }
+
     private fenceList(): Fence[] {
+        const rate = this.fenceRate();
         const out: Fence[] = [];
         this.props.party.forEach((owner) => {
             owner.inventory.weapons.forEach((w, idx) => {
@@ -163,21 +182,21 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 out.push({
                     owner, kind: "weapon", idx, name: w.name,
                     detail: `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""} · ${owner.name.split(" ")[0]}'s stash`,
-                    price: Math.max(5, Math.floor(w.cost * 0.4)),
+                    price: Math.max(5, Math.floor(w.cost * rate)),
                 });
             });
             owner.inventory.armor.forEach((a, idx) => {
                 out.push({
                     owner, kind: "armor", idx, name: a.name,
                     detail: `SP ${a.stoppingPower} · ${owner.name.split(" ")[0]}'s stash`,
-                    price: Math.max(5, Math.floor(a.cost * 0.4)),
+                    price: Math.max(5, Math.floor(a.cost * rate)),
                 });
             });
             owner.inventory.misc.forEach((m, idx) => {
                 out.push({
                     owner, kind: "misc", idx, name: m.name,
                     detail: `junk · ${owner.name.split(" ")[0]}'s stash`,
-                    price: Math.max(2, Math.floor((m.cost || 0) * 0.4)),
+                    price: Math.max(2, Math.floor((m.cost || 0) * rate)),
                 });
             });
         });
@@ -249,7 +268,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                         <div className={"mkStock"}>
                             {[...this.stock, this.service].map((item, i) => this.item(item, "s" + i))}
                         </div>
-                        <h4 className={"mkHead"}>The fence buys · 40% street rate</h4>
+                        <h4 className={"mkHead"}>The fence buys · {Math.round(this.fenceRate() * 100)}% street rate{this.fenceRate() > 0.4 ? " (Operator\u2019s cut)" : ""}</h4>
                         {fence.length === 0 && <div className={"mkEmpty"}>Nothing in the duffel worth fencing.</div>}
                         <div className={"mkStock"}>
                             {fence.map((f, i) => (

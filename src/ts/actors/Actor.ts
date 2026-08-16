@@ -831,6 +831,31 @@ export class Actor extends GameObject {
         return this.isNetrunner() ? this.roleRank : 2;
     }
 
+    /** Deep-copy of the skill tree, for the save file. */
+    public snapshotSkills(): any {
+        return JSON.parse(JSON.stringify(this.skills));
+    }
+
+    /** Overwrite the skill tree from a save-file snapshot. */
+    public restoreSkills(data: any): void {
+        if (data && data.ref && data.tech) { this.skills = data; }
+    }
+
+    /** One line on what this role's passive actually does in the run. */
+    public roleEdge(): string {
+        const r = this.roleRank;
+        if (this.isSolo()) { return `Combat Awareness: +hit / +initiative / first-strike damage from a ${r}-point pool, every fight.`; }
+        if (this.isCop()) { return `Backup: +${r} damage on every landed hit — someone's always covering.`; }
+        if (this.isNetrunner()) { return `Interface ${r}: the crew's deck-jockey — NET dives run on this rank.`; }
+        if (this.isTechie()) { return `Maker: hammers ${r} SP back into everyone's armour after each cleared node.`; }
+        if (this.isFixer()) { return `Operator: +${r * 10}% eddies looted, fence pays ${40 + r * 5}% instead of 40%.`; }
+        if (this.isCorporate()) { return `Teamwork: a ${r * 50}¥ stipend wired to the crew at every sector clear.`; }
+        if (this.isNomad()) { return "Family knows salvage: noticeably better scavenge odds off every body."; }
+        if (this.isMedia()) { return "Credibility: +1 waypoint from every intel score, faster Reputation, an edge in COOL plays."; }
+        if (this.isRockerboy()) { return `Charismatic Impact: +${r} on COOL event checks, Reputation comes easy.`; }
+        return "No role edge.";
+    }
+
     /*draw(context) {
         context.clearRect(this.position[0], this.position[1], 3, 3);
         context.fillStyle = this.color;

@@ -83,6 +83,9 @@ export class RunController {
             // Word travels. Boss and elite scalps build the character's name.
             if (node.type === "boss") { state.character.gainReputation(2); }
             if (node.type === "elite") { state.character.gainReputation(1); }
+            // Techie "Maker": between stops they service the crew's armour.
+            const patched = RunController.makerPass(state.party);
+            if (patched > 0) { extra = [...extra, {msg: `— the Techie hammers ${patched} SP back into the squad's armour —`}]; }
         }
         const messages = [...extra, ...state.messages].slice(0, log);
         if (node.type === "boss") {
@@ -99,6 +102,25 @@ export class RunController {
             },
             screen: "map", messages,
         };
+    }
+
+    /** Techie Maker pass: each Techie repairs every member's worn armour by rank SP. */
+    private static makerPass(party: Actor[]): number {
+        let total = 0;
+        party.forEach((t) => {
+            const fix = t.makerRepair();
+            if (fix <= 0 || !t.canFight()) { return; }
+            party.forEach((m) => {
+                [m.equipment.upper, m.equipment.headgear].forEach((a: any) => {
+                    if (a && a.stoppingPower < a.maxStoppingPower) {
+                        const d = Math.min(fix, a.maxStoppingPower - a.stoppingPower);
+                        a.stoppingPower += d;
+                        total += d;
+                    }
+                });
+            });
+        });
+        return total;
     }
 
     /** One resolved round in a combat node: wipe or clear → debrief, else continue. */
@@ -248,17 +270,22 @@ export class RunController {
     /** Next sector: a new city, a harder one, with the crew you walked out with. */
     public static nextSector(state: InterfaceAppState, log: number): Patch {
         const sector = (state.run ? state.run.sector : 0) + 1;
+        let stipend = 0;
         state.party.forEach((p) => {
             if (!p.canFight()) { p.revive(); }
             p.health = p.maxHealth;
             p.refreshLuck();               // a cleared sector resets the luck pool
             Economy.repairArmor(p);
+            stipend += p.corpStipend();    // Corporate "Teamwork": the quarterly wire lands
         });
+        if (stipend > 0) { Purse.earn(state.character, stipend); }
         return {
             run: RunController.freshRun(sector), screen: "map", report: null, offers: [],
             eventId: null, usedEvents: [],       // new streets, fresh encounter pool
             activeMainPanel: "Combat", mobileTab: "arena",
-            messages: [{msg: `— sector ${sector}: new streets, worse people —`} as any,
+            messages: [
+                ...(stipend > 0 ? [{msg: `— corporate stipend wired in: +${stipend}¥ —`} as any] : []),
+                {msg: `— sector ${sector}: new streets, worse people —`} as any,
                 ...state.messages].slice(0, log),
         };
     }
@@ -273,6 +300,7 @@ export class RunController {
         const character = state.character;
         character.revive();
         Economy.stripToBasics(character);
+        character.grenades = 2;   // basics include two frags
         const crew = new Crew().activate();
         return {
             character, party: [character, new Merc(MercMarket.starter(1))], crew,

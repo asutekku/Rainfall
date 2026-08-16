@@ -32,6 +32,7 @@ import {MetaOverlay} from "./run/metaOverlay";
 import {OrderCtx, PlaybackBundle} from "./combat/battleScene";
 import {BattleEvent} from "../interact/battleEvents";
 import {FeedLog, missionClock} from "../interact/feedLog";
+import {SaveGame} from "../interact/saveGame";
 
 /** Which run-loop screen is on top. "combat" falls through to the ops shell. */
 export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "event" | "net" | "end";
@@ -89,6 +90,7 @@ export interface InterfaceAppState {
 export class App extends React.Component<{}, InterfaceAppState> {
 
     private logLength = 30;
+    private saveTimer: number | null = null;
     private queue: Actor[] = [];             // initiative order, minus the acting unit
     private pendingMsgs: any[] = [];         // engine messages held back until the animation lands
     private pendingEvents: BattleEvent[] = [];   // the animated turn's events, for the feed summary
@@ -139,13 +141,35 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     public override componentWillUnmount() {
         this.clearTurnTimer();
+        if (this.saveTimer !== null) { window.clearTimeout(this.saveTimer); }
+    }
+
+    /**
+     * Checkpointing: whenever the squad stands on the map, the run is written
+     * to localStorage (debounced — state settles in bursts). Death spends the
+     * save: once the revive is gone and the run-over screen is up, it's deleted.
+     */
+    public override componentDidUpdate() {
+        const s = this.state;
+        if (s.run && s.screen === "map" && !s.creating) {
+            if (this.saveTimer !== null) { window.clearTimeout(this.saveTimer); }
+            this.saveTimer = window.setTimeout(() => {
+                const st = this.state;
+                if (st.run && st.screen === "map" && !st.creating) {
+                    SaveGame.save(st.characterSpec, st.party, st.crew, st.run, st.usedEvents);
+                }
+            }, 500) as any;
+        }
+        if (s.run && s.screen === "end" && s.run.reviveUsed) { SaveGame.clear(); }
     }
 
     public override render() {
         // Character creation is a full-screen takeover shown before / on demand.
         if (this.state.creating) {
             return <Creator initial={this.state.characterSpec} canCancel={this.state.run !== null}
-                            onDeploy={this.deployCharacter} onCancel={this.closeCreator}/>;
+                            canContinue={this.state.run === null && SaveGame.exists()}
+                            onDeploy={this.deployCharacter} onCancel={this.closeCreator}
+                            onContinue={this.continueRun}/>;
         }
         // Run-loop takeovers that sit ABOVE the shell. The city map and combat
         // both render inside the shell (via Stage) so the nav / bottom bar stay.
@@ -202,6 +226,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             <Hud actor={this.getCurrentActor()} crew={this.state.crew}/>
             <Sidebar active={this.state.activeMainPanel}
                      auto={this.state.auto}
+                     inRun={this.state.run !== null}
                      activeSelection={this.updateSelection}
                      onAuto={this.toggleAuto}
                      onCreate={this.openCreator}/>
@@ -265,6 +290,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private deployCharacter = (spec: CharacterSpec) => {
         this.resetSequencer();
         const character = new Player(spec);
+        character.grenades = 2;   // opening kit: two frags
         // Never start alone: the fixer throws in a rookie with the job.
         const party = [character, new Merc(MercMarket.starter(1))];
         // Seed a placeholder wave so the combat shell never reads an empty array.
@@ -279,6 +305,25 @@ export class App extends React.Component<{}, InterfaceAppState> {
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
             messages: [{msg: `— ${character.name} hits the street with a rookie in tow —`} as any],
             playback: null, orders: null, turnOrder: [], auto: true,
+        });
+    };
+
+    /** Resume the checkpointed run: same character, same crew, same streets. */
+    private continueRun = () => {
+        const g = SaveGame.load();
+        if (!g) { this.forceUpdate(); return; }
+        this.resetSequencer();
+        // Seed a placeholder wave so the combat shell never reads an empty array.
+        const enemies = ActorController.getEnemies(2, RunController.levelOf(g.party));
+        Battlefield.deploy(g.party, enemies);
+        this.setState({
+            creating: false, characterSpec: g.spec, character: g.character, party: g.party,
+            crew: g.crew, run: g.run, usedEvents: g.usedEvents, screen: "map",
+            currentEnemies: enemies, activeChar: g.character, activeEnemy: enemies[0],
+            report: null, eventId: null, offers: [],
+            activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
+            messages: [{msg: "— back on the street, right where you left it —"} as any],
+            playback: null, orders: null, turnOrder: [],
         });
     };
 
@@ -303,11 +348,13 @@ export class App extends React.Component<{}, InterfaceAppState> {
         let nextRun = run;
         if (outcome.restoreRevive) { nextRun = {...nextRun, reviveUsed: false}; }
         if (outcome.reveal) {
-            // intel: uncover N random still-hidden waypoints on the holo-map
+            // intel: uncover N random still-hidden waypoints on the holo-map.
+            // A Media in the crew works their sources: one extra waypoint.
+            const mediaBonus = state.party.some((p) => p.isMedia() && p.canFight()) ? 1 : 0;
             const known = new Set([...nextRun.clearedIds, ...nextRun.reachableIds, ...nextRun.revealedIds]);
             const hidden = nextRun.nodes.filter((n) => !known.has(n.id) && n.type !== "boss");
             const picked: string[] = [];
-            for (let i = 0; i < outcome.reveal && hidden.length > 0; i++) {
+            for (let i = 0; i < outcome.reveal + mediaBonus && hidden.length > 0; i++) {
                 picked.push(hidden.splice((Math.random() * hidden.length) << 0, 1)[0]!.id);
             }
             if (picked.length) {
@@ -380,6 +427,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     /** Re-open the creator (nav "New Character" / abandon). */
     private openCreator = () => {
         this.resetSequencer();
+        SaveGame.clear();     // a new character starts clean — the old checkpoint dies here
         this.setState({creating: true, report: null, playback: null, orders: null, turnOrder: []});
     };
     private closeCreator = () => this.setState({creating: false});

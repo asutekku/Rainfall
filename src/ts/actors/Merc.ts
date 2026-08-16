@@ -20,6 +20,8 @@ export class Merc extends Actor {
 
     /** The market offer they came from — stable identity, unlike a rolled name. */
     public offerId: string;
+    /** The full offer, retained so a save file can reconstruct this merc. */
+    public offer: MercOffer;
     /** What the crew paid for them — shown on the roster, and what a buyout is priced against. */
     public fee: number;
     /** Market tier: Rookie / Pro / Veteran / Legend. */
@@ -30,9 +32,11 @@ export class Merc extends Actor {
         this.gender = Name.getGender();
         this.name = offer.name;
         this.role = new Role(offer.role);
+        this.grenades = 1;   // every hire walks in with one frag on the belt
         this.skill = this.role.skill;
         this.lifepath = CharacterCreation.randomLifepath();
         this.offerId = offer.id;
+        this.offer = offer;
         this.fee = offer.price;
         this.tier = offer.tier;
         this.auto = true;                     // hired guns fight themselves

@@ -56,10 +56,14 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
     private useMed(a: Actor, idx: number) {
         if (!this.canEquip()) { return; }
         const med = a.inventory.medical.splice(idx, 1)[0] as Medical;
+        const wasDying = a.mortallyWounded;
+        if (wasDying) { a.stabilize(); }               // meds stop the bleeding first
         const healed = a.heal(Math.min(med.restorePoints, a.maxHealth));
-        this.notice(healed > 0
-            ? `${a.name.split(" ")[0]} uses the ${med.name} (+${healed} HP).`
-            : `${a.name.split(" ")[0]} burns the ${med.name} on nothing — already at full health.`);
+        this.notice(wasDying
+            ? `${a.name.split(" ")[0]} is stabilised by the ${med.name}${healed > 0 ? ` (+${healed} HP)` : ""} — back from the brink.`
+            : healed > 0
+                ? `${a.name.split(" ")[0]} uses the ${med.name} (+${healed} HP).`
+                : `${a.name.split(" ")[0]} burns the ${med.name} on nothing — already at full health.`);
     }
 
     private equipArmor(a: Actor, idx: number) {
@@ -110,6 +114,13 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                         </span>
                     </div>
                 )}
+                <div className={"gearRow eq"}>
+                    <span className={"gearSlot"}>✸</span>
+                    <span className={"mkNameWrap"}>
+                        <span className={"mkName"}>Frag grenades ×{a.grenades}</span>
+                        <span className={"mkDetail"}>thrown in battle · restock at markets or off bodies</span>
+                    </span>
+                </div>
             </div>);
     }
 
@@ -153,9 +164,10 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                             <span className={"mkName"}>{m.name}</span>
                             <span className={"mkDetail"}>{m.restorePoints >= 999 ? "full heal" : `heals ${m.restorePoints} HP`}</span>
                         </span>
-                        <button className={"mkBuy gearEquip useBtn"} disabled={lock || a.health >= a.maxHealth}
-                                title={a.health >= a.maxHealth ? "already at full health" : undefined}
-                                onClick={() => this.useMed(a, i)}>USE</button>
+                        <button className={"mkBuy gearEquip useBtn" + (a.mortallyWounded ? " crit" : "")}
+                                disabled={lock || (!a.mortallyWounded && a.health >= a.maxHealth)}
+                                title={a.mortallyWounded ? "stop the dying" : a.health >= a.maxHealth ? "already at full health" : undefined}
+                                onClick={() => this.useMed(a, i)}>{a.mortallyWounded ? "STABILIZE" : "USE"}</button>
                     </div>))}
                 {misc.map((m: any, i: number) => (
                     <div key={"m" + i} className={"gearRow"}>
