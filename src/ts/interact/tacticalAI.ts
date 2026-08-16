@@ -1,6 +1,6 @@
 import {Actor} from "../actors/Actor";
 import {Weapon} from "../items/Weapon";
-import {Battlefield, Point} from "./battlefield";
+import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "./battlefield";
 import {rangeDV} from "./rangeTable";
 
 /**
@@ -21,6 +21,8 @@ export interface Plan {
     moveTo?: Point | undefined;
     target?: Actor | undefined;
     aimed?: boolean | undefined;
+    /** throw a frag at this point instead of shooting */
+    grenadeAt?: Point | undefined;
     label: string;
 }
 
@@ -185,6 +187,10 @@ export class TacticalAI {
         const foes = enemies.filter((e) => e.canFight());
         if (!foes.length) { return {label: "hold"}; }
 
+        // a clustered enemy squad is worth a frag — but never danger-close
+        const frag = this.grenadePlan(self, _allies, foes);
+        if (frag) { return frag; }
+
         const prof = profileFor(self);
         const run = self.runMeters();
         const here = pos(self);
@@ -214,6 +220,36 @@ export class TacticalAI {
             aimed: bestAimed,
             label: moved ? (Battlefield.nearCover(best) ? "cover" : "reposition") : "attack",
         };
+    }
+
+    /**
+     * Frag check: find a blast point that catches 2+ hostiles while every
+     * friendly (thrower included) stays a safety margin outside the radius.
+     */
+    private static grenadePlan(self: Actor, allies: Actor[], foes: Actor[]): Plan | null {
+        if ((self.grenades || 0) <= 0) { return null; }
+        const here = pos(self);
+        // candidate blast points: each foe, and midpoints of foe pairs
+        const points: Point[] = foes.map(pos);
+        for (let i = 0; i < foes.length; i++) {
+            for (let j = i + 1; j < foes.length; j++) {
+                const a = pos(foes[i]!), b = pos(foes[j]!);
+                if (Battlefield.gap(a, b) <= BLAST_RADIUS * 1.8) {
+                    points.push({x: (a.x + b.x) / 2, y: (a.y + b.y) / 2});
+                }
+            }
+        }
+        let best: Point | null = null;
+        let bestCaught = 1;   // require 2+ — a frag on a lone target wastes it
+        for (const p of points) {
+            if (Battlefield.gap(here, p) > GRENADE_RANGE) { continue; }
+            const friendlyClose = [self, ...allies].some((a) =>
+                a.canFight() && Battlefield.gap(pos(a), p) <= BLAST_RADIUS + 2);
+            if (friendlyClose) { continue; }
+            const caught = foes.filter((f) => Battlefield.gap(pos(f), p) <= BLAST_RADIUS).length;
+            if (caught > bestCaught) { bestCaught = caught; best = p; }
+        }
+        return best ? {grenadeAt: best, label: "frag"} : null;
     }
 
     /** Candidate destinations reachable this turn. */

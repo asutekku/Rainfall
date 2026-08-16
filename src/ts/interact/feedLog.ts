@@ -1,5 +1,5 @@
 import {Actor} from "../actors/Actor";
-import {BattleEvent, MoveEvent, SaveEvent, ShotEvent} from "./battleEvents";
+import {BattleEvent, BlastEvent, MoveEvent, SaveEvent, ShotEvent} from "./battleEvents";
 
 /**
  * The surveillance feed. Combat used to dump every engine message into the
@@ -71,6 +71,18 @@ export class FeedLog {
                 kill = true;
             } else {
                 bits.push(`${verb} ${tgt} — ${shot.damage} dmg → ${Math.max(0, shot.target.health)}hp`);
+            }
+        }
+
+        const blast = events.find((e) => e.kind === "blast") as BlastEvent | undefined;
+        if (blast) {
+            if (!blast.victims.length) {
+                bits.push("lobs a frag — nobody caught");
+            } else {
+                const roll = blast.victims.map((v) =>
+                    `${callsign(v.target)} ${v.damage} dmg${v.dropped ? " DOWN" : ""}`).join(", ");
+                bits.push(`lobs a frag — ${roll}`);
+                if (blast.victims.some((v) => v.dropped)) { kill = true; }
             }
         }
 

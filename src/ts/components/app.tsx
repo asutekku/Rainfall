@@ -222,7 +222,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
                    onPlaybackDone={this.onPlaybackDone}
                    onPickMove={this.onPickMove} onClearMove={this.onClearMove}
                    onPickTarget={this.onPickTarget}
-                   onToggleAim={this.onToggleAim}
+                   onToggleAim={this.onToggleAim} onToggleGrenade={this.onToggleGrenade}
                    onExecute={this.executeOrders} onPass={this.passTurn}
                    onToggleAuto={this.toggleAuto}/>
             <MobileTabs tab={this.state.mobileTab} more={this.state.mobileMore}
@@ -483,7 +483,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             const target = foes.length ? foes.reduce((a, b) =>
                 Battlefield.distance(unit!, a) <= Battlefield.distance(unit!, b) ? a : b) : null;
             this.setState({
-                orders: {actor: unit, pendingMove: null, target, aimed: false},
+                orders: {actor: unit, pendingMove: null, target, aimed: false, grenadeMode: false, grenadeAt: null},
                 activeChar: unit, activeEnemy: target || this.state.activeEnemy,
             });
         } else {
@@ -492,7 +492,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     /** Resolve one unit's turn through the engine and ship it to the animator. */
-    private resolveTurn = (unit: Actor, order?: {moveTo?: Point | undefined; target?: Actor | undefined; aimed?: boolean | undefined}) => {
+    private resolveTurn = (unit: Actor, order?: {moveTo?: Point | undefined; target?: Actor | undefined; aimed?: boolean | undefined; grenadeAt?: Point | undefined}) => {
         const res = Combat.takeTurn(unit, this.state.party, this.state.currentEnemies, order);
         this.pendingMsgs = res.messages;
         this.pendingEvents = res.events;
@@ -540,7 +540,10 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     private onPickMove = (p: Point) => {
         const o = this.state.orders;
-        if (o) { this.setState({orders: {...o, pendingMove: p}}); }
+        if (!o) { return; }
+        // in frag mode a street tap places the blast pin instead of a move
+        if (o.grenadeMode) { this.setState({orders: {...o, grenadeAt: p}}); }
+        else { this.setState({orders: {...o, pendingMove: p}}); }
     };
 
     private onClearMove = () => {
@@ -558,6 +561,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (o) { this.setState({orders: {...o, aimed: !o.aimed}}); }
     };
 
+    private onToggleGrenade = () => {
+        const o = this.state.orders;
+        if (o) { this.setState({orders: {...o, grenadeMode: !o.grenadeMode, grenadeAt: null}}); }
+    };
+
     private executeOrders = () => {
         const o = this.state.orders;
         if (!o) { return; }
@@ -565,6 +573,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             moveTo: o.pendingMove || undefined,
             target: o.target && o.target.canFight() ? o.target : undefined,
             aimed: o.aimed,
+            grenadeAt: o.grenadeMode && o.grenadeAt ? o.grenadeAt : undefined,
         });
     };
 

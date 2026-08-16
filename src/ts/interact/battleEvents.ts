@@ -47,6 +47,24 @@ export interface NoShotEvent {
     actor: Actor;
 }
 
+export interface BlastVictim {
+    target: Actor;
+    /** HP that got through (armour is halved against blasts) */
+    damage: number;
+    /** dove clear for half damage */
+    dodged: boolean;
+    dropped: boolean;
+}
+
+/** A frag goes off: everyone inside the radius — both sides — eats the roll. */
+export interface BlastEvent {
+    kind: "blast";
+    actor: Actor;
+    at: Point;
+    radius: number;
+    victims: BlastVictim[];
+}
+
 /** Mortally Wounded unit rolls its Death Save instead of acting. */
 export interface SaveEvent {
     kind: "save";
@@ -59,7 +77,7 @@ export interface LevelEvent {
     actor: Actor;
 }
 
-export type BattleEvent = TurnEvent | MoveEvent | ShotEvent | NoShotEvent | SaveEvent | LevelEvent;
+export type BattleEvent = TurnEvent | MoveEvent | ShotEvent | NoShotEvent | BlastEvent | SaveEvent | LevelEvent;
 
 /** One resolved turn: the animation script plus the text feed it produced. */
 export interface TurnResult {

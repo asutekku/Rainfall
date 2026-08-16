@@ -7,11 +7,11 @@ import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./message
 import {Skill} from "../items/Skill";
 import {rangeDV} from "./rangeTable";
 import {Check} from "./check";
-import {Battlefield, Point} from "./battlefield";
+import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "./battlefield";
 import {TacticalAI, Plan} from "./tacticalAI";
 import {Economy} from "./economy";
 import {BattleRecorder} from "./battleReport";
-import {BattleEvent, TurnResult} from "./battleEvents";
+import {BattleEvent, BlastVictim, TurnResult} from "./battleEvents";
 
 const Log = en_US.Log;
 
@@ -266,7 +266,8 @@ export class Combat {
      * the battle scene) and the feed messages this turn produced.
      */
     public static takeTurn(c: Actor, party: Actor[], enemies: Actor[],
-                           order?: {moveTo?: Point | undefined; target?: Actor | undefined; aimed?: boolean | undefined}): TurnResult {
+                           order?: {moveTo?: Point | undefined; target?: Actor | undefined;
+                                    aimed?: boolean | undefined; grenadeAt?: Point | undefined}): TurnResult {
         this.messages = [];
         this.events = [];
         const side: "party" | "enemy" = party.indexOf(c) >= 0 ? "party" : "enemy";
@@ -278,9 +279,10 @@ export class Combat {
             const allies: Actor[] = side === "party" ? party : enemies;
             const others: Actor[] = [...party, ...enemies].filter((a) => a !== c);
             const plan: Plan = order
-                ? {moveTo: order.moveTo, target: order.target, aimed: order.aimed, label: "manual"}
+                ? {moveTo: order.moveTo, target: order.target, aimed: order.aimed,
+                   grenadeAt: order.grenadeAt, label: "manual"}
                 : TacticalAI.plan(c, allies, foes);
-            this.applyPlan(c, plan, foes, others);
+            this.applyPlan(c, plan, foes, allies, others);
         }
         return {events: this.events, messages: this.messages.flat().reverse()};
     }
@@ -306,8 +308,8 @@ export class Combat {
         return out;
     }
 
-    /** Apply a tactical plan: move (if any), then attack the chosen target. */
-    private static applyPlan(self: Actor, plan: Plan, foes: Actor[], others: Actor[]): void {
+    /** Apply a tactical plan: move (if any), then throw a frag or attack the chosen target. */
+    private static applyPlan(self: Actor, plan: Plan, foes: Actor[], allies: Actor[], others: Actor[]): void {
         if (plan.moveTo) {
             const before: number = this.nearestFoeGap(self, foes);
             const from: Point = {x: self.position.x, y: self.position.y};
@@ -322,9 +324,48 @@ export class Combat {
                 this.messages.push(new MessageStr(`${self.name} ${verb} (${Math.round(after)}m).`));
             }
         }
+        if (plan.grenadeAt && (self.grenades || 0) > 0) {
+            this.throwGrenade(self, plan.grenadeAt, foes, allies);
+            return;   // the throw is the turn's attack
+        }
         if (plan.target && plan.target.canFight()) {
             this.attack(self, plan.target, plan.aimed);
         }
+    }
+
+    /**
+     * A frag goes off at `at`: every fighter inside the blast radius — friend
+     * or foe — takes 6d6 with armour halved; a reflex check dives for half.
+     * (House rule, deliberately simpler than tabletop RED.)
+     */
+    public static throwGrenade(self: Actor, at: Point, foes: Actor[], allies: Actor[]): void {
+        if ((self.grenades || 0) <= 0) { return; }
+        const from: Point = {x: self.position.x, y: self.position.y};
+        const target: Point = Battlefield.gap(from, at) <= GRENADE_RANGE ? at
+            : (() => {   // over-arm throws fall short along the line
+                const g = Battlefield.gap(from, at);
+                return {x: from.x + (at.x - from.x) * (GRENADE_RANGE / g),
+                        y: from.y + (at.y - from.y) * (GRENADE_RANGE / g)};
+            })();
+        self.grenades -= 1;
+        const victims: BlastVictim[] = [];
+        for (const t of [...allies, ...foes]) {
+            if (!t.canFight()) { continue; }
+            if (Battlefield.gap({x: t.position.x, y: t.position.y}, target) > BLAST_RADIUS) { continue; }
+            let dmg = 0;
+            for (let i = 0; i < 6; i++) { dmg += Math.floor(Math.random() * 6) + 1; }
+            const dodged: boolean = Check.redRoll() + t.evasion() >= 15;   // dive clear for half
+            if (dodged) { dmg = Math.ceil(dmg / 2); }
+            const dealt: number = t.receiveDamage(dmg, true);   // blasts halve armour (ap path)
+            BattleRecorder.countShot(self, dealt > 0);
+            BattleRecorder.countDamage(self, t, dealt);
+            victims.push({target: t, damage: dealt, dodged, dropped: !t.canFight()});
+            this.messages.push(new MessageStr(
+                `${t.name} ${dodged ? "dives clear — " : ""}takes ${dealt} blast damage.`));
+            if (foes.indexOf(t) >= 0) { this.registerIfDefeated(self, t); }
+        }
+        this.events.push({kind: "blast", actor: self, at: target, radius: BLAST_RADIUS, victims});
+        this.messages.push(new MessageStr(`${self.name} lobs a frag grenade.`));
     }
 
     private static nearestFoeGap(self: Actor, foes: Actor[]): number {

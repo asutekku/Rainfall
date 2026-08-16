@@ -33,6 +33,7 @@ export interface StageProps {
     onClearMove: () => void;
     onPickTarget: (a: Actor) => void;
     onToggleAim: () => void;
+    onToggleGrenade: () => void;
     onExecute: () => void;
     onPass: () => void;
     onToggleAuto: () => void;
@@ -105,7 +106,8 @@ export class Stage extends React.Component<StageProps, {}> {
         const target = o.target && o.target.canFight() ? o.target : null;
         const prev = target ? aimPreview(o.actor, target, o.pendingMove || undefined, o.aimed) : null;
         const w = o.actor.weapon;
-        const canAim = !!target && !w.autofire && w.weaponClass !== "melee";
+        const canAim = !!target && !w.autofire && w.weaponClass !== "melee" && !o.grenadeMode;
+        const frags = o.actor.grenades || 0;
         const pctCls = prev && prev.ok ? (prev.pct >= 60 ? "hi" : prev.pct >= 30 ? "mid" : "lo") : "lo";
         return (
             <div className={"acts orderActs"}>
@@ -115,18 +117,23 @@ export class Stage extends React.Component<StageProps, {}> {
                         onClick={this.props.onClearMove} disabled={!o.pendingMove}>
                     {o.pendingMove ? "⊹ MOVE SET ✕" : "⊹ TAP STREET TO MOVE"}
                 </button>
-                <span className={"ordTgt" + (target ? " has" : "")}>
-                    {target
+                <span className={"ordTgt" + (target || (o.grenadeMode && o.grenadeAt) ? " has" : "")}>
+                    {o.grenadeMode
+                        ? (o.grenadeAt ? "✸ BLAST POINT SET" : "✸ TAP STREET FOR BLAST POINT")
+                        : target
                         ? <React.Fragment>✦ {target.name} {prev && (prev.ok
                             ? <b className={"pct " + pctCls}>{prev.pct}%</b>
                             : <b className={"pct lo"}>NO SHOT</b>)}{prev && prev.covered ? <i className={"covTag"}> COVER</i> : null}</React.Fragment>
                         : "✦ TAP A HOSTILE TO TARGET"}
                 </span>
+                {frags > 0 &&
+                    <button className={"ob frag" + (o.grenadeMode ? " set" : "")} onClick={this.props.onToggleGrenade}
+                            title={"Frag grenade: 6d6 in a blast radius, armour halved — friend and foe alike"}>✸ FRAG ×{frags}</button>}
                 {canAim &&
                     <button className={"ob" + (o.aimed ? " set" : "")} onClick={this.props.onToggleAim}
                             title={"Aimed head shot: -8 to hit, double damage through head armour"}>◎ AIM</button>}
                 <button className={"ob go"} onClick={this.props.onExecute}
-                        disabled={!o.pendingMove && !target}>▶ EXECUTE</button>
+                        disabled={!o.pendingMove && !target && !(o.grenadeMode && o.grenadeAt)}>▶ EXECUTE</button>
                 <button className={"ob"} onClick={this.props.onPass} title={"do nothing this turn"}>SKIP</button>
                 <button className={"ob"} onClick={this.props.onToggleAuto} title={"let the AI play the whole squad"}>▸ AUTO</button>
             </div>);

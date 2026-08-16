@@ -22,6 +22,9 @@ const COVER_RADIUS = 3;  // metres: how close you must be to a cover point to be
 const COVER_DV = 4;      // extra DV to hit a target that is behind cover
 const MIN_SEP = 2.5;     // metres: no two units share a cell — melee is adjacent, not stacked
 
+export const BLAST_RADIUS = 6;    // metres: frag grenade kill zone
+export const GRENADE_RANGE = 22;  // metres: how far a frag can be thrown
+
 const clamp01 = (n: number): number => Math.max(0, Math.min(1, n));
 const dist2 = (ax: number, ay: number, bx: number, by: number): number => Math.hypot(ax - bx, ay - by);
 
@@ -47,6 +50,10 @@ export class Battlefield {
         this.rollCover();
         this.line(party, SQUAD_Y);
         this.deployEnemies(enemies);
+        // deployment kit: the squad restocks frags between jobs; heavier
+        // hostiles sometimes carry one of their own
+        party.forEach((p) => { p.grenades = 2; });
+        enemies.forEach((e) => { e.grenades = (e.rank || 1) >= 3 && Math.random() < 0.4 ? 1 : 0; });
     }
 
     /**

@@ -26,6 +26,7 @@ export class Actor extends GameObject {
     public override position: ObjectPosition;
     public temperament: string;   // tactical AI personality: balanced|aggressive|flanker|camper|berserker
     public auto: boolean;         // squad member played by the tactical AI instead of the player
+    public grenades: number;      // frag grenades on the belt (throwing one is the turn's attack)
     public faction?: string;      // enemy faction (Maelstrom, Arasaka, ...) for display
     public rank?: number;         // enemy threat rank 1-5
     public archetype?: string;    // enemy role within the faction (Reaver, Lanceman, ...)
@@ -241,6 +242,7 @@ export class Actor extends GameObject {
         this.hireable = false;
         this.temperament = "balanced";
         this.auto = false;
+        this.grenades = 0;
         this.stats = {
             int: 1,
             ref: 1,
