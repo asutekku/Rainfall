@@ -1,5 +1,6 @@
 import {describe, expect, test} from "bun:test";
 import Equipment from "../src/ts/items/Equipment";
+import {Armor} from "../src/ts/items/Armor";
 import {Battlefield} from "../src/ts/interact/battlefield";
 import {Combat} from "../src/ts/interact/combat";
 import {ShotEvent} from "../src/ts/interact/battleEvents";
@@ -122,6 +123,40 @@ describe("Combat.takeTurn — manual orders", () => {
             expect(foe.canFight()).toBe(false);
             expect(me.kills).toBe(1);
         });
+    });
+});
+
+describe("aimed-shot judgement (no more whiff wars)", () => {
+    const armoured = (x: number, y: number) => {
+        const t = fighter({x, y});
+        t.equipment.upper = new Armor("upper", "Test Plate", "test", 1, 11, 0, "");
+        return t;
+    };
+
+    test("a low-skill shooter never gambles on -8 head shots", () => {
+        Battlefield.COVER = [];
+        let aimedShots = 0;
+        for (let i = 0; i < 25; i++) {
+            const me = fighter({ref: 2, skill: 0, weapon: "WSA Autopistol", x: 0, y: 5});
+            const tank = armoured(0, 15);
+            const res = Combat.takeTurn(me, [me], [tank]);
+            const shot = res.events.find((e) => e.kind === "shot") as ShotEvent | undefined;
+            if (shot && shot.aimed) { aimedShots += 1; }
+        }
+        expect(aimedShots).toBe(0);
+    });
+
+    test("a crack shot may still take the head shot against heavy armour", () => {
+        Battlefield.COVER = [];
+        let aimedShots = 0;
+        for (let i = 0; i < 25; i++) {
+            const me = fighter({ref: 10, skill: 10, weapon: "WSA Autopistol", x: 0, y: 5});
+            const tank = armoured(0, 12);
+            const res = Combat.takeTurn(me, [me], [tank]);
+            const shot = res.events.find((e) => e.kind === "shot") as ShotEvent | undefined;
+            if (shot && shot.aimed) { aimedShots += 1; }
+        }
+        expect(aimedShots).toBeGreaterThan(0);
     });
 });
 

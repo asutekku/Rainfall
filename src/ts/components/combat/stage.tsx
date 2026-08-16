@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {accentCss} from "../../actors/resources/factionStyles";
 import {Battlefield, Point} from "../../interact/battlefield";
 import {rangeDV} from "../../interact/rangeTable";
 import {aimPreview} from "../../interact/aimPreview";
@@ -72,6 +73,7 @@ export class Stage extends React.Component<StageProps, {}> {
         const sub = e.faction ? `${e.faction}${e.archetype ? " " + e.archetype : ""}` : e.role.name;
         return (
             <button key={i} className={"es" + (active ? " on" : "") + (e.canFight() ? "" : " dead")}
+                    style={{borderLeft: "3px solid " + accentCss(e.faction)}}
                     onClick={() => this.props.onSelectEnemy(e)}>
                 <span className={"d rank-" + (e.rank || 1)} title={"threat rank " + (e.rank || 1)}>✦</span>
                 <span className={"nm"}>{e.name} <span className={"lv"}>{sub} · L{e.level}</span></span>
@@ -138,16 +140,16 @@ export class Stage extends React.Component<StageProps, {}> {
             </div>);
     }
 
+    /** Auto is the whole show for now — manual control stays parked off-stage. */
     private statusBar() {
         const w = this.props.actor.weapon;
         const active = this.props.turnOrder[0];
         return (
             <div className={"autoStatus"}>
-                <span className={"autoDot"}>▸</span> {this.props.auto ? "AUTO" : "RESOLVING"}
+                <span className={"autoDot"}>▸</span> {this.props.auto ? "LIVE" : "RESOLVING"}
                 {active ? <span className={"nowTurn"}> — {active.name}'s turn</span> : null}
-                <button className={"ob slim"} onClick={this.props.onToggleAuto}>
-                    {this.props.auto ? "❚❚ TAKE CONTROL" : "▸ AUTO"}
-                </button>
+                {!this.props.auto &&
+                    <button className={"ob slim"} onClick={this.props.onToggleAuto}>▸ AUTO</button>}
                 <span className={"wpn"}>
                     <b>{w.name}</b> · {w.diceThrows}d6{w.damage ? "+" + w.damage : ""}
                     {w.ap ? " AP" : ""}{w.autofire ? " · AUTO" : ""}

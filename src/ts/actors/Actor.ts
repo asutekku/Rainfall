@@ -27,9 +27,12 @@ export class Actor extends GameObject {
     public temperament: string;   // tactical AI personality: balanced|aggressive|flanker|camper|berserker
     public auto: boolean;         // squad member played by the tactical AI instead of the player
     public grenades: number;      // frag grenades on the belt (throwing one is the turn's attack)
+    public marking: Actor | null; // sniper laser lock: painted last turn, fires this turn
     public faction?: string;      // enemy faction (Maelstrom, Arasaka, ...) for display
     public rank?: number;         // enemy threat rank 1-5
     public archetype?: string;    // enemy role within the faction (Reaver, Lanceman, ...)
+    public frags?: number;        // archetype-guaranteed grenades on deploy (grenadier kit)
+    public kitParts?: string[];   // archetype silhouette add-ons on top of the faction kit
     public equipment: {
         headgear: Armor | null;
         upper: Armor | null;
@@ -241,6 +244,7 @@ export class Actor extends GameObject {
         this.temperament = "balanced";
         this.auto = false;
         this.grenades = 0;
+        this.marking = null;
         this.stats = {
             int: 1,
             ref: 1,
@@ -614,14 +618,19 @@ export class Actor extends GameObject {
         }
     }
 
+    /** House rule: everyone on these streets can actually shoot. A flat to-hit
+     *  boost over tabletop RED so fights resolve instead of whiffing for rounds. */
+    public static readonly STREET_INSTINCT: number = 3;
+
     /**
-     * RED attack modifier: DEX (melee) or REF (ranged) + weapon skill + weapon
-     * accuracy, minus the Seriously Wounded penalty.
+     * Attack modifier: DEX (melee) or REF (ranged) + weapon skill + weapon
+     * accuracy, minus the Seriously Wounded penalty — and the street-instinct
+     * house bonus on top.
      */
     public attackBonus(weapon: Weapon): number {
         const stat: number = weapon.weaponClass === "melee" ? this.stats.dex : this.stats.ref;
         const cyber: number = weapon.weaponClass === "melee" ? 0 : this.cyberAttackBonus();
-        return stat + this.skillFor(weapon) + weapon.accuracyBonus
+        return stat + this.skillFor(weapon) + weapon.accuracyBonus + Actor.STREET_INSTINCT
             + this.woundPenalty() + cyber + this.fearPenalty;
     }
 

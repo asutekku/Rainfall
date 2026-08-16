@@ -486,11 +486,15 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private beginBattle = () => {
         this.resetSequencer();
         this.battleStart = Date.now();
+        const foes = this.state.currentEnemies;
+        const boss = foes.some((e) => (e.rank || 0) >= 5);
         this.setState({
             battleId: this.state.battleId + 1,
             playback: null, orders: null, turnOrder: [],
             activeMainPanel: "Combat", mobileTab: "arena",
-        }, () => this.scheduleAdvance(500));
+            messages: [FeedLog.contact(foes), ...this.state.messages].slice(0, this.logLength) as any,
+            // a boss entrance holds the camera on the heavy before the fight starts
+        }, () => this.scheduleAdvance(boss ? 2100 : 500));
     };
 
     private scheduleAdvance(ms: number) {

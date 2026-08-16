@@ -269,9 +269,10 @@ export function encounterSpec(node: RunNode, sector: number, partyLevel: number)
     // Flak-and-MetalGear tier only shows up once the crew can punch through it.
     const bossRank = Math.max(2, Math.min(5, 1 + Math.ceil(sector / 2)));
     switch (node.type) {
-        case "elite": return {boss: false, amount: 2, level: base + 1, rank: 3};
+        case "elite": return {boss: false, amount: 3, level: base + 1, rank: 3};
         case "boss": return {boss: true, amount: 1, level: base + 2, rank: bossRank};
-        default: return {boss: false, amount: 1 + (Math.random() < 0.5 ? 1 : 0), level: base, rank: 0};
+        // never fewer than 3 — a 2v1 auto-resolves before the street even loads
+        default: return {boss: false, amount: 3 + (Math.random() < 0.35 ? 1 : 0), level: base, rank: 0};
     }
 }
 

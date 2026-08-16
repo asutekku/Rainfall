@@ -1,5 +1,5 @@
 import {Actor} from "../actors/Actor";
-import {BattleEvent, BlastEvent, MoveEvent, SaveEvent, ShotEvent} from "./battleEvents";
+import {BattleEvent, BlastEvent, MarkEvent, MoveEvent, SaveEvent, ShotEvent} from "./battleEvents";
 
 /**
  * The surveillance feed. Combat used to dump every engine message into the
@@ -34,6 +34,15 @@ export function callsign(a: Actor): string {
     return (parts[parts.length - 1] || a.name).toUpperCase();
 }
 
+/** Callsign for `a`, with a first-name initial when it collides with `other`'s. */
+function disambiguate(a: Actor, other: Actor): string {
+    const sign = callsign(a);
+    if (a !== other && sign === callsign(other)) {
+        return `${a.name.trim()[0]!.toUpperCase()}. ${sign}`;
+    }
+    return sign;
+}
+
 /** mm:ss mission clock from a battle-start timestamp. */
 export function missionClock(startedAt: number): string {
     const s = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
@@ -54,14 +63,20 @@ export class FeedLog {
         const move = events.find((e) => e.kind === "move") as MoveEvent | undefined;
         if (move) {
             const dist = Math.round(Math.hypot(move.to.x - move.from.x, move.to.y - move.from.y));
-            bits.push(move.cover ? `into cover (${dist}m)` : `moves ${dist}m`);
+            bits.push(move.sprint ? `sprints ${dist}m`
+                : move.cover ? `moves ${dist}m into cover` : `moves ${dist}m`);
+        }
+
+        const mark = events.find((e) => e.kind === "mark") as MarkEvent | undefined;
+        if (mark) {
+            bits.push(`paints ${disambiguate(mark.target, turn.actor)} with a laser`);
         }
 
         const shot = events.find((e) => e.kind === "shot") as ShotEvent | undefined;
         if (shot) {
             const verb = shot.melee ? "strikes" : shot.autofire ? "bursts at"
                 : shot.aimed ? "headshots" : "fires at";
-            const tgt = callsign(shot.target);
+            const tgt = disambiguate(shot.target, turn.actor);
             if (!shot.hit) {
                 bits.push(`${verb} ${tgt} — miss`);
             } else if (shot.damage <= 0) {
@@ -80,7 +95,7 @@ export class FeedLog {
                 bits.push("lobs a frag — nobody caught");
             } else {
                 const roll = blast.victims.map((v) =>
-                    `${callsign(v.target)} ${v.damage} dmg${v.dropped ? " DOWN" : ""}`).join(", ");
+                    `${disambiguate(v.target, turn.actor)} ${v.damage} dmg${v.dropped ? " DOWN" : ""}`).join(", ");
                 bits.push(`lobs a frag — ${roll}`);
                 if (blast.victims.some((v) => v.dropped)) { kill = true; }
             }
@@ -123,5 +138,16 @@ export class FeedLog {
     /** Round separator. */
     public static round(n: number): FeedEntry {
         return entry("sys", null, null, `— round ${n} —`);
+    }
+
+    /** Battle-open contact report: who the squad just walked into. */
+    public static contact(enemies: Actor[]): FeedEntry {
+        const live = enemies.filter((e) => e.canFight());
+        const boss = live.find((e) => (e.rank || 0) >= 5);
+        const faction = (live[0] && live[0].faction ? live[0].faction : "hostile").toUpperCase();
+        const text = boss
+            ? `⚠ CONTACT — ${faction}: ${callsign(boss)} [${boss.archetype || "boss"}] +${live.length - 1} escort`
+            : `⚠ CONTACT — ${faction} × ${live.length}`;
+        return entry("sys", null, null, text);
     }
 }

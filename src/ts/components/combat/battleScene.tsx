@@ -5,6 +5,7 @@ import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "../../interact/ba
 import {BattleEvent, BlastEvent, MoveEvent, ShotEvent} from "../../interact/battleEvents";
 import {aimPreview} from "../../interact/aimPreview";
 import {Streetscape, generateStreetscape} from "../../interact/streetscape";
+import {FactionStyle, styleFor} from "../../actors/resources/factionStyles";
 
 /**
  * The 3D battle arena: a procedural rain-slick street in the same holographic
@@ -62,6 +63,7 @@ interface UnitView {
     actor: Actor;
     side: "you" | "ally" | "foe";
     color: number;
+    accent: number;           // faction accent: tracers, slash arcs, trim
     group: THREE.Group;       // root at ground level (world position)
     body: THREE.Group;        // crouch/flinch/fall pose target
     legL: THREE.Object3D;
@@ -78,9 +80,11 @@ interface UnitView {
     crouch: number;           // 0..1 blended pose
     walk: number;             // walk-cycle phase
     walking: boolean;
+    sprinting: boolean;       // all-out melee close: faster gait, forward lean
     fallen: number;           // 0..1 blended fall
     faded: boolean;           // flatlined → nearly invisible
     flinch: number;           // >0 = seconds of flinch left
+    laser: {line: THREE.Line; attr: THREE.BufferAttribute; dot: THREE.Sprite} | null;   // sniper paint beam
 }
 
 /** One playback step: drives the scene for `dur` seconds, then `end` snaps state. */
@@ -119,6 +123,13 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
     private camDist = 46;
     private focus = new THREE.Vector3(0, 0, 18);
     private focusGoal = new THREE.Vector3(0, 0, 18);
+    // engagement framing: yaw/zoom/elevation ease toward these each frame
+    private camYaw = 0;
+    private camYawG = 0;
+    private camZoom = 1;
+    private camZoomG = 1;
+    private camEl = 0.62;
+    private camElG = 0.62;
     private rain: THREE.LineSegments | null = null;
     private rainVel: number[] = [];
     private signMats: Array<{mat: THREE.MeshBasicMaterial; base: number; flicker: boolean; phase: number}> = [];
@@ -201,7 +212,10 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         this.acts = [];
         this.playingId = 0;
         if (this.streetGroup) { this.scene.remove(this.streetGroup); }
-        this.units.forEach((u) => { this.scene.remove(u.group); this.scene.remove(u.pick); u.tag.remove(); });
+        this.units.forEach((u) => {
+            this.scene.remove(u.group); this.scene.remove(u.pick); u.tag.remove();
+            this.dropLaser(u);
+        });
         this.units = [];
         this.scape = generateStreetscape(this.props.battleId * 7919 + 13, Battlefield.COVER);
         this.signMats = [];
@@ -212,6 +226,65 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         this.props.enemies.forEach((a) => this.units.push(this.buildUnit(a, "foe")));
         this.units.forEach((u) => this.snapUnit(u));
         this.syncOrderMarkers();
+        // opening dolly: start tight on the hostiles, sweep out to the overview
+        const foes = this.props.enemies.filter((e) => e.canFight());
+        const boss = foes.find((f) => (f.rank || 0) >= 5);
+        if (foes.length) {
+            const cx = foes.reduce((s, f) => s + f.position.x, 0) / foes.length;
+            const cy = foes.reduce((s, f) => s + f.position.y, 0) / foes.length;
+            this.focus.set(cx, 0, cy);
+            this.camZoom = 0.5;
+            this.camYaw = 0.4;
+            this.camEl = 0.5;
+        }
+        this.frameOverview();
+        this.focusGoal.set(0, 0, 18);
+        if (boss && !this.reduced) {
+            // boss entrance: hold tight on the heavy, pulse the ground, then sweep out
+            this.focus.set(boss.position.x, 0, boss.position.y);
+            this.camZoom = 0.42;
+            this.camEl = 0.42;
+            this.acts.push({dur: 1.4, t: 0, start: () => {
+                this.focusGoal.set(boss.position.x, 0, boss.position.y);
+                this.camZoomG = 0.45;
+                this.camElG = 0.45;
+                const bu = this.unitFor(boss);
+                if (bu) { this.spawnPulse(bu, bu.accent); }
+            }});
+            this.acts.push({dur: 0.05, t: 0, end: () => {
+                this.frameOverview();
+                this.focusGoal.set(0, 0, 18);
+            }});
+        }
+        this.showBanner(foes, boss);
+    }
+
+    /** Faction contact banner over the opening dolly. */
+    private showBanner(foes: Actor[], boss: Actor | undefined) {
+        const host = this.overlay.current;
+        if (!host || !foes.length) { return; }
+        const lead = boss || foes[0]!;
+        const faction = (lead.faction || "HOSTILES").toUpperCase();
+        const accent = "#" + styleFor(lead.faction).accent.toString(16).padStart(6, "0");
+        const el = document.createElement("div");
+        el.className = "bsBanner" + (boss ? " boss" : "");
+        el.style.borderColor = accent;
+        el.innerHTML = boss
+            ? `<b style="color:${accent}">⚠ ${faction}</b><span>${lead.name} — ${lead.archetype || "heavy"}</span>`
+            : `<b style="color:${accent}">⚠ ${faction}</b><span>${foes.length} HOSTILE${foes.length > 1 ? "S" : ""}</span>`;
+        host.appendChild(el);
+        window.setTimeout(() => el.remove(), boss ? 3400 : 2600);
+    }
+
+    /** Tear down a unit's sniper beam (target dropped, lock spent, or rebuild). */
+    private dropLaser(u: UnitView) {
+        if (!u.laser) { return; }
+        this.scene.remove(u.laser.line);
+        this.scene.remove(u.laser.dot);
+        u.laser.line.geometry.dispose();
+        (u.laser.line.material as THREE.Material).dispose();
+        (u.laser.dot.material as THREE.Material).dispose();
+        u.laser = null;
     }
 
     // -------------------------------------------------------------- street --
@@ -541,7 +614,8 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
 
     private gunLength(a: Actor): number {
         switch (a.weapon.weaponClass) {
-            case "rifle": case "sniper": return 1.0;
+            case "sniper": return 1.35;
+            case "rifle": return 1.0;
             case "shotgun": return 0.8;
             case "smg": return 0.55;
             case "bow": return 0.6;
@@ -550,36 +624,75 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         }
     }
 
+    /** Best body SP the unit shows on the street — armour bulk you can read at a glance. */
+    private bodySPOf(a: Actor): number {
+        const worn = a.equipment.upper ? a.equipment.upper.stoppingPower : 0;
+        return Math.max(worn, a.cyberSP());
+    }
+
     private buildUnit(a: Actor, side: "you" | "ally" | "foe"): UnitView {
-        const color = side === "foe" ? ((a.rank || 1) >= 4 ? COL.foeElite : COL.foe) : COL[side];
-        const bodyCol = side === "foe" ? COL.foeBody : COL.body;
+        const foe = side === "foe";
+        const style: FactionStyle | null = foe ? styleFor(a.faction) : null;
+        const color = style ? style.accent : COL[side];
+        const bodyCol = style ? style.body : COL.body;
+        const headCol = style ? style.head : 0x1a1f28;
+        const rank = a.rank || 1;
+        const parts: string[] = style ? [...style.parts, ...(a.kitParts || [])] : [];
+        // armour is silhouette: SP 0 reads slim, MetalGear reads like a wall
+        const bulk = 1 + (this.bodySPOf(a) / 18) * 0.32;
         const group = new THREE.Group();
         const body = new THREE.Group();
         group.add(body);
 
         const mat = (c: number) => new THREE.MeshBasicMaterial({color: c});
         const legGeo = new THREE.BoxGeometry(0.24, 0.9, 0.28).translate(0, -0.45, 0);
-        const legL = new THREE.Mesh(legGeo, mat(bodyCol)); legL.position.set(-0.16, 0.9, 0);
-        const legR = new THREE.Mesh(legGeo.clone(), mat(bodyCol)); legR.position.set(0.16, 0.9, 0);
+        const legCol = parts.indexOf("chrome") >= 0 ? 0x9aa4ad : bodyCol;
+        const legL = new THREE.Mesh(legGeo, mat(legCol)); legL.position.set(-0.16, 0.9, 0);
+        const legR = new THREE.Mesh(legGeo.clone(), mat(legCol)); legR.position.set(0.16, 0.9, 0);
         body.add(legL, legR);
 
-        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.66, 0.72, 0.4), mat(bodyCol));
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.66 * bulk, 0.72, 0.4 * bulk), mat(bodyCol));
         torso.position.y = 1.28;
         body.add(torso);
-        const chest = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.12, 0.42), mat(color));
+        const chest = new THREE.Mesh(new THREE.BoxGeometry(0.5 * bulk, 0.12, 0.42 * bulk), mat(color));
         chest.position.y = 1.5;
         body.add(chest);
-        const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.26, 0.34), mat(color));
-        shoulderL.position.set(-0.44, 1.5, 0);
-        const shoulderR = shoulderL.clone(); shoulderR.position.x = 0.44;
+        const hasPauldrons = parts.indexOf("pauldrons") >= 0;
+        const shW = hasPauldrons ? 0.22 : 0.16;
+        const shH = hasPauldrons ? 0.34 : 0.26;
+        const shD = hasPauldrons ? 0.42 : 0.34;
+        const shX = 0.44 * bulk + (hasPauldrons ? 0.04 : 0);
+        const shoulderL = new THREE.Mesh(new THREE.BoxGeometry(shW, shH, shD), mat(hasPauldrons ? bodyCol : color));
+        shoulderL.position.set(-shX, hasPauldrons ? 1.54 : 1.5, 0);
+        const shoulderR = shoulderL.clone(); shoulderR.position.x = shX;
         body.add(shoulderL, shoulderR);
+        if (hasPauldrons) {   // accent cap on each hard-shell shoulder
+            const capL = new THREE.Mesh(new THREE.BoxGeometry(shW + 0.02, 0.05, shD + 0.02), mat(color));
+            capL.position.set(-shX, 1.73, 0);
+            const capR = capL.clone(); capR.position.x = shX;
+            body.add(capL, capR);
+        }
 
-        const head = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.34, 0.36), mat(0x1a1f28));
+        const helmeted = !!a.equipment.headgear;
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.34, 0.36), mat(headCol));
         head.position.y = 1.85;
         body.add(head);
-        const visor = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.09, 0.05), mat(color));
-        visor.position.set(0, 1.87, 0.19);
+        if (helmeted) {
+            const helm = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.3, 0.42), mat(bodyCol));
+            helm.position.y = 1.94;
+            body.add(helm);
+            body.add(this.edges(helm, color, 0.55));
+        }
+        const visorFull = parts.indexOf("visorFull") >= 0;
+        const visor = new THREE.Mesh(new THREE.BoxGeometry(visorFull ? 0.3 : 0.3, visorFull ? 0.18 : 0.09, 0.05), mat(color));
+        visor.position.set(0, visorFull ? 1.85 : 1.87, 0.19);
         body.add(visor);
+
+        this.dressUnit(body, parts, {accent: color, bodyCol, torso, mat});
+
+        // rank presence: heavies get emissive accent trim, bosses get real mass
+        if (foe && rank >= 4) { body.add(this.edges(torso, color, 0.85)); }
+        group.scale.setScalar(1.12 * (rank >= 5 ? 1.22 : foe && rank === 4 ? 1.07 : 1));
 
         const gun = new THREE.Group();
         const gl = this.gunLength(a);
@@ -587,13 +700,23 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         const barrel = new THREE.Mesh(new THREE.BoxGeometry(0.09, melee ? gl : 0.12, melee ? 0.09 : gl), mat(COL.gun));
         barrel.position.set(0, melee ? gl / 2 : 0, melee ? 0 : gl / 2);
         gun.add(barrel);
+        if (a.weapon.weaponClass === "sniper") {   // scope + muzzle: the long-rifle silhouette
+            const scope = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, 0.3), mat(0x2a2f38));
+            scope.position.set(0, 0.11, gl * 0.42);
+            gun.add(scope);
+            const muzzle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.14), mat(0x2a2f38));
+            muzzle.position.set(0, 0, gl - 0.06);
+            gun.add(muzzle);
+        }
         const tip = new THREE.Object3D();
         tip.position.set(0, melee ? gl : 0, melee ? 0 : gl);
         gun.add(tip);
         gun.position.set(0.3, 1.32, 0.22);
         body.add(gun);
 
-        const ringMat = new THREE.MeshBasicMaterial({color, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false});
+        // the ground ring is the IFF — team red for hostiles no matter the faction
+        const ringCol = foe ? COL.foe : color;
+        const ringMat = new THREE.MeshBasicMaterial({color: ringCol, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false});
         const ring = new THREE.Mesh(new THREE.RingGeometry(0.7, 0.92, 26), ringMat);
         ring.rotation.x = -Math.PI / 2;
         ring.position.y = 0.05;
@@ -605,7 +728,6 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         pick.userData["unit"] = a.name;
         group.add(pick);
 
-        group.scale.setScalar(1.12);
         this.scene.add(group);
 
         const tag = document.createElement("div");
@@ -615,12 +737,121 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         const hpFill = tag.querySelector("i") as HTMLElement;
 
         const u: UnitView = {
-            actor: a, side, color, group, body, legL, legR, gunTip: tip, ring, ringMat, pick,
+            actor: a, side, color, accent: color, group, body, legL, legR, gunTip: tip, ring, ringMat, pick,
             tag, hpFill, visPos: {x: a.position.x, y: a.position.y},
             yaw: side === "foe" ? Math.PI : 0, targetYaw: side === "foe" ? Math.PI : 0,
-            crouch: 0, walk: 0, walking: false, fallen: 0, faded: false, flinch: 0,
+            crouch: 0, walk: 0, walking: false, sprinting: false, fallen: 0, faded: false, flinch: 0,
+            laser: null,
         };
         return u;
+    }
+
+    /** Bolt the faction silhouette kit onto a base figure. */
+    private dressUnit(body: THREE.Group, parts: string[],
+                      c: {accent: number; bodyCol: number; torso: THREE.Mesh;
+                          mat: (n: number) => THREE.MeshBasicMaterial}): void {
+        const add = (m: THREE.Mesh) => body.add(m);
+        for (const part of parts) {
+            switch (part) {
+                case "mohawk": {
+                    const m = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.18, 0.34), c.mat(c.accent));
+                    m.position.set(0, 2.08, 0); add(m);
+                    break;
+                }
+                case "nose": {
+                    const m = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.09, 0.07), c.mat(0xe0533f));
+                    m.position.set(0, 1.82, 0.21); add(m);
+                    break;
+                }
+                case "rags": {   // asymmetric junk plating, stitched on wherever it fits
+                    const spots: Array<[number, number, number, number]> = [
+                        [-0.26, 1.36, 0.21, 0.35], [0.2, 1.18, 0.21, -0.25], [0.3, 1.52, -0.2, 0.4]];
+                    for (const [x, y, z, rot] of spots) {
+                        const m = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.28, 0.05), c.mat(0x4a3b2c));
+                        m.position.set(x, y, z); m.rotation.z = rot; add(m);
+                    }
+                    break;
+                }
+                case "bulkArms": {   // Animals: arms like girders
+                    const armL = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.64, 0.34), c.mat(c.bodyCol));
+                    armL.position.set(-0.52, 1.28, 0);
+                    const armR = armL.clone(); armR.position.x = 0.52;
+                    add(armL); add(armR);
+                    break;
+                }
+                case "crest": {
+                    const m = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.26, 0.44), c.mat(c.accent));
+                    m.position.set(0, 2.14, 0); add(m);
+                    break;
+                }
+                case "optics": {   // glowing sensor trio where a face should be
+                    for (const x of [-0.1, 0, 0.1]) {
+                        const m = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.04), c.mat(c.accent));
+                        m.position.set(x, 1.94, 0.19); add(m);
+                    }
+                    break;
+                }
+                case "spikes": {
+                    for (const x of [-0.44, -0.36, 0.36, 0.44]) {
+                        const m = new THREE.Mesh(new THREE.ConeGeometry(0.05, 0.18, 6), c.mat(0x39404b));
+                        m.position.set(x, 1.72, 0); add(m);
+                    }
+                    break;
+                }
+                case "mask": {   // pale ghost faceplate
+                    const m = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.26, 0.04), c.mat(c.accent));
+                    m.position.set(0, 1.85, 0.2); add(m);
+                    break;
+                }
+                case "cap": {
+                    const top = new THREE.Mesh(new THREE.BoxGeometry(0.36, 0.09, 0.38), c.mat(c.bodyCol));
+                    top.position.set(0, 2.05, 0); add(top);
+                    const brim = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.03, 0.16), c.mat(c.bodyCol));
+                    brim.position.set(0, 2.01, 0.26); add(brim);
+                    break;
+                }
+                case "antenna": {
+                    const whip = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.5, 0.03), c.mat(0x2a2f38));
+                    whip.position.set(-0.46, 1.95, -0.1); add(whip);
+                    const tip = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 0.05), c.mat(c.accent));
+                    tip.position.set(-0.46, 2.22, -0.1); add(tip);
+                    break;
+                }
+                case "backpack": {
+                    const pack = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.5, 0.2), c.mat(c.bodyCol));
+                    pack.position.set(0, 1.34, -0.32); add(pack);
+                    const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.46, 0.08, 0.22), c.mat(c.accent));
+                    stripe.position.set(0, 1.44, -0.32); add(stripe);
+                    break;
+                }
+                case "cross": {   // medic cross on the chest
+                    const h = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.05, 0.03), c.mat(c.accent));
+                    h.position.set(0, 1.36, 0.22 * 1.2); add(h);
+                    const v = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.18, 0.03), c.mat(c.accent));
+                    v.position.set(0, 1.36, 0.22 * 1.2); add(v);
+                    break;
+                }
+                case "coat": {   // longcoat panels hanging off the back
+                    for (const x of [-0.18, 0.18]) {
+                        const m = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.62, 0.05), c.mat(c.bodyCol));
+                        m.position.set(x, 0.82, -0.24); m.rotation.x = 0.08; add(m);
+                    }
+                    break;
+                }
+                case "chrome": {   // exposed cyberware: emissive seams over the frame
+                    body.add(this.edges(c.torso, c.accent, 0.9));
+                    break;
+                }
+                case "bandolier": {   // frags slung across the chest
+                    for (let i = 0; i < 4; i++) {
+                        const m = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.11, 0.06),
+                            c.mat(i === 0 ? c.accent : 0x39404b));
+                        m.position.set(-0.18 + i * 0.13, 1.5 - i * 0.11, 0.23); add(m);
+                    }
+                    break;
+                }
+            }
+        }
     }
 
     /** Snap a unit's visuals to engine truth (used on build and after playback). */
@@ -633,6 +864,29 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
 
     private unitFor(a: Actor): UnitView | null {
         return this.units.find((u) => u.actor === a) || null;
+    }
+
+    // ------------------------------------------------------------- framing --
+
+    /** Duel frame: rotate so the two combatants sit across the screen, zoom to fit them. */
+    private frameDuel(a: Point, b: Point) {
+        this.focusGoal.set((a.x + b.x) / 2, 0, (a.y + b.y) / 2);
+        const sep = Math.hypot(b.x - a.x, b.y - a.y);
+        let yaw = Math.atan2(b.x - a.x, b.y - a.y) - Math.PI / 2;
+        while (yaw > Math.PI) { yaw -= Math.PI * 2; }
+        while (yaw < -Math.PI) { yaw += Math.PI * 2; }
+        // fold to the near-side equivalent so the camera never swings behind the far wall
+        if (yaw > Math.PI / 2) { yaw -= Math.PI; } else if (yaw < -Math.PI / 2) { yaw += Math.PI; }
+        this.camYawG = Math.max(-1.15, Math.min(1.15, yaw));
+        this.camZoomG = Math.max(0.4, Math.min(1, (sep / 2 + 7) / 27.5));
+        this.camElG = 0.5;
+    }
+
+    /** Back out to the tactical overview. */
+    private frameOverview() {
+        this.camYawG = 0;
+        this.camZoomG = 1;
+        this.camElG = 0.62;
     }
 
     // ------------------------------------------------------------- playback --
@@ -659,6 +913,18 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                 case "move": this.pushMoveActs(ev as MoveEvent, D); break;
                 case "shot": this.pushShotActs(ev as ShotEvent, D); break;
                 case "blast": this.pushBlastActs(ev as BlastEvent, D); break;
+                case "mark": {   // sniper paints the target: swing the camera, light the beam
+                    const s = this.unitFor(ev.actor);
+                    const t = this.unitFor(ev.target);
+                    if (s && t) {
+                        this.acts.push({dur: D(0.85), t: 0, start: () => {
+                            s.targetYaw = Math.atan2(t.visPos.x - s.visPos.x, t.visPos.y - s.visPos.y);
+                            this.frameDuel(s.visPos, t.visPos);
+                            this.floater(t, "⊕ PAINTED", "mark");
+                        }});
+                    }
+                    break;
+                }
                 case "noshot": {
                     const u = this.unitFor(ev.actor);
                     if (u) {
@@ -698,6 +964,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
 
     private finishPlayback(id: number, forced: boolean = false) {
         this.acts = [];
+        this.frameOverview();
         this.units.forEach((u) => this.snapUnit(u));
         if (this.playingId === id) { this.playingId = 0; }
         this.doneId = id;
@@ -743,12 +1010,15 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             segLen.push(l);
             total += l;
         }
-        const dur = D(Math.max(0.35, Math.min(2.2, total / 7.5)));
+        // a sprint covers ground half again as fast — it should look desperate
+        const dur = D(Math.max(0.35, Math.min(2.2, total / (ev.sprint ? 11.5 : 7.5))));
         let seg = -1;
         this.acts.push({
             dur, t: 0,
             start: () => {
                 u.walking = true;
+                u.sprinting = !!ev.sprint;
+                this.frameOverview();
                 this.focusGoal.set(ev.to.x, 0, ev.to.y);
             },
             update: (k) => {
@@ -767,6 +1037,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             end: () => {
                 u.visPos = {x: ev.to.x, y: ev.to.y};
                 u.walking = false;
+                u.sprinting = false;
                 if (ev.cover) { this.floater(u, "IN COVER", "cov"); }
             },
         });
@@ -777,10 +1048,10 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         const target = this.unitFor(ev.target);
         if (!shooter || !target) { return; }
 
-        // square up (both units face each other in melee; shooter otherwise)
+        // square up: shooter turns, camera rotates in to frame the exchange
         this.acts.push({dur: D(0.16), t: 0, start: () => {
             shooter.targetYaw = Math.atan2(target.visPos.x - shooter.visPos.x, target.visPos.y - shooter.visPos.y);
-            this.focusGoal.set((shooter.visPos.x + target.visPos.x) / 2, 0, (shooter.visPos.y + target.visPos.y) / 2);
+            this.frameDuel(shooter.visPos, target.visPos);
         }});
 
         if (ev.melee) {
@@ -792,12 +1063,16 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                     const swing = Math.sin(Math.min(1, k * 1.15) * Math.PI);
                     shooter.body.position.z = swing * 0.55;
                     shooter.body.rotation.x = swing * 0.25;
-                    if (!struck && k >= 0.45) { struck = true; this.impact(ev, target); }
+                    if (!struck && k >= 0.45) {
+                        struck = true;
+                        this.spawnSlash(shooter, target, ev.hit);
+                        this.impact(ev, target);
+                    }
                 },
                 end: () => {
                     shooter.body.position.z = 0;
                     shooter.body.rotation.x = 0;
-                    if (!struck) { this.impact(ev, target); }
+                    if (!struck) { this.spawnSlash(shooter, target, ev.hit); this.impact(ev, target); }
                 },
             });
             return;
@@ -843,6 +1118,8 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         this.acts.push({dur: D(0.2), t: 0, start: () => {
             thrower.targetYaw = Math.atan2(ev.at.x - thrower.visPos.x, ev.at.y - thrower.visPos.y);
             this.focusGoal.set(ev.at.x, 0, ev.at.y);
+            this.camZoomG = 0.62;   // lean in for the boom
+            this.camElG = 0.55;
         }});
 
         // the throw: a tumbling grenade on a parabola, then the street lights up
@@ -937,6 +1214,38 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         });
     }
 
+    /**
+     * Melee swing arc: an additive blade sweep from the attacker toward the
+     * target, sparks on connection. Whiffs sweep through empty air.
+     */
+    private spawnSlash(shooter: UnitView, target: UnitView, hit: boolean) {
+        const color = shooter.side === "foe" ? shooter.accent : 0x9df3f6;
+        const arc = new THREE.Mesh(new THREE.RingGeometry(0.55, 1.0, 18, 1, 0, 2.1),
+            new THREE.MeshBasicMaterial({color, transparent: true, opacity: 0.9,
+                side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false}));
+        const at = this.unitAnchor(shooter, 1.35);
+        const toward = this.unitAnchor(target, 1.35);
+        arc.position.copy(at);
+        arc.lookAt(toward);
+        arc.translateZ(0.55);
+        this.scene.add(arc);
+        let life = 0.26;
+        this.fx.push({update: (dt) => {
+            life -= dt;
+            arc.rotation.z -= dt * 11;            // the sweep itself
+            arc.scale.addScalar(dt * 1.6);
+            (arc.material as THREE.MeshBasicMaterial).opacity = Math.max(0, life / 0.26 * 0.9);
+            if (life <= 0) {
+                this.scene.remove(arc);
+                arc.geometry.dispose();
+                (arc.material as THREE.Material).dispose();
+                return false;
+            }
+            return true;
+        }});
+        if (hit) { this.spawnSparks(toward, color, 8); }
+    }
+
     /** Damage numbers, flinch, fall — the moment a volley lands. */
     private impact(ev: ShotEvent, target: UnitView) {
         if (!ev.hit) {
@@ -960,7 +1269,8 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                 this.floater(target, (ev.aimed ? "◎ " : "") + String(ev.damage), big ? "dmg-big" : "dmg");
             }
             this.spawnSparks(this.unitAnchor(target, 1.3), 0xff7a4d, big ? 14 : 8);
-            target.flinch = 0.22;
+            // berserkers walk through small-arms hits — the shrug sells the tank
+            target.flinch = target.actor.temperament === "berserker" && ev.damage < 12 ? 0.08 : 0.22;
         }
         if (ev.dropped && target.fallen < 1) {
             this.floater(target, "DOWN", "down");
@@ -993,7 +1303,8 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                 .add(dir.multiplyScalar(4 + Math.random() * 5))
                 .setY(0.6 + Math.random() * 1.6);
         }
-        const color = shooter.side === "foe" ? COL.tracerFoe : COL.tracerFriend;
+        // hostile fire glows in the faction's colour — Maelstrom red, MaxTac blue
+        const color = shooter.side === "foe" ? shooter.accent : COL.tracerFriend;
         this.spawnFlash(from, color);
 
         const dir = to.clone().sub(from);
@@ -1431,24 +1742,25 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             const wantCrouch = a.canFight() && Battlefield.nearCover(u.visPos) && !u.walking ? 1 : 0;
             u.crouch += (wantCrouch - u.crouch) * Math.min(1, dt * 6);
 
-            // walk cycle
+            // walk cycle (sprints pump harder, faster, lower)
             if (u.walking) {
-                u.walk += dt * 11;
-                u.legL.rotation.x = Math.sin(u.walk) * 0.75;
-                u.legR.rotation.x = -Math.sin(u.walk) * 0.75;
-                u.body.position.y = Math.abs(Math.sin(u.walk)) * 0.06;
+                u.walk += dt * (u.sprinting ? 16 : 11);
+                const swing = u.sprinting ? 0.95 : 0.75;
+                u.legL.rotation.x = Math.sin(u.walk) * swing;
+                u.legR.rotation.x = -Math.sin(u.walk) * swing;
+                u.body.position.y = Math.abs(Math.sin(u.walk)) * (u.sprinting ? 0.09 : 0.06);
             } else {
                 u.legL.rotation.x *= 1 - Math.min(1, dt * 10);
                 u.legR.rotation.x *= 1 - Math.min(1, dt * 10);
                 u.body.position.y = 0;
             }
 
-            // flinch kick
+            // flinch kick (sprinters otherwise hold a forward lean)
             if (u.flinch > 0) {
                 u.flinch -= dt;
                 u.body.rotation.x = -Math.sin(Math.max(0, u.flinch) / 0.22 * Math.PI) * 0.3;
             } else if (u.fallen === 0) {
-                u.body.rotation.x = 0;
+                u.body.rotation.x = u.walking && u.sprinting ? 0.18 : 0;
             }
 
             // fall / crouch pose (fall wins)
@@ -1468,11 +1780,45 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                 }
             });
 
-            // active ring pulse
+            // active ring pulse; rank-5 heavies carry a slow heartbeat even at rest
             const active = this.props.activeName === a.name && a.canFight();
-            const pulse = active && !this.reduced ? 1 + Math.sin(this.t * 5) * 0.12 : 1;
+            const boss = u.side === "foe" && (a.rank || 0) >= 5 && a.canFight();
+            const pulse = active && !this.reduced ? 1 + Math.sin(this.t * 5) * 0.12
+                : boss && !this.reduced ? 1 + Math.max(0, Math.sin(this.t * 3.2)) * 0.16 : 1;
             u.ring.scale.setScalar(pulse * (active ? 1.25 : 1));
-            u.ringMat.opacity = u.fallen > 0 ? 0.12 : active ? 0.95 : 0.45;
+            u.ringMat.opacity = u.fallen > 0 ? 0.12 : active ? 0.95 : boss ? 0.62 : 0.45;
+
+            // sniper paint beam: alive exactly as long as the laser lock is
+            const lockTarget = a.marking && a.marking.canFight() && a.canFight() ? a.marking : null;
+            const lockView = lockTarget ? this.unitFor(lockTarget) : null;
+            if (lockView) {
+                if (!u.laser) {
+                    const geo = new THREE.BufferGeometry();
+                    const attr = new THREE.Float32BufferAttribute(new Float32Array(6), 3);
+                    geo.setAttribute("position", attr);
+                    const line = new THREE.Line(geo, new THREE.LineBasicMaterial({
+                        color: 0xff2a2a, transparent: true, opacity: 0.7,
+                        blending: THREE.AdditiveBlending, depthWrite: false}));
+                    const dot = new THREE.Sprite(new THREE.SpriteMaterial({
+                        map: BattleScene.glowTex(), color: 0xff2a2a, transparent: true, opacity: 0.85,
+                        blending: THREE.AdditiveBlending, depthWrite: false}));
+                    dot.scale.setScalar(0.5);
+                    this.scene.add(line);
+                    this.scene.add(dot);
+                    u.laser = {line, attr, dot};
+                }
+                const from = this.muzzleWorld(u);
+                const to = this.unitAnchor(lockView, 1.45);
+                u.laser.attr.setXYZ(0, from.x, from.y, from.z);
+                u.laser.attr.setXYZ(1, to.x, to.y, to.z);
+                u.laser.attr.needsUpdate = true;
+                u.laser.line.geometry.computeBoundingSphere();
+                u.laser.dot.position.copy(to);
+                const wobble = this.reduced ? 0.7 : 0.55 + 0.25 * Math.sin(this.t * 9);
+                (u.laser.line.material as THREE.LineBasicMaterial).opacity = wobble;
+            } else if (u.laser) {
+                this.dropLaser(u);
+            }
 
             // idle facing
             if (!this.playingId && a.canFight()) {
@@ -1511,13 +1857,23 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             this.blastRing.scale.setScalar(BLAST_RADIUS * (1 + Math.sin(this.t * 4) * 0.04));
         }
 
-        // camera: XCOM-ish elevated view from the squad side, easing toward the action
+        // camera rig: an elevated view from the squad side that eases between an
+        // overview and an engagement frame (yaw'd so shooter and target sit on
+        // opposite sides of the screen, zoomed to fit them)
         this.focus.lerp(this.focusGoal, Math.min(1, dt * 3));
-        const el = 0.62;                       // elevation angle
+        const ease = Math.min(1, dt * 2.4);
+        this.camYaw += (this.camYawG - this.camYaw) * ease;
+        this.camZoom += (this.camZoomG - this.camZoom) * ease;
+        this.camEl += (this.camElG - this.camEl) * ease;
+        const dist = this.camDist * this.camZoom;
         const drift = this.reduced ? 0 : Math.sin(this.t * 0.12) * 1.6;
-        let cx = this.focus.x * 0.55 + drift;
-        const cz = this.focus.z - Math.cos(el) * this.camDist;
-        let cy = Math.sin(el) * this.camDist;
+        // duel frames look at the action dead-centre; the overview biases ahead
+        const duel = Math.min(1, Math.abs(this.camYaw) / 0.25 + (1 - this.camZoom) * 2);
+        const lookX = this.focus.x * (0.8 + 0.2 * duel);
+        const lookZ = this.focus.z + 4 * (1 - duel);
+        let cx = lookX + drift - Math.sin(this.camYaw) * Math.cos(this.camEl) * dist;
+        const cz = lookZ - Math.cos(this.camYaw) * Math.cos(this.camEl) * dist;
+        let cy = Math.sin(this.camEl) * dist;
         if (this.shakeT > 0 && !this.reduced) {
             this.shakeT = Math.max(0, this.shakeT - dt);
             const amp = this.shakeT * 1.6;
@@ -1525,7 +1881,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             cy += (Math.random() - 0.5) * amp;
         }
         this.camera.position.set(cx, cy, cz);
-        this.camera.lookAt(this.focus.x * 0.8, 1, this.focus.z + 4);
+        this.camera.lookAt(lookX, 1 + duel * 0.4, lookZ);
 
         this.renderer.render(this.scene, this.camera);
     };
