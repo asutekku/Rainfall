@@ -32,9 +32,9 @@ export class Combat {
             this.messages.unshift(new MessageStr('That character is out of the fight.'));
             return this.messages.flat().reverse();
         }
-        // Reset per-round Combat Awareness trackers (first hit, deflection).
-        actor.firstHitDone = false; actor.deflectionUsed = false;
-        target.firstHitDone = false; target.deflectionUsed = false;
+        // Reset the per-round Combat Awareness tracker (first hit of the round).
+        actor.firstHitDone = false;
+        target.firstHitDone = false;
         const order: Actor[] = actor.rollInitiative() >= target.rollInitiative()
             ? [actor, target] : [target, actor];
         for (const combatant of order) {
@@ -82,7 +82,7 @@ export class Combat {
         BattleRecorder.countShot(actor, true);
         let damage: number = weapon.getDamage();
         if (damage > 0) {
-            damage += this.spotWeakness(actor);   // Solo "Spot Weakness" (first hit only)
+            damage += this.alphaStrike(actor);    // Solo: the round's opening hit lands harder
             damage += actor.backupDamage();        // Cop "Backup" support fire
         }
         const dealt: number = target.receiveDamage(damage, weapon.ap, aimed);
@@ -95,13 +95,13 @@ export class Combat {
         this.registerIfDefeated(actor, target);
     }
 
-    /** RED Combat Awareness "Spot Weakness": bonus damage on the round's first hit. */
-    private static spotWeakness(actor: Actor): number {
+    /** Solo "Combat Awareness": bonus damage on the round's first landed hit. */
+    private static alphaStrike(actor: Actor): number {
         if (actor.firstHitDone) {
             return 0;
         }
         actor.firstHitDone = true;
-        return actor.spotWeaknessBonus();
+        return actor.alphaStrikeBonus();
     }
 
     /**
@@ -133,7 +133,7 @@ export class Combat {
         const multiplier: number = Math.max(1, Math.min(check.margin, maxMultiplier));
         const d1: number = Math.floor(Math.random() * 6) + 1;
         const d2: number = Math.floor(Math.random() * 6) + 1;
-        let damage: number = (d1 + d2) * multiplier + this.spotWeakness(actor);
+        let damage: number = (d1 + d2) * multiplier + this.alphaStrike(actor);
         if (d1 === 6 && d2 === 6) {
             damage += 5; // Critical Injury
         }
@@ -254,7 +254,7 @@ export class Combat {
     public static beginRound(party: Actor[], enemies: Actor[]): Actor[] {
         BattleRecorder.countRound();
         const all: Actor[] = [...party, ...enemies].filter((a) => a.canFight() || a.mortallyWounded);
-        all.forEach((a) => { a.firstHitDone = false; a.deflectionUsed = false; });
+        all.forEach((a) => { a.firstHitDone = false; });
         return all
             .map((a) => ({a, init: a.rollInitiative()}))
             .sort((x, y) => y.init - x.init)

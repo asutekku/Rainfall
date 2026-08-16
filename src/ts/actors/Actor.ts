@@ -204,9 +204,7 @@ export class Actor extends GameObject {
     public fearPenalty: number;
     public housing: string;
     public vehicle: Vehicle | null;
-    public combatAwareness: { precision: number; initiative: number; spotWeakness: number; deflection: number };
     public firstHitDone: boolean;
-    public deflectionUsed: boolean;
 
     constructor() {
         const role = new Role();
@@ -402,9 +400,7 @@ export class Actor extends GameObject {
         this.fearPenalty = 0;
         this.housing = "Streets";
         this.vehicle = null;
-        this.combatAwareness = {precision: 0, initiative: 0, spotWeakness: 0, deflection: 0};
         this.firstHitDone = false;
-        this.deflectionUsed = false;
         this.lifepath = CharacterCreation.randomLifepath();
     }
 
@@ -576,11 +572,6 @@ export class Actor extends GameObject {
         if (aimedAtHead) {
             damage *= 2; // head shots double the damage that gets through
         }
-        // Combat Awareness "Damage Deflection": block the first pierced damage of the round.
-        if (damage > 0 && !this.deflectionUsed && this.deflection() > 0) {
-            damage = Math.max(0, damage - this.deflection());
-            this.deflectionUsed = true;
-        }
         if (damage > 0) {
             // RED ablation: whichever armour actually stopped part of the hit loses 1 SP.
             const usingSubdermal: boolean = !aimedAtHead && this.cyberSP() > wornSP;
@@ -633,17 +624,17 @@ export class Actor extends GameObject {
 
     /**
      * Attack modifier: DEX (melee) or REF (ranged) + weapon skill + weapon
-     * accuracy, minus the Seriously Wounded penalty, plus a Solo's Precision
-     * Attack bonus — and the street-instinct house bonus on top.
+     * accuracy, minus the Seriously Wounded penalty — and the street-instinct
+     * house bonus on top.
      */
     public attackBonus(weapon: Weapon): number {
         const stat: number = weapon.weaponClass === "melee" ? this.stats.dex : this.stats.ref;
         const cyber: number = weapon.weaponClass === "melee" ? 0 : this.cyberAttackBonus();
         return stat + this.skillFor(weapon) + weapon.accuracyBonus + Actor.STREET_INSTINCT
-            + this.woundPenalty() + this.precisionAttackBonus() + cyber + this.fearPenalty;
+            + this.woundPenalty() + cyber + this.fearPenalty;
     }
 
-    /** RED Reputation (0-10), earned through notable deeds (Media/Rockerboy gain faster). */
+    /** RED Reputation (0-10), earned through notable deeds (Rockerboys gain faster). */
     public gainReputation(amount: number): void {
         this.reputation = Math.min(10, this.reputation + amount + this.repGainBonus());
     }
@@ -682,48 +673,14 @@ export class Actor extends GameObject {
         return this.role.name === "Solo";
     }
 
-    /**
-     * Solo "Combat Awareness" Role Ability (RED): a pool of `roleRank` points the
-     * Solo divides each round among sub-abilities. Set it with setCombatAwareness()
-     * (a UI/AI choice); allocateCombatAwareness() fills a sensible default.
-     */
-    public allocateCombatAwareness(): void {
-        const r = this.roleRank;
-        this.combatAwareness = {
-            precision: Math.ceil(r / 2),                 // +1 to hit per 3 points
-            initiative: Math.floor(r / 3),               // +1 Initiative per point
-            spotWeakness: r - Math.ceil(r / 2) - Math.floor(r / 3), // +1 dmg first hit / point
-            deflection: 0,                               // block 1 pierced dmg per 2 points
-        };
-    }
-
-    /** Manually divide the Combat Awareness pool (must total <= roleRank). */
-    public setCombatAwareness(a: { precision: number; initiative: number; spotWeakness: number; deflection: number }): boolean {
-        if (a.precision + a.initiative + a.spotWeakness + a.deflection > this.roleRank) {
-            return false;
-        }
-        this.combatAwareness = a;
-        return true;
-    }
-
-    /** Combat Awareness "Precision Attack": +1 to hit per 3 allocated points. */
-    public precisionAttackBonus(): number {
-        return this.isSolo() ? Math.floor(this.combatAwareness.precision / 3) : 0;
-    }
-
-    /** Combat Awareness "Initiative Reaction": +1 Initiative per allocated point. */
+    /** Solo "Combat Awareness": always the first to move — +rank Initiative. */
     public initiativeBonus(): number {
-        return this.isSolo() ? this.combatAwareness.initiative : 0;
+        return this.isSolo() ? this.roleRank : 0;
     }
 
-    /** Combat Awareness "Spot Weakness": +1 damage per point on the first hit of the round. */
-    public spotWeaknessBonus(): number {
-        return this.isSolo() ? this.combatAwareness.spotWeakness : 0;
-    }
-
-    /** Combat Awareness "Damage Deflection": block 1 pierced damage per 2 points, once per round. */
-    public deflection(): number {
-        return this.isSolo() ? Math.floor(this.combatAwareness.deflection / 2) : 0;
+    /** Solo "Combat Awareness": the opening hit of each round lands +rank×2 damage. */
+    public alphaStrikeBonus(): number {
+        return this.isSolo() ? this.roleRank * 2 : 0;
     }
 
     /** Configure RED combat-relevant stats and derive HP and Humanity. */
@@ -742,7 +699,7 @@ export class Actor extends GameObject {
             this.humanity = this.maxHumanity;
             this.stats.hm = this.humanity;
         }
-        if (cfg.roleRank !== undefined) { this.roleRank = cfg.roleRank; this.allocateCombatAwareness(); }
+        if (cfg.roleRank !== undefined) { this.roleRank = cfg.roleRank; }
         if (cfg.luck !== undefined) { this.maxLuck = cfg.luck; this.luck = cfg.luck; }
         if (cfg.skill !== undefined) {
             const r = this.skills.ref;
@@ -812,31 +769,63 @@ export class Actor extends GameObject {
     /** Nomad "Moto": bonus to Driving checks (and calling in family rides). */
     public motoBonus(): number { return this.isNomad() ? this.roleRank : 0; }
 
-    /** Fixer "Operator": better deals — +10% per rank on eddies, cheaper upkeep. */
-    public operatorBonus(): number { return this.isFixer() ? this.roleRank : 0; }
+    /** Fixer "Operator": every eddie that passes through their hands is 20% bigger. */
+    public fixerCut(): number { return this.isFixer() ? 0.2 : 0; }
 
     /** Cop "Backup": called-in support adds damage each round of a fight. */
     public backupDamage(): number { return this.isCop() ? this.roleRank : 0; }
 
-    /** Corporate "Teamwork": a corporate stipend paid each period. */
-    public corpStipend(): number { return this.isCorporate() ? this.roleRank * 50 : 0; }
+    /** Corporate "Teamwork": the company account picks up 10% of every market bill. */
+    public corpDiscount(): number { return this.isCorporate() ? 0.1 : 0; }
 
-    /** Rockerboy "Charismatic Impact" / Media "Credibility": Facedown edge from fame. */
-    public facedownBonus(): number {
-        if (this.isRockerboy()) { return this.roleRank; }
-        if (this.isMedia()) { return Math.floor(this.roleRank / 2); }
-        return 0;
+    /** Rockerboy "Charismatic Impact": Facedown / COOL-check edge from fame. */
+    public facedownBonus(): number { return this.isRockerboy() ? this.roleRank : 0; }
+
+    /**
+     * Rockerboy "Charismatic Impact": chance a ganger crew recognises the legend
+     * and stands down before the shooting starts (10-20%, capped).
+     */
+    public standDownChance(): number {
+        return this.isRockerboy() ? Math.min(0.2, 0.08 + this.roleRank * 0.02) : 0;
     }
 
-    /** Media/Rockerboy earn Reputation faster through exposure. */
-    public repGainBonus(): number { return this.isMedia() || this.isRockerboy() ? 1 : 0; }
+    /** Rockerboys earn Reputation faster through exposure. */
+    public repGainBonus(): number { return this.isRockerboy() ? 1 : 0; }
 
-    /** Techie "Maker": repairs this much armour SP each time it services gear. */
+    /** Techie "Maker": services the crew's gear between stops (repairs half the lost SP). */
     public makerRepair(): number { return this.isTechie() ? this.roleRank : 0; }
+
+    /** Media "Credibility": how many streets ahead this member's sources see (others 1). */
+    public intelRange(): number { return this.isMedia() ? 2 : 1; }
 
     /** RED Interface rank: a Netrunner uses its Role Ability rank; others have a basic 2. */
     public interfaceRank(): number {
         return this.isNetrunner() ? this.roleRank : 2;
+    }
+
+    /** Deep-copy of the skill tree, for the save file. */
+    public snapshotSkills(): any {
+        return JSON.parse(JSON.stringify(this.skills));
+    }
+
+    /** Overwrite the skill tree from a save-file snapshot. */
+    public restoreSkills(data: any): void {
+        if (data && data.ref && data.tech) { this.skills = data; }
+    }
+
+    /** One line on what this role's passive actually does in the run. */
+    public roleEdge(): string {
+        const r = this.roleRank;
+        if (this.isSolo()) { return `Combat Awareness: strikes first (+${r} Initiative), and the opening hit each round lands +${r * 2} damage.`; }
+        if (this.isCop()) { return `Backup: +${r} damage on every landed hit — someone's always covering.`; }
+        if (this.isNetrunner()) { return `Interface ${r}: the crew's deck-jockey — NET dives run on this rank.`; }
+        if (this.isTechie()) { return "Maker: patches up half the squad's armour damage after every cleared node."; }
+        if (this.isFixer()) { return "Operator: every eddie through your hands is 20% bigger — loot and fence alike."; }
+        if (this.isCorporate()) { return "Teamwork: the company account covers 10% of everything at the markets."; }
+        if (this.isNomad()) { return "Family knows salvage: noticeably better scavenge odds off every body."; }
+        if (this.isMedia()) { return "Credibility: sources see one street further — the map ahead holds no surprises."; }
+        if (this.isRockerboy()) { return `Charismatic Impact: +${r} on COOL event checks, and some crews stand down on sight (${Math.round(this.standDownChance() * 100)}%).`; }
+        return "No role edge.";
     }
 
     /*draw(context) {

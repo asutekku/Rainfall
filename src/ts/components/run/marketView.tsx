@@ -1,6 +1,7 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {Purse} from "../../interact/crew";
+import {Economy} from "../../interact/economy";
 import {GetItem} from "../../interact/getItem";
 import Equipment from "../../items/Equipment";
 import {Weapon} from "../../items/Weapon";
@@ -98,6 +99,18 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 return `${med.name} into the med pouch.`;
             },
         });
+        out.push({
+            name: "Crate of frags", cost: 120, detail: "ordnance · +1 grenade per member",
+            info: [
+                ["Effect", "every standing member pockets one frag grenade"],
+                ["Use", "thrown in battle — 6d6 in a blast radius, armour halved"],
+            ],
+            blurb: "Militech surplus, crate stencils sanded off.",
+            buy: () => {
+                party.forEach((m) => { if (m.canFight()) { m.grenades += 1; } });
+                return "Frags handed round. Everyone stands a little straighter.";
+            },
+        });
         const cw = cyberwareData[(Math.random() * cyberwareData.length) << 0]!;
         out.push({
             name: cw.name, cost: cw.cost, detail: `chrome · HL ${cw.humanityLoss} (installed on the spot)`,
@@ -135,9 +148,15 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         };
     }
 
+    /** Sticker price after the Corporate "Teamwork" company-account discount. */
+    private price(cost: number): number {
+        return Economy.marketPrice(cost, this.props.party);
+    }
+
     private buy(item: Stock) {
         const leader = this.props.party[0]!;
-        if (!Purse.spend(leader, item.cost)) { this.setState({notice: `Not enough eddies (${item.cost}¥).`}); return; }
+        const cost = this.price(item.cost);
+        if (!Purse.spend(leader, cost)) { this.setState({notice: `Not enough eddies (${cost}¥).`}); return; }
         let line: string;
         if (item.detail.indexOf("service") === 0) {
             line = item.buy(leader);
@@ -155,7 +174,13 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         this.setState({notice: line, bought: this.state.bought.concat(item.name)});
     }
 
+    /** Street rate: 40%, or 48% when a standing Fixer works the fence ("Operator"). */
+    private fenceRate(): number {
+        return Economy.fenceRate(this.props.party);
+    }
+
     private fenceList(): Fence[] {
+        const rate = this.fenceRate();
         const out: Fence[] = [];
         this.props.party.forEach((owner) => {
             owner.inventory.weapons.forEach((w, idx) => {
@@ -163,21 +188,21 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 out.push({
                     owner, kind: "weapon", idx, name: w.name,
                     detail: `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""} · ${owner.name.split(" ")[0]}'s stash`,
-                    price: Math.max(5, Math.floor(w.cost * 0.4)),
+                    price: Math.max(5, Math.floor(w.cost * rate)),
                 });
             });
             owner.inventory.armor.forEach((a, idx) => {
                 out.push({
                     owner, kind: "armor", idx, name: a.name,
                     detail: `SP ${a.stoppingPower} · ${owner.name.split(" ")[0]}'s stash`,
-                    price: Math.max(5, Math.floor(a.cost * 0.4)),
+                    price: Math.max(5, Math.floor(a.cost * rate)),
                 });
             });
             owner.inventory.misc.forEach((m, idx) => {
                 out.push({
                     owner, kind: "misc", idx, name: m.name,
                     detail: `junk · ${owner.name.split(" ")[0]}'s stash`,
-                    price: Math.max(2, Math.floor((m.cost || 0) * 0.4)),
+                    price: Math.max(2, Math.floor((m.cost || 0) * rate)),
                 });
             });
         });
@@ -210,9 +235,9 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                         <span className={"mkDetail"}>{item.detail}</span>
                     </span>
                 </button>
-                <button className={"mkBuy"} disabled={sold || !Purse.canAfford(leader, item.cost)}
+                <button className={"mkBuy"} disabled={sold || !Purse.canAfford(leader, this.price(item.cost))}
                         onClick={() => this.buy(item)}>
-                    {sold ? "SOLD" : item.cost + "¥"}
+                    {sold ? "SOLD" : this.price(item.cost) + "¥"}
                 </button>
                 <div className={"mkInfo"}>
                     <div className={"mkInfoBody"}>
@@ -243,13 +268,17 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                             <span className={"mHeroGlyph"}><i>▤</i></span>
                             <span className={"mHeroKicker"}>Night market</span>
                             <h2 className={"mHeroTitle"}>Tonight's Stock</h2>
-                            <p className={"mHeroSub"}>What fell off a truck this week. Tap a row for the spec sheet.</p>
+                            <p className={"mHeroSub"}>
+                                {this.price(100) < 100
+                                    ? "The company account covers 10% — prices shown are yours."
+                                    : "What fell off a truck this week. Tap a row for the spec sheet."}
+                            </p>
                         </div>
                         {this.state.notice && <div className={"mkNotice"}>{this.state.notice}</div>}
                         <div className={"mkStock"}>
                             {[...this.stock, this.service].map((item, i) => this.item(item, "s" + i))}
                         </div>
-                        <h4 className={"mkHead"}>The fence buys · 40% street rate</h4>
+                        <h4 className={"mkHead"}>The fence buys · {Math.round(this.fenceRate() * 100)}% street rate{this.fenceRate() > 0.4 ? " (Operator\u2019s cut)" : ""}</h4>
                         {fence.length === 0 && <div className={"mkEmpty"}>Nothing in the duffel worth fencing.</div>}
                         <div className={"mkStock"}>
                             {fence.map((f, i) => (

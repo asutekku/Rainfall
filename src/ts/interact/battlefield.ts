@@ -51,9 +51,9 @@ export class Battlefield {
         this.rollCover();
         this.line(party, SQUAD_Y);
         this.deployEnemies(enemies);
-        // deployment kit: the squad restocks frags between jobs; grenadier
-        // archetypes always carry theirs, heavier hostiles sometimes do
-        party.forEach((p) => { p.grenades = 2; });
+        // frags are carried, not conjured: the squad throws what it bought or
+        // scavenged. Grenadier archetypes always pack theirs; heavier hostiles
+        // sometimes bring one of their own.
         enemies.forEach((e) => {
             e.grenades = e.frags !== undefined ? e.frags
                 : (e.rank || 1) >= 3 && Math.random() < 0.4 ? 1 : 0;

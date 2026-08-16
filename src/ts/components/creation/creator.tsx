@@ -28,8 +28,11 @@ const LIFEPATH: Array<[keyof Lifepath, string, string[]]> = [
 export interface CreatorProps {
     initial: CharacterSpec;
     canCancel: boolean;
+    /** A checkpointed run exists on this device. */
+    canContinue?: boolean | undefined;
     onDeploy: (spec: CharacterSpec) => void;
     onCancel: () => void;
+    onContinue?: (() => void) | undefined;
 }
 
 interface CreatorState {
@@ -242,7 +245,11 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                         <button onClick={this.randomize}>⚄ Randomize</button>
                         <button onClick={this.reset}>⟲ Reset</button>
                         {this.props.canCancel && <button onClick={this.props.onCancel}>✕ Cancel</button>}
-                        <button className={"prim"} onClick={() => this.props.onDeploy(this.state.spec)}>Hit the Street ▸</button>
+                        {this.props.canContinue && this.props.onContinue &&
+                            <button className={"prim crContinue"} onClick={this.props.onContinue}>▸ Continue Run</button>}
+                        <button className={"prim"} onClick={() => this.props.onDeploy(this.state.spec)}>
+                            {this.props.canContinue ? "New Run ▸" : "Hit the Street ▸"}
+                        </button>
                     </div>
                 </header>
                 <div className={"crBody"}>

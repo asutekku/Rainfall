@@ -3,6 +3,8 @@ import * as React from 'react';
 interface SidebarProps {
     active: string;
     auto: boolean;
+    /** A run is live — hide the character door so it can't be abandoned by mistap. */
+    inRun: boolean;
     activeSelection: any;
     onAuto: any;
     onCreate: any;
@@ -37,7 +39,8 @@ export class Sidebar extends React.Component<SidebarProps, {}> {
                 <button title={this.props.auto ? "Auto: on" : "Auto"}
                         className={this.props.auto ? "act-on" : ""}
                         onClick={this.props.onAuto}>▸</button>
-                <button title={"New character"} onClick={this.props.onCreate}>✎</button>
+                {!this.props.inRun &&
+                    <button title={"New character"} onClick={this.props.onCreate}>✎</button>}
             </nav>);
     }
 }

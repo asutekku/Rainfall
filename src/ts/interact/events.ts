@@ -65,14 +65,20 @@ export function makeCtx(party: Actor[]): EventCtx {
 
 /** Approximate odds of d10+stat >= dv, for showing on the button. */
 export function odds(actor: Actor, check: EventCheck): number {
-    const p = (11 - (check.dv - statOf(actor, check.stat))) * 10;
+    const p = (11 - (check.dv - statOf(actor, check.stat) - faceBonus(actor, check))) * 10;
     return Math.max(5, Math.min(95, p));
 }
 
 export interface CheckResult { success: boolean; luckSpent: number; roll: number; total: number; stat: number; }
 
+/** Fame carries COOL plays: Rockerboy "Charismatic Impact" (+rank) and
+ *  Media "Credibility" (+rank/2) add their Facedown edge to COOL checks. */
+export function faceBonus(actor: Actor, check: EventCheck): number {
+    return check.stat === "cool" ? actor.facedownBonus() : 0;
+}
+
 export function rollCheck(actor: Actor, check: EventCheck): CheckResult {
-    const stat = statOf(actor, check.stat);
+    const stat = statOf(actor, check.stat) + faceBonus(actor, check);
     const res = Check.resolve(actor, stat, check.dv);
     return {success: res.success, luckSpent: res.luckSpent, roll: res.roll, total: res.total, stat};
 }

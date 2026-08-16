@@ -51,6 +51,7 @@ export class CharacterAbout extends React.Component<AboutProps, AboutState> {
                     <StatListItem name={"Name:"} value={a.name}/>
                     <StatListItem name={"Role:"} value={a.role.name}/>
                     <StatListItem name={"Skill:"} value={a.role.skill!} tooltip={a.role.skillDescription}/>
+                    <div className={"roleEdge"}>◆ {a.roleEdge()}</div>
                     <StatListItem name={"Level:"} value={a.level.toString()}/>
                     <StatListItem name={"Experience:"} value={`${a.experience}/${a.maxExperience}`}/>
                     <div className={"statCard"}>

@@ -187,10 +187,12 @@ export class RunMap {
         nodes[bossIdx]!.type = "boss";
         const others = nodes.map((_n, i) => i).filter((i) => i !== entryIdx && i !== bossIdx);
         const shuffled = others.sort(() => Math.random() - 0.5);
-        // one guaranteed shop, safehouse and fixer's table; the rest is trouble
-        const extra: NodeType[] = ["merchant", "rest", "hire", "net", "net"];
+        // one guaranteed shop, safehouse, fixer's table, street event and NET
+        // jack-point (a Netrunner's payday can't be a map lottery); the rest is trouble
+        const extra: NodeType[] = ["merchant", "rest", "hire", "net"];
         shuffled.forEach((i, k) => {
             nodes[i]!.type = k === 0 ? "merchant" : k === 1 ? "rest" : k === 2 ? "hire" : k === 3 ? "event"
+                : k === 4 ? "net"
                 : Math.random() < 0.24 ? "event"
                 : (sector > 1 && Math.random() < 0.22) ? "elite"
                 : Math.random() < 0.2 ? Utils.pickRandom(extra)

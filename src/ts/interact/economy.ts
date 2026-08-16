@@ -47,7 +47,8 @@ export class Economy {
         if (killer.faction) { return []; }              // enemies don't keep loot
         const msgs: string[] = [];
         const rank = victim.rank || 1;
-        const chance = 0.2 + 0.06 * rank;
+        // Nomads strip a wreck to the frame — their finds come up more often.
+        const chance = 0.2 + 0.06 * rank + (killer.isNomad() ? 0.12 : 0);
         if (victim.weapon && victim.weapon.name !== "Fists" && Math.random() < chance) {
             const w = victim.weapon.clone();
             w.equipped = false;
@@ -68,6 +69,10 @@ export class Economy {
             msgs.push(rare
                 ? `★ ${killer.name} scavenges rare ${worn.name} (SP ${worn.stoppingPower})!`
                 : `${killer.name} scavenges ${worn.name} (SP ${worn.stoppingPower}).`);
+        }
+        if (Math.random() < 0.08) {
+            killer.grenades += 1;
+            msgs.push(`${killer.name} pockets a frag grenade.`);
         }
         // pocket loot: meds the crew can actually use, junk the fence will take
         if (Math.random() < 0.16) {
@@ -231,6 +236,24 @@ export class Economy {
     /** What the fence pays for a piece the squad doesn't want: half sticker price. */
     public static sellValue(cost: number): number {
         return Math.max(5, Math.floor((cost || 0) / 2));
+    }
+
+    /**
+     * Corporate "Teamwork": the sticker price after the company account takes
+     * its cut. With no standing Corporate in the crew this IS the sticker price.
+     */
+    public static marketPrice(cost: number, party: Actor[]): number {
+        const discount = party.reduce((m, p) => Math.max(m, p.canFight() ? p.corpDiscount() : 0), 0);
+        return Math.ceil(cost * (1 - discount));
+    }
+
+    /**
+     * What fraction of sticker price the fence pays: 40% street rate, and a
+     * standing Fixer's "Operator" cut makes every payout 20% bigger (48%).
+     */
+    public static fenceRate(party: Actor[]): number {
+        const cut = party.reduce((m, p) => Math.max(m, p.canFight() ? p.fixerCut() : 0), 0);
+        return 0.4 * (1 + cut);
     }
 
     /** Patch worn armour back up to its rating — what a safehouse stop is for. */
