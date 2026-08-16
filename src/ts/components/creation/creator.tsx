@@ -4,6 +4,7 @@ import {
     CharacterCreation, CharacterSpec, Lifepath,
     STAT_KEYS, STAT_BUDGET, STAT_MIN, STAT_MAX,
 } from "../../actors/resources/CharacterCreation";
+import type {Career} from "../../interact/career";
 
 const ROLE_MAP: any = roles;
 const ROLE_KEYS: string[] = ["rockerboy", "solo", "netrunner", "techie", "media", "cop", "corporate", "fixer", "nomad"];
@@ -27,28 +28,33 @@ const LIFEPATH: Array<[keyof Lifepath, string, string[]]> = [
 
 export interface CreatorProps {
     initial: CharacterSpec;
-    canCancel: boolean;
-    /** A checkpointed run exists on this device. */
-    canContinue?: boolean | undefined;
-    onDeploy: (spec: CharacterSpec) => void;
+    /** The merc on file. Present → this screen asks one question before it asks nine. */
+    career: Career | null;
+    onDeploy: (spec: CharacterSpec, veteran: boolean) => void;
     onCancel: () => void;
-    onContinue?: (() => void) | undefined;
 }
 
 interface CreatorState {
     spec: CharacterSpec;
     /** Point-buy + lifepath revealed. Closed, the role's own stat line is used. */
     advanced: boolean;
+    /** The veteran was retired here — the editor is open and this is someone new. */
+    retired: boolean;
 }
 
 /**
- * Boot screen: you, not a squad.
+ * The one door into a run: you, not a squad.
  *
  * The rest of the crew is hired off the street from the merc market, so this
  * only builds the one character who persists across runs. Pick a role, take
  * the name or roll another, hit the street — the role's signature stat line
  * does the rest. The full RED Complete Package point-buy and the Lifepath
  * tables are still here for anyone who wants them, folded behind "customise".
+ *
+ * With a merc already on file this opens as their card instead of a blank
+ * form: sending them back out is one button, and retiring them is the other.
+ * "New run" and "new character" used to be two near-identical doors on the way
+ * in — they are one decision, and this is where it is made.
  */
 export class Creator extends React.Component<CreatorProps, CreatorState> {
 
@@ -58,7 +64,7 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
         super(props);
         const spec = Creator.normalize(props.initial);
         this.base = Creator.clone(spec);
-        this.state = {spec, advanced: false};
+        this.state = {spec, advanced: false, retired: false};
     }
 
     /** Fill in every stat + a lifepath so the editor never reads an undefined field. */
@@ -121,6 +127,18 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
     };
 
     private reset = () => this.setState({spec: Creator.clone(this.base)});
+
+    /**
+     * Retire the merc on file and open the editor on someone else entirely.
+     * Nothing is deleted yet — the record only dies if this new person actually
+     * deploys, so backing out of here leaves the veteran exactly where they were.
+     */
+    private retire = () => {
+        const rolled = CharacterCreation.randomSpec();
+        const spec = Creator.normalize({...rolled, stats: CharacterCreation.statsForRole(rolled.role || "solo")});
+        this.base = Creator.clone(spec);
+        this.setState({spec, retired: true, advanced: false});
+    };
 
     /** Opening customise keeps the role line as the starting point for edits. */
     private toggleAdvanced = () => this.setState({advanced: !this.state.advanced});
@@ -231,41 +249,82 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
             </div>);
     }
 
+    /**
+     * The merc on file, ready to go back out. Read-only on purpose: a veteran's
+     * numbers are what they earned, and editing them here would quietly mean
+     * "start over at level 1". Retiring is the honest way to that, and it says so.
+     */
+    private veteranCard(career: Career) {
+        const role = ROLE_MAP[career.spec.role || "solo"];
+        const m = career.merc;
+        const first = career.name.split(" ")[0];
+        return (
+            <div className={"crVet"}>
+                <div className={"crVetHead"}>
+                    <img src={`src/media/portraits/${career.spec.role || "solo"}.png`} alt={role.name}/>
+                    <div>
+                        <b>{career.name}</b>
+                        <span style={{color: role.color}}>{role.name} · {role.skill}</span>
+                    </div>
+                </div>
+                <div className={"crVetStats"}>
+                    <span><i>Level</i><b>{m.level}</b></span>
+                    <span><i>Kills</i><b>{career.kills}</b></span>
+                    <span><i>Rep</i><b>{m.reputation}/10</b></span>
+                    <span><i>Humanity</i><b>{m.humanity}/{m.maxHumanity}</b></span>
+                    <span><i>Chrome</i><b>{m.chrome.length}</b></span>
+                    <span><i>Runs</i><b>{career.runs}</b></span>
+                </div>
+                <p className={"crVetNote"}>
+                    Goes out at Sector 1 in basic kit with a rookie in tow. Levels, training, reputation
+                    and chrome come along; gear, eddies and crew never do.
+                </p>
+                <button className={"crRetire"} onClick={this.retire}>
+                    Retire {first} and build someone new
+                </button>
+            </div>);
+    }
+
     public override render() {
         const s = this.state.spec;
         const r = ROLE_MAP[s.role || "solo"];
+        // The veteran holds the screen until they're retired, at which point
+        // this is an ordinary build-a-merc form again.
+        const career = this.state.retired ? null : this.props.career;
         return (
             <div className={"creator solo"}>
                 <header className={"crHead"}>
                     <div>
-                        <h1>Hit the Street</h1>
-                        <p>Your merc — the crew gets hired on the way</p>
+                        <h1>{career ? "Back to Work" : "Hit the Street"}</h1>
+                        <p>{career ? `Run ${career.runs + 1} — the crew gets hired on the way`
+                                   : "Your merc — the crew gets hired on the way"}</p>
                     </div>
                     <div className={"crActions"}>
-                        <button onClick={this.randomize}>⚄ Randomize</button>
-                        <button onClick={this.reset}>⟲ Reset</button>
-                        {this.props.canCancel && <button onClick={this.props.onCancel}>✕ Cancel</button>}
-                        {this.props.canContinue && this.props.onContinue &&
-                            <button className={"prim crContinue"} onClick={this.props.onContinue}>▸ Continue Run</button>}
-                        <button className={"prim"} onClick={() => this.props.onDeploy(this.state.spec)}>
-                            {this.props.canContinue ? "New Run ▸" : "Hit the Street ▸"}
+                        {!career && <button onClick={this.randomize}>⚄ Randomize</button>}
+                        {!career && <button onClick={this.reset}>⟲ Reset</button>}
+                        <button onClick={this.props.onCancel}>✕ Cancel</button>
+                        <button className={"prim"}
+                                onClick={() => this.props.onDeploy(this.state.spec, !!career)}>
+                            {career ? `Send ${career.name.split(" ")[0]} back out ▸` : "Hit the Street ▸"}
                         </button>
                     </div>
                 </header>
                 <div className={"crBody"}>
                     <main className={"crEdit"}>
-                        <div className={"crEditHead"}>
-                            <img className={"crPortrait"} src={`src/media/portraits/${s.role}.png`} alt={r.name}/>
-                            {this.identity(s)}
-                        </div>
-                        {this.rolePicker(s)}
-                        {this.derivedBar(s)}
-                        <button className={"crAdvToggle" + (this.state.advanced ? " on" : "")}
-                                onClick={this.toggleAdvanced}>
-                            {this.state.advanced ? "▾" : "▸"} Customise — stat point-buy & lifepath
-                        </button>
-                        {this.state.advanced && this.statBuy(s)}
-                        {this.state.advanced && this.lifepath(s)}
+                        {career ? this.veteranCard(career) : <>
+                            <div className={"crEditHead"}>
+                                <img className={"crPortrait"} src={`src/media/portraits/${s.role}.png`} alt={r.name}/>
+                                {this.identity(s)}
+                            </div>
+                            {this.rolePicker(s)}
+                            {this.derivedBar(s)}
+                            <button className={"crAdvToggle" + (this.state.advanced ? " on" : "")}
+                                    onClick={this.toggleAdvanced}>
+                                {this.state.advanced ? "▾" : "▸"} Customise — stat point-buy & lifepath
+                            </button>
+                            {this.state.advanced && this.statBuy(s)}
+                            {this.state.advanced && this.lifepath(s)}
+                        </>}
                     </main>
                 </div>
             </div>);

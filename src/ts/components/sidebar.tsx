@@ -3,11 +3,15 @@ import * as React from 'react';
 interface SidebarProps {
     active: string;
     auto: boolean;
-    /** A run is live — hide the character door so it can't be abandoned by mistap. */
-    inRun: boolean;
+    /**
+     * The squad is standing on the map, so the checkpoint is current and
+     * leaving costs nothing. Off the map it stays hidden — quitting out of a
+     * fight would rewind to the last waypoint, which is a way to un-lose it.
+     */
+    canQuit: boolean;
     activeSelection: any;
     onAuto: any;
-    onCreate: any;
+    onQuit: any;
 }
 
 // Panel-switching views (glyph + label; label doubles as tooltip / accessible name).
@@ -39,8 +43,9 @@ export class Sidebar extends React.Component<SidebarProps, {}> {
                 <button title={this.props.auto ? "Auto: on" : "Auto"}
                         className={this.props.auto ? "act-on" : ""}
                         onClick={this.props.onAuto}>▸</button>
-                {!this.props.inRun &&
-                    <button title={"New character"} onClick={this.props.onCreate}>✎</button>}
+                {this.props.canQuit &&
+                    <button title={"Quit to title — the run is checkpointed here"}
+                            onClick={this.props.onQuit}>⏻</button>}
             </nav>);
     }
 }

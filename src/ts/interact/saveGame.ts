@@ -22,7 +22,7 @@ import type {RunState} from "./runMap";
 
 interface ArmorSnap { part: string; name: string; sp: number; maxSp: number; cost: number; }
 
-interface MemberSnap {
+export interface MemberSnap {
     kind: "player" | "merc";
     offer: MercOffer | null;              // mercs only
     level: number; experience: number; maxExperience: number;
@@ -49,6 +49,24 @@ interface SaveData {
     funds: number;
     usedEvents: string[];
     run: RunState;                        // plain data throughout (node saved as null)
+    savedAt?: number;                     // wall clock, for "12 min ago" on the boot screen
+}
+
+/**
+ * What the boot screen needs to describe the checkpoint without rebuilding a
+ * single actor: who's out there, how far they got, what they're carrying.
+ * Every field is derived from the payload, so saves written before this
+ * existed still describe themselves.
+ */
+export interface SaveHeader {
+    name: string;
+    role: string;
+    level: number;
+    sector: number;
+    depth: number;
+    funds: number;
+    squad: number;
+    savedAt: number;                      // 0 when the save predates the stamp
 }
 
 export interface RestoredGame {
@@ -73,7 +91,7 @@ const rebuildArmor = (s: ArmorSnap): Armor => {
     return a;
 };
 
-const memberSnap = (m: Actor): MemberSnap => ({
+export const memberSnap = (m: Actor): MemberSnap => ({
     kind: m instanceof Merc ? "merc" : "player",
     offer: m instanceof Merc ? m.offer : null,
     level: m.level, experience: m.experience, maxExperience: m.maxExperience,
@@ -96,7 +114,7 @@ const memberSnap = (m: Actor): MemberSnap => ({
 });
 
 /** Stamp the mutable state from a snapshot onto a freshly constructed actor. */
-const stamp = (a: Actor, s: MemberSnap): Actor => {
+export const stamp = (a: Actor, s: MemberSnap): Actor => {
     a.level = s.level; a.experience = s.experience; a.maxExperience = s.maxExperience;
     a.maxHealth = s.maxHealth; a.health = s.health;
     a.maxLuck = s.maxLuck; a.luck = s.luck;
@@ -127,6 +145,31 @@ export class SaveGame {
         try { return !!window.localStorage.getItem(KEY); } catch { return false; }
     }
 
+    /**
+     * Describe the checkpoint without rebuilding it. The boot screen asks the
+     * player to choose between continuing and starting over, and it can only
+     * ask that fairly if it can say what continuing would resume.
+     */
+    public static peek(): SaveHeader | null {
+        try {
+            const raw = window.localStorage.getItem(KEY);
+            if (!raw) { return null; }
+            const data = JSON.parse(raw) as SaveData;
+            if (data.v !== 1 || !data.members || !data.members.length || !data.run) { return null; }
+            const you = data.members[0]!;
+            return {
+                name: data.spec.name || "Unnamed",
+                role: data.spec.role || "solo",
+                level: you.level,
+                sector: data.run.sector,
+                depth: data.run.depth,
+                funds: data.funds,
+                squad: data.members.length,
+                savedAt: data.savedAt || 0,
+            };
+        } catch { return null; }
+    }
+
     /** Checkpoint the run. Call only from safe moments (standing on the map). */
     public static save(spec: CharacterSpec, party: Actor[], crew: Crew, run: RunState, usedEvents: string[]): void {
         try {
@@ -136,6 +179,7 @@ export class SaveGame {
                 funds: crew.funds,
                 usedEvents: usedEvents.slice(),
                 run: {...run, node: null},
+                savedAt: Date.now(),
             };
             window.localStorage.setItem(KEY, JSON.stringify(data));
         } catch { /* quota or private mode — a missing save is not worth crashing over */ }

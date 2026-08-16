@@ -1,5 +1,6 @@
 import type {InterfaceAppState} from "../components/app";
 import {Actor} from "../actors/Actor";
+import {ActorController} from "../actors/actorController";
 import {Armor} from "../items/Armor";
 import {Weapon} from "../items/Weapon";
 import {Merc} from "../actors/Merc";
@@ -32,6 +33,43 @@ export class RunController {
     public static freshRun(sector: number = 1): RunState {
         BattleRecorder.abort();
         return RunMap.generate(sector);
+    }
+
+    /**
+     * Put a character on the street at the top of sector 1 — the one way a run
+     * ever begins. First deploy, a veteran sent back out from the boot screen,
+     * and the run after a wipe all land here, so a run always opens in exactly
+     * the same shape (this used to live in two places and had already drifted:
+     * one seeded the combat shell, the other leaned on stale state from the run
+     * that had just ended).
+     *
+     * Every run starts on the same footing: patched up, Luck restored, basic
+     * kit, two frags. What the character keeps is what the character *is* —
+     * levels, training, reputation, and the chrome they paid Humanity for.
+     * Trauma Team resets the body and doesn't touch the wiring.
+     */
+    public static beginRun(character: Actor, opening: string, log: number): Patch {
+        character.revive();
+        character.health = character.maxHealth;
+        character.refreshLuck();
+        Economy.stripToBasics(character);
+        character.grenades = 2;
+        // Never start alone: the fixer throws in a rookie with the job.
+        const party: Actor[] = [character, new Merc(MercMarket.starter(1))];
+        const crew = new Crew().activate();
+        // Seed a placeholder wave so the combat shell never reads an empty array.
+        const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
+        Battlefield.deploy(party, enemies);
+        return {
+            character, party, crew,
+            run: RunController.scout(RunController.freshRun(1), party),
+            screen: "map", report: null, offers: [],
+            eventId: null, usedEvents: [],
+            currentEnemies: enemies, activeChar: character, activeEnemy: enemies[0],
+            activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
+            messages: [{msg: opening} as any].slice(0, log),
+            playback: null, orders: null, turnOrder: [], auto: true,
+        };
     }
 
     /** Move onto an adjacent node: relocate, open its screen, or start its fight. */
@@ -335,21 +373,19 @@ export class RunController {
      * their levels and training intact; the gear, the crew and the eddies stay
      * on the pavement. Next run starts at sector 1 with a stronger merc in
      * basic kit — which is why encounters scale off the sector, not the party.
+     *
+     * `tail` is the last few lines of the run that just died: the feed used to
+     * be wiped clean here, which made the fourth run read exactly like the
+     * first. The street remembers what happened twenty minutes ago.
      */
-    public static nextRun(state: InterfaceAppState, log: number): Patch {
-        const character = state.character;
-        character.revive();
-        Economy.stripToBasics(character);
-        character.grenades = 2;   // basics include two frags
-        const crew = new Crew().activate();
-        const party = [character, new Merc(MercMarket.starter(1))];
+    public static nextRun(state: InterfaceAppState, log: number, tail: any[] = []): Patch {
+        const run = state.run;
+        const reached = run ? `— last job died in sector ${run.sector}, ${run.depth} waypoints deep —` : "";
+        const patch = RunController.beginRun(state.character, "— Trauma Team drops you back on the street. New crew, old scars. —", log);
+        const opening = (patch.messages || []) as any[];
         return {
-            character, party, crew,
-            run: RunController.scout(RunController.freshRun(1), party),
-            screen: "map", report: null, offers: [],
-            eventId: null, usedEvents: [],
-            activeChar: character, activeMainPanel: "Combat", mobileTab: "arena",
-            messages: [{msg: "— Trauma Team drops you back on the street. New crew, old scars. —"} as any].slice(0, log),
+            ...patch,
+            messages: [...opening, ...(reached ? [{msg: reached} as any] : []), ...tail].slice(0, log),
         };
     }
 
