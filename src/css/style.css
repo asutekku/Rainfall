@@ -1269,3 +1269,8 @@ progress::-moz-progress-bar { background:var(--rust); }
 .fe.kill { border-left:2px solid var(--crit); padding-left:6px; background:rgba(224,83,63,.06); }
 .fe.sys { color:var(--dim); font-size:11px; }
 .fe.sys .x { color:var(--dim); }
+
+/* frag mode */
+.ob.frag { border-color:#6b4a1e; color:var(--warn); }
+.ob.frag.set { border-color:var(--warn); background:#241a0d; box-shadow:0 0 8px rgba(240,168,48,.25); }
+.bsFloat.f-tick { color:#ff9a70; font-size:12px; }

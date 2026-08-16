@@ -1,8 +1,8 @@
 import * as React from "react";
 import * as THREE from "three";
 import {Actor} from "../../actors/Actor";
-import {Battlefield, Point} from "../../interact/battlefield";
-import {BattleEvent, MoveEvent, ShotEvent} from "../../interact/battleEvents";
+import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "../../interact/battlefield";
+import {BattleEvent, BlastEvent, MoveEvent, ShotEvent} from "../../interact/battleEvents";
 import {aimPreview} from "../../interact/aimPreview";
 import {Streetscape, generateStreetscape} from "../../interact/streetscape";
 
@@ -30,6 +30,9 @@ export interface OrderCtx {
     pendingMove: Point | null;
     target: Actor | null;
     aimed: boolean;
+    /** street taps place a blast point instead of a move */
+    grenadeMode: boolean;
+    grenadeAt: Point | null;
 }
 
 export interface BattleSceneProps {
@@ -111,6 +114,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
     private t = 0;
     private last = 0;
     private reduced = false;
+    private shakeT = 0;                  // camera-shake seconds left (explosions)
     private ro: ResizeObserver | null = null;
     private camDist = 46;
     private focus = new THREE.Vector3(0, 0, 18);
@@ -129,6 +133,9 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
     private losLine!: THREE.Line;
     private losMat!: THREE.LineBasicMaterial;
     private hoverMark!: THREE.Mesh;
+    private throwRing!: THREE.Mesh;
+    private blastDisc!: THREE.Mesh;
+    private blastRing!: THREE.Mesh;
     private hitChip!: HTMLDivElement;
 
     // ------------------------------------------------------------ lifecycle --
@@ -651,6 +658,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                 }
                 case "move": this.pushMoveActs(ev as MoveEvent, D); break;
                 case "shot": this.pushShotActs(ev as ShotEvent, D); break;
+                case "blast": this.pushBlastActs(ev as BlastEvent, D); break;
                 case "noshot": {
                     const u = this.unitFor(ev.actor);
                     if (u) {
@@ -826,6 +834,109 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         });
     }
 
+    /** Frag throw: face the point, arc the grenade over, detonate, count the cost. */
+    private pushBlastActs(ev: BlastEvent, D: (n: number) => number) {
+        const thrower = this.unitFor(ev.actor);
+        if (!thrower) { return; }
+        const at = new THREE.Vector3(ev.at.x, 0.15, ev.at.y);
+
+        this.acts.push({dur: D(0.2), t: 0, start: () => {
+            thrower.targetYaw = Math.atan2(ev.at.x - thrower.visPos.x, ev.at.y - thrower.visPos.y);
+            this.focusGoal.set(ev.at.x, 0, ev.at.y);
+        }});
+
+        // the throw: a tumbling grenade on a parabola, then the street lights up
+        let nade: THREE.Mesh | null = null;
+        const flightDur = D(0.8);
+        this.acts.push({
+            dur: flightDur, t: 0,
+            start: () => {
+                nade = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.22, 0.16),
+                    new THREE.MeshBasicMaterial({color: 0x9aa4ad}));
+                this.scene.add(nade);
+            },
+            update: (k) => {
+                if (!nade) { return; }
+                const from = this.unitAnchor(thrower, 1.4);
+                nade.position.lerpVectors(from, at, k);
+                nade.position.y += Math.sin(k * Math.PI) * 4.5;   // arc
+                nade.rotation.x += 0.3; nade.rotation.z += 0.2;
+            },
+            end: () => {
+                if (nade) {
+                    this.scene.remove(nade);
+                    nade.geometry.dispose();
+                    (nade.material as THREE.Material).dispose();
+                }
+                this.explode(at, ev);
+            },
+        });
+        const anyDown = ev.victims.some((v) => v.dropped);
+        this.acts.push({dur: D(0.9 + (anyDown ? 0.5 : 0)), t: 0});
+    }
+
+    /** The boom: flash, shockwave ring, sparks, smoke, a scorch that stays, camera shake. */
+    private explode(at: THREE.Vector3, ev: BlastEvent) {
+        this.shakeT = 0.55;
+        this.spawnFlash(at.clone().setY(1.2), 0xffd9a0);
+        this.spawnSparks(at.clone().setY(1.0), 0xffa04d, 26);
+        this.spawnSparks(at.clone().setY(0.6), 0xff5a3c, 14);
+
+        // expanding shockwave ring on the asphalt
+        const ring = new THREE.Mesh(new THREE.RingGeometry(0.86, 1, 48), new THREE.MeshBasicMaterial({
+            color: 0xffc27d, transparent: true, opacity: 0.95, side: THREE.DoubleSide,
+            blending: THREE.AdditiveBlending, depthWrite: false}));
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.set(at.x, 0.06, at.z);
+        this.scene.add(ring);
+        let life = 0.65;
+        this.fx.push({update: (dt) => {
+            life -= dt;
+            ring.scale.addScalar(dt * (BLAST_RADIUS * 2.4));
+            (ring.material as THREE.MeshBasicMaterial).opacity = Math.max(0, life / 0.65 * 0.95);
+            if (life <= 0) { this.scene.remove(ring); (ring.material as THREE.Material).dispose(); return false; }
+            return true;
+        }});
+
+        // rising smoke
+        for (let i = 0; i < 5; i++) {
+            const s = new THREE.Sprite(new THREE.SpriteMaterial({
+                map: BattleScene.glowTex(), color: 0x39404b, transparent: true, opacity: 0.4, depthWrite: false}));
+            s.position.set(at.x + (Math.random() - 0.5) * 2, 0.6, at.z + (Math.random() - 0.5) * 2);
+            s.scale.setScalar(1.4 + Math.random());
+            this.scene.add(s);
+            let l = 1.5 + Math.random() * 0.5;
+            const rise = 1.6 + Math.random();
+            this.fx.push({update: (dt) => {
+                l -= dt;
+                s.position.y += rise * dt;
+                s.scale.addScalar(dt * 2.2);
+                (s.material as THREE.SpriteMaterial).opacity = Math.max(0, l / 2 * 0.4);
+                if (l <= 0) { this.scene.remove(s); (s.material as THREE.Material).dispose(); return false; }
+                return true;
+            }});
+        }
+
+        // permanent scorch on the street
+        const scorch = new THREE.Mesh(new THREE.CircleGeometry(BLAST_RADIUS * 0.55, 24),
+            new THREE.MeshBasicMaterial({color: 0x05060a, transparent: true, opacity: 0.6, depthWrite: false}));
+        scorch.rotation.x = -Math.PI / 2;
+        scorch.position.set(at.x, 0.03, at.z);
+        if (this.streetGroup) { this.streetGroup.add(scorch); } else { this.scene.add(scorch); }
+
+        // the bill, staggered off each victim
+        ev.victims.forEach((v, i) => {
+            const u = this.unitFor(v.target);
+            if (!u) { return; }
+            window.setTimeout(() => {
+                if (v.damage <= 0) { this.floater(u, v.dodged ? "DIVES CLEAR" : "ARMOR", "soak"); }
+                else { this.floater(u, (v.dodged ? "½ " : "") + String(v.damage), v.damage >= 15 ? "dmg-big" : "dmg"); }
+                if (v.dropped) { this.floater(u, "DOWN", "down"); }
+                u.flinch = 0.25;
+            }, 120 + i * 140);
+        });
+    }
+
     /** Damage numbers, flinch, fall — the moment a volley lands. */
     private impact(ev: ShotEvent, target: UnitView) {
         if (!ev.hit) {
@@ -835,7 +946,19 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             this.spawnSparks(this.unitAnchor(target, 1.3), 0x9aa4ad, 5);
         } else {
             const big = ev.damage >= 15 || ev.aimed;
-            this.floater(target, (ev.aimed ? "◎ " : "") + String(ev.damage), big ? "dmg-big" : "dmg");
+            // multi-round volleys read as a rain of ticks summing to the roll
+            const n = ev.actor.weapon.weaponClass === "shotgun" ? 4
+                : Math.max(1, Math.min(ev.rounds || 1, ev.damage));
+            if (n > 1 && ev.damage >= n) {
+                const cuts = this.splitDamage(ev.damage, n);
+                cuts.forEach((c, i) => window.setTimeout(() =>
+                    this.floater(target, String(c), "tick"), i * 110));
+                window.setTimeout(() => {
+                    if (big) { this.floater(target, (ev.aimed ? "◎ " : "") + String(ev.damage), "dmg-big"); }
+                }, n * 110 + 60);
+            } else {
+                this.floater(target, (ev.aimed ? "◎ " : "") + String(ev.damage), big ? "dmg-big" : "dmg");
+            }
             this.spawnSparks(this.unitAnchor(target, 1.3), 0xff7a4d, big ? 14 : 8);
             target.flinch = 0.22;
         }
@@ -888,6 +1011,8 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             update: (dt) => {
                 travelled += speed * dt;
                 if (travelled >= len) {
+                    // each round that connects lands its own little spark
+                    if (ev.hit) { this.spawnSparks(to.clone(), 0xffb066, 3); }
                     this.scene.remove(mesh);
                     geo.dispose();
                     (mesh.material as THREE.Material).dispose();
@@ -966,6 +1091,18 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         });
     }
 
+    /** Split a rolled total into `n` positive chunks that sum back to it (cosmetic per-round ticks). */
+    private splitDamage(total: number, n: number): number[] {
+        const cuts: number[] = new Array(n).fill(1);
+        let left = total - n;
+        for (let i = 0; i < n && left > 0; i++) {
+            const take = i === n - 1 ? left : Math.floor(Math.random() * (left + 1));
+            cuts[i]! += take;
+            left -= take;
+        }
+        return cuts.sort(() => Math.random() - 0.5);
+    }
+
     /** HTML damage/status floater above a unit. */
     private floater(u: UnitView, text: string, cls: string) {
         const host = this.overlay.current;
@@ -1019,7 +1156,22 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         this.hoverMark.rotation.x = -Math.PI / 2;
         this.hoverMark.position.y = 0.06;
 
-        for (const o of [this.rangeDisc, this.rangeRing, this.moveMark, this.movePath, this.targetRing, this.losLine, this.hoverMark]) {
+        // frag mode: amber throw-range ring + red blast preview disc
+        this.throwRing = new THREE.Mesh(new THREE.RingGeometry(0.985, 1, 64), new THREE.MeshBasicMaterial({
+            color: 0xf0a830, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false}));
+        this.throwRing.rotation.x = -Math.PI / 2;
+        this.throwRing.position.y = 0.05;
+        this.blastDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 40), new THREE.MeshBasicMaterial({
+            color: 0xe0533f, transparent: true, opacity: 0.14, depthWrite: false}));
+        this.blastDisc.rotation.x = -Math.PI / 2;
+        this.blastDisc.position.y = 0.04;
+        this.blastRing = new THREE.Mesh(new THREE.RingGeometry(0.96, 1, 48), new THREE.MeshBasicMaterial({
+            color: 0xe0533f, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false}));
+        this.blastRing.rotation.x = -Math.PI / 2;
+        this.blastRing.position.y = 0.05;
+
+        for (const o of [this.rangeDisc, this.rangeRing, this.moveMark, this.movePath, this.targetRing,
+                         this.losLine, this.hoverMark, this.throwRing, this.blastDisc, this.blastRing]) {
             o.visible = false;
             this.scene.add(o);
         }
@@ -1038,12 +1190,13 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         }
         const o = this.props.orders;
         const show = !!o;
-        this.rangeDisc.visible = show;
-        this.rangeRing.visible = show;
+        this.rangeDisc.visible = show && !o!.grenadeMode;
+        this.rangeRing.visible = show && !o!.grenadeMode;
         if (!o) {
             this.hoverMark.visible = false;
             this.moveMark.visible = this.movePath.visible = false;
             this.targetRing.visible = this.losLine.visible = false;
+            this.throwRing.visible = this.blastDisc.visible = this.blastRing.visible = false;
             if (this.hitChip) { this.hitChip.style.display = "none"; }
             return;
         }
@@ -1053,6 +1206,41 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         this.rangeRing.scale.setScalar(run);
         this.rangeDisc.position.set(a.position.x, 0.04, a.position.y);
         this.rangeRing.position.set(a.position.x, 0.05, a.position.y);
+
+        // frag mode: amber throw range + red blast preview where the pin lands
+        this.throwRing.visible = o.grenadeMode;
+        if (o.grenadeMode) {
+            this.throwRing.scale.setScalar(GRENADE_RANGE);
+            this.throwRing.position.set(a.position.x, 0.05, a.position.y);
+        }
+        const showBlast = o.grenadeMode && !!o.grenadeAt;
+        this.blastDisc.visible = this.blastRing.visible = showBlast;
+        if (showBlast && o.grenadeAt) {
+            this.blastDisc.scale.setScalar(BLAST_RADIUS);
+            this.blastRing.scale.setScalar(BLAST_RADIUS);
+            this.blastDisc.position.set(o.grenadeAt.x, 0.04, o.grenadeAt.y);
+            this.blastRing.position.set(o.grenadeAt.x, 0.05, o.grenadeAt.y);
+            if (this.hitChip) {
+                const caught = [...this.props.party, ...this.props.enemies].filter((t) =>
+                    t.canFight() && Battlefield.gap({x: t.position.x, y: t.position.y}, o.grenadeAt!) <= BLAST_RADIUS);
+                const friendly = caught.filter((t) => this.props.party.indexOf(t) >= 0).length;
+                this.hitChip.style.display = "block";
+                this.hitChip.style.borderColor = friendly ? "#f0a830" : "#e0533f";
+                this.hitChip.textContent = `✸ ${caught.length} in blast`
+                    + (friendly ? ` — ${friendly} FRIENDLY!` : "") + ` · ~15 dmg`;
+                const p = this.toScreen(new THREE.Vector3(o.grenadeAt.x, 1.6, o.grenadeAt.y));
+                if (p) { this.hitChip.style.left = p.x + "px"; this.hitChip.style.top = p.y + "px"; }
+            }
+            this.targetRing.visible = this.losLine.visible = false;
+            this.moveMark.visible = this.movePath.visible = false;
+            return;
+        }
+        if (o.grenadeMode) {   // frag mode but no pin yet
+            this.targetRing.visible = this.losLine.visible = false;
+            this.moveMark.visible = this.movePath.visible = false;
+            if (this.hitChip) { this.hitChip.style.display = "none"; }
+            return;
+        }
 
         if (o.pendingMove) {
             this.moveMark.visible = true;
@@ -1109,37 +1297,43 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         return {x: hit.x, y: hit.z};
     }
 
-    /** Clamp a wished destination to the acting unit's run range + arena bounds. */
-    private clampToRange(a: Actor, p: Point): Point {
-        const run = a.runMeters();
+    /** Clamp a wished point to `max` metres from the acting unit + arena bounds. */
+    private clampToRange(a: Actor, p: Point, max: number): Point {
         const from: Point = {x: a.position.x, y: a.position.y};
         const gap = Battlefield.gap(from, p);
-        const t = gap > run ? run / gap : 1;
+        const t = gap > max ? max / gap : 1;
         return Battlefield.clamp({x: from.x + (p.x - from.x) * t, y: from.y + (p.y - from.y) * t});
+    }
+
+    private orderReach(o: OrderCtx): number {
+        return o.grenadeMode ? GRENADE_RANGE : o.actor.runMeters();
     }
 
     private onDown = (ev: PointerEvent) => {
         const o = this.props.orders;
         const n = this.ndc(ev);
         if (!o) { return; }
-        const ray = new THREE.Raycaster();
-        ray.setFromCamera(n, this.camera);
-        const foes = this.units.filter((u) => u.side === "foe" && u.actor.canFight());
-        const hits = ray.intersectObjects(foes.map((u) => u.pick));
-        const first = hits[0];
-        if (first) {
-            const u = foes.find((f) => f.pick === first.object);
-            if (u) { this.props.onPickTarget(u.actor); return; }
+        if (!o.grenadeMode) {   // in frag mode every tap places the blast pin, foes included
+            const ray = new THREE.Raycaster();
+            ray.setFromCamera(n, this.camera);
+            const foes = this.units.filter((u) => u.side === "foe" && u.actor.canFight());
+            const hits = ray.intersectObjects(foes.map((u) => u.pick));
+            const first = hits[0];
+            if (first) {
+                const u = foes.find((f) => f.pick === first.object);
+                if (u) { this.props.onPickTarget(u.actor); return; }
+            }
         }
         const g = this.groundPoint(n);
-        if (g) { this.props.onPickMove(this.clampToRange(o.actor, g)); }
+        if (g) { this.props.onPickMove(this.clampToRange(o.actor, g, this.orderReach(o))); }
     };
 
     private onMove = (ev: PointerEvent) => {
-        if (!this.props.orders) { return; }
+        const o = this.props.orders;
+        if (!o) { return; }
         const g = this.groundPoint(this.ndc(ev));
         if (!g) { this.hoverMark.visible = false; return; }
-        const p = this.clampToRange(this.props.orders.actor, g);
+        const p = this.clampToRange(o.actor, g, this.orderReach(o));
         this.hoverMark.visible = true;
         this.hoverMark.position.set(p.x, 0.06, p.y);
     };
@@ -1313,14 +1507,23 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         if (this.props.orders) { this.syncOrderMarkers(); }
         if (this.moveMark.visible && !this.reduced) { this.moveMark.rotation.y += dt * 2; }
         if (this.targetRing.visible && !this.reduced) { this.targetRing.rotation.z += dt * 1.6; }
+        if (this.blastRing.visible && !this.reduced) {
+            this.blastRing.scale.setScalar(BLAST_RADIUS * (1 + Math.sin(this.t * 4) * 0.04));
+        }
 
         // camera: XCOM-ish elevated view from the squad side, easing toward the action
         this.focus.lerp(this.focusGoal, Math.min(1, dt * 3));
         const el = 0.62;                       // elevation angle
         const drift = this.reduced ? 0 : Math.sin(this.t * 0.12) * 1.6;
-        const cx = this.focus.x * 0.55 + drift;
+        let cx = this.focus.x * 0.55 + drift;
         const cz = this.focus.z - Math.cos(el) * this.camDist;
-        const cy = Math.sin(el) * this.camDist;
+        let cy = Math.sin(el) * this.camDist;
+        if (this.shakeT > 0 && !this.reduced) {
+            this.shakeT = Math.max(0, this.shakeT - dt);
+            const amp = this.shakeT * 1.6;
+            cx += (Math.random() - 0.5) * amp;
+            cy += (Math.random() - 0.5) * amp;
+        }
         this.camera.position.set(cx, cy, cz);
         this.camera.lookAt(this.focus.x * 0.8, 1, this.focus.z + 4);
 
