@@ -247,6 +247,15 @@ export class Economy {
         return Math.ceil(cost * (1 - discount));
     }
 
+    /**
+     * What fraction of sticker price the fence pays: 40% street rate, and a
+     * standing Fixer's "Operator" cut makes every payout 20% bigger (48%).
+     */
+    public static fenceRate(party: Actor[]): number {
+        const cut = party.reduce((m, p) => Math.max(m, p.canFight() ? p.fixerCut() : 0), 0);
+        return 0.4 * (1 + cut);
+    }
+
     /** Patch worn armour back up to its rating — what a safehouse stop is for. */
     public static repairArmor(actor: Actor): void {
         [actor.equipment.upper, actor.equipment.headgear].forEach((a) => {

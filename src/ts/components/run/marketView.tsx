@@ -174,10 +174,9 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         this.setState({notice: line, bought: this.state.bought.concat(item.name)});
     }
 
-    /** Street rate: 40%, plus 5% per rank of the crew's best Fixer ("Operator"). */
+    /** Street rate: 40%, or 48% when a standing Fixer works the fence ("Operator"). */
     private fenceRate(): number {
-        const op = this.props.party.reduce((m, p) => Math.max(m, p.operatorBonus()), 0);
-        return 0.4 + op * 0.05;
+        return Economy.fenceRate(this.props.party);
     }
 
     private fenceList(): Fence[] {

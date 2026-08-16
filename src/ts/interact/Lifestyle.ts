@@ -41,7 +41,7 @@ export class Lifestyle {
      */
     public static payUpkeep(actor: Actor): boolean {
         // Fixer "Operator" negotiates the rent down.
-        const cost: number = Math.max(0, Lifestyle.upkeepCost(actor) - actor.operatorBonus() * 10);
+        const cost: number = Math.max(0, Math.round(Lifestyle.upkeepCost(actor) * (1 - actor.fixerCut())));
         if (Purse.spend(actor, cost)) {
             return true;
         }

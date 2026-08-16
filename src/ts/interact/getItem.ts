@@ -91,8 +91,8 @@ export class GetItem {
     public static updateCurrency(money: number, actor: Actor) {
         if (money >= 0) {
             Messages.logMessage(Log.findMoney, actor);
-            // Fixer "Operator" negotiates a better cut (+10% per rank).
-            Purse.earn(actor, Math.floor(money * (1 + actor.operatorBonus() / 10)));
+            // Fixer "Operator" negotiates a better cut: every eddie is 20% bigger.
+            Purse.earn(actor, Math.floor(money * (1 + actor.fixerCut())));
         } else {
             Messages.logMessage(Log.insufficientFunds, actor);
         }

@@ -769,8 +769,8 @@ export class Actor extends GameObject {
     /** Nomad "Moto": bonus to Driving checks (and calling in family rides). */
     public motoBonus(): number { return this.isNomad() ? this.roleRank : 0; }
 
-    /** Fixer "Operator": better deals — +10% per rank on eddies, cheaper upkeep. */
-    public operatorBonus(): number { return this.isFixer() ? this.roleRank : 0; }
+    /** Fixer "Operator": every eddie that passes through their hands is 20% bigger. */
+    public fixerCut(): number { return this.isFixer() ? 0.2 : 0; }
 
     /** Cop "Backup": called-in support adds damage each round of a fight. */
     public backupDamage(): number { return this.isCop() ? this.roleRank : 0; }
@@ -820,7 +820,7 @@ export class Actor extends GameObject {
         if (this.isCop()) { return `Backup: +${r} damage on every landed hit — someone's always covering.`; }
         if (this.isNetrunner()) { return `Interface ${r}: the crew's deck-jockey — NET dives run on this rank.`; }
         if (this.isTechie()) { return "Maker: patches up half the squad's armour damage after every cleared node."; }
-        if (this.isFixer()) { return `Operator: +${r * 10}% eddies looted, fence pays ${40 + r * 5}% instead of 40%.`; }
+        if (this.isFixer()) { return "Operator: every eddie through your hands is 20% bigger — loot and fence alike."; }
         if (this.isCorporate()) { return "Teamwork: the company account covers 10% of everything at the markets."; }
         if (this.isNomad()) { return "Family knows salvage: noticeably better scavenge odds off every body."; }
         if (this.isMedia()) { return "Credibility: sources see one street further — the map ahead holds no surprises."; }
