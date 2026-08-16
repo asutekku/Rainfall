@@ -21,7 +21,11 @@ export interface Archetype {
     portrait: string;     // role key used for the portrait
     reward: number;       // eddies / XP multiplier
     frags?: number;       // guaranteed grenades on deploy (grenadier kit)
+    smokes?: number;      // smoke grenades on deploy
+    flashes?: number;     // flashbangs on deploy
+    emps?: number;        // EMP charges on deploy (chrome-killers)
     parts?: string[];     // extra silhouette parts on top of the faction kit
+    ability?: string;     // rank-5 signature move ("leap" | "volley")
 }
 
 export const ARCHETYPES: Archetype[] = [
@@ -41,13 +45,15 @@ export const ARCHETYPES: Archetype[] = [
     {faction: "Maelstrom", title: "Raider", rank: 2, ref: 5, dex: 5, body: 7, will: 6, skill: 4, luck: 3,
         bodySP: 12, headSP: 0, weapons: ["smg", "pistol"], minDice: 0, temperament: "aggressive", portrait: "solo", reward: 2},
     {faction: "Wraiths", title: "Raider", rank: 2, ref: 5, dex: 5, body: 6, will: 5, skill: 4, luck: 3,
-        bodySP: 7, headSP: 4, weapons: ["shotgun", "rifle"], minDice: 0, temperament: "aggressive", portrait: "nomad", reward: 2},
+        bodySP: 7, headSP: 4, weapons: ["shotgun", "rifle"], minDice: 0, temperament: "aggressive", portrait: "nomad",
+        reward: 2, smokes: 1},
+    {faction: "Chrome", title: "Ghoul", rank: 2, ref: 6, dex: 7, body: 7, will: 6, skill: 4, luck: 1,
+        bodySP: 11, headSP: 0, weapons: ["melee"], minDice: 2, temperament: "berserker", portrait: "solo", reward: 3},
 
     // ---- Rank 3: elites (SP 11-13, HP ~40-45) ----
     {faction: "6th Street", title: "Veteran", rank: 3, ref: 6, dex: 6, body: 6, will: 6, skill: 6, luck: 4,
-        bodySP: 11, headSP: 7, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker", portrait: "cop", reward: 3},
-    {faction: "Wraiths", title: "Deadeye", rank: 3, ref: 8, dex: 6, body: 5, will: 6, skill: 6, luck: 3,
-        bodySP: 7, headSP: 4, weapons: ["sniper"], minDice: 4, temperament: "camper", portrait: "nomad", reward: 4},
+        bodySP: 11, headSP: 7, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker", portrait: "cop",
+        reward: 3, smokes: 1},
     {faction: "Maelstrom", title: "Bombardier", rank: 3, ref: 6, dex: 6, body: 7, will: 6, skill: 5, luck: 3,
         bodySP: 12, headSP: 0, weapons: ["smg", "shotgun"], minDice: 0, temperament: "aggressive", portrait: "solo",
         reward: 4, frags: 2, parts: ["bandolier"]},
@@ -56,13 +62,20 @@ export const ARCHETYPES: Archetype[] = [
     {faction: "Maelstrom", title: "Reaver", rank: 3, ref: 6, dex: 6, body: 8, will: 7, skill: 6, luck: 3,
         bodySP: 13, headSP: 0, weapons: ["smg", "rifle", "melee"], minDice: 0, temperament: "berserker", portrait: "solo", reward: 3},
     {faction: "Arasaka", title: "Lanceman", rank: 3, ref: 7, dex: 6, body: 6, will: 7, skill: 7, luck: 4,
-        bodySP: 12, headSP: 11, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker", portrait: "corporate", reward: 4},
+        bodySP: 12, headSP: 11, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker", portrait: "corporate",
+        reward: 4, flashes: 1},
+    {faction: "Wraiths", title: "Deadeye", rank: 3, ref: 8, dex: 6, body: 5, will: 6, skill: 6, luck: 3,
+        bodySP: 7, headSP: 4, weapons: ["sniper"], minDice: 4, temperament: "camper", portrait: "nomad",
+        reward: 4, smokes: 1},
 
     // ---- Rank 4: heavies (SP 13-15, HP ~45-55) ----
     {faction: "Militech", title: "Trooper", rank: 4, ref: 7, dex: 7, body: 7, will: 7, skill: 8, luck: 5,
         bodySP: 15, headSP: 11, weapons: ["rifle"], minDice: 4, temperament: "flanker", portrait: "corporate", reward: 6},
     {faction: "Trauma Team", title: "Operator", rank: 4, ref: 7, dex: 7, body: 7, will: 7, skill: 7, luck: 5,
-        bodySP: 15, headSP: 11, weapons: ["smg", "rifle"], minDice: 0, temperament: "flanker", portrait: "cop", reward: 6},
+        bodySP: 15, headSP: 11, weapons: ["smg", "rifle"], minDice: 0, temperament: "flanker", portrait: "cop",
+        reward: 6, flashes: 1},
+    {faction: "Chrome", title: "Juggernaut", rank: 4, ref: 6, dex: 6, body: 9, will: 7, skill: 6, luck: 2,
+        bodySP: 15, headSP: 0, weapons: ["shotgun", "rifle"], minDice: 3, temperament: "aggressive", portrait: "solo", reward: 8},
     {faction: "Cyberpsycho", title: "Rampage", rank: 4, ref: 7, dex: 7, body: 9, will: 8, skill: 6, luck: 3,
         bodySP: 13, headSP: 0, weapons: ["melee", "rifle"], minDice: 3, temperament: "berserker", portrait: "solo", reward: 7},
     {faction: "Arasaka", title: "Marksman", rank: 4, ref: 8, dex: 7, body: 6, will: 7, skill: 8, luck: 4,
@@ -73,9 +86,14 @@ export const ARCHETYPES: Archetype[] = [
 
     // ---- Rank 5: bosses (SP 15-18, HP ~55-60) ----
     {faction: "MaxTac", title: "Officer", rank: 5, ref: 8, dex: 8, body: 8, will: 8, skill: 9, luck: 6,
-        bodySP: 15, headSP: 13, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker", portrait: "cop", reward: 10},
+        bodySP: 15, headSP: 13, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker", portrait: "cop",
+        reward: 10, flashes: 1, emps: 1, ability: "volley"},
     {faction: "Cyberpsycho", title: "Terror", rank: 5, ref: 8, dex: 8, body: 10, will: 9, skill: 8, luck: 4,
-        bodySP: 15, headSP: 0, weapons: ["melee", "rifle"], minDice: 4, temperament: "berserker", portrait: "solo", reward: 12},
+        bodySP: 15, headSP: 0, weapons: ["melee", "rifle"], minDice: 4, temperament: "berserker", portrait: "solo",
+        reward: 12, ability: "leap"},
+    {faction: "Chrome", title: "Dragoon", rank: 5, ref: 8, dex: 7, body: 10, will: 8, skill: 8, luck: 2,
+        bodySP: 18, headSP: 13, weapons: ["rifle"], minDice: 4, temperament: "flanker", portrait: "solo",
+        reward: 14, ability: "volley"},
 ];
 
 /** The rank spread appropriate to a given party level (weighted by frequency). */

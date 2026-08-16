@@ -7,11 +7,11 @@ import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./message
 import {Skill} from "../items/Skill";
 import {rangeDV} from "./rangeTable";
 import {Check} from "./check";
-import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "./battlefield";
+import {BLAST_RADIUS, Battlefield, EMP_RADIUS, FLASH_RADIUS, GRENADE_RANGE, Point} from "./battlefield";
 import {TacticalAI, Plan} from "./tacticalAI";
 import {Economy} from "./economy";
 import {BattleRecorder} from "./battleReport";
-import {BattleEvent, BlastVictim, TurnResult} from "./battleEvents";
+import {BattleEvent, BlastType, BlastVictim, TurnResult} from "./battleEvents";
 
 const Log = en_US.Log;
 
@@ -106,7 +106,31 @@ export class Combat {
             autofire: false, melee, covered, dropped: !target.canFight(), rounds});
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
         if (aimed && dealt > 0) { this.messages.push(new MessageStr(`${actor.name} lands a head shot!`)); }
+        this.rollCrit(target, dealt);
         this.registerIfDefeated(actor, target);
+    }
+
+    /**
+     * Battle-scoped critical injuries (house rule): a hit that drives 12+ HP
+     * through armour risks leaving a mark — an open bleed, a torn-up leg, or
+     * a stunned turn. Everything here heals the moment the fight ends.
+     */
+    private static rollCrit(target: Actor, dealt: number): void {
+        if (dealt < 12 || !target.canFight()) { return; }
+        const roll: number = Math.floor(Math.random() * 6) + 1;
+        if (roll <= 2) {
+            target.bleeding = Math.max(target.bleeding, 2);
+            this.events.push({kind: "crit", actor: target, effect: "bleeding"});
+            this.messages.push(new MessageStr(`${target.name} is bleeding badly.`));
+        } else if (roll === 3 && !target.crippled) {
+            target.crippled = true;
+            this.events.push({kind: "crit", actor: target, effect: "crippled"});
+            this.messages.push(new MessageStr(`${target.name}'s leg is torn up — half speed.`));
+        } else if (roll === 4) {
+            target.stunned = Math.max(target.stunned, 1);
+            this.events.push({kind: "crit", actor: target, effect: "stunned"});
+            this.messages.push(new MessageStr(`${target.name} is knocked senseless.`));
+        }
     }
 
     /** Solo "Combat Awareness": bonus damage on the round's first landed hit. */
@@ -158,6 +182,7 @@ export class Combat {
         this.events.push({kind: "shot", actor, target, hit: true, damage: dealt, aimed: false,
             autofire: true, melee: false, covered: cover > 0, dropped: !target.canFight(), rounds: 5});
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
+        this.rollCrit(target, dealt);
         this.registerIfDefeated(actor, target);
     }
 
@@ -267,8 +292,15 @@ export class Combat {
      */
     public static beginRound(party: Actor[], enemies: Actor[]): Actor[] {
         BattleRecorder.countRound();
+        Battlefield.tickSmoke();   // clouds thin between rounds
         const all: Actor[] = [...party, ...enemies].filter((a) => a.canFight() || a.mortallyWounded);
-        all.forEach((a) => { a.firstHitDone = false; });
+        all.forEach((a) => {
+            a.firstHitDone = false;
+            // a target that slipped into smoke breaks the sniper's paint
+            if (a.marking && Battlefield.inSmoke({x: a.marking.position.x, y: a.marking.position.y})) {
+                a.marking = null;
+            }
+        });
         // Sandevistan Overclock: the fight's opening round is always theirs.
         // The flag is armed at deploy and burned here, so only round 1 is skewed.
         const order = all
@@ -293,17 +325,100 @@ export class Combat {
         this.events.push({kind: "turn", actor: c, side});
         if (c.alive && c.mortallyWounded) {
             this.resolveDeathSave(c);
-        } else if (c.canFight()) {
-            const foes: Actor[] = side === "party" ? enemies : party;
-            const allies: Actor[] = side === "party" ? party : enemies;
-            const others: Actor[] = [...party, ...enemies].filter((a) => a !== c);
-            const plan: Plan = order
-                ? {moveTo: order.moveTo, target: order.target, aimed: order.aimed,
-                   grenadeAt: order.grenadeAt, label: "manual"}
-                : TacticalAI.plan(c, allies, foes);
-            this.applyPlan(c, plan, foes, allies, others);
+            return this.finishTurn();
         }
+        if (!c.canFight()) { return this.finishTurn(); }
+
+        // open wounds bleed at the top of the turn — armour doesn't help
+        if (c.bleeding > 0) {
+            const dealt: number = c.directDamage(c.bleeding);
+            const dropped: boolean = !c.canFight();
+            this.events.push({kind: "bleed", actor: c, damage: dealt, dropped});
+            this.messages.push(new MessageStr(`${c.name} is bleeding out — ${dealt} damage.`));
+            if (dropped) { return this.finishTurn(); }
+        }
+        // flashbanged / EMP-shocked: the turn is spent reeling
+        if (c.stunned > 0) {
+            c.stunned -= 1;
+            this.events.push({kind: "skip", actor: c, reason: "stunned"});
+            this.messages.push(new MessageStr(`${c.name} reels — stunned.`));
+            return this.finishTurn();
+        }
+        if (c.hackCooldown > 0) { c.hackCooldown -= 1; }
+
+        const foes: Actor[] = side === "party" ? enemies : party;
+        const allies: Actor[] = side === "party" ? party : enemies;
+        const others: Actor[] = [...party, ...enemies].filter((a) => a !== c);
+
+        // suppressed: this turn is spent getting low, not shooting back
+        if (c.pinned) {
+            c.pinned = false;
+            this.events.push({kind: "skip", actor: c, reason: "pinned"});
+            this.messages.push(new MessageStr(`${c.name} keeps their head down.`));
+            this.duckIntoCover(c, foes, others);
+            return this.finishTurn();
+        }
+        // hostiles check their nerve once the wave is bleeding bodies
+        if (side === "enemy" && this.moraleBreaks(c, enemies)) {
+            const exit: Point = Battlefield.routExit({x: c.position.x, y: c.position.y});
+            c.routed = true;
+            this.events.push({kind: "rout", actor: c, to: exit});
+            c.position.x = exit.x;   // they're gone — the scene animates the sprint out
+            c.position.y = exit.y;
+            this.messages.push(new MessageStr(`${c.name} breaks and runs.`));
+            return this.finishTurn();
+        }
+        // rank-5 signature move fires once, when its trigger lines up
+        if (!order && this.bossAbility(c, foes, others)) { return this.finishTurn(); }
+
+        const plan: Plan = order
+            ? {moveTo: order.moveTo, target: order.target, aimed: order.aimed,
+               grenadeAt: order.grenadeAt, label: "manual"}
+            : TacticalAI.plan(c, allies, foes);
+        this.applyPlan(c, plan, foes, allies, others);
+        return this.finishTurn();
+    }
+
+    private static finishTurn(): TurnResult {
         return {events: this.events, messages: this.messages.flat().reverse()};
+    }
+
+    /** A pinned unit's whole action: scramble to the nearest cover face. */
+    private static duckIntoCover(c: Actor, foes: Actor[], others: Actor[]): void {
+        if (Battlefield.nearCover(c.position)) { return; }
+        const here: Point = {x: c.position.x, y: c.position.y};
+        const near = Battlefield.COVER.slice()
+            .sort((a, b) => Battlefield.gap(here, a) - Battlefield.gap(here, b))[0];
+        if (!near || Battlefield.gap(here, near) > c.runMeters() + 2) { return; }
+        const from: Point = {x: here.x, y: here.y};
+        const foe = foes.filter((f) => f.canFight())[0];
+        const d = foe ? Battlefield.gap(near, {x: foe.position.x, y: foe.position.y}) || 1 : 1;
+        const hug: Point = foe
+            ? {x: near.x + (near.x - foe.position.x) / d * 2, y: near.y + (near.y - foe.position.y) / d * 2}
+            : {x: near.x + 2, y: near.y};
+        const moved = Battlefield.stepToward(c, hug, c.runMeters(), others);
+        if (moved >= 1) {
+            this.events.push({kind: "move", actor: c, from,
+                to: {x: c.position.x, y: c.position.y}, cover: Battlefield.nearCover(c.position)});
+        }
+    }
+
+    /**
+     * Morale (house rule): once the wave has lost half its people, each
+     * survivor checks its nerve exactly once — d10 + WILL (+4 for rank 3+)
+     * against 13. Berserkers and full-chrome never break.
+     */
+    private static moraleBreaks(c: Actor, enemies: Actor[]): boolean {
+        // the app prunes the fallen from its live list — measure against the
+        // wave's original headcount, not whoever is still standing
+        const wave: number = Math.max(Battlefield.WAVE, enemies.length);
+        if (c.moraleTested || wave < 2) { return false; }
+        const living: number = enemies.filter((e) => e.canFight()).length;
+        if (wave - living < Math.ceil(wave / 2)) { return false; }
+        c.moraleTested = true;
+        if (c.temperament === "berserker" || c.faction === "Chrome" || c.faction === "Cyberpsycho") { return false; }
+        const roll: number = Math.floor(Math.random() * 10) + 1;
+        return roll + c.stats.will + ((c.rank || 1) >= 3 ? 4 : 0) < 13;
     }
 
     /** One full round with both sides played by the tactical AI. */
@@ -330,7 +445,66 @@ export class Combat {
     /** House rule: a laser-locked sniper shot is steadied — the paint turn pays off. */
     public static readonly MARK_BONUS: number = 5;
 
-    /** Apply a tactical plan: move (if any), then throw a frag or attack the chosen target. */
+    /** Rounds a trigger pull costs: a full burst on autofire, else the volley. */
+    private static ammoCost(a: Actor, aimed: boolean): number {
+        if (a.weapon.autofire) { return 10; }
+        return aimed ? 1 : Math.max(1, Math.min(a.weapon.rateOfFire || 1, 3));
+    }
+
+    /** True when the magazine can't feed the shot the plan calls for. */
+    private static needsReload(a: Actor, aimed: boolean): boolean {
+        if (a.weapon.weaponClass === "melee" || a.weapon.shots <= 0 || a.mag >= 900) { return false; }
+        return a.mag < this.ammoCost(a, aimed);
+    }
+
+    /**
+     * Rank-5 signature moves, fired once per battle when their trigger lines up.
+     * Returns true when the ability consumed the turn.
+     */
+    private static bossAbility(self: Actor, foes: Actor[], others: Actor[]): boolean {
+        if ((self.rank || 0) < 5 || !self.ability || self.abilityUsed) { return false; }
+        const live = foes.filter((f) => f.canFight());
+        if (!live.length) { return false; }
+        const here: Point = {x: self.position.x, y: self.position.y};
+        const nearest = live.reduce((a, b) =>
+            Battlefield.gap(here, {x: a.position.x, y: a.position.y})
+            < Battlefield.gap(here, {x: b.position.x, y: b.position.y}) ? a : b);
+        const gap = Battlefield.gap(here, {x: nearest.position.x, y: nearest.position.y});
+
+        if (self.ability === "leap" && gap >= 5 && gap <= 20) {
+            // crashing leap: land on the target, slam everything around the crater
+            self.abilityUsed = true;
+            Battlefield.stepToward(self, {x: nearest.position.x, y: nearest.position.y}, 99, others);
+            const at: Point = {x: self.position.x, y: self.position.y};
+            this.events.push({kind: "ability", actor: self, name: "leap", to: at});
+            this.messages.push(new MessageStr(`${self.name} leaps — the street cracks.`));
+            const victims: BlastVictim[] = [];
+            for (const t of live) {
+                if (Battlefield.gap({x: t.position.x, y: t.position.y}, at) > 3.5) { continue; }
+                let dmg = 0;
+                for (let i = 0; i < 3; i++) { dmg += Math.floor(Math.random() * 6) + 1; }
+                const dealt: number = t.receiveDamage(dmg, true);
+                BattleRecorder.countDamage(self, t, dealt);
+                victims.push({target: t, damage: dealt, dodged: false, dropped: !t.canFight()});
+                this.messages.push(new MessageStr(`${t.name} takes ${dealt} from the slam.`));
+                this.registerIfDefeated(self, t);
+            }
+            this.events.push({kind: "blast", actor: self, at, radius: 3.5, gtype: "slam", victims});
+            return true;
+        }
+        if (self.ability === "volley" && !this.needsReload(self, false)) {
+            // double tap: two disciplined attacks on the same target in one action
+            self.abilityUsed = true;
+            this.events.push({kind: "ability", actor: self, name: "volley"});
+            this.messages.push(new MessageStr(`${self.name} opens up — sustained fire.`));
+            this.attack(self, nearest);
+            if (nearest.canFight()) { this.attack(self, nearest); }
+            return true;
+        }
+        return false;
+    }
+
+    /** Apply a tactical plan: move, then the turn's one action (throw / hack / suppress / stabilize / attack). */
     private static applyPlan(self: Actor, plan: Plan, foes: Actor[], allies: Actor[], others: Actor[]): void {
         if (plan.moveTo) {
             const before: number = this.nearestFoeGap(self, foes);
@@ -351,6 +525,18 @@ export class Combat {
             }
         }
         if (plan.sprint) { return; }   // the sprint IS the turn — no attack
+        if (plan.stabilizeTarget) {
+            this.stabilizeAlly(self, plan.stabilizeTarget);
+            return;
+        }
+        if (plan.hackTarget && plan.hackTarget.canFight()) {
+            this.quickhack(self, plan.hackTarget);
+            return;
+        }
+        if (plan.suppressTarget && plan.suppressTarget.canFight()) {
+            this.suppress(self, plan.suppressTarget);
+            return;
+        }
         if (plan.markTarget && plan.markTarget.canFight()) {
             // sniper telegraph: paint the target this turn, fire the steadied shot next
             self.marking = plan.markTarget;
@@ -358,24 +544,81 @@ export class Combat {
             this.messages.push(new MessageStr(`${self.name} paints ${plan.markTarget.name} with a laser.`));
             return;
         }
-        if (plan.grenadeAt && (self.grenades || 0) > 0) {
-            this.throwGrenade(self, plan.grenadeAt, foes, allies);
+        if (plan.grenadeAt) {
+            this.throwGrenade(self, plan.grenadeAt, foes, allies, plan.grenadeType || "frag");
             return;   // the throw is the turn's attack
         }
         if (plan.target && plan.target.canFight()) {
+            // dry magazine: the trigger clicks and the turn becomes the reload
+            if (this.needsReload(self, !!plan.aimed)) {
+                self.mag = self.weapon.shots;
+                this.events.push({kind: "reload", actor: self});
+                this.messages.push(new MessageStr(`${self.name} reloads.`));
+                return;
+            }
+            if (self.weapon.weaponClass !== "melee" && self.mag < 900) {
+                self.mag = Math.max(0, self.mag - this.ammoCost(self, !!plan.aimed));
+            }
             const locked: boolean = self.marking === plan.target;
             self.marking = null;   // firing (at anyone) burns the lock
             this.attack(self, plan.target, plan.aimed, locked ? Combat.MARK_BONUS : 0);
         }
     }
 
+    /** Field medicine: stop the bleeding; drag the dying back to their feet at 1 HP. */
+    private static stabilizeAlly(self: Actor, target: Actor): void {
+        if (Battlefield.distance(self, target) > 3.5) { return; }
+        const saved: boolean = target.alive && target.mortallyWounded;
+        target.bleeding = 0;
+        if (saved) { target.stabilize(); }
+        this.events.push({kind: "stabilize", actor: self, target, saved});
+        this.messages.push(new MessageStr(saved
+            ? `${self.name} drags ${target.name} back from the brink.`
+            : `${self.name} patches ${target.name} up.`));
+    }
+
+    /** Netrunner Short Circuit: burn a chromed target's systems — armour means nothing. */
+    private static quickhack(self: Actor, target: Actor): void {
+        self.hackCooldown = 3;   // this turn + the next two
+        const margin: number = Check.redRoll() + self.interfaceRank() + 4
+            - (Check.redRoll() + target.stats.will);
+        let dmg = 0;
+        for (let i = 0; i < 3; i++) { dmg += Math.floor(Math.random() * 6) + 1; }
+        if (margin < 0) { dmg = Math.ceil(dmg / 2); }   // partial breach still hurts
+        const dealt: number = target.directDamage(dmg);
+        const stunned: boolean = margin >= 4 && target.canFight();
+        if (stunned) { target.stunned = Math.max(target.stunned, 1); }
+        BattleRecorder.countShot(self, dealt > 0);
+        BattleRecorder.countDamage(self, target, dealt);
+        this.events.push({kind: "hack", actor: self, target, damage: dealt, stunned,
+            dropped: !target.canFight()});
+        this.messages.push(new MessageStr(
+            `${self.name} shorts ${target.name}'s chrome — ${dealt} damage${stunned ? ", systems locked" : ""}.`));
+        this.registerIfDefeated(self, target);
+    }
+
+    /** Suppressive fire: a whole magazine of noise. An opposed check pins the target. */
+    private static suppress(self: Actor, target: Actor): void {
+        self.mag = Math.max(0, self.mag - 10);
+        const pinned: boolean = Check.opposed(self,
+            self.stats.ref + self.skillFor(self.weapon), target.stats.will).success;
+        if (pinned) { target.pinned = true; }
+        this.events.push({kind: "suppress", actor: self, target, pinned});
+        this.messages.push(new MessageStr(pinned
+            ? `${self.name} hoses ${target.name}'s position — pinned.`
+            : `${self.name} hoses ${target.name}'s position — they hold steady.`));
+    }
+
     /**
-     * A frag goes off at `at`: every fighter inside the blast radius — friend
-     * or foe — takes 6d6 with armour halved; a reflex check dives for half.
-     * (House rule, deliberately simpler than tabletop RED.)
+     * Typed ordnance at `at` — frags maim, smoke hides, flashbangs stun, EMP
+     * burns chrome. Frags also level nearby street furniture, and a caught car
+     * goes up in a secondary explosion. (House rules, simpler than tabletop.)
      */
-    public static throwGrenade(self: Actor, at: Point, foes: Actor[], allies: Actor[]): void {
-        if ((self.grenades || 0) <= 0) { return; }
+    public static throwGrenade(self: Actor, at: Point, foes: Actor[], allies: Actor[],
+                               type: BlastType = "frag"): void {
+        const belt: {[k: string]: number} = {
+            frag: self.grenades, smoke: self.smokes, flash: self.flashes, emp: self.emps};
+        if ((belt[type] || 0) <= 0) { return; }
         const from: Point = {x: self.position.x, y: self.position.y};
         const target: Point = Battlefield.gap(from, at) <= GRENADE_RANGE ? at
             : (() => {   // over-arm throws fall short along the line
@@ -383,11 +626,57 @@ export class Combat {
                 return {x: from.x + (at.x - from.x) * (GRENADE_RANGE / g),
                         y: from.y + (at.y - from.y) * (GRENADE_RANGE / g)};
             })();
-        self.grenades -= 1;
+        if (type === "frag") { self.grenades -= 1; }
+        else if (type === "smoke") { self.smokes -= 1; }
+        else if (type === "flash") { self.flashes -= 1; }
+        else { self.emps -= 1; }
+
+        if (type === "smoke") {
+            Battlefield.addSmoke(target);
+            // fresh smoke breaks every laser lock painted through it
+            [...foes, ...allies].forEach((a) => {
+                if (a.marking && Battlefield.inSmoke({x: a.marking.position.x, y: a.marking.position.y})) {
+                    a.marking = null;
+                }
+            });
+            this.events.push({kind: "blast", actor: self, at: target,
+                radius: Battlefield.SMOKE[Battlefield.SMOKE.length - 1]!.r, gtype: "smoke", victims: []});
+            this.messages.push(new MessageStr(`${self.name} pops smoke.`));
+            return;
+        }
+
+        const radius: number = type === "flash" ? FLASH_RADIUS : type === "emp" ? EMP_RADIUS : BLAST_RADIUS;
         const victims: BlastVictim[] = [];
         for (const t of [...allies, ...foes]) {
             if (!t.canFight()) { continue; }
-            if (Battlefield.gap({x: t.position.x, y: t.position.y}, target) > BLAST_RADIUS) { continue; }
+            if (Battlefield.gap({x: t.position.x, y: t.position.y}, target) > radius) { continue; }
+            if (type === "flash") {
+                // no wounds, just a white wall of noise: WILL check or lose the turn
+                const held: boolean = Check.redRoll() + t.stats.will >= 13;
+                if (!held) { t.stunned = Math.max(t.stunned, 1); }
+                victims.push({target: t, damage: 0, dodged: held, dropped: false, stunned: !held});
+                this.messages.push(new MessageStr(held
+                    ? `${t.name} shakes off the flash.` : `${t.name} is blinded — stunned.`));
+                continue;
+            }
+            if (type === "emp") {
+                if (!t.chromed()) {
+                    this.messages.push(new MessageStr(`${t.name} rides out the EMP — no chrome to fry.`));
+                    continue;
+                }
+                let dmg = 0;
+                for (let i = 0; i < 3; i++) { dmg += Math.floor(Math.random() * 6) + 1; }
+                const dealt: number = t.directDamage(dmg);   // straight through the armour
+                const stunned: boolean = t.canFight() && Check.redRoll() + t.stats.will < 15;
+                if (stunned) { t.stunned = Math.max(t.stunned, 1); }
+                BattleRecorder.countShot(self, dealt > 0);
+                BattleRecorder.countDamage(self, t, dealt);
+                victims.push({target: t, damage: dealt, dodged: false, dropped: !t.canFight(), stunned});
+                this.messages.push(new MessageStr(`${t.name}'s chrome arcs — ${dealt} damage.`));
+                if (foes.indexOf(t) >= 0) { this.registerIfDefeated(self, t); }
+                continue;
+            }
+            // frag
             let dmg = 0;
             for (let i = 0; i < 6; i++) { dmg += Math.floor(Math.random() * 6) + 1; }
             const dodged: boolean = Check.redRoll() + t.evasion() >= 15;   // dive clear for half
@@ -398,10 +687,41 @@ export class Combat {
             victims.push({target: t, damage: dealt, dodged, dropped: !t.canFight()});
             this.messages.push(new MessageStr(
                 `${t.name} ${dodged ? "dives clear — " : ""}takes ${dealt} blast damage.`));
+            this.rollCrit(t, dealt);
             if (foes.indexOf(t) >= 0) { this.registerIfDefeated(self, t); }
         }
-        this.events.push({kind: "blast", actor: self, at: target, radius: BLAST_RADIUS, victims});
-        this.messages.push(new MessageStr(`${self.name} lobs a frag grenade.`));
+        this.events.push({kind: "blast", actor: self, at: target, radius, gtype: type, victims});
+        this.messages.push(new MessageStr(`${self.name} lobs ${type === "frag" ? "a frag grenade"
+            : type === "flash" ? "a flashbang" : "an EMP charge"}.`));
+
+        // frags rearrange the street: caught cover is destroyed, cars go up
+        if (type === "frag") {
+            const gone = Battlefield.destroyCoverNear(target, BLAST_RADIUS * 0.75);
+            for (const c of gone) {
+                const exploded: boolean = c.kind === "car";
+                this.events.push({kind: "coverGone", at: {x: c.x, y: c.y}, ckind: c.kind, exploded});
+                this.messages.push(new MessageStr(exploded
+                    ? "The wrecked car goes up in a fireball!" : `The ${c.kind} is blown apart.`));
+                if (exploded) { this.carExplosion(self, c, foes, allies); }
+            }
+        }
+    }
+
+    /** Secondary boom when a frag catches a car: 3d6 armour-halved in a tight radius. */
+    private static carExplosion(self: Actor, at: Point, foes: Actor[], allies: Actor[]): void {
+        const victims: BlastVictim[] = [];
+        for (const t of [...allies, ...foes]) {
+            if (!t.canFight()) { continue; }
+            if (Battlefield.gap({x: t.position.x, y: t.position.y}, at) > 4.5) { continue; }
+            let dmg = 0;
+            for (let i = 0; i < 3; i++) { dmg += Math.floor(Math.random() * 6) + 1; }
+            const dealt: number = t.receiveDamage(dmg, true);
+            BattleRecorder.countDamage(self, t, dealt);
+            victims.push({target: t, damage: dealt, dodged: false, dropped: !t.canFight()});
+            this.messages.push(new MessageStr(`${t.name} is caught in the fireball — ${dealt} damage.`));
+            if (foes.indexOf(t) >= 0) { this.registerIfDefeated(self, t); }
+        }
+        this.events.push({kind: "blast", actor: self, at: {x: at.x, y: at.y}, radius: 4.5, gtype: "car", victims});
     }
 
     private static nearestFoeGap(self: Actor, foes: Actor[]): number {

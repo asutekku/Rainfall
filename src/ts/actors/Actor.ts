@@ -27,12 +27,28 @@ export class Actor extends GameObject {
     public temperament: string;   // tactical AI personality: balanced|aggressive|flanker|camper|berserker
     public auto: boolean;         // squad member played by the tactical AI instead of the player
     public grenades: number;      // frag grenades on the belt (throwing one is the turn's attack)
+    public smokes: number;        // smoke grenades: pop a cloud that spoils shots and laser locks
+    public flashes: number;       // flashbangs: stun everyone caught in the burst
+    public emps: number;          // EMP charges: burn through chrome, ignore armour
     public marking: Actor | null; // sniper laser lock: painted last turn, fires this turn
     public faction?: string;      // enemy faction (Maelstrom, Arasaka, ...) for display
     public rank?: number;         // enemy threat rank 1-5
     public archetype?: string;    // enemy role within the faction (Reaver, Lanceman, ...)
     public frags?: number;        // archetype-guaranteed grenades on deploy (grenadier kit)
     public kitParts?: string[];   // archetype silhouette add-ons on top of the faction kit
+    public ability?: string;      // rank-5 signature move ("leap" | "volley")
+
+    // --- battle-scoped combat state: injuries and stances that last exactly
+    // one engagement. Battlefield.deploy() wipes the lot before every fight. ---
+    public bleeding: number;      // HP lost at the start of each of this unit's turns
+    public crippled: boolean;     // leg injury: movement halved (visible limp)
+    public stunned: number;       // turns to sit out (flashbangs, big hits, EMP)
+    public pinned: boolean;       // suppressed: next turn is spent keeping their head down
+    public mag: number;           // rounds left in the magazine (999 = no magazine to track)
+    public routed: boolean;       // morale broke — sprinted off the field, out of the fight
+    public hackCooldown: number;  // turns until this netrunner can quickhack again
+    public abilityUsed: boolean;  // the rank-5 signature move is spent
+    public moraleTested: boolean; // each unit checks morale at most once per battle
     public equipment: {
         headgear: Armor | null;
         upper: Armor | null;
@@ -252,7 +268,19 @@ export class Actor extends GameObject {
         this.temperament = "balanced";
         this.auto = false;
         this.grenades = 0;
+        this.smokes = 0;
+        this.flashes = 0;
+        this.emps = 0;
         this.marking = null;
+        this.bleeding = 0;
+        this.crippled = false;
+        this.stunned = 0;
+        this.pinned = false;
+        this.mag = 999;
+        this.routed = false;
+        this.hackCooldown = 0;
+        this.abilityUsed = false;
+        this.moraleTested = false;
         this.stats = {
             int: 1,
             ref: 1,
@@ -473,7 +501,43 @@ export class Actor extends GameObject {
 
     /** Can still take combat actions: alive, conscious, and not Mortally Wounded. */
     public canFight(): boolean {
-        return this.alive && !this.mortallyWounded && this.health > 0;
+        return this.alive && !this.mortallyWounded && this.health > 0 && !this.routed;
+    }
+
+    /** Wipe every battle-scoped injury/stance — called on each fresh deployment. */
+    public resetBattleState(): void {
+        this.bleeding = 0;
+        this.crippled = false;
+        this.stunned = 0;
+        this.pinned = false;
+        this.routed = false;
+        this.hackCooldown = 0;
+        this.abilityUsed = false;
+        this.moraleTested = false;
+        this.marking = null;
+        this.mag = this.weapon && this.weapon.weaponClass !== "melee" && this.weapon.shots > 0
+            ? this.weapon.shots : 999;
+    }
+
+    /**
+     * Damage that skips armour entirely (bleeding, quickhacks). Same wound-state
+     * transitions as receiveDamage, no ablation.
+     */
+    public directDamage(amount: number): number {
+        const dmg: number = Math.max(0, Math.floor(amount));
+        if (dmg > 0 && this.alive && !this.mortallyWounded) {
+            this.health -= dmg;
+            if (this.health <= 0) {
+                this.health = 0;
+                this.mortallyWounded = true;
+            }
+        }
+        return dmg;
+    }
+
+    /** Enough chrome in the body for EMP and quickhacks to bite. */
+    public chromed(): boolean {
+        return this.cyberSP() > 0 || this.faction === "Chrome" || this.faction === "Cyberpsycho";
     }
 
     /** RED: at or below half HP the character is Seriously Wounded (-2 to Actions). */
@@ -700,7 +764,7 @@ export class Actor extends GameObject {
 
     /** Metres this actor can cover in a turn by Running (a Move Action at x2). */
     public runMeters(): number {
-        return this.moveStat() * 2;
+        return this.moveStat() * 2 * (this.crippled ? 0.5 : 1);   // a shot-up leg is half speed
     }
 
     /** RED Initiative: 1d10 + REF (+ Solo Initiative Reaction + reflex boosters). */

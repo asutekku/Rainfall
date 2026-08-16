@@ -6,7 +6,6 @@ import {Armor} from "../items/Armor";
 import {Medical, Scrap} from "../items/Scrap";
 import {Chrome} from "./chrome";
 import {Crew} from "./crew";
-import {Economy} from "./economy";
 import {GetItem} from "./getItem";
 import type {MercOffer} from "./mercMarket";
 import type {RunState} from "./runMap";
@@ -27,7 +26,7 @@ interface ArmorSnap { part: string; name: string; sp: number; maxSp: number; cos
 /** Chrome travels as line + mark — the catalog rebuilds the instance. */
 interface ChromeSnap { line: string; mk: number; }
 
-interface MemberSnap {
+export interface MemberSnap {
     kind: "player" | "merc";
     offer: MercOffer | null;              // mercs only
     level: number; experience: number; maxExperience: number;
@@ -54,6 +53,24 @@ interface SaveData {
     funds: number;
     usedEvents: string[];
     run: RunState;                        // plain data throughout (node saved as null)
+    savedAt?: number;                     // wall clock, for "12 min ago" on the boot screen
+}
+
+/**
+ * What the boot screen needs to describe the checkpoint without rebuilding a
+ * single actor: who's out there, how far they got, what they're carrying.
+ * Every field is derived from the payload, so saves written before this
+ * existed still describe themselves.
+ */
+export interface SaveHeader {
+    name: string;
+    role: string;
+    level: number;
+    sector: number;
+    depth: number;
+    funds: number;
+    squad: number;
+    savedAt: number;                      // 0 when the save predates the stamp
 }
 
 export interface RestoredGame {
@@ -78,7 +95,7 @@ const rebuildArmor = (s: ArmorSnap): Armor => {
     return a;
 };
 
-const memberSnap = (m: Actor): MemberSnap => ({
+export const memberSnap = (m: Actor): MemberSnap => ({
     kind: m instanceof Merc ? "merc" : "player",
     offer: m instanceof Merc ? m.offer : null,
     level: m.level, experience: m.experience, maxExperience: m.maxExperience,
@@ -101,7 +118,7 @@ const memberSnap = (m: Actor): MemberSnap => ({
 });
 
 /** Stamp the mutable state from a snapshot onto a freshly constructed actor. */
-const stamp = (a: Actor, s: MemberSnap): Actor => {
+export const stamp = (a: Actor, s: MemberSnap): Actor => {
     a.level = s.level; a.experience = s.experience; a.maxExperience = s.maxExperience;
     a.maxHealth = s.maxHealth; a.health = s.health;
     a.maxLuck = s.maxLuck; a.luck = s.luck;
@@ -132,6 +149,31 @@ export class SaveGame {
         try { return !!window.localStorage.getItem(KEY); } catch { return false; }
     }
 
+    /**
+     * Describe the checkpoint without rebuilding it. The boot screen asks the
+     * player to choose between continuing and starting over, and it can only
+     * ask that fairly if it can say what continuing would resume.
+     */
+    public static peek(): SaveHeader | null {
+        try {
+            const raw = window.localStorage.getItem(KEY);
+            if (!raw) { return null; }
+            const data = JSON.parse(raw) as SaveData;
+            if (data.v !== 2 || !data.members || !data.members.length || !data.run) { return null; }
+            const you = data.members[0]!;
+            return {
+                name: data.spec.name || "Unnamed",
+                role: data.spec.role || "solo",
+                level: you.level,
+                sector: data.run.sector,
+                depth: data.run.depth,
+                funds: data.funds,
+                squad: data.members.length,
+                savedAt: data.savedAt || 0,
+            };
+        } catch { return null; }
+    }
+
     /** Checkpoint the run. Call only from safe moments (standing on the map). */
     public static save(spec: CharacterSpec, party: Actor[], crew: Crew, run: RunState, usedEvents: string[]): void {
         try {
@@ -141,13 +183,10 @@ export class SaveGame {
                 funds: crew.funds,
                 usedEvents: usedEvents.slice(),
                 run: {...run, node: null},
+                savedAt: Date.now(),
             };
             window.localStorage.setItem(KEY, JSON.stringify(data));
         } catch { /* quota or private mode — a missing save is not worth crashing over */ }
-        // The character outlives the run: mirror them (and what the Cryptobank
-        // would salvage from the pot right now) into the meta save.
-        const you = party[0];
-        if (you) { MetaSave.save(you, Math.floor(crew.funds * you.chromeNum("deathBank")), spec); }
     }
 
     /** Rebuild the whole game from the checkpoint; null if absent or unreadable. */
@@ -174,107 +213,3 @@ export class SaveGame {
     }
 }
 
-// ===========================================================================
-// Meta save: the character, not the run. Written at every checkpoint and on
-// death, cleared only by "start over with someone new" — so chrome, levels
-// and the Humanity bill survive both the wipe and the browser closing.
-// ===========================================================================
-
-interface MetaData {
-    v: 1;
-    spec: CharacterSpec;
-    name: string;
-    level: number; experience: number; maxExperience: number;
-    humanity: number; maxHumanity: number;
-    maxLuck: number;
-    reputation: number; kills: number;
-    stats: any; skills: any;
-    chrome: ChromeSnap[];
-    /** Eddies the Cryptobank Cortex carries across the death (0 without it). */
-    bank: number;
-}
-
-/** What the boot screen needs to pitch the continue button. */
-export interface MetaSummary { name: string; level: number; augs: number; humanity: number; maxHumanity: number; }
-
-const META_KEY = "rainfall.meta.v1";
-
-export class MetaSave {
-
-    public static exists(): boolean {
-        try { return !!window.localStorage.getItem(META_KEY); } catch { return false; }
-    }
-
-    /** Mirror the character into the meta slot. Omitting `spec` keeps the stored one. */
-    public static save(you: Actor, bank: number, spec?: CharacterSpec): void {
-        try {
-            const prior = MetaSave.read();
-            const data: MetaData = {
-                v: 1,
-                spec: spec || (prior ? prior.spec : {}),
-                name: you.name,
-                level: you.level, experience: you.experience, maxExperience: you.maxExperience,
-                humanity: you.humanity, maxHumanity: you.maxHumanity,
-                maxLuck: you.maxLuck,
-                reputation: you.reputation, kills: you.kills,
-                stats: JSON.parse(JSON.stringify(you.stats)),
-                skills: you.snapshotSkills(),
-                chrome: you.cybernetics.map((c) => ({line: c.lineId, mk: c.mk})),
-                bank: Math.max(0, Math.floor(bank)),
-            };
-            window.localStorage.setItem(META_KEY, JSON.stringify(data));
-        } catch { /* ignore */ }
-    }
-
-    private static read(): MetaData | null {
-        try {
-            const raw = window.localStorage.getItem(META_KEY);
-            if (!raw) { return null; }
-            const data = JSON.parse(raw) as MetaData;
-            return data.v === 1 ? data : null;
-        } catch { return null; }
-    }
-
-    /** One line for the boot screen: who is waiting, and how chromed they are. */
-    public static summary(): MetaSummary | null {
-        const d = MetaSave.read();
-        return d ? {name: d.name, level: d.level, augs: d.chrome.length,
-            humanity: d.humanity, maxHumanity: d.maxHumanity} : null;
-    }
-
-    /**
-     * Rebuild the veteran: a fresh Player from their spec with the earned state
-     * stamped on top. Chrome lands by direct assignment — its Humanity was paid
-     * long ago and the saved stats already carry every effect. Gear is street
-     * basics plus whatever the chrome regrows. Returns the banked eddies too.
-     */
-    public static restore(): {character: Player; spec: CharacterSpec; bank: number} | null {
-        const d = MetaSave.read();
-        if (!d) { return null; }
-        const you = new Player(d.spec);
-        you.name = d.name;
-        you.level = d.level; you.experience = d.experience; you.maxExperience = d.maxExperience;
-        you.stats = d.stats;
-        you.restoreSkills(d.skills);
-        you.maxHumanity = d.maxHumanity;
-        you.humanity = d.humanity;
-        you.stats.emp = Math.floor(you.humanity / 10);
-        you.stats.hm = you.humanity;
-        you.cyberpsychosis = you.humanity <= 0;
-        you.maxLuck = d.maxLuck;
-        you.luck = d.maxLuck;
-        you.reputation = d.reputation;
-        you.kills = d.kills;
-        you.cybernetics = d.chrome.map((c) => Chrome.build(c.line, c.mk))
-            .filter((c): c is NonNullable<typeof c> => !!c);
-        you.recalculateHealth();
-        Economy.stripToBasics(you);
-        you.grenades = 2;
-        return {character: you, spec: d.spec, bank: d.bank};
-    }
-
-    /** "Start over with someone new" — the veteran is let go. */
-    public static clear(): void {
-        try { window.localStorage.removeItem(META_KEY); } catch { /* ignore */ }
-    }
-}

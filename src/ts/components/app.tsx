@@ -24,20 +24,29 @@ import {MarketView} from "./run/marketView";
 import {SafehouseView} from "./run/safehouseView";
 import {NetDiveView} from "./run/netDiveView";
 import {Crew} from "../interact/crew";
-import {MercMarket, MercOffer} from "../interact/mercMarket";
-import {Merc} from "../actors/Merc";
+import {MercOffer} from "../interact/mercMarket";
 import {HireBoard} from "./run/hireBoard";
 import {SectorClearView} from "./run/sectorClearView";
 import {MetaOverlay} from "./run/metaOverlay";
 import {OrderCtx, PlaybackBundle} from "./combat/battleScene";
 import {BattleEvent} from "../interact/battleEvents";
 import {FeedLog, missionClock} from "../interact/feedLog";
-import {MetaSave, SaveGame} from "../interact/saveGame";
+import {SaveGame, SaveHeader} from "../interact/saveGame";
+import {Career, CareerStore} from "../interact/career";
+import {TitleView} from "./titleView";
 import {AugOffer, Chrome} from "../interact/chrome";
 import {AugPickView} from "./run/augPickView";
 
 /** Which run-loop screen is on top. "combat" falls through to the ops shell. */
 export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "event" | "net" | "end" | "augpick";
+
+/**
+ * Where the game is, at the coarsest level. This used to be a `creating`
+ * boolean, which left no way to express "no run yet" — so the app booted into
+ * screen "combat" with a null run and two guards existed purely to stop that
+ * impossible state from resolving.
+ */
+export type GamePhase = "title" | "creator" | "run";
 
 export interface InterfaceAppState {
     activeMainPanel: string;
@@ -49,7 +58,12 @@ export interface InterfaceAppState {
     currentEnemies: Actor[];
     messages: Message[];
     auto: boolean;
-    creating: boolean;
+    /** Title screen, character creation, or a live run. */
+    phase: GamePhase;
+    /** The merc's record across runs — survives death, cleared only by retirement. */
+    career: Career | null;
+    /** The checkpointed run as the boot screen describes it (null when there's none). */
+    saveHeader: SaveHeader | null;
     /** The spec your character was built from, so "new character" opens where you left it. */
     characterSpec: CharacterSpec;
     /** Candidates on the board while a hire screen is up. */
@@ -104,38 +118,42 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private battleStart = 0;                 // mission-clock zero for the current fight
     private roundNo = 0;
     private markRound = 0;                   // round separator waiting to land in the feed
+    private markHoldLeft = -1;               // holdout rounds left, shown on the separator
+    private reinforced = false;              // the once-per-battle reinforcement wave arrived
 
     constructor(props: any) {
         super(props);
-        // Boot into character creation, pre-filled with a ready-to-run merc
-        // (one-click Deploy still works). The spec also seeds a valid party so
-        // the game state behind the creator is never empty.
-        const characterSpec = CharacterCreation.defaultSpec();
-        const character = new Player(characterSpec);
-        const party = [character];
-        const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
-        Battlefield.deploy(party, enemies);
+        // Boot builds nothing it will throw away: no squad, no enemies, no
+        // battlefield, and crucially no active Crew — `Crew.activate()` sets a
+        // global every purse operation reads, and a run is where that belongs.
+        // The one object made here is the merc themselves, restored from the
+        // career if there is one, because the title screen is about them.
+        const career = CareerStore.load();
+        const characterSpec = career ? career.spec : CharacterCreation.defaultSpec();
+        const character = career ? CareerStore.restore(career) : new Player(characterSpec);
         this.state = {
             activeMainPanel: "Character",
             character,
             activeChar: undefined,
             activeEnemy: undefined,
-            party,
-            currentEnemies: enemies,
+            party: [],
+            currentEnemies: [],
             messages: [],
             auto: true,   // combat plays itself by default; TAKE CONTROL opts into orders
-            creating: true,
+            phase: "title",
+            career,
+            saveHeader: SaveGame.peek(),
             characterSpec,
             offers: [],
             mobileTab: "arena",
             mobileMore: false,
             unread: 0,
             run: null,
-            screen: "combat",
+            screen: "map",
             report: null,
             eventId: null,
             usedEvents: [],
-            crew: new Crew().activate(),
+            crew: new Crew(),
             augOffers: [],
             battleId: 1,
             playback: null,
@@ -151,37 +169,61 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     /**
      * Checkpointing: whenever the squad stands on the map, the run is written
-     * to localStorage (debounced — state settles in bursts). Death spends the
-     * save: once the revive is gone and the run-over screen is up, it's deleted.
+     * to localStorage (debounced — state settles in bursts) and the career
+     * snapshot is refreshed alongside it, so levels and chrome earned mid-run
+     * outlive a closed tab even though the run itself may not.
+     *
+     * Death spends the save. It used to be deleted only once the revive had
+     * been spent, which meant dying with it unspent left a pre-death checkpoint
+     * on disk: close the tab, come back, and the boot screen offered to undo
+     * the wipe. The run-over screen only ever appears for a lost run, so its
+     * arrival is the condition.
      */
     public override componentDidUpdate() {
         const s = this.state;
-        if (s.run && s.screen === "map" && !s.creating) {
+        if (s.phase !== "run") { return; }
+        if (s.run && s.screen === "map") {
             if (this.saveTimer !== null) { window.clearTimeout(this.saveTimer); }
-            this.saveTimer = window.setTimeout(() => {
-                const st = this.state;
-                if (st.run && st.screen === "map" && !st.creating) {
-                    SaveGame.save(st.characterSpec, st.party, st.crew, st.run, st.usedEvents);
-                }
-            }, 500) as any;
+            this.saveTimer = window.setTimeout(this.checkpoint, 500) as any;
         }
-        if (s.run && s.screen === "end" && s.run.reviveUsed) {
-            // Death spends the run save — but the character (chrome, levels, and
-            // whatever the Cryptobank salvaged from the pot) survives it.
-            MetaSave.save(s.character, Math.floor(s.crew.funds * s.character.chromeNum("deathBank")),
-                s.characterSpec);
-            SaveGame.clear();
-        }
+        if (s.run && s.screen === "end") { SaveGame.clear(); }
     }
 
+    /** Write the run checkpoint and refresh the career snapshot from the live merc. */
+    private checkpoint = () => {
+        const st = this.state;
+        if (st.phase !== "run" || !st.run || st.screen !== "map") { return; }
+        SaveGame.save(st.characterSpec, st.party, st.crew, st.run, st.usedEvents);
+        // A run checkpointed before careers existed has no record behind it —
+        // adopt the merc who is out there rather than leaving them unrecorded.
+        if (!st.career) {
+            const started = CareerStore.start(st.characterSpec, st.character);
+            CareerStore.save(started);
+            this.setState({career: started});
+            return;
+        }
+        const career = CareerStore.sync(st.career, st.characterSpec, st.character, st.run);
+        CareerStore.save(career);
+        // Only re-render when a *displayed* number moved — the snapshot itself
+        // is a fresh object every time and would loop this forever.
+        if (career.bestSector !== st.career.bestSector || career.bestDepth !== st.career.bestDepth
+            || career.kills !== st.career.kills) {
+            this.setState({career});
+        }
+    };
+
     public override render() {
-        // Character creation is a full-screen takeover shown before / on demand.
-        if (this.state.creating) {
-            return <Creator initial={this.state.characterSpec} canCancel={this.state.run !== null}
-                            canContinue={this.state.run === null && SaveGame.exists()}
-                            veteran={this.state.run === null && !SaveGame.exists() ? MetaSave.summary() : null}
-                            onDeploy={this.deployCharacter} onCancel={this.closeCreator}
-                            onContinue={this.continueRun} onContinueVeteran={this.continueVeteran}/>;
+        // The front door. Two ways in and no more: pick up the checkpointed run,
+        // or start a new one — and the creator is where "same merc or someone
+        // new" gets decided, so it stays one door instead of two look-alikes.
+        if (this.state.phase === "title") {
+            return <TitleView save={this.state.saveHeader} career={this.state.career}
+                              onContinue={this.continueRun} onNewRun={this.openCreator}/>;
+        }
+        // Character creation is a full-screen takeover reached from the title.
+        if (this.state.phase === "creator") {
+            return <Creator initial={this.state.characterSpec} career={this.state.career}
+                            onDeploy={this.deployCharacter} onCancel={this.gotoTitle}/>;
         }
         // Run-loop takeovers that sit ABOVE the shell. The city map and combat
         // both render inside the shell (via Stage) so the nav / bottom bar stay.
@@ -206,11 +248,16 @@ export class App extends React.Component<{}, InterfaceAppState> {
                                     onHire={this.hireMerc} onContinue={this.nextSector}/>;
         }
         if (run && this.state.screen === "end") {
+            const career = this.state.career;
             return <RunEndView character={this.state.character} sector={run.sector}
                                depth={run.depth} kills={this.state.character.kills}
+                               runNo={career ? career.runs : 1}
+                               bestSector={career ? career.bestSector : run.sector}
+                               bestDepth={career ? career.bestDepth : run.depth}
+                               crewLeft={this.state.party.filter((p) => p.hireable).length}
                                canRevive={!run.reviveUsed}
                                onRevive={this.reviveRun} onNextRun={this.nextRun}
-                               onNewCharacter={this.openCreator}/>;
+                               onQuit={this.gotoTitle}/>;
         }
         if (run && this.state.screen === "hire") {
             return <MetaOverlay title={"☰ Fixer’s Table"} onLeave={this.leaveMeta}>
@@ -242,10 +289,10 @@ export class App extends React.Component<{}, InterfaceAppState> {
             <Hud actor={this.getCurrentActor()} crew={this.state.crew}/>
             <Sidebar active={this.state.activeMainPanel}
                      auto={this.state.auto}
-                     inRun={this.state.run !== null}
+                     canQuit={this.state.screen === "map"}
                      activeSelection={this.updateSelection}
                      onAuto={this.toggleAuto}
-                     onCreate={this.openCreator}/>
+                     onQuit={this.gotoTitle}/>
             <section id={"feedcol"}>
                 <Party name={"Squad"} party={this.state.party} activeSelection={this.getCharacter} friendly={true}
                        onToggleAuto={this.toggleActorAuto} onCycleTemperament={this.cycleTemperament}
@@ -302,42 +349,43 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     private closeMore = () => this.setState({mobileMore: false});
 
-    /** Build your character and hit the street. The crew gets hired on the way. */
-    private deployCharacter = (spec: CharacterSpec) => {
+    /**
+     * Hit the street. `veteran` is the creator's answer to the one question it
+     * exists to ask: send the merc on file back out, or retire them and run
+     * with someone new. Either way a new run ends whatever run was checkpointed
+     * — and that happens *here*, at the commit, not when the creator opened.
+     */
+    private deployCharacter = (spec: CharacterSpec, veteran: boolean) => {
         this.resetSequencer();
-        MetaSave.clear();   // deploying someone new lets the old veteran go
-        const character = new Player(spec);
-        character.grenades = 2;   // opening kit: two frags
-        // Never start alone: the fixer throws in a rookie with the job.
-        const party = [character, new Merc(MercMarket.starter(1))];
-        Chrome.armRun(party);
-        // Seed a placeholder wave so the combat shell never reads an empty array.
-        const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
-        Battlefield.deploy(party, enemies);
+        SaveGame.clear();
+        const prior = veteran ? this.state.career : null;
+        if (!prior) { CareerStore.clear(); }     // retiring: the old record goes with the old merc
+        const character = prior ? CareerStore.restore(prior) : new Player(spec);
+        // The Cryptobank pot recorded at death rides in, then the slate wipes.
+        const career = prior ? {...CareerStore.countRun(prior), bank: 0} : CareerStore.start(spec, character);
+        CareerStore.save(career);
+        const opening = prior
+            ? `— ${character.name} takes another job — run ${career.runs} —`
+            : `— ${character.name} hits the street with a rookie in tow —`;
         this.setState({
-            characterSpec: spec, character, party, currentEnemies: enemies,
-            activeChar: character, activeEnemy: enemies[0],
-            creating: false, run: RunController.scout(RunController.freshRun(1), party), screen: "map", report: null,
-            crew: new Crew().activate(), offers: [],
-            eventId: null, usedEvents: [],
-            activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
-            messages: [{msg: `— ${character.name} hits the street with a rookie in tow —`} as any],
-            playback: null, orders: null, turnOrder: [], auto: true,
-        });
+            ...RunController.beginRun(character, opening, this.logLength, prior ? prior.bank || 0 : 0),
+            phase: "run", characterSpec: spec, career, saveHeader: null,
+        } as any);
     };
 
     /** Resume the checkpointed run: same character, same crew, same streets. */
     private continueRun = () => {
         const g = SaveGame.load();
-        if (!g) { this.forceUpdate(); return; }
+        if (!g) { this.setState({saveHeader: null}); return; }
         this.resetSequencer();
         Chrome.armRun(g.party);
         // Seed a placeholder wave so the combat shell never reads an empty array.
         const enemies = ActorController.getEnemies(2, RunController.levelOf(g.party));
         Battlefield.deploy(g.party, enemies);
         this.setState({
-            creating: false, characterSpec: g.spec, character: g.character, party: g.party,
-            crew: g.crew, run: RunController.scout(g.run, g.party), usedEvents: g.usedEvents, screen: "map",
+            phase: "run", characterSpec: g.spec, character: g.character, party: g.party,
+            crew: g.crew.activate(), run: RunController.scout(g.run, g.party),
+            usedEvents: g.usedEvents, screen: "map",
             currentEnemies: enemies, activeChar: g.character, activeEnemy: enemies[0],
             report: null, eventId: null, offers: [],
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
@@ -347,32 +395,17 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     /**
-     * The veteran walks again: the meta save rebuilds the character — chrome,
-     * levels, Humanity bill and any banked eddies — into a fresh sector-1 run.
+     * Back to the front door. The checkpoint is written first when the squad is
+     * standing on the map (the rail only offers this there), so quitting is a
+     * pause, not an abandon — and it can't be used to walk out of a losing fight.
      */
-    private continueVeteran = () => {
-        const v = MetaSave.restore();
-        if (!v) { this.forceUpdate(); return; }
+    private gotoTitle = () => {
+        if (this.saveTimer !== null) { window.clearTimeout(this.saveTimer); this.saveTimer = null; }
+        this.checkpoint();          // no-ops off the map, so a dead run leaves nothing behind
         this.resetSequencer();
-        const character = v.character;
-        const starter = new Merc(character.chromeHas("freeVeteranStarter")
-            ? MercMarket.starterVeteran(1) : MercMarket.starter(1));
-        const party = [character, starter];
-        Chrome.armRun(party);
-        const crew = new Crew(Crew.STARTING_FUNDS + v.bank).activate();
-        const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
-        Battlefield.deploy(party, enemies);
-        const lines: any[] = [{msg: `— ${character.name} walks the street again. The chrome remembers. —`}];
-        if (v.bank > 0) { lines.push({msg: `— the Cryptobank Cortex releases ${v.bank}¥ from cold storage —`}); }
         this.setState({
-            characterSpec: v.spec, character, party, currentEnemies: enemies,
-            activeChar: character, activeEnemy: enemies[0],
-            creating: false, run: RunController.scout(RunController.freshRun(1), party), screen: "map", report: null,
-            crew, offers: [], augOffers: [],
-            eventId: null, usedEvents: [],
-            activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
-            messages: lines,
-            playback: null, orders: null, turnOrder: [], auto: true,
+            phase: "title", saveHeader: SaveGame.peek(), career: CareerStore.load(),
+            report: null, playback: null, orders: null, turnOrder: [],
         });
     };
 
@@ -380,6 +413,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private takeAug = (lineId: string | null) => {
         this.setState(RunController.takeAug(this.state, lineId, this.logLength) as any);
     };
+
 
     /** Player picked a node: fight it, or open its merchant / rest / event screen. */
     private enterNode = (node: RunNode) => {
@@ -469,7 +503,18 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     /** Leave the debrief: auto-kit whatever is left, then map / run-over screen. */
     private leaveDebrief = () => {
-        this.setState(RunController.continueFromDebrief(this.state, this.logLength) as any);
+        const patch = RunController.continueFromDebrief(this.state, this.logLength) as any;
+        // The run died here — write how far it got into the career before the
+        // run-over screen reads it back out. The snapshot is refreshed too
+        // (chrome and levels earned since the last checkpoint survive a closed
+        // tab), and the dead pot is recorded for the Cryptobank Cortex.
+        if (patch.screen === "end" && this.state.career) {
+            const synced = CareerStore.sync(this.state.career, this.state.characterSpec,
+                this.state.character, this.state.run);
+            patch.career = {...CareerStore.endRun(synced, this.state.run), bank: this.state.crew.funds};
+            CareerStore.save(patch.career);
+        }
+        this.setState(patch);
     };
 
     /** Spend the one-per-run revive and resume the current fight. */
@@ -478,13 +523,15 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (patch) { this.setState(patch as any, this.beginBattle); }
     };
 
-    /** Re-open the creator (nav "New Character" / abandon). */
+    /**
+     * Open the creator from the title. Nothing is destroyed on the way in — the
+     * checkpoint and the career both survive until a deploy actually commits,
+     * so backing out of here costs the player nothing.
+     */
     private openCreator = () => {
         this.resetSequencer();
-        SaveGame.clear();     // a new character starts clean — the old checkpoint dies here
-        this.setState({creating: true, report: null, playback: null, orders: null, turnOrder: []});
+        this.setState({phase: "creator", report: null, playback: null, orders: null, turnOrder: []});
     };
-    private closeCreator = () => this.setState({creating: false});
 
     /** Flip a squad member between manual and AI control. */
     private toggleActorAuto = (a: Actor) => {
@@ -534,6 +581,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
         this.viewPaused = false;
         this.roundNo = 0;
         this.markRound = 0;
+        this.markHoldLeft = -1;
+        this.reinforced = false;
     }
 
     /** A combat node just opened: fresh street, fresh initiative, first turn. */
@@ -563,7 +612,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     /** Hand the next unit its turn: orders prompt for manual members, AI otherwise. */
     private advanceTurn = () => {
-        if (this.state.creating || this.state.screen !== "combat") { return; }
+        if (this.state.phase !== "run" || this.state.screen !== "combat") { return; }
         if (this.state.playback || this.state.orders) { return; }
         if (!this.state.party.length || !this.state.currentEnemies.length) { return; }
         if (this.fightOver()) { return; }
@@ -580,7 +629,14 @@ export class App extends React.Component<{}, InterfaceAppState> {
                 this.queue = Combat.beginRound(this.state.party, this.state.currentEnemies);
                 if (!this.queue.length) { return; }
                 this.roundNo += 1;
-                if (this.roundNo > 1) { this.markRound = this.roundNo; }
+                const hold = this.holdoutRounds();
+                if (this.roundNo > 1) {
+                    this.markRound = this.roundNo;
+                    this.markHoldLeft = hold > 0 ? Math.max(0, hold - this.roundNo + 1) : -1;
+                }
+                // survived the clock: the hostiles disengage and the street is held
+                if (this.maybeEndHoldout(hold)) { return; }
+                this.maybeReinforce();
             }
         }
         if (!unit) { return; }
@@ -600,6 +656,56 @@ export class App extends React.Component<{}, InterfaceAppState> {
         }
     };
 
+    /** The holdout clock on the current combat node (0 = plain firefight). */
+    private holdoutRounds(): number {
+        const node = this.state.run && this.state.run.node;
+        return node && node.holdout ? node.holdout : 0;
+    }
+
+    /** Holdout survived: the hostiles disengage, the squad keeps the street. */
+    private maybeEndHoldout(hold: number): boolean {
+        if (hold <= 0 || this.roundNo <= hold) { return false; }
+        if (!this.state.party.some((p) => p.canFight())) { return false; }
+        this.state.currentEnemies.forEach((e) => { if (e.canFight()) { e.routed = true; } });
+        const lines = [FeedLog.sys("— clock beaten: hostiles disengage — street held —")];
+        const patch = RunController.step(this.state, lines, this.logLength);
+        this.setState({...patch, playback: null, turnOrder: [], orders: null} as any);
+        return true;
+    }
+
+    /**
+     * Elite and boss fights call for backup once, at the top of round 2: one or
+     * two low-rank guns from the same faction jog in from the far end of the
+     * street. Kept modest on purpose — pressure, not a second army.
+     */
+    private maybeReinforce(): void {
+        const node = this.state.run && this.state.run.node;
+        if (!node || (node.type !== "elite" && node.type !== "boss")) { return; }
+        if (this.reinforced || this.roundNo !== 2) { return; }
+        const foes = this.state.currentEnemies;
+        const lead = foes.find((e) => e.canFight());
+        if (!lead) { return; }
+        this.reinforced = true;
+        const n = node.type === "boss" ? 2 : Math.random() < 0.5 ? 2 : 1;
+        const rank = node.type === "boss" ? 2 : 1;
+        const fresh = ActorController.getReinforcements(lead.faction, n, RunController.levelOf(this.state.party), rank);
+        fresh.forEach((a, i) => {
+            a.position.x = (i - (n - 1) / 2) * 6 + (Math.random() - 0.5) * 3;
+            a.position.y = 41 + Math.random() * 2;
+            a.position.z = 0;
+            a.grenades = 0;
+            a.resetBattleState();
+        });
+        this.queue.push(...fresh);
+        Battlefield.WAVE += fresh.length;   // morale counts the latecomers too
+        const faction = (lead.faction || "hostile").toUpperCase();
+        this.setState({
+            currentEnemies: [...foes, ...fresh],
+            messages: [FeedLog.sys(`⚠ REINFORCEMENTS — ${n} more ${faction} inbound`),
+                ...this.state.messages].slice(0, this.logLength) as any,
+        });
+    }
+
     /** Resolve one unit's turn through the engine and ship it to the animator. */
     private resolveTurn = (unit: Actor, order?: {moveTo?: Point | undefined; target?: Actor | undefined; aimed?: boolean | undefined; grenadeAt?: Point | undefined}) => {
         const res = Combat.takeTurn(unit, this.state.party, this.state.currentEnemies, order);
@@ -618,7 +724,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
             ...FeedLog.keepLegacy(this.pendingMsgs, time),
             ...FeedLog.fromTurn(this.pendingEvents, time),
         ];
-        if (this.markRound) { lines.push(FeedLog.round(this.markRound)); this.markRound = 0; }
+        if (this.markRound) {
+            lines.push(FeedLog.round(this.markRound, this.markHoldLeft));
+            this.markRound = 0;
+            this.markHoldLeft = -1;
+        }
         this.pendingMsgs = [];
         this.pendingEvents = [];
         const done = () => {
@@ -734,10 +844,21 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (report) { this.setState({report}); }
     };
 
-    /** A wipe is not the end of the character — start the next run with them. */
+    /**
+     * A wipe is not the end of the character — start the next run with them.
+     * The tail of the dead run's feed comes along, so the street picks up where
+     * it left off instead of opening on a blank slate every time.
+     */
     private nextRun = () => {
         this.resetSequencer();
-        this.setState(RunController.nextRun(this.state, this.logLength) as any);
+        const tail = this.state.messages.slice(0, 3);
+        const patch = RunController.nextRun(this.state, this.logLength, tail) as any;
+        if (this.state.career) {
+            // the Cryptobank slice was just paid into the new pot — the record clears
+            patch.career = {...CareerStore.countRun(this.state.career), bank: 0};
+            CareerStore.save(patch.career);
+        }
+        this.setState(patch);
     };
 
     /** Open a squad member's full character sheet (from the roster's ›). */
