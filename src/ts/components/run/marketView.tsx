@@ -1,12 +1,12 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {AugOffer, Chrome} from "../../interact/chrome";
 import {Purse} from "../../interact/crew";
 import {Economy} from "../../interact/economy";
 import {GetItem} from "../../interact/getItem";
 import Equipment from "../../items/Equipment";
 import {Weapon} from "../../items/Weapon";
 import armors from "../../items/armors";
-import cyberwareData from "../../../objects/cyberware";
 import {randomMed} from "../../items/consumables";
 import {Medical} from "../../items/Scrap";
 
@@ -26,7 +26,7 @@ interface Stock {
 }
 interface Fence { owner: Actor; kind: "weapon" | "armor" | "medical" | "misc"; idx: number; name: string; detail: string; price: number; }
 
-interface MarketViewState { notice: string; bought: string[]; version: number; open: string | null; }
+interface MarketViewState { notice: string; bought: string[]; version: number; open: string | null; rerolled: boolean; }
 
 const weaponInfo = (w: Weapon): Array<[string, string]> => {
     const rows: Array<[string, string]> = [
@@ -50,20 +50,24 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
 
     private stock: Stock[];
     private service: Stock;
+    private chromeStock: AugOffer[];
 
     constructor(props: MarketViewProps) {
         super(props);
-        this.state = {notice: "", bought: [], version: 0, open: null};
+        this.state = {notice: "", bought: [], version: 0, open: null, rerolled: false};
         this.stock = MarketView.rollStock(props.party);
         this.service = MarketView.rollService();
+        this.chromeStock = Chrome.shopOffers(props.party[0]!, 2);
     }
 
     private static rollStock(party: Actor[]): Stock[] {
         const level = party.reduce((m, p) => Math.max(m, p.level), 1);
         const cap = Math.min(5, 2 + Math.floor(level / 2));
         const out: Stock[] = [];
+        // Vendor-Handshake chrome: the back room opens — more guns on the table.
+        const extra = party[0] ? party[0].chromeNum("stockBonus") : 0;
         const guns = Equipment.weapons.filter((w) => w.damageType === "kinetic" && w.cost > 0 && w.rarity <= cap);
-        for (let i = 0; i < 3 && guns.length; i++) {
+        for (let i = 0; i < 3 + extra && guns.length; i++) {
             const w = guns[(Math.random() * guns.length) << 0]!;
             out.push({
                 name: w.name, cost: w.cost,
@@ -111,17 +115,6 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 return "Frags handed round. Everyone stands a little straighter.";
             },
         });
-        const cw = cyberwareData[(Math.random() * cyberwareData.length) << 0]!;
-        out.push({
-            name: cw.name, cost: cw.cost, detail: `chrome · HL ${cw.humanityLoss} (installed on the spot)`,
-            info: [
-                ["Slot", cw.slot],
-                ["Humanity loss", `${cw.humanityLoss}`],
-                ["Install", "on the spot, no anaesthetic surcharge"],
-            ],
-            blurb: cw.description,
-            buy: (a) => { a.installCyberware(GetItem.cyberware(cw.name)); return `${cw.name} installed. It itches.`; },
-        });
         return out;
     }
 
@@ -162,10 +155,8 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
             line = item.buy(leader);
             if (item.name === "Med-bay patch-up") { this.props.party.forEach((p) => p.heal(Math.floor(p.maxHealth * 0.4))); }
             if (item.name === "Humanity therapy") {
-                this.props.party.forEach((p) => {
-                    p.humanity = Math.min(p.maxHumanity, p.humanity + 5);
-                    p.stats.emp = Math.floor(p.humanity / 10);
-                });
+                // shiftHumanity keeps EMP in step and can lift a cyberpsychosis lock
+                this.props.party.forEach((p) => p.shiftHumanity(5));
             }
             if (item.name === "Combat stims, clean") { this.props.party.forEach((p) => p.heal(6)); }
         } else {
@@ -177,6 +168,88 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
     /** Street rate: 40%, or 48% when a standing Fixer works the fence ("Operator"). */
     private fenceRate(): number {
         return Economy.fenceRate(this.props.party);
+    }
+
+    // ------------------------------------------------------------ ripperdoc --
+
+    /** Vendor-Handshake Mk.III: once per visit, the other crate comes out. */
+    private rerollStock = () => {
+        this.stock = MarketView.rollStock(this.props.party);
+        this.service = MarketView.rollService();
+        this.chromeStock = Chrome.shopOffers(this.props.party[0]!, 2);
+        this.setState({rerolled: true, open: null, notice: "The shutter rolls up on the other crate."});
+    };
+
+    private buyChrome(offer: AugOffer) {
+        const you = this.props.party[0]!;
+        const cost = this.price(offer.cost);
+        if (!Chrome.canInstall(you)) { this.setState({notice: "The doc looks at your eyes and shakes his head."}); return; }
+        if (!Purse.spend(you, cost)) { this.setState({notice: `Not enough eddies (${cost}¥).`}); return; }
+        const cw = offer.isUpgrade ? Chrome.upgrade(you, offer.line.id) : Chrome.install(you, offer.line.id);
+        this.setState({
+            notice: cw ? `${cw.name} ${offer.isUpgrade ? "tuned up" : "installed"}. It itches (−${offer.hl} Humanity).`
+                : "The chair stays empty.",
+            bought: this.state.bought.concat(offer.line.id + offer.mk),
+            version: this.state.version + 1,
+        });
+    }
+
+    private chromeRow(offer: AugOffer, key: string) {
+        const you = this.props.party[0]!;
+        const mark = offer.line.marks[offer.mk - 1]!;
+        const sold = this.state.bought.indexOf(offer.line.id + offer.mk) >= 0;
+        const locked = !Chrome.canInstall(you);
+        const open = this.state.open === key;
+        const cost = this.price(offer.cost);
+        return (
+            <div key={key} className={"mkItem" + (sold ? " sold" : "") + (open ? " open" : "")}>
+                <button className={"mkRow"} onClick={() => this.toggleInfo(key)} aria-expanded={open}>
+                    <span className={"mkChevron"}>›</span>
+                    <span className={"mkNameWrap"}>
+                        <span className={"mkName"}>{offer.isUpgrade ? "▲ " : ""}{mark.name}</span>
+                        <span className={"mkDetail"}>
+                            {offer.line.tier} chrome · Mk.{offer.mk} · −{offer.hl} HUM{offer.isUpgrade ? " · upgrade" : ""}
+                        </span>
+                    </span>
+                </button>
+                <button className={"mkBuy"}
+                        disabled={sold || locked || !Purse.canAfford(you, cost)}
+                        onClick={() => this.buyChrome(offer)}>
+                    {sold ? (offer.isUpgrade ? "TUNED" : "SOLD") : cost + "¥"}
+                </button>
+                <div className={"mkInfo"}>
+                    <div className={"mkInfoBody"}>
+                        <p className={"mkBlurb"}>{mark.description}</p>
+                        <dl className={"mkSpecs"}>
+                            <div className={"mkSpec"}><dt>Slot</dt><dd>{offer.line.slot}</dd></div>
+                            <div className={"mkSpec"}><dt>Humanity</dt><dd>−{offer.hl} ({you.humanity} → {Math.max(0, you.humanity - offer.hl)})</dd></div>
+                            <div className={"mkSpec"}><dt>Permanence</dt><dd>chrome survives death — gear doesn't</dd></div>
+                        </dl>
+                    </div>
+                </div>
+            </div>);
+    }
+
+    private ripperdoc() {
+        const you = this.props.party[0]!;
+        const locked = !Chrome.canInstall(you);
+        const upgrades = Chrome.upgradeOffers(you);
+        const canReroll = you.chromeHas("stockReroll") && !this.state.rerolled;
+        return (
+            <React.Fragment>
+                <h4 className={"mkHead"}>
+                    Ripperdoc counter · HUM {you.humanity}/{you.maxHumanity}
+                    {you.humanity < 20 && !locked ? <em className={"mkWarn"}> — the edge is close</em> : null}
+                    {canReroll && <button className={"mkReroll"} onClick={this.rerollStock}>⟲ other crate</button>}
+                </h4>
+                {locked && <div className={"mkNotice psycho"}>CYBERPSYCHOSIS — the doc refuses the chair. Extraction or therapy first.</div>}
+                <div className={"mkStock"}>
+                    {this.chromeStock.map((o, i) => this.chromeRow(o, "c" + i))}
+                    {upgrades.map((o, i) => this.chromeRow(o, "u" + o.line.id + i))}
+                    {this.chromeStock.length === 0 && upgrades.length === 0 &&
+                        <div className={"mkEmpty"}>Nothing on the shelf fits what you've got.</div>}
+                </div>
+            </React.Fragment>);
     }
 
     private fenceList(): Fence[] {
@@ -270,7 +343,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                             <h2 className={"mHeroTitle"}>Tonight's Stock</h2>
                             <p className={"mHeroSub"}>
                                 {this.price(100) < 100
-                                    ? "The company account covers 10% — prices shown are yours."
+                                    ? `Someone else's account covers ${100 - this.price(100)}% — prices shown are yours.`
                                     : "What fell off a truck this week. Tap a row for the spec sheet."}
                             </p>
                         </div>
@@ -278,6 +351,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                         <div className={"mkStock"}>
                             {[...this.stock, this.service].map((item, i) => this.item(item, "s" + i))}
                         </div>
+                        {this.ripperdoc()}
                         <h4 className={"mkHead"}>The fence buys · {Math.round(this.fenceRate() * 100)}% street rate{this.fenceRate() > 0.4 ? " (Operator\u2019s cut)" : ""}</h4>
                         {fence.length === 0 && <div className={"mkEmpty"}>Nothing in the duffel worth fencing.</div>}
                         <div className={"mkStock"}>

@@ -73,6 +73,10 @@ export class RunEndView extends React.Component<RunEndViewProps, {}> {
                                 <li>{chrome} piece{chrome === 1 ? "" : "s"} of chrome · Humanity {c.humanity}/{c.maxHumanity}</li>
                                 <li>Reputation {c.reputation}/10</li>
                             </ul>
+                            {chrome > 0 &&
+                                <span className={"reKeepChrome"}>
+                                    {c.cybernetics.map((cw) => cw.name).join(" · ")}
+                                </span>}
                         </div>
                         <div className={"reLost"}>
                             <h2>Left on the pavement</h2>

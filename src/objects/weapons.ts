@@ -8804,11 +8804,11 @@ const weapons: WeaponConfig[] = [
     "rateOfFire": 2,
     "autofire": false,
     "hands": 1,
-    "rarity": 1,
+    "rarity": 6,
     "concealment": true,
     "reliability": 2,
     "quality": "Standard",
-    "cost": 500,
+    "cost": 0,
     "range": 2,
     "description": "Retractable monofilament claws (cyberware): 3d6 in close combat."
   }

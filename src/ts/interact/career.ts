@@ -39,6 +39,12 @@ export interface Career {
     kills: number;
     /** Where the last run ended — null while the first one is still running. */
     lastRun: { sector: number; depth: number } | null;
+    /**
+     * The dead run's crew pot, recorded at the wipe. A Cryptobank Cortex turns
+     * a slice of it into next run's opening funds; without one it's just a
+     * number on a frozen account. Zeroed when the next run begins.
+     */
+    bank?: number;
 }
 
 const KEY = "rainfall.career.v1";

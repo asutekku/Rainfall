@@ -4,6 +4,7 @@ import {Player} from "../actors/player";
 import {CharacterSpec} from "../actors/resources/CharacterCreation";
 import {Armor} from "../items/Armor";
 import {Medical, Scrap} from "../items/Scrap";
+import {Chrome} from "./chrome";
 import {Crew} from "./crew";
 import {GetItem} from "./getItem";
 import type {MercOffer} from "./mercMarket";
@@ -22,6 +23,9 @@ import type {RunState} from "./runMap";
 
 interface ArmorSnap { part: string; name: string; sp: number; maxSp: number; cost: number; }
 
+/** Chrome travels as line + mark — the catalog rebuilds the instance. */
+interface ChromeSnap { line: string; mk: number; }
+
 export interface MemberSnap {
     kind: "player" | "merc";
     offer: MercOffer | null;              // mercs only
@@ -39,11 +43,11 @@ export interface MemberSnap {
     invArmor: ArmorSnap[];
     invMeds: Array<{name: string; cost: number; restore: number; desc: string}>;
     invMisc: Array<{name: string; cost: number; desc: string}>;
-    chrome: string[];
+    chrome: ChromeSnap[];
 }
 
 interface SaveData {
-    v: 1;
+    v: 2;
     spec: CharacterSpec;
     members: MemberSnap[];
     funds: number;
@@ -110,7 +114,7 @@ export const memberSnap = (m: Actor): MemberSnap => ({
     invArmor: m.inventory.armor.map((a) => armorSnap(a)!),
     invMeds: m.inventory.medical.map((x: any) => ({name: x.name, cost: x.cost || 0, restore: x.restorePoints || 0, desc: x.description || ""})),
     invMisc: m.inventory.misc.map((x: any) => ({name: x.name, cost: x.cost || 0, desc: x.description || ""})),
-    chrome: m.cybernetics.map((c) => c.name),
+    chrome: m.cybernetics.map((c) => ({line: c.lineId, mk: c.mk})),
 });
 
 /** Stamp the mutable state from a snapshot onto a freshly constructed actor. */
@@ -126,7 +130,7 @@ export const stamp = (a: Actor, s: MemberSnap): Actor => {
     a.restoreSkills(s.skills);
     // chrome first: passives (cyberSP, initiative) read the list live, and the
     // direct assignment avoids re-charging Humanity for an install already paid
-    a.cybernetics = s.chrome.map((n) => GetItem.cyberware(n));
+    a.cybernetics = s.chrome.map((c) => Chrome.build(c.line, c.mk)).filter((c): c is NonNullable<typeof c> => !!c);
     a.weapon = GetItem.weapon(s.weapon);
     a.weapon.equipped = true;
     a.equipment.upper = s.upper ? rebuildArmor(s.upper) : null;
@@ -155,7 +159,7 @@ export class SaveGame {
             const raw = window.localStorage.getItem(KEY);
             if (!raw) { return null; }
             const data = JSON.parse(raw) as SaveData;
-            if (data.v !== 1 || !data.members || !data.members.length || !data.run) { return null; }
+            if (data.v !== 2 || !data.members || !data.members.length || !data.run) { return null; }
             const you = data.members[0]!;
             return {
                 name: data.spec.name || "Unnamed",
@@ -174,7 +178,7 @@ export class SaveGame {
     public static save(spec: CharacterSpec, party: Actor[], crew: Crew, run: RunState, usedEvents: string[]): void {
         try {
             const data: SaveData = {
-                v: 1, spec,
+                v: 2, spec,
                 members: party.map(memberSnap),
                 funds: crew.funds,
                 usedEvents: usedEvents.slice(),
@@ -191,7 +195,7 @@ export class SaveGame {
             const raw = window.localStorage.getItem(KEY);
             if (!raw) { return null; }
             const data = JSON.parse(raw) as SaveData;
-            if (data.v !== 1 || !data.members.length || !data.run) { return null; }
+            if (data.v !== 2 || !data.members.length || !data.run) { return null; }
             const party = data.members.map((s) =>
                 stamp(s.kind === "merc" && s.offer ? new Merc(s.offer) : new Player(data.spec), s));
             const crew = new Crew(data.funds).activate();
@@ -208,3 +212,4 @@ export class SaveGame {
         try { window.localStorage.removeItem(KEY); } catch { /* ignore */ }
     }
 }
+

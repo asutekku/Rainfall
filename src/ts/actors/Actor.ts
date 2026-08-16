@@ -1,6 +1,6 @@
 import {GetItem} from "../interact/getItem";
 import {Armor} from "../items/Armor";
-import {Cyberware} from "../items/Cyberware";
+import {Cyberware, CyberwareEffects} from "../items/Cyberware";
 import {Program} from "../items/Program";
 import {Vehicle} from "../items/Vehicle";
 import {Item} from "../items/Item";
@@ -221,6 +221,14 @@ export class Actor extends GameObject {
     public housing: string;
     public vehicle: Vehicle | null;
     public firstHitDone: boolean;
+    // --- chrome runtime state (never saved; re-armed by Chrome.primeSquad/armRun) ---
+    public squadInitRt: number;      // Tactical Co-Processor aura on this body
+    public squadHitRt: number;       // squad/merc to-hit aura on this body
+    public actFirstPending: boolean; // Sandevistan Overclock: owed the round-1 opener
+    public grazeUsed: boolean;       // Smartgun Array: the per-fight graze is spent
+    public iceLeft: number;          // Self-ICE: killing blows this run can still eat
+    public bioSavesLeft: number;     // Squad Biomonitor: merc saves left this run
+    public bioStabilized: boolean;   // this merc already used their biomonitor save
 
     constructor() {
         const role = new Role();
@@ -429,6 +437,13 @@ export class Actor extends GameObject {
         this.housing = "Streets";
         this.vehicle = null;
         this.firstHitDone = false;
+        this.squadInitRt = 0;
+        this.squadHitRt = 0;
+        this.actFirstPending = false;
+        this.grazeUsed = false;
+        this.iceLeft = 0;
+        this.bioSavesLeft = 0;
+        this.bioStabilized = false;
         this.lifepath = CharacterCreation.randomLifepath();
     }
 
@@ -532,7 +547,8 @@ export class Actor extends GameObject {
 
     /** RED: -2 to all Actions while Seriously Wounded (negated by a Pain Editor). */
     public woundPenalty(): number {
-        return this.isSeriouslyWounded() && !this.hasPainEditor() ? -2 : 0;
+        if (!this.isSeriouslyWounded() || this.hasPainEditor()) { return 0; }
+        return this.chromeHas("halveWoundPenalty") ? -1 : -2;
     }
 
     /** RED HP = 10 + 5 x ceil((BODY + WILL) / 2). Resets wound state. */
@@ -550,6 +566,8 @@ export class Actor extends GameObject {
      * permanent death.
      */
     public deathSave(): boolean {
+        // Blood Pump: the assisted heart refuses to quit — dying, but never dead.
+        if (this.chromeHas("stabilizeDying")) { return true; }
         const roll: number = Math.floor(Math.random() * 10) + 1;
         const survived: boolean = roll !== 10 && (roll + this.deathSavePenalty) < this.stats.bt;
         this.deathSavePenalty += 1;
@@ -636,6 +654,12 @@ export class Actor extends GameObject {
         if (aimedAtHead) {
             damage *= 2; // head shots double the damage that gets through
         }
+        // Self-ICE: a killing blow trips the breaker instead (once per run per charge).
+        if (damage >= this.health && this.iceLeft > 0 && this.alive && !this.mortallyWounded) {
+            this.iceLeft -= 1;
+            const floor = Math.max(1, Math.floor(this.maxHealth * this.chromeFloor()));
+            damage = Math.max(0, this.health - floor);
+        }
         if (damage > 0) {
             // RED ablation: whichever armour actually stopped part of the hit loses 1 SP.
             const usingSubdermal: boolean = !aimedAtHead && this.cyberSP() > wornSP;
@@ -694,8 +718,24 @@ export class Actor extends GameObject {
     public attackBonus(weapon: Weapon): number {
         const stat: number = weapon.weaponClass === "melee" ? this.stats.dex : this.stats.ref;
         const cyber: number = weapon.weaponClass === "melee" ? 0 : this.cyberAttackBonus();
+        const fear: number = this.chromeHas("ignoreFearPenalty") ? 0 : this.fearPenalty;
         return stat + this.skillFor(weapon) + weapon.accuracyBonus + Actor.STREET_INSTINCT
-            + this.woundPenalty() + cyber + this.fearPenalty;
+            + this.woundPenalty() + cyber + fear + this.squadHitRt;
+    }
+
+    /** The HP fraction a tripped Self-ICE leaves its wearer at. */
+    public chromeFloor(): number {
+        return this.cybernetics.reduce((f, c) => Math.max(f, c.effects.iceFloor || 0), 0.01);
+    }
+
+    /** Every eddie earned by the crew, scaled: Fixer "Operator" plus any Fixer Shard. */
+    public eddieBonus(): number {
+        return this.fixerCut() + this.chromeNum("eddieBonus");
+    }
+
+    /** Market prices down: the better of a Corporate's account and an Expense Chip. */
+    public marketDiscount(): number {
+        return Math.max(this.corpDiscount(), this.chromeNum("priceDiscount"));
     }
 
     /** RED Reputation (0-10), earned through notable deeds (Rockerboys gain faster). */
@@ -730,7 +770,7 @@ export class Actor extends GameObject {
     /** RED Initiative: 1d10 + REF (+ Solo Initiative Reaction + reflex boosters). */
     public rollInitiative(): number {
         return Math.floor(Math.random() * 10) + 1 + this.stats.ref
-            + this.initiativeBonus() + this.cyberInitiative();
+            + this.initiativeBonus() + this.cyberInitiative() + this.squadInitRt;
     }
 
     public isSolo(): boolean {
@@ -774,24 +814,45 @@ export class Actor extends GameObject {
     }
 
     /**
+     * The one canonical way Humanity moves. Keeps EMP and the mirror stat in
+     * step, and flips cyberpsychosis both ways — bottoming out locks the
+     * ripperdoc's chair, clawing back above zero unlocks it.
+     */
+    public shiftHumanity(delta: number): void {
+        this.humanity = Math.max(0, Math.min(this.maxHumanity, this.humanity + delta));
+        this.stats.emp = Math.floor(this.humanity / 10);
+        this.stats.hm = this.humanity;
+        this.cyberpsychosis = this.humanity <= 0;
+    }
+
+    /** Sum of a numeric chrome effect across everything installed. */
+    public chromeNum(key: keyof CyberwareEffects): number {
+        return this.cybernetics.reduce((n, c) => n + (Number(c.effects[key]) || 0), 0);
+    }
+
+    /** Any installed piece carries this boolean effect. */
+    public chromeHas(key: keyof CyberwareEffects): boolean {
+        return this.cybernetics.some((c) => c.effects[key] === true);
+    }
+
+    /**
      * Installs a piece of cyberware: pays its Humanity Loss, recomputes EMP from
      * the remaining Humanity, applies stat effects, and flags cyberpsychosis if
      * Humanity is emptied. Call at set-up (it refreshes HP for BODY changes).
      */
     public installCyberware(cw: Cyberware): void {
         this.cybernetics.push(cw);
-        this.humanity = Math.max(0, this.humanity - cw.humanityLoss);
-        this.stats.emp = Math.floor(this.humanity / 10);
-        this.stats.hm = this.humanity;
-        if (this.humanity <= 0) {
-            this.cyberpsychosis = true;
-        }
+        this.shiftHumanity(-cw.humanityLoss);
         if (cw.effects.body) {
             this.stats.bt += cw.effects.body;
             this.recalculateHealth();
         }
+        if (cw.effects.luckMax) {
+            this.maxLuck += cw.effects.luckMax;
+            this.luck += cw.effects.luckMax;
+        }
         if (cw.effects.grantsWeapon) {
-            // Cyberweapons (Wolvers, Rippers, ...) are real weapons the wielder can equip.
+            // Cyberweapons (Wolvers, popup guns, ...) are real weapons the wielder can equip.
             this.inventory.weapons.push(GetItem.weapon(cw.effects.grantsWeapon));
         }
     }
@@ -842,8 +903,10 @@ export class Actor extends GameObject {
     /** Corporate "Teamwork": the company account picks up 10% of every market bill. */
     public corpDiscount(): number { return this.isCorporate() ? 0.1 : 0; }
 
-    /** Rockerboy "Charismatic Impact": Facedown / COOL-check edge from fame. */
-    public facedownBonus(): number { return this.isRockerboy() ? this.roleRank : 0; }
+    /** Facedown / COOL-check edge: Rockerboy fame, plus chrome that glints right. */
+    public facedownBonus(): number {
+        return (this.isRockerboy() ? this.roleRank : 0) + this.chromeNum("facedownBonus");
+    }
 
     /**
      * Rockerboy "Charismatic Impact": chance a ganger crew recognises the legend
@@ -854,13 +917,17 @@ export class Actor extends GameObject {
     }
 
     /** Rockerboys earn Reputation faster through exposure. */
-    public repGainBonus(): number { return this.isRockerboy() ? 1 : 0; }
+    public repGainBonus(): number {
+        return (this.isRockerboy() ? 1 : 0) + this.chromeNum("repBonus");
+    }
 
     /** Techie "Maker": services the crew's gear between stops (repairs half the lost SP). */
     public makerRepair(): number { return this.isTechie() ? this.roleRank : 0; }
 
     /** Media "Credibility": how many streets ahead this member's sources see (others 1). */
-    public intelRange(): number { return this.isMedia() ? 2 : 1; }
+    public intelRange(): number {
+        return Math.max(this.isMedia() ? 2 : 1, 1 + this.chromeNum("scoutRange"));
+    }
 
     /** RED Interface rank: a Netrunner uses its Role Ability rank; others have a basic 2. */
     public interfaceRank(): number {

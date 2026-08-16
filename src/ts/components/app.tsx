@@ -34,9 +34,11 @@ import {FeedLog, missionClock} from "../interact/feedLog";
 import {SaveGame, SaveHeader} from "../interact/saveGame";
 import {Career, CareerStore} from "../interact/career";
 import {TitleView} from "./titleView";
+import {AugOffer, Chrome} from "../interact/chrome";
+import {AugPickView} from "./run/augPickView";
 
 /** Which run-loop screen is on top. "combat" falls through to the ops shell. */
-export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "event" | "net" | "end";
+export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "event" | "net" | "end" | "augpick";
 
 /**
  * Where the game is, at the coarsest level. This used to be a `creating`
@@ -84,6 +86,8 @@ export interface InterfaceAppState {
     usedEvents: string[];
     /** The crew's shared purse — every payday, hire and store buy runs through it. */
     crew: Crew;
+    /** The boss's chrome drop on offer while the augpick screen is up. */
+    augOffers: AugOffer[];
     /** Bumped when a new encounter starts — tells the 3D arena to build a fresh street. */
     battleId: number;
     /** The resolved turn currently being animated by the battle scene. */
@@ -150,6 +154,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             eventId: null,
             usedEvents: [],
             crew: new Crew(),
+            augOffers: [],
             battleId: 1,
             playback: null,
             orders: null,
@@ -231,6 +236,10 @@ export class App extends React.Component<{}, InterfaceAppState> {
                                 onClaim={this.claimLoot} onSell={this.sellLoot} onAutoKit={this.autoKit}
                                 onBuyout={this.buyoutMerc}
                                 onContinue={this.leaveDebrief} onRevive={this.reviveRun}/>;
+        }
+        if (run && this.state.screen === "augpick") {
+            return <AugPickView character={this.state.character} offers={this.state.augOffers}
+                                onPick={this.takeAug}/>;
         }
         if (run && this.state.screen === "sector") {
             return <SectorClearView sector={run.sector} funds={this.state.crew.funds}
@@ -352,13 +361,14 @@ export class App extends React.Component<{}, InterfaceAppState> {
         const prior = veteran ? this.state.career : null;
         if (!prior) { CareerStore.clear(); }     // retiring: the old record goes with the old merc
         const character = prior ? CareerStore.restore(prior) : new Player(spec);
-        const career = prior ? CareerStore.countRun(prior) : CareerStore.start(spec, character);
+        // The Cryptobank pot recorded at death rides in, then the slate wipes.
+        const career = prior ? {...CareerStore.countRun(prior), bank: 0} : CareerStore.start(spec, character);
         CareerStore.save(career);
         const opening = prior
             ? `— ${character.name} takes another job — run ${career.runs} —`
             : `— ${character.name} hits the street with a rookie in tow —`;
         this.setState({
-            ...RunController.beginRun(character, opening, this.logLength),
+            ...RunController.beginRun(character, opening, this.logLength, prior ? prior.bank || 0 : 0),
             phase: "run", characterSpec: spec, career, saveHeader: null,
         } as any);
     };
@@ -368,6 +378,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         const g = SaveGame.load();
         if (!g) { this.setState({saveHeader: null}); return; }
         this.resetSequencer();
+        Chrome.armRun(g.party);
         // Seed a placeholder wave so the combat shell never reads an empty array.
         const enemies = ActorController.getEnemies(2, RunController.levelOf(g.party));
         Battlefield.deploy(g.party, enemies);
@@ -398,6 +409,12 @@ export class App extends React.Component<{}, InterfaceAppState> {
         });
     };
 
+    /** The boss's chrome drop resolved (or skipped) — on to the sector screen. */
+    private takeAug = (lineId: string | null) => {
+        this.setState(RunController.takeAug(this.state, lineId, this.logLength) as any);
+    };
+
+
     /** Player picked a node: fight it, or open its merchant / rest / event screen. */
     private enterNode = (node: RunNode) => {
         const patch: any = RunController.enter(this.state, node, this.logLength);
@@ -417,7 +434,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (!run || !run.node) { return; }
         const lines: any[] = outcome.lines.map((l) => ({msg: l}));
         let nextRun = run;
-        if (outcome.restoreRevive) { nextRun = {...nextRun, reviveUsed: false}; }
+        if (outcome.restoreRevive) { nextRun = {...nextRun, reviveUsed: false, revivesUsed: 0}; }
         if (outcome.reveal) {
             // intel: uncover N random still-hidden waypoints on the holo-map.
             // A Media in the crew works their sources: one extra waypoint.
@@ -488,9 +505,13 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private leaveDebrief = () => {
         const patch = RunController.continueFromDebrief(this.state, this.logLength) as any;
         // The run died here — write how far it got into the career before the
-        // run-over screen reads it back out.
+        // run-over screen reads it back out. The snapshot is refreshed too
+        // (chrome and levels earned since the last checkpoint survive a closed
+        // tab), and the dead pot is recorded for the Cryptobank Cortex.
         if (patch.screen === "end" && this.state.career) {
-            patch.career = CareerStore.endRun(this.state.career, this.state.run);
+            const synced = CareerStore.sync(this.state.career, this.state.characterSpec,
+                this.state.character, this.state.run);
+            patch.career = {...CareerStore.endRun(synced, this.state.run), bank: this.state.crew.funds};
             CareerStore.save(patch.career);
         }
         this.setState(patch);
@@ -833,7 +854,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
         const tail = this.state.messages.slice(0, 3);
         const patch = RunController.nextRun(this.state, this.logLength, tail) as any;
         if (this.state.career) {
-            patch.career = CareerStore.countRun(this.state.career);
+            // the Cryptobank slice was just paid into the new pot — the record clears
+            patch.career = {...CareerStore.countRun(this.state.career), bank: 0};
             CareerStore.save(patch.career);
         }
         this.setState(patch);

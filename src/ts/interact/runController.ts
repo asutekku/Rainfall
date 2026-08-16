@@ -10,6 +10,7 @@ import {Crew, Purse} from "./crew";
 import {MercMarket} from "./mercMarket";
 import {Economy} from "./economy";
 import {RunMap, RunNode, RunState, encounterSpec, spawnEncounter} from "./runMap";
+import {Chrome} from "./chrome";
 
 type Patch = Partial<InterfaceAppState>;
 
@@ -48,18 +49,27 @@ export class RunController {
      * levels, training, reputation, and the chrome they paid Humanity for.
      * Trauma Team resets the body and doesn't touch the wiring.
      */
-    public static beginRun(character: Actor, opening: string, log: number): Patch {
+    public static beginRun(character: Actor, opening: string, log: number, prevFunds: number = 0): Patch {
         character.revive();
         character.health = character.maxHealth;
         character.refreshLuck();
         Economy.stripToBasics(character);
         character.grenades = 2;
-        // Never start alone: the fixer throws in a rookie with the job.
-        const party: Actor[] = [character, new Merc(MercMarket.starter(1))];
-        const crew = new Crew().activate();
+        // Cryptobank Cortex: a slice of the previous pot survives into this run.
+        const banked = Math.floor(prevFunds * character.chromeNum("deathBank"));
+        // Never start alone: the fixer throws in a rookie with the job —
+        // or, on a Command Uplink Mk.III, a Veteran already waiting at the corner.
+        const starter = new Merc(character.chromeHas("freeVeteranStarter")
+            ? MercMarket.starterVeteran(1) : MercMarket.starter(1));
+        RunController.outfitHire(character, starter);
+        const party: Actor[] = [character, starter];
+        Chrome.armRun(party);        // fresh run, fresh Self-ICE / biomonitor charges
+        const crew = new Crew(Crew.STARTING_FUNDS + banked).activate();
         // Seed a placeholder wave so the combat shell never reads an empty array.
         const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
         Battlefield.deploy(party, enemies);
+        const lines: any[] = [{msg: opening}];
+        if (banked > 0) { lines.push({msg: `— the Cryptobank Cortex releases ${banked}¥ from cold storage —`}); }
         return {
             character, party, crew,
             run: RunController.scout(RunController.freshRun(1), party),
@@ -67,7 +77,7 @@ export class RunController {
             eventId: null, usedEvents: [],
             currentEnemies: enemies, activeChar: character, activeEnemy: enemies[0],
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
-            messages: [{msg: opening} as any].slice(0, log),
+            messages: lines.slice(0, log),
             playback: null, orders: null, turnOrder: [], auto: true,
         };
     }
@@ -87,7 +97,8 @@ export class RunController {
         if (node.type === "net") { return {run: {...run, node}, screen: "net"}; }
         if (node.type === "hire") {
             // A fixer's table mid-sector: short list, and he takes his cut.
-            return {run: {...run, node}, screen: "hire", offers: MercMarket.board(run.sector + 1, 3, 1.25)};
+            return {run: {...run, node}, screen: "hire",
+                offers: MercMarket.board(run.sector + 1, 3, 1.25 * RunController.hireMarkup(state))};
         }
         // combat / elite / boss
         if (node.type === "combat") {
@@ -129,6 +140,7 @@ export class RunController {
     public static advance(state: InterfaceAppState, node: RunNode, extra: any[], log: number): Patch {
         const run = state.run;
         if (!run) { return {}; }
+        const you = state.character;
         const fresh = run.clearedIds.indexOf(node.id) < 0;
         const clearedIds = fresh ? run.clearedIds.concat(node.id) : run.clearedIds;
         const depth = run.depth + 1;
@@ -136,18 +148,35 @@ export class RunController {
             // Every node survived steadies the nerves: +1 Luck across the squad.
             state.party.forEach((p) => { p.luck = Math.min(p.maxLuck, p.luck + 1); });
             // Word travels. Boss and elite scalps build the character's name.
-            if (node.type === "boss") { state.character.gainReputation(2); }
-            if (node.type === "elite") { state.character.gainReputation(1); }
+            if (node.type === "boss") { you.gainReputation(2); }
+            if (node.type === "elite") { you.gainReputation(1); }
             // Techie "Maker": between stops they service the crew's armour.
             const patched = RunController.makerPass(state.party);
             if (patched > 0) { extra = [...extra, {msg: `— the Techie patches ${patched} SP back into the squad's armour —`}]; }
+            const combatNode = node.type === "combat" || node.type === "elite" || node.type === "boss";
+            if (combatNode) {
+                // Nanosurgeons: the swarm closes the wearer's wounds after a fight.
+                const nano = you.chromeNum("healAfterCombat");
+                const nanoHealed = nano > 0 && you.canFight() ? you.heal(nano) : 0;
+                if (nanoHealed > 0) { extra = [...extra, {msg: `— nanosurgeons knit ${nanoHealed} HP back into ${you.name.split(" ")[0]} —`}]; }
+                // Squad Biomonitor Mk.III: the link drip-feeds the hired help too.
+                const drip = you.chromeNum("mercHealAfter");
+                if (drip > 0) { state.party.forEach((p, i) => { if (i > 0 && p.canFight()) { p.heal(drip); } }); }
+            }
+            // Probability Co-Processor Mk.III: hard scalps reset the odds.
+            if ((node.type === "elite" || node.type === "boss") && you.chromeHas("luckOnElite")) {
+                you.refreshLuck();
+                extra = [...extra, {msg: "— the co-processor recalibrates: Luck restored —"}];
+            }
         }
         const messages = [...extra, ...state.messages].slice(0, log);
         if (node.type === "boss") {
-            // Sector cleared — not the end of anything, just the next city over.
+            // Sector cleared — and the scalp pays in chrome: pick one of two, free.
+            const augOffers = Chrome.bossOffers(you, run.sector);
             return {
                 run: {...run, clearedIds, depth, node: null, position: node.id, outcome: "won"},
-                screen: "sector", offers: MercMarket.board(run.sector + 1, 4), messages,
+                screen: augOffers.length ? "augpick" : "sector", augOffers,
+                offers: MercMarket.board(run.sector + 1, 4, RunController.hireMarkup(state)), messages,
             };
         }
         return {
@@ -208,6 +237,10 @@ export class RunController {
         const party = state.party;
         const run = state.run;
         if (!run) { return {}; }
+        // Squad Biomonitor: a dropping merc gets pulled back before the ledger closes.
+        Chrome.biomonitorPass(party).forEach((name) => {
+            msgs = [{msg: `— biomonitor override: ${name} is stabilised on their feet —`}, ...msgs];
+        });
         // routed enemies ran off the field — the fight is over without their bodies
         const alive = state.currentEnemies.filter((e) => e.health > 0 && !e.routed);
         const feed = [...msgs, ...state.messages].slice(0, log);
@@ -317,9 +350,13 @@ export class RunController {
         // The pickup isn't optional and it isn't free.
         const you = state.party.find((p) => !p.hireable);
         if (you && !you.canFight() && report && report.outcome === "victory") {
-            const bill = Purse.garnish(you, 400 + (run ? run.sector : 1) * 200);
+            // Trauma Platinum: priority biotelemetry shaves (or waives) the bill.
+            const rate = Math.max(0, 1 - you.chromeNum("traumaDiscount"));
+            const bill = Purse.garnish(you, Math.round((400 + (run ? run.sector : 1) * 200) * rate));
             you.revive();
-            notes.push({msg: `Trauma Team stabilises ${you.name} — billed ${bill}¥.`});
+            notes.push({msg: bill > 0
+                ? `Trauma Team stabilises ${you.name} — billed ${bill}¥.`
+                : `Trauma Team stabilises ${you.name} — Platinum coverage, no bill.`});
         }
         const lost = report ? report.casualties : [];
         lost.forEach((c) => notes.unshift({msg: `${c.name} didn't make it off the street.`}));
@@ -335,12 +372,28 @@ export class RunController {
     // Hiring and sectors
     // =====================================================================
 
+    /** Reputation Cortex: mercs sign on cheaper — folded into board prices. */
+    public static hireMarkup(state: InterfaceAppState): number {
+        return Math.max(0.1, 1 - state.character.chromeNum("hireDiscount"));
+    }
+
+    /** Command Uplink: a fresh hire draws on the wearer's requisition codes. */
+    private static outfitHire(character: Actor, merc: Merc): void {
+        if (character.chromeNum("mercGearTier") <= 0) { return; }
+        const worn = merc.equipment.upper;
+        const better = Economy.nextArmorTier(worn ? worn.maxStoppingPower : 0);
+        if (better) {
+            merc.equipment.upper = new Armor("upper", better.name, "", 1, better.sp, better.cost, "");
+        }
+    }
+
     /** Put a candidate on the payroll if the purse and the squad cap allow it. */
     public static hire(state: InterfaceAppState, id: string, log: number): Patch | null {
         const offer = state.offers.find((o) => o.id === id);
         if (!offer || state.party.length >= RunController.SQUAD_CAP) { return null; }
         if (!state.crew.spend(offer.price)) { return null; }
         const merc = new Merc(offer);
+        RunController.outfitHire(state.character, merc);
         return {
             party: [...state.party, merc],
             messages: [{msg: `${merc.name} (${merc.tier} ${merc.role.name}) signs on for ${offer.price}¥.`} as any,
@@ -357,6 +410,7 @@ export class RunController {
             p.refreshLuck();               // a cleared sector resets the luck pool
             Economy.repairArmor(p);
         });
+        Chrome.armRun(state.party);        // fresh sector, fresh Self-ICE / biomonitor charges
         return {
             run: RunController.scout(RunController.freshRun(sector), state.party),
             screen: "map", report: null, offers: [],
@@ -381,7 +435,9 @@ export class RunController {
     public static nextRun(state: InterfaceAppState, log: number, tail: any[] = []): Patch {
         const run = state.run;
         const reached = run ? `— last job died in sector ${run.sector}, ${run.depth} waypoints deep —` : "";
-        const patch = RunController.beginRun(state.character, "— Trauma Team drops you back on the street. New crew, old scars. —", log);
+        // Cryptobank Cortex: a slice of the dead run's pot rides the shadow account out.
+        const patch = RunController.beginRun(state.character,
+            "— Trauma Team drops you back on the street. New crew, old scars. —", log, state.crew.funds);
         const opening = (patch.messages || []) as any[];
         return {
             ...patch,
@@ -389,18 +445,51 @@ export class RunController {
         };
     }
 
-    /** Spend the one-per-run Trauma Team revive and resume the current fight. */
+    /**
+     * Resolve the boss's chrome drop: install / upgrade the picked line (the
+     * metal is free — the Humanity bill isn't), or skip it. Either way the
+     * sector-clear screen is next.
+     */
+    public static takeAug(state: InterfaceAppState, lineId: string | null, log: number): Patch {
+        const you = state.character;
+        const lines: any[] = [];
+        if (lineId) {
+            const offer = state.augOffers.find((o) => o.line.id === lineId);
+            const cw = offer ? (offer.isUpgrade ? Chrome.upgrade(you, lineId) : Chrome.install(you, lineId)) : null;
+            if (cw) {
+                lines.push({msg: `— ${cw.name} ${offer!.isUpgrade ? "upgraded" : "installed"} (−${offer!.hl} Humanity) —`});
+                if (you.cyberpsychosis) { lines.push({msg: `— ${you.name} feels nothing about that at all. CYBERPSYCHOSIS. —`}); }
+            }
+        }
+        return {screen: "sector", augOffers: [],
+            messages: [...lines, ...state.messages].slice(0, log)};
+    }
+
+    /** Revives the character's chrome entitles them to per sector (base 1). */
+    public static reviveAllowance(state: InterfaceAppState): number {
+        return 1 + state.character.chromeNum("extraRevives");
+    }
+
+    /** Spend a Trauma Team revive and resume the current fight. */
     public static revive(state: InterfaceAppState, log: number): Patch | null {
         const run = state.run;
-        if (!run || run.reviveUsed) { return null; }
+        const allowance = RunController.reviveAllowance(state);
+        if (!run || run.revivesUsed >= allowance) { return null; }
         state.party.forEach((p) => p.revive());
+        // Trauma Platinum Mk.II: the extraction crew patches armour on the way up.
+        if (state.character.chromeHas("reviveRepairs")) {
+            state.party.forEach((p) => Economy.repairArmor(p));
+        }
         // The ledger was sealed when the squad went down — open a fresh one so the
         // resumed fight gets its own debrief.
         BattleRecorder.begin(state.party, state.currentEnemies,
             run.node ? run.node.type : "combat", "second wind");
+        const used = run.revivesUsed + 1;
         return {
-            run: {...run, reviveUsed: true, outcome: "active"}, screen: "combat", report: null,
-            messages: [{msg: "— Trauma Team revive (one per run) —"} as any, ...state.messages].slice(0, log),
+            run: {...run, revivesUsed: used, reviveUsed: used >= allowance, outcome: "active"},
+            screen: "combat", report: null,
+            messages: [{msg: `— Trauma Team revive (${allowance - used} left this run) —`} as any,
+                ...state.messages].slice(0, log),
         };
     }
 

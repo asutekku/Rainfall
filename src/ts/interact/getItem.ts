@@ -65,8 +65,13 @@ export class GetItem {
         return new Armor(t.bodyPart, t.name, t.set, t.level, t.stoppingPower, t.cost, t.description);
     }
 
+    /** Chrome by mark name — resolves which line and mark the name belongs to. */
     public static cyberware(name: string): Cyberware {
-        return new Cyberware(cyberwareData.find((c) => c.name === name)!);
+        for (const line of cyberwareData) {
+            const idx = line.marks.findIndex((m) => m.name === name);
+            if (idx >= 0) { return new Cyberware(line, idx + 1); }
+        }
+        throw new Error(`unknown cyberware: ${name}`);
     }
 
     public static program(name: string): Program {
@@ -91,8 +96,8 @@ export class GetItem {
     public static updateCurrency(money: number, actor: Actor) {
         if (money >= 0) {
             Messages.logMessage(Log.findMoney, actor);
-            // Fixer "Operator" negotiates a better cut: every eddie is 20% bigger.
-            Purse.earn(actor, Math.floor(money * (1 + actor.fixerCut())));
+            // Fixer "Operator" and any Fixer Shard chrome: every eddie is bigger.
+            Purse.earn(actor, Math.floor(money * (1 + actor.eddieBonus())));
         } else {
             Messages.logMessage(Log.insufficientFunds, actor);
         }

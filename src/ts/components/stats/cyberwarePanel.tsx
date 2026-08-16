@@ -12,13 +12,17 @@ export class CyberwarePanel extends React.Component<CyberwareProps, {}> {
         return (
             <div className={"redPanel"}>
                 <div className={"redSection"}>
-                    <div className={"redSectionTitle"}>Installed Cyberware — Humanity {a.humanity}/{a.maxHumanity}</div>
+                    <div className={"redSectionTitle"}>
+                        Installed Chrome — Humanity {a.humanity}/{a.maxHumanity}
+                        {a.cyberpsychosis ? <em className={"psychoFlag"}> CYBERPSYCHOSIS</em>
+                            : a.humanity < 20 ? <em className={"psychoFlag warn"}> fear line</em> : null}
+                    </div>
                     {a.cybernetics.length === 0
-                        ? <div className={"redEmpty"}>No chrome installed.</div>
+                        ? <div className={"redEmpty"}>No chrome installed. Chrome survives death — gear doesn't.</div>
                         : a.cybernetics.map((c, i) => (
                             <div className={"redRow"} key={i}>
-                                <span className={"redRowName"}>{c.name}</span>
-                                <span className={"redRowMeta"}>{c.slot} · HL {c.humanityLoss}</span>
+                                <span className={"redRowName"}>{c.name} <i className={"mkPips"}>{"◆".repeat(c.mk)}{"◇".repeat(3 - c.mk)}</i></span>
+                                <span className={"redRowMeta"}>{c.tier} · {c.slot} · {c.humanityLoss} HUM paid</span>
                                 <span className={"redRowDesc"}>{c.description}</span>
                             </div>
                         ))}

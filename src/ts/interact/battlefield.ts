@@ -1,5 +1,6 @@
 import {Actor} from "../actors/Actor";
 import {Formation, formationFor} from "../actors/resources/factionStyles";
+import {Chrome} from "./chrome";
 import {Utils} from "../utils/utils";
 
 /**
@@ -78,6 +79,7 @@ export class Battlefield {
         });
         // battle-scoped injuries, stances, locks and magazines start clean
         [...party, ...enemies].forEach((a) => a.resetBattleState());
+        Chrome.primeSquad(party);   // arm battle-scoped chrome (auras, overclock, graze)
     }
 
     /** Is a point inside any hanging smoke? */

@@ -1,9 +1,9 @@
 import {Actor} from "../actors/Actor";
 import {Purse} from "./crew";
 import {Check} from "./check";
-import {GetItem} from "./getItem";
+import {Chrome} from "./chrome";
 import Equipment from "../items/Equipment";
-import cyberwareData from "../../objects/cyberware";
+import {Medical} from "../items/Scrap";
 import {EncounterSpec} from "./runMap";
 
 /**
@@ -30,7 +30,7 @@ export interface EventOutcome {
     restoreRevive?: boolean | undefined; // re-arm the per-run Trauma Team pickup
 }
 
-export interface EventCheck { stat: StatKey; dv: number; label: string; }
+export interface EventCheck { stat: StatKey; dv: number; label: string; tag?: "toxin"; }
 
 export interface EventOption {
     label: string;
@@ -65,20 +65,42 @@ export function makeCtx(party: Actor[]): EventCtx {
 
 /** Approximate odds of d10+stat >= dv, for showing on the button. */
 export function odds(actor: Actor, check: EventCheck): number {
+    if (autoPasses(actor, check)) { return 100; }
     const p = (11 - (check.dv - statOf(actor, check.stat) - faceBonus(actor, check))) * 10;
     return Math.max(5, Math.min(95, p));
 }
 
 export interface CheckResult { success: boolean; luckSpent: number; roll: number; total: number; stat: number; }
 
-/** Fame carries COOL plays: Rockerboy "Charismatic Impact" (+rank) and
- *  Media "Credibility" (+rank/2) add their Facedown edge to COOL checks. */
+/**
+ * Everything that skews a check besides the raw stat:
+ * - COOL: Rockerboy fame / intimidating chrome (facedownBonus).
+ * - INT/TECH: Chipware skill chips; a Polychip Array covers every stat.
+ * - toxin-tagged: Toxin Binders' filtration bonus.
+ * - COOL/EMP: below 20 Humanity the street can smell the chrome — the
+ *   cyberpsychosis fear line, −2 on every social read.
+ */
 export function faceBonus(actor: Actor, check: EventCheck): number {
-    return check.stat === "cool" ? actor.facedownBonus() : 0;
+    let mod = check.stat === "cool" ? actor.facedownBonus() : 0;
+    const chip = actor.chromeNum("checkBonus");
+    if (chip > 0 && (actor.chromeHas("checkAllStats") || check.stat === "int" || check.stat === "tech")) {
+        mod += chip;
+    }
+    if (check.tag === "toxin") { mod += actor.chromeNum("toxinCheckBonus"); }
+    if (actor.humanity < 20 && (check.stat === "cool" || check.stat === "emp")) { mod -= 2; }
+    return mod;
+}
+
+/** Toxin Binders Mk.II+: a poison/drug check simply doesn't apply to this body. */
+export function autoPasses(actor: Actor, check: EventCheck): boolean {
+    return check.tag === "toxin" && actor.chromeHas("toxinImmune");
 }
 
 export function rollCheck(actor: Actor, check: EventCheck): CheckResult {
     const stat = statOf(actor, check.stat) + faceBonus(actor, check);
+    if (autoPasses(actor, check)) {
+        return {success: true, luckSpent: 0, roll: 10, total: stat + 10, stat};
+    }
     const res = Check.resolve(actor, stat, check.dv);
     return {success: res.success, luckSpent: res.luckSpent, roll: res.roll, total: res.total, stat};
 }
@@ -98,20 +120,15 @@ const d6 = (n: number): number => {
     return t;
 };
 
-const hum = (a: Actor, delta: number): void => {
-    a.humanity = Math.max(0, Math.min(a.maxHumanity, a.humanity + delta));
-    a.stats.emp = Math.floor(a.humanity / 10);
-    a.stats.hm = a.humanity;
-    if (a.humanity <= 0) { a.cyberpsychosis = true; }
-};
+const hum = (a: Actor, delta: number): void => a.shiftHumanity(delta);
 
 const pay = (ctx: EventCtx, eddies: number): boolean => Purse.spend(ctx.leader, eddies);
 
 const needEddies = (n: number) => (ctx: EventCtx): string | null =>
     Purse.canAfford(ctx.leader, n) ? null : `need ${n}¥`;
 
-const randomCyberName = (): string =>
-    cyberwareData[(Math.random() * cyberwareData.length) << 0]!.name;
+/** Scav-clinic pricing: the back alley runs at 60% of the ripperdoc counter. */
+const clinicPrice = (cost: number): number => Math.max(10, Math.ceil(cost * 0.6));
 
 /** A random kinetic weapon in a rarity band, into the actor's stash. */
 const grantWeapon = (a: Actor, rMin: number, rMax: number): string => {
@@ -131,41 +148,56 @@ export const EVENTS: GameEvent[] = [
 
     // ---- doctors & flesh ----
     {
-        id: "ripperdoc", title: "Back-Alley Ripperdoc",
-        flavor: "A basement clinic behind a noodle stall. The doc's hands are chrome to the elbow and the autoclave has seen things.",
+        id: "ripperdoc", title: "Scav Clinic",
+        flavor: "A basement clinic behind a noodle stall. The doc's hands are chrome to the elbow, the prices are too good, and the anaesthetic is optional.",
         options: [
             {
-                label: "Cheap install — 150¥, random chrome", detail: "TECH check or the install gets messy",
-                req: needEddies(150), check: {stat: "tech", dv: 12, label: "watch the doc's work"},
+                label: "Discount install — dirty chair, +1 Humanity", detail: "60% price · TECH check or the install gets messy",
+                req: (ctx) => {
+                    const offer = Chrome.cheapestInstall(ctx.leader);
+                    if (!offer) { return Chrome.canInstall(ctx.leader) ? "nothing left to fit" : "the doc won't touch a cyberpsycho"; }
+                    return Purse.canAfford(ctx.leader, clinicPrice(offer.cost)) ? null : `need ${clinicPrice(offer.cost)}¥`;
+                },
+                check: {stat: "tech", dv: 12, label: "watch the doc's work"},
                 run: (ctx, ok) => {
-                    pay(ctx, 150);
                     const a = ctx.leader;
-                    const name = randomCyberName();
-                    a.installCyberware(GetItem.cyberware(name));
-                    if (ok) { return {lines: [`The doc slots a ${name}. Clean work.`]}; }
+                    const offer = Chrome.cheapestInstall(a);
+                    if (!offer) { return {lines: ["The doc shrugs. Nothing on the shelf fits you."]}; }
+                    pay(ctx, clinicPrice(offer.cost));
+                    const cw = Chrome.install(a, offer.line.id, ok ? 1 : 2);
+                    if (!cw) { return {lines: ["The doc shrugs. Nothing on the shelf fits you."]}; }
+                    if (ok) { return {lines: [`The doc slots a ${cw.name}. Clean enough work, for the price (−${offer.hl + 1} Humanity).`]}; }
                     const dmg = hurt(a, d6(2));
-                    hum(a, -4);
-                    return {lines: [`The doc slots a ${name} — badly. ${a.name} loses ${dmg} HP and a piece of themselves.`]};
+                    return {lines: [`The doc slots a ${cw.name} — badly. ${a.name} loses ${dmg} HP and a little extra of themselves (−${offer.hl + 2} Humanity).`]};
                 },
             },
             {
-                label: "Clean install — 400¥, premium chrome",
-                req: needEddies(400),
+                label: "Discount upgrade — dirty chair, +1 Humanity", detail: "half the ripperdoc's rate",
+                req: (ctx) => {
+                    const offer = Chrome.cheapestUpgrade(ctx.leader);
+                    if (!offer) { return Chrome.canInstall(ctx.leader) ? "nothing to upgrade" : "the doc won't touch a cyberpsycho"; }
+                    return Purse.canAfford(ctx.leader, clinicPrice(offer.cost)) ? null : `need ${clinicPrice(offer.cost)}¥`;
+                },
                 run: (ctx) => {
-                    pay(ctx, 400);
-                    const name = randomCyberName();
-                    ctx.leader.installCyberware(GetItem.cyberware(name));
-                    return {lines: [`Sterile field, steady hands: ${name} installed without a hitch.`]};
+                    const a = ctx.leader;
+                    const offer = Chrome.cheapestUpgrade(a);
+                    if (!offer) { return {lines: ["Nothing on you is worth the doc's time."]}; }
+                    pay(ctx, clinicPrice(offer.cost));
+                    const cw = Chrome.upgrade(a, offer.line.id, 1);
+                    return {lines: [cw
+                        ? `The doc tunes it up: ${cw.name} (−${offer.hl + 1} Humanity).`
+                        : "The doc waves you off the chair."]};
                 },
             },
             {
                 label: "Extract chrome — recover Humanity",
-                req: (ctx) => ctx.leader.cybernetics.length > 1 ? null : "nothing to spare",
+                req: (ctx) => ctx.leader.cybernetics.length > 0 ? null : "nothing to spare",
                 run: (ctx) => {
                     const a = ctx.leader;
-                    const cw = a.cybernetics.pop()!;
-                    hum(a, cw.humanityLoss + 4);
-                    return {lines: [`The ${cw.name} comes out. ${a.name} feels more like a person again (+${cw.humanityLoss + 4} Humanity).`]};
+                    const cw = Chrome.extract(a);
+                    return {lines: [cw
+                        ? `The ${cw.name} comes out. ${a.name} feels more like a person again (+${cw.humanityLoss + 4} Humanity).`
+                        : "Nothing to take out."]};
                 },
             },
             {label: "Walk away", run: () => ({lines: ["Some other night."]})},
@@ -340,11 +372,19 @@ export const EVENTS: GameEvent[] = [
             },
             {
                 label: "The cheap batch — 30¥", detail: "TECH check to spot a bad vial",
-                req: needEddies(30), check: {stat: "tech", dv: 13, label: "read the label"},
+                req: needEddies(30), check: {stat: "tech", dv: 13, label: "read the label", tag: "toxin"},
                 run: (ctx, ok) => {
                     pay(ctx, 30);
                     const a = ctx.leader;
-                    if (ok) { a.stats.ref += 1; hum(a, -2); return {lines: [`Good batch after all. ${a.name} rides the edge (+1 REF).`]}; }
+                    if (ok) {
+                        a.stats.ref += 1; hum(a, -2);
+                        const lines = [`Good batch after all. ${a.name} rides the edge (+1 REF).`];
+                        if (Chrome.toxinShield(ctx.party) >= 3) {
+                            a.inventory.medical.push(new Medical("Bounceback (filtered)", 50, 15, "What the binder glands strained out, rebottled."));
+                            lines.push("The toxin binders strain the garbage out — and hand it back as clean pharma.");
+                        }
+                        return {lines};
+                    }
                     const dmg = hurt(a, d6(2));
                     return {lines: [`Bad vial. ${a.name} convulses — ${dmg} HP gone before it passes.`]};
                 },
@@ -579,6 +619,15 @@ export const EVENTS: GameEvent[] = [
                     const roll = Math.random();
                     if (roll < 0.4) { Purse.earn(ctx.leader, 90); return {lines: ["A courier, judging by the shoes. 90¥ in a hidden belt."]}; }
                     if (roll < 0.7) { const name = grantWeapon(ctx.leader, 1, 3); return {lines: [`Whoever they were, they were armed — a ${name}, still loaded.`]}; }
+                    // Toxin Binders: the contact toxin never gets past the glands.
+                    if (Chrome.toxinShield(ctx.party) >= 2) {
+                        const lines = ["Contact toxin on the collar — the binder glands eat it without breaking stride."];
+                        if (Chrome.toxinShield(ctx.party) >= 3) {
+                            ctx.leader.inventory.medical.push(new Medical("Refined Toxin Base", 40, 10, "One street's poison is another's anaesthetic."));
+                            lines.push("They even keep the base compound. Free pharma.");
+                        }
+                        return {lines};
+                    }
                     const a = first(ctx.party);
                     const dmg = hurt(a, d6(1));
                     return {lines: [`Contact toxin on the collar. ${a.name} takes ${dmg} learning that.`]};
