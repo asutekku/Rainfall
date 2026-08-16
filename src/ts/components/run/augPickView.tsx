@@ -1,6 +1,7 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {AugOffer} from "../../interact/chrome";
+import {NodeShell} from "./metaOverlay";
 
 export interface AugPickViewProps {
     character: Actor;
@@ -39,32 +40,23 @@ export class AugPickView extends React.Component<AugPickViewProps, {}> {
     public override render() {
         const c = this.props.character;
         return (
-            <div className={"metaOverlay augWrap"}>
-                <div className={"metaHead"}>
-                    <span className={"metaTitle"}>⬡ Chrome Claim</span>
-                    <span className={"evEddies"}>HUM {c.humanity}/{c.maxHumanity}</span>
+            <NodeShell accent={"aug"} icon={"⬡"} label={"Chrome Claim"}
+                       kicker={"Boss scalp — the good crate"} title={"Pick Your Chrome"}
+                       sub={"The boss doesn't need this crate any more. Cyberware from it is " +
+                            "yours to keep — chrome survives death, unlike everything else you carry."}
+                       hum={[c.humanity, c.maxHumanity]}
+                       guide={<React.Fragment>
+                           Take <b>one</b> of the two — the install is free, but the <b>Humanity</b> cost
+                           is paid now and never comes back. Skipping costs nothing.
+                       </React.Fragment>}>
+                <div className={"augCards"}>
+                    {this.props.offers.map(this.card)}
                 </div>
-                <div className={"ovScroll"}>
-                    <div className={"ovInner"}>
-                        <div className={"mHero aug"}>
-                            <span className={"mHeroGlyph"}><i>⬡</i></span>
-                            <span className={"mHeroKicker"}>Boss scalp — the good crate</span>
-                            <h2 className={"mHeroTitle"}>Pick Your Chrome</h2>
-                            <p className={"mHeroSub"}>
-                                The metal is free. The Humanity isn't — and it never comes back.
-                                Whatever you take is yours past death.
-                            </p>
-                        </div>
-                        <div className={"augCards"}>
-                            {this.props.offers.map(this.card)}
-                        </div>
-                        <div className={"augSkipRow"}>
-                            <button className={"metaLeave"} onClick={() => this.props.onPick(null)}>
-                                Keep your soul — skip ▸
-                            </button>
-                        </div>
-                    </div>
+                <div className={"augSkipRow"}>
+                    <button className={"metaLeave"} onClick={() => this.props.onPick(null)}>
+                        Keep your soul — skip ▸
+                    </button>
                 </div>
-            </div>);
+            </NodeShell>);
     }
 }

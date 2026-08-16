@@ -41,6 +41,10 @@ export class SectorClearView extends React.Component<SectorClearViewProps, {}> {
                     <div className={"scHead"}>
                         <h1>SECTOR {this.props.sector} CLEAR</h1>
                         <p>The boss is cold and the block is yours. Sector {this.props.sector + 1} is worse.</p>
+                        <p className={"scHint"}>
+                            Spend the payday now — this board is the cheapest hiring in the game
+                            (the fixer mid-sector marks the same talent up). Move on when the roster's set.
+                        </p>
                     </div>
 
                     <div className={"scCols"}>

@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {NodeShell} from "./metaOverlay";
 
 export interface SafehouseViewProps {
     party: Actor[];
@@ -45,42 +46,38 @@ export class SafehouseView extends React.Component<SafehouseViewProps, Safehouse
     public override render() {
         const done = this.state.done;
         return (
-            <div className={"metaOverlay"}>
-                <div className={"metaHead"}>
-                    <span className={"metaTitle"}>☾ Safehouse</span>
-                    {done && <button className={"metaLeave"} onClick={() => this.props.onLeave([done])}>Move out ▸</button>}
-                    {!done && <button className={"metaLeaveGhost"} onClick={() => this.props.onLeave(["— no time to rest —"])}>Skip ▸</button>}
-                </div>
-                <div className={"ovScroll"}>
-                    <div className={"ovInner"}>
-                        <div className={"mHero sh"}>
-                            <span className={"mHeroGlyph"}><i>☾</i></span>
-                            <span className={"mHeroKicker"}>One night off the street</span>
-                            <h2 className={"mHeroTitle"}>Safehouse</h2>
-                        </div>
-                        <p className={"evFlavor"}>
-                            A cold-water flat with a working lock and a mattress that's seen worse.
-                            One night. One call — make it count.
-                        </p>
-                        {!done && (
-                            <div className={"evOpts"}>
-                                <button className={"evOpt"} onClick={this.patch}>
-                                    <span className={"evOptLabel"}>Patch up</span>
-                                    <span className={"evOptMeta"}><em>squad heals 50%, stabilises the dying</em></span>
-                                </button>
-                                <button className={"evOpt"} onClick={this.drill}>
-                                    <span className={"evOptLabel"}>Run combat drills</span>
-                                    <span className={"evOptMeta"}><em>everyone +1 to their equipped weapon skill</em></span>
-                                </button>
-                                <button className={"evOpt"} onClick={this.decompress}>
-                                    <span className={"evOptLabel"}>Decompress</span>
-                                    <span className={"evOptMeta"}><em>squad +6 Humanity · Luck pools refill</em></span>
-                                </button>
-                            </div>
-                        )}
-                        {done && <div className={"evResult"}><p>{done}</p></div>}
+            <NodeShell accent={"sh"} icon={"☾"} label={"Safehouse"}
+                       kicker={"One night off the street"} title={"Safehouse"}
+                       sub={"A cold-water flat with a working lock and a mattress that's seen worse. " +
+                            "The whole squad gets one night behind a door that holds."}
+                       onLeave={done
+                           ? () => this.props.onLeave([done])
+                           : () => this.props.onLeave(["— no time to rest —"])}
+                       leaveLabel={done ? "Move out ▸" : "Skip — rest nothing ▸"}
+                       leaveGhost={!done}
+                       guide={!done
+                           ? <React.Fragment>
+                               Pick <b>one</b> way to spend the night — it applies to the whole squad,
+                               and the other two are gone by morning.
+                           </React.Fragment>
+                           : undefined}>
+                {!done && (
+                    <div className={"evOpts"}>
+                        <button className={"evOpt"} onClick={this.patch}>
+                            <span className={"evOptLabel"}>Patch up</span>
+                            <span className={"evOptMeta"}><em>squad heals 50% of max HP · stabilises the dying</em></span>
+                        </button>
+                        <button className={"evOpt"} onClick={this.drill}>
+                            <span className={"evOptLabel"}>Run combat drills</span>
+                            <span className={"evOptMeta"}><em>everyone +1 to their equipped weapon skill, permanently</em></span>
+                        </button>
+                        <button className={"evOpt"} onClick={this.decompress}>
+                            <span className={"evOptLabel"}>Decompress</span>
+                            <span className={"evOptMeta"}><em>squad +6 Humanity · Luck pools refill to full</em></span>
+                        </button>
                     </div>
-                </div>
-            </div>);
+                )}
+                {done && <div className={"evResult"}><p>{done}</p></div>}
+            </NodeShell>);
     }
 }

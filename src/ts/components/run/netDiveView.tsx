@@ -2,6 +2,7 @@ import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {Purse} from "../../interact/crew";
 import {Netrun as NetEngine, NetrunResult} from "../../interact/Netrun";
+import {NodeShell} from "./metaOverlay";
 
 export interface NetDiveViewProps {
     party: Actor[];
@@ -67,50 +68,45 @@ export class NetDiveView extends React.Component<NetDiveViewProps, NetDiveViewSt
         const runner = this.runner();
         const r = this.state.result;
         return (
-            <div className={"metaOverlay netWrap"}>
-                <div className={"metaHead"}>
-                    <span className={"metaTitle"}>⌁ NET Access</span>
-                    <span className={"evEddies"}>{Math.floor(Purse.balance(this.props.party[0]!))}¥</span>
-                    {!r && <button className={"metaLeaveGhost"} onClick={() => this.props.onLeave(["— left the jack-point cold —"])}>Walk on ▸</button>}
-                </div>
-                <div className={"ovScroll"}>
-                    <div className={"ovInner"}>
-                        <div className={"mHero net"}>
-                            <span className={"mHeroGlyph"}><i>⌁</i></span>
-                            <span className={"mHeroKicker"}>Hardline jack-point</span>
-                            <h2 className={"mHeroTitle"}>NET Access</h2>
-                            <p className={"mHeroSub"}>
-                                {runner.name.split(" ")[0]} runs it — Interface {runner.interfaceRank()}.
-                                One dive, then the trace burns the line.
-                            </p>
-                        </div>
-                        {!r && (
-                            <div className={"evOpts"}>
-                                {DIFFICULTIES.map(([d, blurb]) => (
-                                    <button key={d}
-                                            className={"evOpt" + (this.state.difficulty === d ? " netSel" : "")}
-                                            onClick={() => this.setState({difficulty: d})}>
-                                        <span className={"evOptLabel"}>{d}</span>
-                                        <span className={"evOptMeta"}><em>{blurb}</em></span>
-                                    </button>
-                                ))}
-                                <button className={"metaLeave netGo"} onClick={this.dive}>⌁ Jack in ▸</button>
-                            </div>
-                        )}
-                        {r && (
-                            <div className={"evResult"}>
-                                <p className={r.flatlined ? "netBad" : r.success ? "netGood" : ""}>
-                                    {r.flatlined ? "FLATLINED" : r.success ? "RUN SUCCESSFUL" : "RUN ENDED"}
-                                    {" — "}{r.floorsCleared}/{r.totalFloors} floors · {r.eddiesGained}¥
-                                </p>
-                                {r.log.slice(-6).map((l, i) => <p key={i} className={"netLog"}>{l}</p>)}
-                                <button className={"metaLeave"} onClick={() => this.props.onLeave(this.summary(r))}>
-                                    Jack out ▸
-                                </button>
-                            </div>
-                        )}
+            <NodeShell accent={"net"} icon={"⌁"} label={"NET Access"}
+                       kicker={"Hardline jack-point"} title={"NET Access"}
+                       sub={"A live cable into a nearby corp architecture, still warm from " +
+                            "whoever cut it open. Data fortresses hold eddies — and ICE."}
+                       eddies={Purse.balance(this.props.party[0]!)}
+                       onLeave={!r ? () => this.props.onLeave(["— left the jack-point cold —"]) : undefined}
+                       leaveLabel={"Walk on ▸"} leaveGhost={true}
+                       guide={!r
+                           ? <React.Fragment>
+                               Pick how deep to dive, then jack in — <b>one dive</b>, then the trace burns
+                               the line. {runner.name.split(" ")[0]} runs it (best Interface, rank {runner.interfaceRank()}).
+                               Eddies siphoned go to the crew purse; black ICE burns <b>real HP</b>.
+                           </React.Fragment>
+                           : undefined}>
+                {!r && (
+                    <div className={"evOpts"}>
+                        {DIFFICULTIES.map(([d, blurb]) => (
+                            <button key={d}
+                                    className={"evOpt" + (this.state.difficulty === d ? " netSel" : "")}
+                                    onClick={() => this.setState({difficulty: d})}>
+                                <span className={"evOptLabel"}>{d}</span>
+                                <span className={"evOptMeta"}><em>{blurb}</em></span>
+                            </button>
+                        ))}
+                        <button className={"metaLeave netGo"} onClick={this.dive}>⌁ Jack in ▸</button>
                     </div>
-                </div>
-            </div>);
+                )}
+                {r && (
+                    <div className={"evResult"}>
+                        <p className={r.flatlined ? "netBad" : r.success ? "netGood" : ""}>
+                            {r.flatlined ? "FLATLINED" : r.success ? "RUN SUCCESSFUL" : "RUN ENDED"}
+                            {" — "}{r.floorsCleared}/{r.totalFloors} floors · {r.eddiesGained}¥
+                        </p>
+                        {r.log.slice(-6).map((l, i) => <p key={i} className={"netLog"}>{l}</p>)}
+                        <button className={"metaLeave"} onClick={() => this.props.onLeave(this.summary(r))}>
+                            Jack out ▸
+                        </button>
+                    </div>
+                )}
+            </NodeShell>);
     }
 }

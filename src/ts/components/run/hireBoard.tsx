@@ -54,6 +54,7 @@ export class HireBoard extends React.Component<HireBoardProps, {}> {
                 </div>
                 {full && <p className={"hbNote"}>Squad is full — no room on the payroll.</p>}
                 <ul className={"hbOffers"}>{this.props.offers.map(this.offer)}</ul>
+                <p className={"hbHint"}>SP = armour · skill = weapon rating · tap the price to hire</p>
             </div>);
     }
 }

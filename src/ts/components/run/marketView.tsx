@@ -9,6 +9,7 @@ import {Weapon} from "../../items/Weapon";
 import armors from "../../items/armors";
 import {randomMed} from "../../items/consumables";
 import {Medical} from "../../items/Scrap";
+import {NodeShell} from "./metaOverlay";
 
 export interface MarketViewProps {
     party: Actor[];
@@ -242,6 +243,10 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                     {you.humanity < 20 && !locked ? <em className={"mkWarn"}> — the edge is close</em> : null}
                     {canReroll && <button className={"mkReroll"} onClick={this.rerollStock}>⟲ other crate</button>}
                 </h4>
+                <p className={"mkHint"}>
+                    Cyberware is the run's permanent upgrade — it stays with you through death.
+                    Every piece costs Humanity; hit 0 and you go cyberpsycho.
+                </p>
                 {locked && <div className={"mkNotice psycho"}>CYBERPSYCHOSIS — the doc refuses the chair. Extraction or therapy first.</div>}
                 <div className={"mkStock"}>
                     {this.chromeStock.map((o, i) => this.chromeRow(o, "c" + i))}
@@ -329,45 +334,39 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         const leader = this.props.party[0]!;
         const fence = this.fenceList();
         return (
-            <div className={"metaOverlay mkWrap"}>
-                <div className={"metaHead"}>
-                    <span className={"metaTitle"}>▤ Black Market</span>
-                    <span className={"evEddies"}>{Math.floor(Purse.balance(leader))}¥</span>
-                    <button className={"metaLeave"} onClick={this.props.onLeave}>Leave ▸</button>
+            <NodeShell accent={"mk"} icon={"▤"} label={"Black Market"}
+                       kicker={"Night market"} title={"Tonight's Stock"}
+                       sub={"What fell off a truck this week — guns, armour, meds, and a ripperdoc " +
+                            "running a counter at the back. One visit: the stall is gone when you leave." +
+                            (this.price(100) < 100
+                                ? ` Someone else's account covers ${100 - this.price(100)}% — prices shown are yours.`
+                                : "")}
+                       eddies={Purse.balance(leader)}
+                       onLeave={this.props.onLeave} leaveLabel={"Leave ▸"}
+                       guide={<React.Fragment>
+                           Tap a row to unfold the full spec, tap the <b>price</b> to buy.
+                           Bought gear lands in your stash — equip it from the Gear tab.
+                       </React.Fragment>}>
+                {this.state.notice && <div className={"mkNotice"}>{this.state.notice}</div>}
+                <div className={"mkStock"}>
+                    {[...this.stock, this.service].map((item, i) => this.item(item, "s" + i))}
                 </div>
-                <div className={"ovScroll"}>
-                    <div className={"ovInner"}>
-                        <div className={"mHero mk"}>
-                            <span className={"mHeroGlyph"}><i>▤</i></span>
-                            <span className={"mHeroKicker"}>Night market</span>
-                            <h2 className={"mHeroTitle"}>Tonight's Stock</h2>
-                            <p className={"mHeroSub"}>
-                                {this.price(100) < 100
-                                    ? `Someone else's account covers ${100 - this.price(100)}% — prices shown are yours.`
-                                    : "What fell off a truck this week. Tap a row for the spec sheet."}
-                            </p>
-                        </div>
-                        {this.state.notice && <div className={"mkNotice"}>{this.state.notice}</div>}
-                        <div className={"mkStock"}>
-                            {[...this.stock, this.service].map((item, i) => this.item(item, "s" + i))}
-                        </div>
-                        {this.ripperdoc()}
-                        <h4 className={"mkHead"}>The fence buys · {Math.round(this.fenceRate() * 100)}% street rate{this.fenceRate() > 0.4 ? " (Operator\u2019s cut)" : ""}</h4>
-                        {fence.length === 0 && <div className={"mkEmpty"}>Nothing in the duffel worth fencing.</div>}
-                        <div className={"mkStock"}>
-                            {fence.map((f, i) => (
-                                <div key={"f" + i} className={"mkItem"}>
-                                    <div className={"mkRow static"}>
-                                        <span className={"mkNameWrap"}>
-                                            <span className={"mkName"}>{f.name}</span>
-                                            <span className={"mkDetail"}>{f.detail}</span>
-                                        </span>
-                                    </div>
-                                    <button className={"mkBuy sellBtn"} onClick={() => this.sell(f)}>+{f.price}¥</button>
-                                </div>))}
-                        </div>
-                    </div>
+                {this.ripperdoc()}
+                <h4 className={"mkHead"}>The fence buys · {Math.round(this.fenceRate() * 100)}% street rate{this.fenceRate() > 0.4 ? " (Operator\u2019s cut)" : ""}</h4>
+                <p className={"mkHint"}>Sell anything the crew carries but doesn't use — scavenged guns, spare armour, junk. Eddies land in the purse.</p>
+                {fence.length === 0 && <div className={"mkEmpty"}>Nothing in the duffel worth fencing.</div>}
+                <div className={"mkStock"}>
+                    {fence.map((f, i) => (
+                        <div key={"f" + i} className={"mkItem"}>
+                            <div className={"mkRow static"}>
+                                <span className={"mkNameWrap"}>
+                                    <span className={"mkName"}>{f.name}</span>
+                                    <span className={"mkDetail"}>{f.detail}</span>
+                                </span>
+                            </div>
+                            <button className={"mkBuy sellBtn"} onClick={() => this.sell(f)}>+{f.price}¥</button>
+                        </div>))}
                 </div>
-            </div>);
+            </NodeShell>);
     }
 }
