@@ -1,5 +1,5 @@
 import {Actor} from "../actors/Actor";
-import {BattleEvent, BlastEvent, MoveEvent, SaveEvent, ShotEvent} from "./battleEvents";
+import {BattleEvent, BlastEvent, MarkEvent, MoveEvent, SaveEvent, ShotEvent} from "./battleEvents";
 
 /**
  * The surveillance feed. Combat used to dump every engine message into the
@@ -63,7 +63,13 @@ export class FeedLog {
         const move = events.find((e) => e.kind === "move") as MoveEvent | undefined;
         if (move) {
             const dist = Math.round(Math.hypot(move.to.x - move.from.x, move.to.y - move.from.y));
-            bits.push(move.cover ? `moves ${dist}m into cover` : `moves ${dist}m`);
+            bits.push(move.sprint ? `sprints ${dist}m`
+                : move.cover ? `moves ${dist}m into cover` : `moves ${dist}m`);
+        }
+
+        const mark = events.find((e) => e.kind === "mark") as MarkEvent | undefined;
+        if (mark) {
+            bits.push(`paints ${disambiguate(mark.target, turn.actor)} with a laser`);
         }
 
         const shot = events.find((e) => e.kind === "shot") as ShotEvent | undefined;
@@ -132,5 +138,16 @@ export class FeedLog {
     /** Round separator. */
     public static round(n: number): FeedEntry {
         return entry("sys", null, null, `— round ${n} —`);
+    }
+
+    /** Battle-open contact report: who the squad just walked into. */
+    public static contact(enemies: Actor[]): FeedEntry {
+        const live = enemies.filter((e) => e.canFight());
+        const boss = live.find((e) => (e.rank || 0) >= 5);
+        const faction = (live[0] && live[0].faction ? live[0].faction : "hostile").toUpperCase();
+        const text = boss
+            ? `⚠ CONTACT — ${faction}: ${callsign(boss)} [${boss.archetype || "boss"}] +${live.length - 1} escort`
+            : `⚠ CONTACT — ${faction} × ${live.length}`;
+        return entry("sys", null, null, text);
     }
 }

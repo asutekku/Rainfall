@@ -53,7 +53,7 @@ export class Combat {
     /** Lightweight telemetry for balancing (read + reset by the headless sim). */
     public static stats = {shots: 0, hits: 0, aimed: 0, dmg: 0};
 
-    public static attack(actor: Actor, target: Actor, aimed: boolean = false): any {
+    public static attack(actor: Actor, target: Actor, aimed: boolean = false, bonus: number = 0): any {
         const weapon = actor.weapon;
         const distance: number = Utils.distance(actor.position, target.position);
         if (weapon.autofire && weapon.weaponClass !== "melee") {
@@ -71,7 +71,7 @@ export class Combat {
         }
         this.stats.shots += 1; if (aimed) { this.stats.aimed += 1; }
         const targetOldHP: number = target.health;
-        if (!this.didAttackHit(actor, target, distance, aimed)) {
+        if (!this.didAttackHit(actor, target, distance, aimed, bonus)) {
             BattleRecorder.countShot(actor, false);
             this.events.push({kind: "shot", actor, target, hit: false, damage: 0, aimed,
                 autofire: false, melee, covered, dropped: false, rounds});
@@ -226,9 +226,10 @@ export class Combat {
      * target's evasion; ranged compares the attack roll to the weapon's DV for
      * its class at the current distance (out of range = automatic miss).
      */
-    private static didAttackHit(actor: Actor, target: Actor, distance: number, aimed: boolean = false): boolean {
+    private static didAttackHit(actor: Actor, target: Actor, distance: number,
+                                aimed: boolean = false, bonus: number = 0): boolean {
         const weapon = actor.weapon;
-        const atkMod: number = actor.attackBonus(weapon) + (aimed ? -8 : 0);   // RED Aimed Shot: -8 to hit
+        const atkMod: number = actor.attackBonus(weapon) + (aimed ? -8 : 0) + bonus;   // RED Aimed Shot: -8 to hit
         if (weapon.weaponClass === "melee") {
             return Check.opposed(actor, atkMod, target.evasion()).success;
         }
@@ -308,28 +309,45 @@ export class Combat {
         return out;
     }
 
+    /** House rule: a laser-locked sniper shot is steadied — the paint turn pays off. */
+    public static readonly MARK_BONUS: number = 5;
+
     /** Apply a tactical plan: move (if any), then throw a frag or attack the chosen target. */
     private static applyPlan(self: Actor, plan: Plan, foes: Actor[], allies: Actor[], others: Actor[]): void {
         if (plan.moveTo) {
             const before: number = this.nearestFoeGap(self, foes);
             const from: Point = {x: self.position.x, y: self.position.y};
-            const moved: number = Battlefield.stepToward(self, plan.moveTo, self.runMeters(), others);
+            // sprint (house rule): melee trades its attack for a double move, so
+            // Bruisers stop getting kited across the whole street
+            const reach: number = self.runMeters() * (plan.sprint ? 2 : 1);
+            const moved: number = Battlefield.stepToward(self, plan.moveTo, reach, others);
             if (moved >= 1) {
                 const after: number = this.nearestFoeGap(self, foes);
                 const inCover: boolean = Battlefield.nearCover(self.position);
                 this.events.push({kind: "move", actor: self, from,
-                    to: {x: self.position.x, y: self.position.y}, cover: inCover});
-                const verb: string = inCover ? "takes cover"
+                    to: {x: self.position.x, y: self.position.y}, cover: inCover,
+                    ...(plan.sprint ? {sprint: true} : {})});
+                const verb: string = plan.sprint ? "sprints in" : inCover ? "takes cover"
                     : after < before - 0.5 ? "advances" : after > before + 0.5 ? "falls back" : "repositions";
                 this.messages.push(new MessageStr(`${self.name} ${verb} (${Math.round(after)}m).`));
             }
+        }
+        if (plan.sprint) { return; }   // the sprint IS the turn — no attack
+        if (plan.markTarget && plan.markTarget.canFight()) {
+            // sniper telegraph: paint the target this turn, fire the steadied shot next
+            self.marking = plan.markTarget;
+            this.events.push({kind: "mark", actor: self, target: plan.markTarget});
+            this.messages.push(new MessageStr(`${self.name} paints ${plan.markTarget.name} with a laser.`));
+            return;
         }
         if (plan.grenadeAt && (self.grenades || 0) > 0) {
             this.throwGrenade(self, plan.grenadeAt, foes, allies);
             return;   // the throw is the turn's attack
         }
         if (plan.target && plan.target.canFight()) {
-            this.attack(self, plan.target, plan.aimed);
+            const locked: boolean = self.marking === plan.target;
+            self.marking = null;   // firing (at anyone) burns the lock
+            this.attack(self, plan.target, plan.aimed, locked ? Combat.MARK_BONUS : 0);
         }
     }
 

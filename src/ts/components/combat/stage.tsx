@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {accentCss} from "../../actors/resources/factionStyles";
 import {Battlefield, Point} from "../../interact/battlefield";
 import {rangeDV} from "../../interact/rangeTable";
 import {aimPreview} from "../../interact/aimPreview";
@@ -72,6 +73,7 @@ export class Stage extends React.Component<StageProps, {}> {
         const sub = e.faction ? `${e.faction}${e.archetype ? " " + e.archetype : ""}` : e.role.name;
         return (
             <button key={i} className={"es" + (active ? " on" : "") + (e.canFight() ? "" : " dead")}
+                    style={{borderLeft: "3px solid " + accentCss(e.faction)}}
                     onClick={() => this.props.onSelectEnemy(e)}>
                 <span className={"d rank-" + (e.rank || 1)} title={"threat rank " + (e.rank || 1)}>✦</span>
                 <span className={"nm"}>{e.name} <span className={"lv"}>{sub} · L{e.level}</span></span>

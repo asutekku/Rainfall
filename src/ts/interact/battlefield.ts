@@ -1,4 +1,5 @@
 import {Actor} from "../actors/Actor";
+import {Formation, formationFor} from "../actors/resources/factionStyles";
 import {Utils} from "../utils/utils";
 
 /**
@@ -50,10 +51,14 @@ export class Battlefield {
         this.rollCover();
         this.line(party, SQUAD_Y);
         this.deployEnemies(enemies);
-        // deployment kit: the squad restocks frags between jobs; heavier
-        // hostiles sometimes carry one of their own
+        // deployment kit: the squad restocks frags between jobs; grenadier
+        // archetypes always carry theirs, heavier hostiles sometimes do
         party.forEach((p) => { p.grenades = 2; });
-        enemies.forEach((e) => { e.grenades = (e.rank || 1) >= 3 && Math.random() < 0.4 ? 1 : 0; });
+        enemies.forEach((e) => {
+            e.grenades = e.frags !== undefined ? e.frags
+                : (e.rank || 1) >= 3 && Math.random() < 0.4 ? 1 : 0;
+        });
+        [...party, ...enemies].forEach((a) => { a.marking = null; });   // no stale laser locks
     }
 
     /**
@@ -74,28 +79,39 @@ export class Battlefield {
     }
 
     /**
+     * The wave's opening formation. Faction character decides it three times
+     * out of four (Animals brawl in close, corporates hold a line, Tygers
+     * flank) — the rest rolls wild so no faction is fully predictable.
+     */
+    public static chooseFormation(enemies: Actor[]): Formation {
+        const all: Formation[] = ["line", "flank", "scatter", "close"];
+        if (Math.random() < 0.25) { return all[Math.floor(Math.random() * all.length)]!; }
+        return formationFor(enemies[0] ? enemies[0].faction : undefined);
+    }
+
+    /**
      * Place (or replace) a wave of hostiles. Each engagement opens differently:
      * a far skirmish line, a split flanking ambush, a loose scatter through the
      * mid-street, or a close-quarters brawl already inside pistol range.
      */
-    public static deployEnemies(enemies: Actor[]): void {
-        const style = Math.floor(Math.random() * 4);
+    public static deployEnemies(enemies: Actor[], formation?: Formation): void {
+        const style = formation || this.chooseFormation(enemies);
         const placed: Actor[] = [];
         enemies.forEach((e, i) => {
             let x = 0, y = ENEMY_Y;
             switch (style) {
-                case 1: {   // flank ambush: halves tucked against both walls, mid-depth
+                case "flank": {   // flank ambush: halves tucked against both walls, mid-depth
                     const side = i % 2 === 0 ? -1 : 1;
                     x = side * (12 + Math.random() * 8);
                     y = 15 + Math.random() * 11;
                     break;
                 }
-                case 2: {   // loose scatter through the far half of the street
+                case "scatter": {   // loose scatter through the far half of the street
                     x = -18 + Math.random() * 36;
                     y = 24 + Math.random() * 16;
                     break;
                 }
-                case 3: {   // close contact: the fight starts inside pistol range
+                case "close": {   // close contact: the fight starts inside pistol range
                     x = this.spread(i, enemies.length, 9);
                     y = 19 + Math.random() * 5;
                     break;

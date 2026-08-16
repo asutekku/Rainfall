@@ -24,6 +24,10 @@ export interface Plan {
     aimed?: boolean | undefined;
     /** throw a frag at this point instead of shooting */
     grenadeAt?: Point | undefined;
+    /** all-out double move that forfeits the attack (melee closing distance) */
+    sprint?: boolean | undefined;
+    /** sniper telegraph: paint this target now, fire the steadied shot next turn */
+    markTarget?: Actor | undefined;
     label: string;
 }
 
@@ -206,6 +210,18 @@ export class TacticalAI {
         const nearest = foes.reduce((a, b) => Battlefield.gap(here, pos(b)) < Battlefield.gap(here, pos(a)) ? b : a);
         const primary = pos(nearest);
 
+        // melee too far to land a blow this turn: all-out sprint beats a
+        // half-advance that leaves the brawler standing in the open
+        if (self.weapon.weaponClass === "melee" && Battlefield.gap(here, primary) > run + MELEE_REACH) {
+            return {moveTo: pointToward(here, primary, run * 2), sprint: true, label: "sprint"};
+        }
+
+        // snipers play their own game: paint, then fire the steadied shot
+        if (self.weapon.weaponClass === "sniper") {
+            const sniper = this.sniperPlan(self, foes);
+            if (sniper) { return sniper; }
+        }
+
         const candidates = this.candidates(self, here, primary, foes, run);
 
         let best = candidates[0]!;
@@ -229,6 +245,42 @@ export class TacticalAI {
             aimed: bestAimed,
             label: moved ? (Battlefield.nearCover(best) ? "cover" : "reposition") : "attack",
         };
+    }
+
+    /**
+     * Sniper doctrine: fire the steadied shot at a live laser lock, otherwise
+     * pick the juiciest target, settle into cover if there's some close by,
+     * and paint it — the visible telegraph IS the counterplay window.
+     */
+    private static sniperPlan(self: Actor, foes: Actor[]): Plan | null {
+        const here = pos(self);
+        const locked = self.marking && self.marking.canFight() ? self.marking : null;
+        if (locked) {
+            const dist = Battlefield.gap(here, pos(locked));
+            const cover = Battlefield.coverPenaltyAt(pos(locked), here);
+            return {target: locked, aimed: bestNet(self, locked, dist, cover).aimed, label: "deadeye"};
+        }
+        // best expected-damage target from where we stand
+        let mark: Actor | undefined;
+        let best = -1;
+        for (const foe of foes) {
+            const v = expectedNet(self, foe, Battlefield.gap(here, pos(foe)),
+                Battlefield.coverPenaltyAt(pos(foe), here), false);
+            if (v > best) { best = v; mark = foe; }
+        }
+        if (!mark) { return null; }
+        // settle into nearby cover while painting (a nest, not a road trip)
+        let moveTo: Point | undefined;
+        if (!Battlefield.nearCover(here)) {
+            const near = Battlefield.COVER.slice()
+                .sort((a, b) => Battlefield.gap(here, a) - Battlefield.gap(here, b))[0];
+            if (near && Battlefield.gap(here, near) <= self.runMeters() + 2) {
+                const d = Battlefield.gap(near, pos(mark)) || 1;
+                moveTo = pointToward(here, {x: near.x + (near.x - mark.position.x) / d * 2.0,
+                    y: near.y + (near.y - mark.position.y) / d * 2.0}, self.runMeters());
+            }
+        }
+        return {moveTo, markTarget: mark, label: "mark"};
     }
 
     /**

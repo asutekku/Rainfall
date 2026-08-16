@@ -27,9 +27,12 @@ export class Actor extends GameObject {
     public temperament: string;   // tactical AI personality: balanced|aggressive|flanker|camper|berserker
     public auto: boolean;         // squad member played by the tactical AI instead of the player
     public grenades: number;      // frag grenades on the belt (throwing one is the turn's attack)
+    public marking: Actor | null; // sniper laser lock: painted last turn, fires this turn
     public faction?: string;      // enemy faction (Maelstrom, Arasaka, ...) for display
     public rank?: number;         // enemy threat rank 1-5
     public archetype?: string;    // enemy role within the faction (Reaver, Lanceman, ...)
+    public frags?: number;        // archetype-guaranteed grenades on deploy (grenadier kit)
+    public kitParts?: string[];   // archetype silhouette add-ons on top of the faction kit
     public equipment: {
         headgear: Armor | null;
         upper: Armor | null;
@@ -243,6 +246,7 @@ export class Actor extends GameObject {
         this.temperament = "balanced";
         this.auto = false;
         this.grenades = 0;
+        this.marking = null;
         this.stats = {
             int: 1,
             ref: 1,

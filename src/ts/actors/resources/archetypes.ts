@@ -20,6 +20,8 @@ export interface Archetype {
     temperament: string;  // "roll" = derive from the drawn weapon
     portrait: string;     // role key used for the portrait
     reward: number;       // eddies / XP multiplier
+    frags?: number;       // guaranteed grenades on deploy (grenadier kit)
+    parts?: string[];     // extra silhouette parts on top of the faction kit
 }
 
 export const ARCHETYPES: Archetype[] = [
@@ -44,6 +46,11 @@ export const ARCHETYPES: Archetype[] = [
     // ---- Rank 3: elites (SP 11-13, HP ~40-45) ----
     {faction: "6th Street", title: "Veteran", rank: 3, ref: 6, dex: 6, body: 6, will: 6, skill: 6, luck: 4,
         bodySP: 11, headSP: 7, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker", portrait: "cop", reward: 3},
+    {faction: "Wraiths", title: "Deadeye", rank: 3, ref: 8, dex: 6, body: 5, will: 6, skill: 6, luck: 3,
+        bodySP: 7, headSP: 4, weapons: ["sniper"], minDice: 4, temperament: "camper", portrait: "nomad", reward: 4},
+    {faction: "Maelstrom", title: "Bombardier", rank: 3, ref: 6, dex: 6, body: 7, will: 6, skill: 5, luck: 3,
+        bodySP: 12, headSP: 0, weapons: ["smg", "shotgun"], minDice: 0, temperament: "aggressive", portrait: "solo",
+        reward: 4, frags: 2, parts: ["bandolier"]},
     {faction: "Tyger Claws", title: "Blademaster", rank: 3, ref: 8, dex: 8, body: 6, will: 6, skill: 7, luck: 4,
         bodySP: 11, headSP: 0, weapons: ["melee"], minDice: 3, temperament: "berserker", portrait: "solo", reward: 3},
     {faction: "Maelstrom", title: "Reaver", rank: 3, ref: 6, dex: 6, body: 8, will: 7, skill: 6, luck: 3,
@@ -58,6 +65,11 @@ export const ARCHETYPES: Archetype[] = [
         bodySP: 15, headSP: 11, weapons: ["smg", "rifle"], minDice: 0, temperament: "flanker", portrait: "cop", reward: 6},
     {faction: "Cyberpsycho", title: "Rampage", rank: 4, ref: 7, dex: 7, body: 9, will: 8, skill: 6, luck: 3,
         bodySP: 13, headSP: 0, weapons: ["melee", "rifle"], minDice: 3, temperament: "berserker", portrait: "solo", reward: 7},
+    {faction: "Arasaka", title: "Marksman", rank: 4, ref: 8, dex: 7, body: 6, will: 7, skill: 8, luck: 4,
+        bodySP: 12, headSP: 11, weapons: ["sniper"], minDice: 4, temperament: "camper", portrait: "corporate", reward: 7},
+    {faction: "Militech", title: "Grenadier", rank: 4, ref: 7, dex: 6, body: 8, will: 7, skill: 7, luck: 4,
+        bodySP: 15, headSP: 11, weapons: ["shotgun", "rifle"], minDice: 0, temperament: "aggressive", portrait: "corporate",
+        reward: 7, frags: 2, parts: ["bandolier"]},
 
     // ---- Rank 5: bosses (SP 15-18, HP ~55-60) ----
     {faction: "MaxTac", title: "Officer", rank: 5, ref: 8, dex: 8, body: 8, will: 8, skill: 9, luck: 6,
@@ -88,4 +100,42 @@ export function pickArchetype(level: number): Archetype {
 export function pickArchetypeOfRank(rank: number): Archetype {
     const pool = ARCHETYPES.filter((a) => a.rank === rank);
     return (pool.length ? pool[(Math.random() * pool.length) << 0] : ARCHETYPES[0])!;
+}
+
+/**
+ * Pick ONE faction for a themed encounter: a random faction that fields at
+ * least one archetype inside the level's rank band, so a whole wave can be
+ * drawn from it. A Maelstrom fight should feel like Maelstrom, not a grab-bag.
+ */
+export function pickFaction(level: number): string {
+    const band = rankBand(level);
+    const eligible = [...new Set(ARCHETYPES.filter((a) => band.indexOf(a.rank) >= 0)
+        .map((a) => a.faction))];
+    return eligible[(Math.random() * eligible.length) << 0] || ARCHETYPES[0]!.faction;
+}
+
+/** Pick an archetype from a specific faction, weighted toward the level's rank band. */
+export function pickArchetypeFrom(faction: string, level: number): Archetype {
+    const band = rankBand(level);
+    const pool = ARCHETYPES.filter((a) => a.faction === faction);
+    if (!pool.length) { return pickArchetype(level); }
+    // weight each archetype by how often its rank appears in the band
+    const weighted: Archetype[] = [];
+    for (const a of pool) {
+        const w = band.filter((r) => r === a.rank).length;
+        for (let i = 0; i < Math.max(0, w); i++) { weighted.push(a); }
+    }
+    const bag = weighted.length ? weighted : pool;
+    return bag[(Math.random() * bag.length) << 0]!;
+}
+
+/** Factions that field an archetype of the exact rank (for themed elite waves). */
+export function factionsOfRank(rank: number): string[] {
+    return [...new Set(ARCHETYPES.filter((a) => a.rank === rank).map((a) => a.faction))];
+}
+
+/** An archetype of exactly `rank` from `faction` (any-rank fallback keeps spawns safe). */
+export function pickRankedFrom(faction: string, rank: number): Archetype {
+    const pool = ARCHETYPES.filter((a) => a.faction === faction && a.rank === rank);
+    return pool.length ? pool[(Math.random() * pool.length) << 0]! : pickArchetypeOfRank(rank);
 }
