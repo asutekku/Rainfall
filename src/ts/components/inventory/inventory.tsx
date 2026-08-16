@@ -58,7 +58,9 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
         const med = a.inventory.medical.splice(idx, 1)[0] as Medical;
         const wasDying = a.mortallyWounded;
         if (wasDying) { a.stabilize(); }               // meds stop the bleeding first
-        const healed = a.heal(Math.min(med.restorePoints, a.maxHealth));
+        // Blood Pump Mk.II/III: meds circulate harder in an assisted system.
+        const dose = Math.floor(Math.min(med.restorePoints, a.maxHealth) * (1 + a.chromeNum("medBoost")));
+        const healed = a.heal(dose);
         this.notice(wasDying
             ? `${a.name.split(" ")[0]} is stabilised by the ${med.name}${healed > 0 ? ` (+${healed} HP)` : ""} — back from the brink.`
             : healed > 0

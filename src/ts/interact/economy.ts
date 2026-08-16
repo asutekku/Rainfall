@@ -32,7 +32,9 @@ export class Economy {
 
     /** Award a defeated foe's eddies — to the crew purse when a player killed it. */
     public static loot(killer: Actor, victim: Actor): number {
-        const eddies = Purse.earn(killer, Math.max(5, Math.floor(victim.currency)));
+        // Fixer "Operator" / Fixer Shard chrome: every payout comes up bigger.
+        const take = Math.max(5, Math.round(victim.currency * (1 + killer.eddieBonus())));
+        const eddies = Purse.earn(killer, take);
         BattleRecorder.countEddies(killer, eddies);
         return eddies;
     }
@@ -48,7 +50,8 @@ export class Economy {
         const msgs: string[] = [];
         const rank = victim.rank || 1;
         // Nomads strip a wreck to the frame — their finds come up more often.
-        const chance = 0.2 + 0.06 * rank + (killer.isNomad() ? 0.12 : 0);
+        // Magpie Optics chrome tags salvage the same way, and they stack.
+        const chance = 0.2 + 0.06 * rank + (killer.isNomad() ? 0.12 : 0) + killer.chromeNum("scavBonus");
         if (victim.weapon && victim.weapon.name !== "Fists" && Math.random() < chance) {
             const w = victim.weapon.clone();
             w.equipped = false;
@@ -233,17 +236,23 @@ export class Economy {
         };
     }
 
+    /** The next rung up the armour ladder from a given SP (null at the top). */
+    public static nextArmorTier(sp: number): { name: string; sp: number; cost: number } | null {
+        return ARMOR_TIERS.find((t) => t.sp > sp) || null;
+    }
+
     /** What the fence pays for a piece the squad doesn't want: half sticker price. */
     public static sellValue(cost: number): number {
         return Math.max(5, Math.floor((cost || 0) / 2));
     }
 
     /**
-     * Corporate "Teamwork": the sticker price after the company account takes
-     * its cut. With no standing Corporate in the crew this IS the sticker price.
+     * The sticker price after the best discount in the crew: a Corporate's
+     * company account or an Expense Chip, whichever runs deeper (they don't
+     * stack). With neither, this IS the sticker price.
      */
     public static marketPrice(cost: number, party: Actor[]): number {
-        const discount = party.reduce((m, p) => Math.max(m, p.canFight() ? p.corpDiscount() : 0), 0);
+        const discount = party.reduce((m, p) => Math.max(m, p.canFight() ? p.marketDiscount() : 0), 0);
         return Math.ceil(cost * (1 - discount));
     }
 
@@ -261,6 +270,13 @@ export class Economy {
         [actor.equipment.upper, actor.equipment.headgear].forEach((a) => {
             if (a) { a.stoppingPower = a.maxStoppingPower; }
         });
+        // Subdermal Mk.III knits its ablated plate back wherever armour gets patched.
+        actor.cybernetics.forEach((c) => {
+            if (c.effects.subdermalSelfRepair) {
+                const spec = GetItem.cyberware(c.name);
+                if (spec.effects.sp !== undefined) { c.effects.sp = spec.effects.sp; }
+            }
+        });
     }
 
     /**
@@ -274,6 +290,13 @@ export class Economy {
         actor.equipment.headgear = GetItem.armor("Kevlar Helmet");
         actor.inventory.weapons = [GetItem.weapon("Fists")];
         actor.inventory.armor = [];
+        // Chrome is bolted in — cyberweapons (Wolvers, popup guns) can't be
+        // repossessed with the duffel. Regrow them into the stripped kit.
+        actor.cybernetics.forEach((c) => {
+            if (c.effects.grantsWeapon) {
+                actor.inventory.weapons.push(GetItem.weapon(c.effects.grantsWeapon));
+            }
+        });
         // Trauma Team put them back on the street with a roof and a subscription;
         // without this an eviction earlier in a run followed the character forever.
         actor.housing = "NiceConapt";

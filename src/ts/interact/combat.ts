@@ -72,6 +72,20 @@ export class Combat {
         this.stats.shots += 1; if (aimed) { this.stats.aimed += 1; }
         const targetOldHP: number = target.health;
         if (!this.didAttackHit(actor, target, distance, aimed, bonus)) {
+            // Smartgun Array: the first miss each fight is salvaged into a graze.
+            if (!melee && actor.chromeHas("grazeOnMiss") && !actor.grazeUsed) {
+                actor.grazeUsed = true;
+                const grazeDmg: number = Math.ceil(weapon.getDamage() / 2);
+                const dealt: number = target.receiveDamage(grazeDmg, weapon.ap, false);
+                this.stats.hits += 1; this.stats.dmg += dealt;
+                BattleRecorder.countShot(actor, dealt > 0);
+                BattleRecorder.countDamage(actor, target, dealt);
+                this.events.push({kind: "shot", actor, target, hit: true, damage: dealt, aimed,
+                    autofire: false, melee, covered, dropped: !target.canFight(), rounds});
+                this.messages.push(new MessageStr(`${actor.name}'s smartgun array turns the miss into a graze — ${dealt} damage.`));
+                this.registerIfDefeated(actor, target);
+                return;
+            }
             BattleRecorder.countShot(actor, false);
             this.events.push({kind: "shot", actor, target, hit: false, damage: 0, aimed,
                 autofire: false, melee, covered, dropped: false, rounds});
@@ -255,10 +269,14 @@ export class Combat {
         BattleRecorder.countRound();
         const all: Actor[] = [...party, ...enemies].filter((a) => a.canFight() || a.mortallyWounded);
         all.forEach((a) => { a.firstHitDone = false; });
-        return all
-            .map((a) => ({a, init: a.rollInitiative()}))
+        // Sandevistan Overclock: the fight's opening round is always theirs.
+        // The flag is armed at deploy and burned here, so only round 1 is skewed.
+        const order = all
+            .map((a) => ({a, init: a.rollInitiative() + (a.actFirstPending ? 1000 : 0)}))
             .sort((x, y) => y.init - x.init)
             .map((o) => o.a);
+        all.forEach((a) => { a.actFirstPending = false; });
+        return order;
     }
 
     /**

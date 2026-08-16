@@ -32,10 +32,12 @@ import {MetaOverlay} from "./run/metaOverlay";
 import {OrderCtx, PlaybackBundle} from "./combat/battleScene";
 import {BattleEvent} from "../interact/battleEvents";
 import {FeedLog, missionClock} from "../interact/feedLog";
-import {SaveGame} from "../interact/saveGame";
+import {MetaSave, SaveGame} from "../interact/saveGame";
+import {AugOffer, Chrome} from "../interact/chrome";
+import {AugPickView} from "./run/augPickView";
 
 /** Which run-loop screen is on top. "combat" falls through to the ops shell. */
-export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "event" | "net" | "end";
+export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "event" | "net" | "end" | "augpick";
 
 export interface InterfaceAppState {
     activeMainPanel: string;
@@ -70,6 +72,8 @@ export interface InterfaceAppState {
     usedEvents: string[];
     /** The crew's shared purse — every payday, hire and store buy runs through it. */
     crew: Crew;
+    /** The boss's chrome drop on offer while the augpick screen is up. */
+    augOffers: AugOffer[];
     /** Bumped when a new encounter starts — tells the 3D arena to build a fresh street. */
     battleId: number;
     /** The resolved turn currently being animated by the battle scene. */
@@ -132,6 +136,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             eventId: null,
             usedEvents: [],
             crew: new Crew().activate(),
+            augOffers: [],
             battleId: 1,
             playback: null,
             orders: null,
@@ -160,7 +165,13 @@ export class App extends React.Component<{}, InterfaceAppState> {
                 }
             }, 500) as any;
         }
-        if (s.run && s.screen === "end" && s.run.reviveUsed) { SaveGame.clear(); }
+        if (s.run && s.screen === "end" && s.run.reviveUsed) {
+            // Death spends the run save — but the character (chrome, levels, and
+            // whatever the Cryptobank salvaged from the pot) survives it.
+            MetaSave.save(s.character, Math.floor(s.crew.funds * s.character.chromeNum("deathBank")),
+                s.characterSpec);
+            SaveGame.clear();
+        }
     }
 
     public override render() {
@@ -168,8 +179,9 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (this.state.creating) {
             return <Creator initial={this.state.characterSpec} canCancel={this.state.run !== null}
                             canContinue={this.state.run === null && SaveGame.exists()}
+                            veteran={this.state.run === null && !SaveGame.exists() ? MetaSave.summary() : null}
                             onDeploy={this.deployCharacter} onCancel={this.closeCreator}
-                            onContinue={this.continueRun}/>;
+                            onContinue={this.continueRun} onContinueVeteran={this.continueVeteran}/>;
         }
         // Run-loop takeovers that sit ABOVE the shell. The city map and combat
         // both render inside the shell (via Stage) so the nav / bottom bar stay.
@@ -182,6 +194,10 @@ export class App extends React.Component<{}, InterfaceAppState> {
                                 onClaim={this.claimLoot} onSell={this.sellLoot} onAutoKit={this.autoKit}
                                 onBuyout={this.buyoutMerc}
                                 onContinue={this.leaveDebrief} onRevive={this.reviveRun}/>;
+        }
+        if (run && this.state.screen === "augpick") {
+            return <AugPickView character={this.state.character} offers={this.state.augOffers}
+                                onPick={this.takeAug}/>;
         }
         if (run && this.state.screen === "sector") {
             return <SectorClearView sector={run.sector} funds={this.state.crew.funds}
@@ -289,10 +305,12 @@ export class App extends React.Component<{}, InterfaceAppState> {
     /** Build your character and hit the street. The crew gets hired on the way. */
     private deployCharacter = (spec: CharacterSpec) => {
         this.resetSequencer();
+        MetaSave.clear();   // deploying someone new lets the old veteran go
         const character = new Player(spec);
         character.grenades = 2;   // opening kit: two frags
         // Never start alone: the fixer throws in a rookie with the job.
         const party = [character, new Merc(MercMarket.starter(1))];
+        Chrome.armRun(party);
         // Seed a placeholder wave so the combat shell never reads an empty array.
         const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
         Battlefield.deploy(party, enemies);
@@ -313,6 +331,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         const g = SaveGame.load();
         if (!g) { this.forceUpdate(); return; }
         this.resetSequencer();
+        Chrome.armRun(g.party);
         // Seed a placeholder wave so the combat shell never reads an empty array.
         const enemies = ActorController.getEnemies(2, RunController.levelOf(g.party));
         Battlefield.deploy(g.party, enemies);
@@ -325,6 +344,41 @@ export class App extends React.Component<{}, InterfaceAppState> {
             messages: [{msg: "— back on the street, right where you left it —"} as any],
             playback: null, orders: null, turnOrder: [],
         });
+    };
+
+    /**
+     * The veteran walks again: the meta save rebuilds the character — chrome,
+     * levels, Humanity bill and any banked eddies — into a fresh sector-1 run.
+     */
+    private continueVeteran = () => {
+        const v = MetaSave.restore();
+        if (!v) { this.forceUpdate(); return; }
+        this.resetSequencer();
+        const character = v.character;
+        const starter = new Merc(character.chromeHas("freeVeteranStarter")
+            ? MercMarket.starterVeteran(1) : MercMarket.starter(1));
+        const party = [character, starter];
+        Chrome.armRun(party);
+        const crew = new Crew(Crew.STARTING_FUNDS + v.bank).activate();
+        const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
+        Battlefield.deploy(party, enemies);
+        const lines: any[] = [{msg: `— ${character.name} walks the street again. The chrome remembers. —`}];
+        if (v.bank > 0) { lines.push({msg: `— the Cryptobank Cortex releases ${v.bank}¥ from cold storage —`}); }
+        this.setState({
+            characterSpec: v.spec, character, party, currentEnemies: enemies,
+            activeChar: character, activeEnemy: enemies[0],
+            creating: false, run: RunController.scout(RunController.freshRun(1), party), screen: "map", report: null,
+            crew, offers: [], augOffers: [],
+            eventId: null, usedEvents: [],
+            activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
+            messages: lines,
+            playback: null, orders: null, turnOrder: [], auto: true,
+        });
+    };
+
+    /** The boss's chrome drop resolved (or skipped) — on to the sector screen. */
+    private takeAug = (lineId: string | null) => {
+        this.setState(RunController.takeAug(this.state, lineId, this.logLength) as any);
     };
 
     /** Player picked a node: fight it, or open its merchant / rest / event screen. */
@@ -346,7 +400,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (!run || !run.node) { return; }
         const lines: any[] = outcome.lines.map((l) => ({msg: l}));
         let nextRun = run;
-        if (outcome.restoreRevive) { nextRun = {...nextRun, reviveUsed: false}; }
+        if (outcome.restoreRevive) { nextRun = {...nextRun, reviveUsed: false, revivesUsed: 0}; }
         if (outcome.reveal) {
             // intel: uncover N random still-hidden waypoints on the holo-map.
             // A Media in the crew works their sources: one extra waypoint.

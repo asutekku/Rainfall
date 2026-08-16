@@ -30,9 +30,12 @@ export interface CreatorProps {
     canCancel: boolean;
     /** A checkpointed run exists on this device. */
     canContinue?: boolean | undefined;
+    /** A dead-but-chromed character waits in the meta save (no run to resume). */
+    veteran?: {name: string; level: number; augs: number} | null | undefined;
     onDeploy: (spec: CharacterSpec) => void;
     onCancel: () => void;
     onContinue?: (() => void) | undefined;
+    onContinueVeteran?: (() => void) | undefined;
 }
 
 interface CreatorState {
@@ -247,8 +250,12 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                         {this.props.canCancel && <button onClick={this.props.onCancel}>✕ Cancel</button>}
                         {this.props.canContinue && this.props.onContinue &&
                             <button className={"prim crContinue"} onClick={this.props.onContinue}>▸ Continue Run</button>}
+                        {!this.props.canContinue && this.props.veteran && this.props.onContinueVeteran &&
+                            <button className={"prim crContinue"} onClick={this.props.onContinueVeteran}>
+                                ▸ Continue as {this.props.veteran.name.split(" ")[0]} — L{this.props.veteran.level} · {this.props.veteran.augs} aug{this.props.veteran.augs === 1 ? "" : "s"}
+                            </button>}
                         <button className={"prim"} onClick={() => this.props.onDeploy(this.state.spec)}>
-                            {this.props.canContinue ? "New Run ▸" : "Hit the Street ▸"}
+                            {this.props.canContinue ? "New Run ▸" : this.props.veteran ? "Someone New ▸" : "Hit the Street ▸"}
                         </button>
                     </div>
                 </header>

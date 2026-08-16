@@ -33,7 +33,10 @@ export interface RunState {
     clearedIds: string[];
     reachableIds: string[];           // neighbours of `position`
     revealedIds: string[];            // fog-of-war waypoints uncovered by intel
+    /** The revive allowance is spent (drives every "can revive" gate). */
     reviveUsed: boolean;
+    /** Trauma pickups burned this sector — Trauma Platinum chrome raises the allowance. */
+    revivesUsed: number;
     depth: number;
     outcome: "active" | "won" | "lost";
 }
@@ -206,7 +209,7 @@ export class RunMap {
             clearedIds: [entry.id],
             reachableIds: adj[entry.id]!.slice(),
             revealedIds: [],
-            reviveUsed: false, depth: 0, outcome: "active",
+            reviveUsed: false, revivesUsed: 0, depth: 0, outcome: "active",
         };
     }
 

@@ -1,5 +1,6 @@
 import {Actor} from "../actors/Actor";
 import {Formation, formationFor} from "../actors/resources/factionStyles";
+import {Chrome} from "./chrome";
 import {Utils} from "../utils/utils";
 
 /**
@@ -59,6 +60,7 @@ export class Battlefield {
                 : (e.rank || 1) >= 3 && Math.random() < 0.4 ? 1 : 0;
         });
         [...party, ...enemies].forEach((a) => { a.marking = null; });   // no stale laser locks
+        Chrome.primeSquad(party);   // arm battle-scoped chrome (auras, overclock, graze)
     }
 
     /**

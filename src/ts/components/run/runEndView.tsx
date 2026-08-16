@@ -40,8 +40,15 @@ export class RunEndView extends React.Component<RunEndViewProps, {}> {
                             <span><i>Level</i><b>{c.level}</b></span>
                             <span><i>Kills</i><b>{this.props.kills}</b></span>
                             <span><i>Reached</i><b>S{this.props.sector}·{this.props.depth}</b></span>
+                            <span><i>Chrome</i><b>{c.cybernetics.length}</b></span>
                         </div>
-                        <span className={"reKeepLost"}>Gear, eddies and crew stay behind.</span>
+                        {c.cybernetics.length > 0 &&
+                            <span className={"reKeepChrome"}>
+                                {c.cybernetics.map((cw) => cw.name).join(" · ")}
+                            </span>}
+                        <span className={"reKeepLost"}>
+                            Gear, eddies and crew stay behind. <b>The chrome comes with you</b> — and so does the Humanity it cost ({c.humanity}/{c.maxHumanity}).
+                        </span>
                     </div>
 
                     <div className={"runEndActions"}>

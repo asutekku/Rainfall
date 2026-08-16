@@ -45,12 +45,8 @@ export class Player extends Actor {
         // RED: everyone runs armour. Start in a Light Armor Jacket (SP ~ RED Light Armorjack).
         this.equipment.upper = GetItem.armor("Light Armor Jacket");
         this.equipment.headgear = GetItem.armor("Kevlar Helmet");
-        // A chromed-up solo's starting loadout (each install pays Humanity Loss).
-        this.installCyberware(GetItem.cyberware("Neural Link"));
-        this.installCyberware(GetItem.cyberware("Cybereye w/ Targeting Scope"));
-        this.installCyberware(GetItem.cyberware("Sandevistan"));
-        this.installCyberware(GetItem.cyberware("Subdermal Armor"));
-        this.installCyberware(GetItem.cyberware("Wolvers")); // grants a 3d6 melee cyberweapon
+        // No factory chrome: augs are the career, bought one Humanity chunk at a
+        // time from ripperdocs and boss scalps — and they survive every death.
         // A basic cyberdeck loadout for jacking into the NET.
         this.cyberdeck.push(GetItem.program("Zap"));
         this.cyberdeck.push(GetItem.program("Sword"));

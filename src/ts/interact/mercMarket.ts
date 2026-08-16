@@ -159,6 +159,32 @@ export class MercMarket {
     }
 
     /**
+     * Command Uplink Mk.III: the freebie waiting after a wipe is a Veteran.
+     * Same shape as `starter`, drawn from the third tier instead of the floor.
+     */
+    public static starterVeteran(sector: number): MercOffer {
+        const tier = TIERS[2]!;
+        const role = Utils.pickRandom(CharacterCreation.roles());
+        return {
+            id: "m" + (this.seq++),
+            name: CharacterCreation.randomName(),
+            role,
+            tier: tier.name,
+            trait: "Your requisition codes still open doors",
+            level: Math.max(1, sector + tier.levelOver),
+            price: 0,
+            skill: tier.skill,
+            roleRank: tier.roleRank,
+            stats: this.statsFor(role, tier),
+            weapons: ROLE_WEAPONS[role] || ["pistol", "smg"],
+            minDice: tier.minDice,
+            maxDice: tier.maxDice,
+            armorName: tier.armorName,
+            armorSP: tier.armorSP,
+        };
+    }
+
+    /**
      * A board of candidates. The between-sector board is broad and sells at the
      * going rate; the fixer's table mid-sector is short and takes a cut, which
      * is the price of not having to wait for the next sector.

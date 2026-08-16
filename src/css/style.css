@@ -1384,3 +1384,59 @@ progress::-moz-progress-bar { background:var(--rust); }
         animation:panelIn .34s cubic-bezier(.22,.9,.3,1) both;
     }
 }
+
+/* =====================================================================
+   CHROME — augs, the ripperdoc counter, and the boss's aug-pick screen
+   ===================================================================== */
+
+/* --- boss chrome claim ------------------------------------------------- */
+.mHero.aug .mHeroGlyph { color:var(--rare); border-color:var(--rare); box-shadow:0 0 24px rgba(197,107,255,.28), inset 0 0 14px rgba(197,107,255,.14); }
+.augCards { display:grid; grid-template-columns:repeat(auto-fit, minmax(250px, 1fr)); gap:14px; margin:16px 0 6px; }
+.augCard {
+    display:flex; flex-direction:column; align-items:flex-start; gap:8px; text-align:left;
+    padding:16px 16px 14px; cursor:pointer;
+    background:var(--panel); border:1px solid var(--line2); clip-path:var(--bevel);
+    color:var(--ink); font-family:var(--mono);
+    transition:border-color .15s, background .15s, transform .15s;
+}
+.augCard:hover { background:var(--sel); transform:translateY(-2px); }
+.augCard.tier-street { border-left:3px solid var(--cyanDim); }
+.augCard.tier-corporate { border-left:3px solid var(--warn); }
+.augCard.tier-military { border-left:3px solid var(--rare); }
+.augCard.tier-street:hover { border-color:var(--cyan); }
+.augCard.tier-corporate:hover { border-color:var(--warn); }
+.augCard.tier-military:hover { border-color:var(--rare); }
+.augTier { font-size:9px; letter-spacing:.22em; color:var(--dim); }
+.augCard.tier-street .augTier { color:var(--cyanDim); }
+.augCard.tier-corporate .augTier { color:var(--warn); }
+.augCard.tier-military .augTier { color:var(--rare); }
+.augName { font-size:16px; color:var(--ink); text-shadow:0 0 12px rgba(55,225,231,.25); }
+.augMk { font-size:11px; color:var(--cyan); letter-spacing:.12em; }
+.augMk i { font-style:normal; color:var(--mid); }
+.augDesc { font-size:11px; color:var(--mid); line-height:1.55; }
+.augBill { margin-top:auto; padding-top:8px; font-size:11px; color:var(--dim); border-top:1px dashed var(--line); align-self:stretch; }
+.augBill b { color:var(--crit); }
+.augBill i { font-style:normal; color:var(--faint); }
+.augSkipRow { display:flex; justify-content:center; padding:14px 0 4px; }
+
+/* --- ripperdoc counter (market) ---------------------------------------- */
+.mkWarn { font-style:normal; color:var(--warn); text-transform:none; letter-spacing:0; }
+.mkReroll {
+    margin-left:10px; padding:2px 9px; cursor:pointer;
+    background:var(--panel2); border:1px solid var(--line2);
+    color:var(--cyan); font-family:var(--mono); font-size:10px; letter-spacing:.08em;
+}
+.mkReroll:hover { border-color:var(--cyan); background:var(--sel); }
+.mkNotice.psycho { color:var(--crit); border-left-color:var(--crit); letter-spacing:.06em; }
+
+/* --- character sheet + run end ----------------------------------------- */
+.psychoFlag { font-style:normal; color:var(--crit); letter-spacing:.14em; }
+.psychoFlag.warn { color:var(--warn); }
+.mkPips { font-style:normal; color:var(--cyan); font-size:10px; letter-spacing:.14em; }
+.reKeepChrome { display:block; margin-top:8px; color:var(--cyan); font-size:10px; letter-spacing:.05em; line-height:1.7; }
+.reKeepLost b { color:var(--mid); }
+
+@media (prefers-reduced-motion: no-preference) {
+    .augCard { animation:panelIn .34s cubic-bezier(.22,.9,.3,1) both; }
+    .augCards .augCard:nth-child(2) { animation-delay:.08s; }
+}
