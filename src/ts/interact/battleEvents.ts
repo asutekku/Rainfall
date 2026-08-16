@@ -21,6 +21,8 @@ export interface MoveEvent {
     to: Point;
     /** ends the move tucked next to cover (plays the crouch) */
     cover: boolean;
+    /** all-out sprint (melee closing at double speed — faster, leaning gait) */
+    sprint?: boolean;
 }
 
 export interface ShotEvent {
@@ -77,7 +79,15 @@ export interface LevelEvent {
     actor: Actor;
 }
 
-export type BattleEvent = TurnEvent | MoveEvent | ShotEvent | NoShotEvent | BlastEvent | SaveEvent | LevelEvent;
+/** A sniper paints its target: the laser telegraphs next turn's shot. */
+export interface MarkEvent {
+    kind: "mark";
+    actor: Actor;
+    target: Actor;
+}
+
+export type BattleEvent = TurnEvent | MoveEvent | ShotEvent | NoShotEvent | BlastEvent | SaveEvent
+    | LevelEvent | MarkEvent;
 
 /** One resolved turn: the animation script plus the text feed it produced. */
 export interface TurnResult {

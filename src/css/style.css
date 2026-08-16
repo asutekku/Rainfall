@@ -1302,3 +1302,21 @@ progress::-moz-progress-bar { background:var(--rust); }
 .ob.frag { border-color:#6b4a1e; color:var(--warn); }
 .ob.frag.set { border-color:var(--warn); background:#241a0d; box-shadow:0 0 8px rgba(240,168,48,.25); }
 .bsFloat.f-tick { color:#ff9a70; font-size:12px; }
+.bsFloat.f-mark { color:#ff2a2a; font-size:12px; letter-spacing:.12em; text-shadow:0 0 10px rgba(255,42,42,.6); }
+
+/* faction contact banner over the opening dolly */
+.bsBanner { position:absolute; left:50%; top:16%; transform:translateX(-50%);
+    display:flex; flex-direction:column; align-items:center; gap:2px;
+    padding:8px 26px; border:1px solid; border-left-width:6px; background:rgba(7,8,12,.82);
+    font-family:var(--mono, monospace); text-align:center; pointer-events:none; z-index:6;
+    animation:bsBanner 2.6s ease-in-out forwards; }
+.bsBanner b { font-size:19px; letter-spacing:.3em; }
+.bsBanner span { font-size:11px; letter-spacing:.2em; color:var(--mid); }
+.bsBanner.boss { animation-duration:3.4s; }
+.bsBanner.boss b { font-size:22px; }
+@keyframes bsBanner {
+    0% { opacity:0; transform:translateX(-50%) translateY(-8px); }
+    12% { opacity:1; transform:translateX(-50%) translateY(0); }
+    82% { opacity:1; }
+    100% { opacity:0; transform:translateX(-50%) translateY(4px); }
+}
