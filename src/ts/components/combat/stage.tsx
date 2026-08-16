@@ -5,7 +5,6 @@ import {rangeDV} from "../../interact/rangeTable";
 import {aimPreview} from "../../interact/aimPreview";
 import {RunNode, RunState} from "../../interact/runMap";
 import {MainPanel} from "../mainPanel";
-import {IsoMap} from "./isoMap";
 import {BattleScene, OrderCtx, PlaybackBundle} from "./battleScene";
 import {CityMap} from "../run/cityMap";
 
@@ -182,10 +181,6 @@ export class Stage extends React.Component<StageProps, {}> {
                                        party={this.props.party} screen={this.props.screen}
                                        messages={this.props.messages}
                                        onNotice={this.props.onNotice}/>
-                        </div>
-                        <div className={"minimap"} title={"Return to combat"} onClick={this.props.onGotoCombat}>
-                            <IsoMap party={this.props.party} enemies={this.props.enemies} mini={true}/>
-                            <span className={"minimapHint"}>◤ TACTICAL — click to engage</span>
                         </div>
                     </React.Fragment>
                 )}

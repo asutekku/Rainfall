@@ -3,11 +3,7 @@ import {Actor} from "../actors/Actor";
 import {Player} from "../actors/player";
 import {Message} from "./actionLog/messageComponent";
 import {Inventory} from "./inventory/inventory";
-import {Quests} from "./quests/quests";
 import {Character} from "./stats/stats";
-import {Store} from "./storePanel/store";
-import {Netrun} from "./net/netrun";
-import {Downtime} from "./downtime/downtime";
 import {CareerStats} from "./stats/careerStats";
 
 interface MainProps {
@@ -48,16 +44,8 @@ export class MainPanel extends React.Component<MainProps, MainState> {
             case "Inventory":
                 return <Inventory party={this.props.party} screen={this.props.screen}
                                   onNotice={this.props.onNotice}/>;
-            case 'Quests':
-                return <Quests messages={this.getMessage}/>;
             case 'Character':
                 return <Character actor={this.props.currentActor}/>;
-            case 'Store':
-                return <Store player={this.props.currentActor} messages={this.getMessage}/>;
-            case 'Netrun':
-                return <Netrun actor={this.props.currentActor}/>;
-            case 'Downtime':
-                return <Downtime actor={this.props.currentActor}/>;
             case 'Stats':
                 return <CareerStats party={this.props.party} enemy={this.props.currentEnemy}/>;
             default:

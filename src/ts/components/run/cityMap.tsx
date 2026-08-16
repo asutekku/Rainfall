@@ -14,6 +14,7 @@ const TYPE: { [k in NodeType]: [number, string, string] } = {
     merchant: [0x7fd67f, "Black Market", "▤"],
     rest: [0x8be0ff, "Safehouse", "☾"],
     event: [0xc56bff, "Encounter", "◈"],
+    net: [0x2ee6a8, "NET Access", "⌁"],
     hire: [0xf06ba8, "Fixer's Table", "☰"],
     boss: [0xe0533f, "Boss", "⚑"],
 };
@@ -339,6 +340,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
     private static torusGeo = new THREE.TorusGeometry(0.85, 0.3, 6, 10);
     private static dodecaGeo = new THREE.DodecahedronGeometry(1.05, 0);
     private static knotGeo = new THREE.TorusKnotGeometry(0.7, 0.24, 48, 8);
+    private static spikeGeo = new THREE.CylinderGeometry(0.12, 0.55, 2.1, 5);
     private static checkGeo = CityMap.buildCheckGeo();
 
     /** A chunky 3D checkmark for cleared waypoints. */
@@ -362,6 +364,7 @@ export class CityMap extends React.Component<CityMapProps, {}> {
             case "merchant": return CityMap.boxGeo;     // crate
             case "rest": return CityMap.torusGeo;       // safe ring
             case "event": return CityMap.knotGeo;       // tangled question
+            case "net": return CityMap.spikeGeo;        // data spike / antenna
             case "hire": return CityMap.boxGeo;         // a table with bodies for sale
             case "boss": return CityMap.dodecaGeo;      // heavy core
             default: return CityMap.icoGeo;             // firefight

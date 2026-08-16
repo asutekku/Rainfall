@@ -45,6 +45,7 @@ export class RunController {
         if (node.type === "merchant") { return {run: {...run, node}, screen: "merchant"}; }
         if (node.type === "rest") { return {run: {...run, node}, screen: "rest"}; }
         if (node.type === "event") { return {run: {...run, node}, screen: "event"}; }
+        if (node.type === "net") { return {run: {...run, node}, screen: "net"}; }
         if (node.type === "hire") {
             // A fixer's table mid-sector: short list, and he takes his cut.
             return {run: {...run, node}, screen: "hire", offers: MercMarket.board(run.sector + 1, 3, 1.25)};
@@ -73,9 +74,16 @@ export class RunController {
     public static advance(state: InterfaceAppState, node: RunNode, extra: any[], log: number): Patch {
         const run = state.run;
         if (!run) { return {}; }
-        const clearedIds = run.clearedIds.indexOf(node.id) >= 0
-            ? run.clearedIds : run.clearedIds.concat(node.id);
+        const fresh = run.clearedIds.indexOf(node.id) < 0;
+        const clearedIds = fresh ? run.clearedIds.concat(node.id) : run.clearedIds;
         const depth = run.depth + 1;
+        if (fresh) {
+            // Every node survived steadies the nerves: +1 Luck across the squad.
+            state.party.forEach((p) => { p.luck = Math.min(p.maxLuck, p.luck + 1); });
+            // Word travels. Boss and elite scalps build the character's name.
+            if (node.type === "boss") { state.character.gainReputation(2); }
+            if (node.type === "elite") { state.character.gainReputation(1); }
+        }
         const messages = [...extra, ...state.messages].slice(0, log);
         if (node.type === "boss") {
             // Sector cleared — not the end of anything, just the next city over.
@@ -243,6 +251,7 @@ export class RunController {
         state.party.forEach((p) => {
             if (!p.canFight()) { p.revive(); }
             p.health = p.maxHealth;
+            p.refreshLuck();               // a cleared sector resets the luck pool
             Economy.repairArmor(p);
         });
         return {

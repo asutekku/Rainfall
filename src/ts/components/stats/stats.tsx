@@ -2,7 +2,7 @@ import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {Category} from "../general/category";
 import {CharacterAbout} from "./characterAbout";
-import {CharacterStats} from "./characterStats";
+import {CharacterSkills} from "./characterSkills";
 import {CyberwarePanel} from "./cyberwarePanel";
 
 interface StatProps {
@@ -30,7 +30,7 @@ export class Character extends React.Component<StatProps, StatState> {
         } else if (selection === 'Chrome') {
             return <CyberwarePanel actor={this.props.actor}/>;
         } else {
-            return <CharacterStats actor={this.props.actor}/>;
+            return <CharacterSkills actor={this.props.actor}/>;
         }
     }
 
@@ -44,7 +44,7 @@ export class Character extends React.Component<StatProps, StatState> {
                 <div className={"itemCollectionContainer"}>
                     <div className={"itemCollectionCategories"}>
                         <Category title={"About"} update={this.handleClick} active={this.state.selection}/>
-                        <Category title={"Weapon"} update={this.handleClick} active={this.state.selection}/>
+                        <Category title={"Skills"} update={this.handleClick} active={this.state.selection}/>
                         <Category title={"Chrome"} update={this.handleClick} active={this.state.selection}/>
                     </div>
                     <div className={"itemCollection-100"}>

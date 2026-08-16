@@ -22,6 +22,7 @@ import {BattleRecorder, BattleReport} from "../interact/battleReport";
 import {EventView} from "./run/eventView";
 import {MarketView} from "./run/marketView";
 import {SafehouseView} from "./run/safehouseView";
+import {NetDiveView} from "./run/netDiveView";
 import {Crew} from "../interact/crew";
 import {MercMarket, MercOffer} from "../interact/mercMarket";
 import {Merc} from "../actors/Merc";
@@ -33,7 +34,7 @@ import {BattleEvent} from "../interact/battleEvents";
 import {FeedLog, missionClock} from "../interact/feedLog";
 
 /** Which run-loop screen is on top. "combat" falls through to the ops shell. */
-export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "event" | "end";
+export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "event" | "net" | "end";
 
 export interface InterfaceAppState {
     activeMainPanel: string;
@@ -184,6 +185,9 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (run && this.state.screen === "rest") {
             return <SafehouseView party={this.state.party} onLeave={this.leaveSafehouse}/>;
         }
+        if (run && this.state.screen === "net") {
+            return <NetDiveView party={this.state.party} onLeave={this.leaveSafehouse}/>;
+        }
         if (run && this.state.screen === "event" && this.state.eventId) {
             const ev = Events.byId(this.state.eventId);
             if (ev) { return <EventView event={ev} party={this.state.party} onDone={this.finishEvent}/>; }
@@ -198,7 +202,6 @@ export class App extends React.Component<{}, InterfaceAppState> {
             <Hud actor={this.getCurrentActor()} crew={this.state.crew}/>
             <Sidebar active={this.state.activeMainPanel}
                      auto={this.state.auto}
-                     inRun={this.state.run !== null}
                      activeSelection={this.updateSelection}
                      onAuto={this.toggleAuto}
                      onCreate={this.openCreator}/>
@@ -332,7 +335,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         this.setState({...RunController.advance(midState, run.node, lines, this.logLength), eventId: null} as any);
     };
 
-    /** Leave the safehouse with the night's outcome in the feed. */
+    /** Leave a safehouse / NET node, its outcome lines landing in the feed. */
     private leaveSafehouse = (lines: string[]) => {
         const run = this.state.run;
         if (!run || !run.node) { return; }
