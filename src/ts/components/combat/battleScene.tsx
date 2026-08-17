@@ -5,6 +5,7 @@ import {BLAST_RADIUS, Battlefield, Point} from "../../interact/battlefield";
 import {AbilityEvent, BattleEvent, BlastEvent, CoverGoneEvent, HackEvent, MoveEvent, RoutEvent,
     ShotEvent, StabilizeEvent, SuppressEvent} from "../../interact/battleEvents";
 import {Streetscape, generateStreetscape} from "../../interact/streetscape";
+import {STATUS} from "../../interact/statuses";
 import {FactionStyle, styleFor} from "../../actors/resources/factionStyles";
 
 /**
@@ -940,13 +941,27 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                     }
                     break;
                 }
-                case "bleed": {
+                case "bleed": {   // the damage-over-time tick: bleed, fire, toxins
                     const u = this.unitFor(ev.actor);
                     if (u) {
+                        const burning = ev.sources.indexOf("burn") >= 0;
+                        const toxic = !burning && ev.sources.indexOf("toxin") >= 0;
                         this.acts.push({dur: D(0.5), t: 0, start: () => {
                             this.floater(u, String(ev.damage), "tick");
-                            this.spawnSparks(this.unitAnchor(u, 1.1), 0xc02020, 4);
+                            this.spawnSparks(this.unitAnchor(u, 1.1),
+                                burning ? 0xff8a30 : toxic ? 0x8fd94f : 0xc02020, burning ? 7 : 4);
                             if (ev.dropped) { this.floater(u, "DOWN", "down"); }
+                        }});
+                    }
+                    break;
+                }
+                case "status": {   // something stuck to someone — say which
+                    const u = this.unitFor(ev.actor);
+                    if (u) {
+                        const def = STATUS[ev.status];
+                        this.acts.push({dur: D(0.35), t: 0, start: () => {
+                            this.floater(u, ev.warded ? "WARDED" : def.label.toUpperCase(),
+                                ev.warded ? "buff" : def.debuff ? "mark" : "buff");
                         }});
                     }
                     break;
@@ -1536,15 +1551,27 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         if (hit) { this.spawnSparks(toward, color, 8); }
     }
 
-    /** Damage numbers, flinch, fall — the moment a volley lands. */
+    /**
+     * Damage numbers, flinch, fall — the moment a volley lands.
+     *
+     * Every shot produces a number now, so the floater's job changed: it used
+     * to distinguish "hit" from "nothing happened", and it now distinguishes
+     * how well the shot connected. A graze and a crit are the same event with
+     * different weight behind them, and the board should say which it was.
+     */
     private impact(ev: ShotEvent, target: UnitView) {
         if (!ev.hit) {
             this.floater(target, "MISS", "miss");
         } else if (ev.damage <= 0) {
             this.floater(target, "ARMOR", "soak");
             this.spawnSparks(this.unitAnchor(target, 1.3), 0x9aa4ad, 5);
+        } else if (ev.quality === "graze") {
+            this.floater(target, "GRAZE " + ev.damage, "soak");
+            this.spawnSparks(this.unitAnchor(target, 1.3), 0xff9a70, 4);
+            target.flinch = 0.1;
         } else {
-            const big = ev.damage >= 15 || ev.aimed;
+            const big = ev.quality === "crit" || ev.damage >= 15 || ev.aimed;
+            if (ev.quality === "crit") { this.floater(target, "CRIT", "crit"); }
             // multi-round volleys read as a rain of ticks summing to the roll
             const n = ev.actor.weapon.weaponClass === "shotgun" ? 4
                 : Math.max(1, Math.min(ev.rounds || 1, ev.damage));

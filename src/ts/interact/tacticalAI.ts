@@ -1,8 +1,8 @@
 import {Actor} from "../actors/Actor";
 import {Weapon} from "../items/Weapon";
-import {pAtLeast} from "./aimPreview";
 import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "./battlefield";
-import {rangeDV} from "./rangeTable";
+import {QUALITY_MULT, applySoak, AIMED_EDGE, AIMED_MULT, aimedSP, coverEdge, expectedMult, outOfRange, rangeEdge, rollQuality} from "./damageModel";
+import {SUPPRESS_CUT, hasStatus, incomingMult, outgoingMult, spDelta, statusEdge} from "./statuses";
 
 /**
  * Tactical combat AI.
@@ -10,8 +10,8 @@ import {rangeDV} from "./rangeTable";
  * Each turn the acting unit enumerates a handful of candidate destinations
  * (hold, advance to its weapon's best range, duck to cover, flank, retreat),
  * then scores each one with a small Monte-Carlo rollout: it samples the real
- * Cyberpunk RED resolution — exploding d10 to-hit against the range/cover DV,
- * d6 damage with crits, autofire multipliers, armour — to estimate the damage
+ * resolution — the graze/hit/crit quality bands against the range/cover edge,
+ * d6 damage, autofire multipliers, the armour soak curve — to estimate the damage
  * it would deal from there and the damage it would take in return. It picks the
  * position with the best expected trade, weighting survival higher as its own
  * HP drops. This is deliberately a "mini Monte Carlo": cheap, stochastic, and
@@ -40,6 +40,7 @@ export interface Plan {
 }
 
 const SAMPLES = 20;        // rollouts per (attacker,target) estimate
+const MELEE_BASE = 12;
 const MELEE_REACH = 4;     // metres you must be within to melee (>= one cell, so adjacent works)
 
 const W_MOVE = 0.02;       // tiny cost per metre moved (prefer standing when equal)
@@ -65,27 +66,16 @@ const profileFor = (a: Actor): Profile => PROFILES[a.temperament] || PROFILES["b
 
 const d6 = (): number => Math.floor(Math.random() * 6) + 1;
 
-/** RED d10: explodes on a natural 10, fumbles on a natural 1. */
-function redRoll(): number {
-    const first = Math.floor(Math.random() * 10) + 1;
-    if (first === 10) { return 10 + (Math.floor(Math.random() * 10) + 1); }
-    if (first === 1) { return 1 - (Math.floor(Math.random() * 10) + 1); }
-    return first;
-}
-
-/** Effective body stopping power the RED way: best of worn/subdermal, halved by AP. */
-function effectiveSP(target: Actor, ap: boolean): number {
+/** Body stopping power: the better of worn and subdermal. AP is applySoak's job. */
+function effectiveSP(target: Actor): number {
     const worn = target.equipment.upper ? target.equipment.upper.stoppingPower : 0;
-    let sp = Math.max(worn, target.cyberSP());
-    if (ap) { sp = Math.floor(sp / 2); }
-    return sp;
+    return Math.max(0, Math.max(worn, target.cyberSP()) + spDelta(target));
 }
 
-/** Head stopping power (headgear only; subdermal armour doesn't cover the head). */
-function headSP(target: Actor, ap: boolean): number {
-    let sp = target.equipment.headgear ? target.equipment.headgear.stoppingPower : 0;
-    if (ap) { sp = Math.floor(sp / 2); }
-    return sp;
+/** The armour an aimed shot has to beat: the better of helmet and half the plate. */
+function headSP(target: Actor): number {
+    return aimedSP(target.equipment.headgear ? target.equipment.headgear.stoppingPower : 0,
+                   effectiveSP(target));
 }
 
 function sampleKineticDamage(w: Weapon): number {
@@ -101,38 +91,41 @@ function sampleKineticDamage(w: Weapon): number {
 }
 
 /** Net damage past armour for a landed hit — head shots use head SP and double what gets through. */
-function landedDamage(w: Weapon, target: Actor, aimed: boolean): number {
-    const dmg = sampleKineticDamage(w);
-    return aimed ? Math.max(0, dmg - headSP(target, w.ap)) * 2 : Math.max(0, dmg - effectiveSP(target, w.ap));
+function landedDamage(w: Weapon, target: Actor, aimed: boolean, mult: number,
+                      attacker: Actor): number {
+    const dmg = Math.round(sampleKineticDamage(w) * mult
+        * outgoingMult(attacker) * incomingMult(target));
+    return aimed
+        ? Math.round(applySoak(dmg, headSP(target), w.ap) * AIMED_MULT)
+        : applySoak(dmg, effectiveSP(target), w.ap);
 }
 
-/** One simulated attack: net HP damage dealt (0 on miss / out of range / non-kinetic). */
+/** The accuracy edge a shot from `distance` through `coverDV` would carry. */
+function edgeAt(attacker: Actor, target: Actor, distance: number, coverDV: number, aimed: boolean): number {
+    const w = attacker.weapon;
+    const base = attacker.attackBonus(w) + (aimed ? AIMED_EDGE : 0) + statusEdge(attacker);
+    return w.weaponClass === "melee"
+        ? base + MELEE_BASE - target.evasion()
+        : base + rangeEdge(w.weaponClass, distance) + coverEdge(coverDV);
+}
+
+/** One simulated attack: net HP damage dealt (0 on a fumble / out of range / non-kinetic). */
 function sampleNet(attacker: Actor, target: Actor, distance: number, coverDV: number, aimed: boolean): number {
     const w = attacker.weapon;
     if (w.damageType !== "kinetic" || w.diceThrows <= 0) { return 0; }
-    const aimPenalty = aimed ? -8 : 0;   // RED Aimed Shot: -8 to hit
+    if (w.weaponClass === "melee" && distance > MELEE_REACH) { return 0; }
+    if (w.weaponClass !== "melee" && outOfRange(w.weaponClass, distance)) { return 0; }
 
-    if (w.weaponClass === "melee") {
-        if (distance > MELEE_REACH) { return 0; }
-        if (redRoll() + attacker.attackBonus(w) + aimPenalty < redRoll() + target.evasion()) { return 0; }
-        return landedDamage(w, target, aimed);
-    }
+    const quality = rollQuality(edgeAt(attacker, target, distance, coverDV, aimed));
+    if (quality === "miss") { return 0; }
 
-    const dv = rangeDV(w.weaponClass, distance);
-    if (dv === null) { return 0; }
-    const total = redRoll() + attacker.attackBonus(w) + aimPenalty;
-    const need = dv + coverDV;
-    if (total < need) { return 0; }
-
-    if (w.autofire) {   // autofire can't aim; damage is 2d6 x margin, capped
+    if (w.autofire) {   // autofire can't aim; the burst multiplier reads off the band
         const maxMult = w.weaponClass === "rifle" ? 4 : 3;
-        const mult = Math.max(1, Math.min(total - need, maxMult));
-        const a = d6(); const b = d6();
-        let dmg = (a + b) * mult;
-        if (a === 6 && b === 6) { dmg += 5; }
-        return Math.max(0, dmg - effectiveSP(target, w.ap));
+        const mult = Math.min(quality === "graze" ? 1 : quality === "hit" ? 2 : maxMult, maxMult);
+        return applySoak(Math.round((d6() + d6()) * mult
+            * outgoingMult(attacker) * incomingMult(target)), effectiveSP(target), w.ap);
     }
-    return landedDamage(w, target, aimed);
+    return landedDamage(w, target, aimed, QUALITY_MULT[quality], attacker);
 }
 
 /** Mean net damage across the given distance + cover, optionally aiming for the head. */
@@ -148,18 +141,20 @@ function bestNet(attacker: Actor, target: Actor, distance: number, coverDV: numb
     // Aiming is a specialist move: worth the -8 only when body armour is genuinely
     // stopping normal fire. If a normal shot already punches through (avg damage well
     // over the target's SP), take it — the higher hit chance resolves faster.
-    const penetration = attacker.weapon.averageDamage() - effectiveSP(target, attacker.weapon.ap);
-    if (!TacticalAI.allowAimed || attacker.weapon.autofire || penetration >= 3) {
-        return {value: normal, aimed: false};
-    }
-    // ... and only for shooters who can actually land it. A low-skill ganger
-    // spamming -8 head shots is a whiff war, not a tactic: gate on the real
-    // odds of the aimed shot connecting.
-    const dv = attacker.weapon.weaponClass === "melee" ? null : rangeDV(attacker.weapon.weaponClass, distance);
-    if (dv !== null) {
-        const aimChance = pAtLeast(dv + coverDV - (attacker.attackBonus(attacker.weapon) - 8));
-        if (aimChance < 0.35) { return {value: normal, aimed: false}; }
-    }
+    // Aiming is a specialist move, and under the soak curve the old test for it
+    // ("does a normal shot already punch through?") no longer means anything —
+    // a normal shot always punches through something. Decide it exactly instead:
+    // the placed shot hits harder and against less armour, and pays for both in
+    // accuracy. Multiply the two out and take whichever is worth more. No
+    // threshold to recalibrate every time the curve moves.
+    const w = attacker.weapon;
+    if (!TacticalAI.allowAimed || w.autofire) { return {value: normal, aimed: false}; }
+    const raw = w.averageDamage();
+    const bodyValue = applySoak(raw, effectiveSP(target), w.ap)
+        * expectedMult(edgeAt(attacker, target, distance, coverDV, false));
+    const headValue = applySoak(raw, headSP(target), w.ap) * AIMED_MULT
+        * expectedMult(edgeAt(attacker, target, distance, coverDV, true));
+    if (headValue <= bodyValue) { return {value: normal, aimed: false}; }
     const aimed = expectedNet(attacker, target, distance, coverDV, true);
     return aimed > normal ? {value: aimed, aimed: true} : {value: normal, aimed: false};
 }
@@ -238,14 +233,22 @@ export class TacticalAI {
             if (sniper) { return sniper; }
         }
 
-        // a dug-in target that autofire can't crack is worth pinning instead:
-        // a whole magazine of noise buys a turn where they can't shoot back
+        // A magazine of noise costs a dug-in target a third of its damage for two
+        // turns. The old gate only fired when shooting was mathematically futile
+        // — which nothing is any more, so the tactic had quietly become
+        // unreachable. Compare the trade instead: damage denied against damage
+        // dealt, and take whichever is worth more.
         if (self.weapon.autofire && self.mag >= 10) {
             const dist = Battlefield.gap(here, primary);
             const coverDV = Battlefield.coverPenaltyAt(primary, here);
-            if (coverDV > 0 && !nearest.pinned
-                && expectedNet(self, nearest, dist, coverDV, false) < 1.2
-                && Math.random() < 0.6) {
+            // Symmetric arithmetic: what suppressing denies them, against what
+            // shooting deals. Both sides use the same rollout, so a heavy hitter
+            // is worth silencing and a peashooter is worth simply shooting.
+            const mine = expectedNet(self, nearest, dist, coverDV, false);
+            const theirCover = Battlefield.coverPenaltyAt(here, primary);
+            const denied = expectedNet(nearest, self, dist, theirCover, false) * SUPPRESS_CUT * 2;
+            if (coverDV > 0 && !hasStatus(nearest, "suppressed")
+                && denied > mine && Math.random() < 0.6) {
                 return {suppressTarget: nearest, label: "suppress"};
             }
         }

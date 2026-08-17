@@ -7,8 +7,10 @@ import {Battlefield, FIELD_CAP} from "../src/ts/interact/battlefield";
 import {AbilityEvent, BleedEvent, BlastEvent, CoverGoneEvent, HackEvent, RoutEvent, ShotEvent,
     SkipEvent, StabilizeEvent, SuppressEvent} from "../src/ts/interact/battleEvents";
 import {Combat} from "../src/ts/interact/combat";
+import {TacticalAI} from "../src/ts/interact/tacticalAI";
 import {encounterSpec, spawnEncounter} from "../src/ts/interact/runMap";
 import {fighter, withRandom} from "./helpers";
+import {outgoingMult, stacksOf} from "../src/ts/interact/statuses";
 
 const byTitle = (t: string) => ARCHETYPES.find((a) => a.title === t)!;
 const adversary = (title: string, x: number, y: number, level: number = 4) => {
@@ -63,14 +65,15 @@ describe("battle-scoped critical injuries", () => {
 
     test("resetBattleState clears every injury and stance", () => {
         const me = fighter();
-        me.bleeding = 2; me.crippled = true; me.stunned = 1; me.pinned = true;
+        me.bleeding = 2; me.crippled = true; me.stunned = 1;
+        me.afflict("suppressed", 2); me.afflict("burn", 3); me.afflict("ward", 1);
         me.routed = true; me.moraleTested = true; me.abilityUsed = true; me.hackCooldown = 2;
         me.resetBattleState();
         expect(me.bleeding).toBe(0);
         expect(me.crippled).toBe(false);
         expect(me.stunned).toBe(0);
-        expect(me.pinned).toBe(false);
         expect(me.routed).toBe(false);
+        expect(me.statuses).toEqual({});   // one bag, one wipe
         expect(me.canFight()).toBe(true);
     });
 });
@@ -95,34 +98,73 @@ describe("ammo, reload and suppression", () => {
         });
     });
 
-    test("a pinned unit spends its next turn keeping its head down", () => {
-        Battlefield.COVER = [];
-        const me = fighter({x: 0, y: 5});
-        me.pinned = true;
-        const res = Combat.takeTurn(me, [me], [fighter({x: 0, y: 20})]);
-        const skip = res.events.find((e) => e.kind === "skip") as SkipEvent;
-        expect(skip.reason).toBe("pinned");
-        expect(res.events.some((e) => e.kind === "shot")).toBe(false);
-        expect(me.pinned).toBe(false);
+    // Suppression quietly became unreachable once every shot started doing
+    // damage: its old gate only fired when shooting was mathematically futile.
+    // The gate is a trade now, so pin it down — a dead tactic looks exactly
+    // like a working one from the outside.
+    test("suppressing a dug-in target is still a plan the AI will pick", () => {
+        Battlefield.COVER = [{x: 0, y: 28, kind: "crate"}];   // in front of the target, or it isn't cover
+        const gun = require("../src/ts/items/Equipment").default.weapons
+            .find((w: any) => w.autofire && w.weaponClass !== "melee" && w.shots >= 10);
+        const me = fighter({ref: 6, skill: 6, x: 0, y: 0});
+        me.weapon = gun.clone();
+        me.resetBattleState();
+        const foe = fighter({ref: 6, skill: 6, weapon: "AK-47 Medium Assault", x: 0, y: 30});
+        let chosen = 0;
+        for (let i = 0; i < 120; i++) {
+            if (TacticalAI.plan(me, [me], [foe]).label === "suppress") { chosen += 1; }
+        }
+        expect(chosen).toBeGreaterThan(0);
     });
 
-    test("autofire hoses an uncrackable covered target instead of whiffing", () => {
-        withRandom(0.5, () => {
-            Battlefield.COVER = [{x: 0, y: 38, kind: "crate"}];
+    // This used to assert that suppression ate the whole turn. Deleting a turn
+    // is the worst thing you can do to a fight nobody is playing, so suppression
+    // is a penalty now: the unit still acts, it just does less with it.
+    test("a suppressed unit keeps its turn and shoots worse for it", () => {
+        Battlefield.COVER = [];
+        const me = fighter({ref: 8, skill: 8, weapon: "WSA Autopistol", x: 0, y: 5});
+        me.afflict("suppressed", 2);
+        const res = Combat.takeTurn(me, [me], [fighter({x: 0, y: 10})]);
+        expect(res.events.some((e) => e.kind === "skip")).toBe(false);
+        expect(res.events.some((e) => e.kind === "shot")).toBe(true);
+        expect(outgoingMult(me)).toBeLessThan(1);
+        // and it is a duration effect, so the turn it just took cost it a stack
+        expect(stacksOf(me, "suppressed")).toBe(1);
+    });
+
+    test("stun is the only status that costs a turn, and it lasts exactly one", () => {
+        Battlefield.COVER = [];
+        const me = fighter({x: 0, y: 5});
+        me.afflict("stunned", 5);              // capped at 1 however hard you hit
+        expect(stacksOf(me, "stunned")).toBe(1);
+        const res = Combat.takeTurn(me, [me], [fighter({x: 0, y: 20})]);
+        expect((res.events.find((e) => e.kind === "skip") as SkipEvent).reason).toBe("stunned");
+        expect(stacksOf(me, "stunned")).toBe(0);
+    });
+
+    // This used to assert the opposite: against SP 18 behind cover, flat armour
+    // subtraction meant an autofire burst mathematically could not do damage,
+    // so the AI suppressed instead of firing into a wall. The soak curve has no
+    // walls — the burst is worth taking now, and the AI takes it.
+    test("no target is uncrackable: autofire puts damage through SP 18 behind cover", () => {
+        Battlefield.COVER = [{x: 0, y: 38, kind: "crate"}];
+        const gun = require("../src/ts/items/Equipment").default.weapons
+            .find((w: any) => w.autofire && w.weaponClass !== "melee" && w.shots >= 10);
+        let landed = 0, shots = 0;
+        for (let i = 0; i < 40; i++) {
             const auto = fighter({ref: 5, skill: 5, x: 0, y: 0});
-            const gun = require("../src/ts/items/Equipment").default.weapons
-                .find((w: any) => w.autofire && w.weaponClass !== "melee" && w.shots >= 10);
             auto.weapon = gun.clone();
             auto.resetBattleState();
             const tank = fighter({x: 0, y: 40});
             tank.equipment.upper = new (require("../src/ts/items/Armor").Armor)(
                 "upper", "Test Plate", "test", 1, 18, 0, "");
             const res = Combat.takeTurn(auto, [auto], [tank]);
-            const supp = res.events.find((e) => e.kind === "suppress") as SuppressEvent | undefined;
-            expect(supp).toBeTruthy();
-            expect(supp!.pinned).toBe(true);
-            expect(tank.pinned).toBe(true);
-        });
+            const shot = res.events.find((e) => e.kind === "shot") as any;
+            if (shot && shot.hit) { shots += 1; if (shot.damage > 0) { landed += 1; } }
+        }
+        expect(shots).toBeGreaterThan(30);   // fumbles are the only way to whiff now
+        // every shot that connects gets something through — that is the floor
+        expect(landed).toBe(shots);
     });
 });
 

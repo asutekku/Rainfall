@@ -1,6 +1,7 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
-import {aimPreview} from "../../interact/aimPreview";
+import {soak} from "../../interact/damageModel";
+import {shotPreview} from "../../interact/shotPreview";
 import {Battlefield} from "../../interact/battlefield";
 import {hudArmor, unitConditions} from "./hudInfo";
 
@@ -40,14 +41,14 @@ export class UnitCard extends React.Component<UnitCardProps, {}> {
     public override render() {
         const a = this.props.unit;
         const foe = this.props.enemies.indexOf(a) >= 0;
-        const marked = (foe ? this.props.party : this.props.enemies).some((o) => o.marking === a);
-        const conditions = unitConditions(a, marked);
+        const conditions = unitConditions(a);
         const anchor = this.props.party[0];
         const facing = anchor && anchor !== a;
         const dist = facing ? Math.round(Battlefield.distance(anchor!, a)) : null;
-        // Nobody aims by hand any more, so the odds are the explanation rather
-        // than the input: this is why your merc keeps missing this one.
-        const shot = facing ? aimPreview(foe ? anchor! : a, foe ? a : anchor!) : null;
+        // Every shot lands now, so the useful question is not "will it hit" but
+        // "how much of it does this one's armour keep". This is the explanation
+        // for why your merc chips at one target and cuts through another.
+        const shot = facing ? shotPreview(foe ? anchor! : a, foe ? a : anchor!) : null;
         const w = a.weapon;
         const rank = foe ? Math.max(1, Math.min(5, a.rank || 1)) : 0;
         const sub = foe && a.faction
@@ -64,17 +65,29 @@ export class UnitCard extends React.Component<UnitCardProps, {}> {
 
                     <dl className={"ucFacts"}>
                         <div><dt>Health</dt><dd>{Math.max(0, Math.ceil(a.health))} / {a.maxHealth}</dd></div>
-                        <div><dt>Armour</dt><dd>{hudArmor(a)} SP <i>stops that much off each hit</i></dd></div>
+                        <div><dt>Armour</dt><dd>{hudArmor(a)} SP{" "}
+                            <i>soaks {Math.round(soak(hudArmor(a)) * 100)}% of every hit</i></dd></div>
                         {dist !== null && <div><dt>Range</dt><dd>{dist} m from you</dd></div>}
-                        {shot && <div><dt>{foe ? "You hit it" : "It gets hit"}</dt><dd>
-                            {shot.ok
-                                ? <React.Fragment>
-                                    <b className={shot.pct >= 60 ? "ucHi" : shot.pct >= 30 ? "ucMid" : "ucLo"}>
-                                        {shot.pct}%</b>
-                                    {shot.covered ? <i>behind cover — harder to hit</i> : null}
-                                  </React.Fragment>
-                                : <b className={"ucLo"}>No shot — out of range</b>}
+                        {shot && <div><dt>{foe ? "You deal" : "It deals"}</dt><dd>
+                            {!shot.ok
+                                ? <b className={"ucLo"}>Nothing — out of range</b>
+                                : shot.unreachable
+                                ? <b className={"ucLo"}>Nothing — out of reach</b>
+                                : <React.Fragment>
+                                    <b className={shot.expected >= shot.onHit * 0.8 ? "ucHi"
+                                        : shot.expected >= shot.onHit * 0.5 ? "ucMid" : "ucLo"}>
+                                        ~{shot.expected}</b>
+                                    <i> a shot · {Math.round(shot.soaked * 100)}% soaked by armour
+                                        {shot.covered ? " · behind cover" : ""}</i>
+                                  </React.Fragment>}
                         </dd></div>}
+                        {shot && shot.ok && !shot.unreachable &&
+                            <div><dt>Shot lands</dt><dd className={"ucBands"}>
+                                <span className={"ucLo"}>{Math.round(shot.odds.graze * 100)}% graze</span>
+                                <span>{Math.round(shot.odds.hit * 100)}% clean</span>
+                                <span className={"ucHi"}>{Math.round(shot.odds.crit * 100)}% crit</span>
+                                <i>{shot.onCrit} on a crit</i>
+                            </dd></div>}
                         <div><dt>Weapon</dt><dd>
                             {w.name} <i>{w.diceThrows}d6{w.damage ? "+" + w.damage : ""}
                             {w.ap ? " · ignores armour" : ""}{w.autofire ? " · full auto" : ""}</i>
@@ -90,8 +103,9 @@ export class UnitCard extends React.Component<UnitCardProps, {}> {
                         <div className={"ucCond"}>
                             <h4>Right now</h4>
                             <ul>
-                                {conditions.map(([label, why], i) =>
-                                    <li key={i}><b>{label}</b> — {why}</li>)}
+                                {conditions.map(([label, why, bad], i) =>
+                                    <li key={i} className={bad ? "ucBad" : "ucGood"}>
+                                        <b>{label}</b> — {why}</li>)}
                             </ul>
                         </div>
                     )}

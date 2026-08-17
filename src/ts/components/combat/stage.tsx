@@ -2,7 +2,7 @@ import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {accentCss} from "../../actors/resources/factionStyles";
 import {Battlefield} from "../../interact/battlefield";
-import {rangeDV} from "../../interact/rangeTable";
+import {outOfRange} from "../../interact/damageModel";
 import {RunNode, RunState} from "../../interact/runMap";
 import {MainPanel} from "../mainPanel";
 import {BattleScene, PlaybackBundle} from "./battleScene";
@@ -62,7 +62,7 @@ export class Stage extends React.Component<StageProps, {}> {
         const shooter = this.props.actor;
         const dist = Math.round(Battlefield.distance(shooter, e));
         const cls = shooter.weapon.weaponClass;
-        const outOfRange = cls !== "melee" && rangeDV(cls, dist) === null;
+        const unreachable = cls !== "melee" && outOfRange(cls, dist);
         const temper = Stage.TEMPER[e.temperament] || Stage.TEMPER["balanced"]!;
         const sub = e.faction ? `${e.faction}${e.archetype ? " " + e.archetype : ""}` : e.role.name;
         return (
@@ -74,7 +74,7 @@ export class Stage extends React.Component<StageProps, {}> {
                 <span className={"temp " + temper[1]} title={"AI temperament"}>{temper[0]}</span>
                 <span className={"bar hp"}><i className={hpCls} style={{width: hpPct + "%"}}/></span>
                 <b className={"hpn " + hpCls}>{Math.max(0, Math.ceil(e.health))}</b>
-                <span className={"rng" + (outOfRange ? " oor" : "")}>{dist}m</span>
+                <span className={"rng" + (unreachable ? " oor" : "")}>{dist}m</span>
                 <span className={"sp"}>SP {this.enemyArmor(e)}</span>
             </button>);
     };

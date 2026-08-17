@@ -3,6 +3,7 @@ import {describe, expect, test} from "bun:test";
 // through helpers → Actor first leaves `class Player extends Actor` in TDZ
 import "../src/ts/interact/getItem";
 import {hudArmor, hudTags, unitConditions} from "../src/ts/components/combat/hudInfo";
+import {STATUS, StatusKey} from "../src/ts/interact/statuses";
 import {fighter} from "./helpers";
 
 describe("phone battle HUD row data", () => {
@@ -12,11 +13,21 @@ describe("phone battle HUD row data", () => {
 
     test("battle states become chips, worst first, capped at two", () => {
         const a = fighter();
-        a.bleeding = 2;
-        a.stunned = 1;
-        a.pinned = true;
+        a.afflict("bleed", 2);
+        a.afflict("suppressed", 1);
+        a.afflict("shred", 1);
         const tags = hudTags(a).map(([label]) => label);
-        expect(tags).toEqual(["BLD", "STN"]);
+        expect(tags.length).toBe(2);
+        expect(tags[0]).toBe("BLD");   // the damage-over-time outranks the rest
+    });
+
+    test("a status without a chip stays off the row and still reaches the card", () => {
+        const a = fighter();
+        a.afflict("crippled", 1);
+        a.afflict("hardened", 3);
+        expect(hudTags(a)).toEqual([]);
+        expect(unitConditions(a).map(([l]) => l)).toEqual(["Hardened", "Crippled"].sort((x, y) =>
+            unitConditions(a).findIndex(([l]) => l === x) - unitConditions(a).findIndex(([l]) => l === y)));
     });
 
     test("dying beats downed beats fled — one fate chip only", () => {
@@ -33,21 +44,24 @@ describe("phone battle HUD row data", () => {
         expect(hudTags(down).map(([l]) => l)).toEqual(["DOWN"]);
     });
 
-    test("marked and crippled stay off the row — the card names them", () => {
-        const a = fighter();
-        a.crippled = true;
-        expect(hudTags(a)).toEqual([]);
-        expect(unitConditions(a, true).map(([l]) => l)).toEqual(["Crippled", "Marked"]);
+    test("every status in the registry explains itself in words", () => {
+        for (const key of Object.keys(STATUS) as StatusKey[]) {
+            const a = fighter();
+            a.afflict(key, 2);
+            const named = unitConditions(a).find(([l]) => l === STATUS[key].label);
+            expect(named).toBeTruthy();
+            expect(named![1].length).toBeGreaterThan(10);
+            expect(named![2]).toBe(STATUS[key].debuff);
+        }
     });
 
-    test("every condition the card spells out carries an explanation", () => {
+    test("buffs and debuffs are told apart, so the card can colour them", () => {
         const a = fighter();
-        a.bleeding = 3;
-        a.stunned = 1;
-        a.pinned = true;
-        const named = unitConditions(a, false);
-        expect(named.map(([l]) => l)).toEqual(["Bleeding", "Stunned", "Pinned"]);
-        expect(named.every(([, why]) => why.length > 0)).toBe(true);
+        a.afflict("burn", 2);
+        a.afflict("thorns", 3);
+        const rows = unitConditions(a);
+        expect(rows.find(([l]) => l === "Burning")![2]).toBe(true);
+        expect(rows.find(([l]) => l === "Spiked")![2]).toBe(false);
     });
 
     test("armor reads the better of worn and subdermal plate", () => {
