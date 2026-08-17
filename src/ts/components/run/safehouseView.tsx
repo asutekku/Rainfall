@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {MetaFoot} from "./metaOverlay";
 
 export interface SafehouseViewProps {
     party: Actor[];
@@ -48,8 +49,6 @@ export class SafehouseView extends React.Component<SafehouseViewProps, Safehouse
             <div className={"metaOverlay"}>
                 <div className={"metaHead"}>
                     <span className={"metaTitle"}>☾ Safehouse</span>
-                    {done && <button className={"metaLeave"} onClick={() => this.props.onLeave([done])}>Move out ▸</button>}
-                    {!done && <button className={"metaLeaveGhost"} onClick={() => this.props.onLeave(["— no time to rest —"])}>Skip ▸</button>}
                 </div>
                 <div className={"ovScroll"}>
                     <div className={"ovInner"}>
@@ -81,6 +80,12 @@ export class SafehouseView extends React.Component<SafehouseViewProps, Safehouse
                         {done && <div className={"evResult"}><p>{done}</p></div>}
                     </div>
                 </div>
+                <MetaFoot>
+                    {done
+                        ? <button className={"metaLeave"} onClick={() => this.props.onLeave([done])}>Move out ▸</button>
+                        : <button className={"metaLeaveGhost"}
+                                  onClick={() => this.props.onLeave(["— no time to rest —"])}>Skip the night ▸</button>}
+                </MetaFoot>
             </div>);
     }
 }

@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {MetaFoot} from "./metaOverlay";
 import {Purse} from "../../interact/crew";
 import {EventCheck, EventCtx, EventOutcome, GameEvent, makeCtx, odds, rollCheck} from "../../interact/events";
 
@@ -154,13 +155,16 @@ export class EventView extends React.Component<EventViewProps, EventViewState> {
                         {done && (
                             <div className={"evResult"}>
                                 {done.lines.map((l, i) => <p key={i} style={{animationDelay: `${i * 0.12}s`}}>{l}</p>)}
-                                <button className={"metaLeave"} onClick={() => this.props.onDone(done)}>
-                                    {done.combat ? "Weapons out ▸" : "Move on ▸"}
-                                </button>
                             </div>
                         )}
                     </div>
                 </div>
+                {done && <MetaFoot>
+                    <button className={"metaLeave" + (done.combat ? " metaDanger" : "")}
+                            onClick={() => this.props.onDone(done)}>
+                        {done.combat ? "Weapons out ▸" : "Move on ▸"}
+                    </button>
+                </MetaFoot>}
             </div>);
     }
 }
