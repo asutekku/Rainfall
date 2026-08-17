@@ -3,6 +3,8 @@ import {Actor} from "../../actors/Actor";
 import {Armor} from "../../items/Armor";
 import {Weapon} from "../../items/Weapon";
 import {Medical} from "../../items/Scrap";
+import {Crew} from "../../interact/crew";
+import {KIT, KIT_ORDER} from "../../interact/loadout";
 
 export interface InventoryProps {
     party: Actor[];
@@ -20,6 +22,14 @@ interface InventoryState { memberIdx: number; version: number; }
  * mid-fight the loadout is locked (holster discipline).
  */
 export class Inventory extends React.Component<InventoryProps, InventoryState> {
+
+    /** What's in the crew's ordnance crate, in one line. */
+    private static crateLine(): string {
+        const crate = Crew.active ? Crew.active.kit : null;
+        if (!crate) { return "empty"; }
+        const parts = KIT_ORDER.filter((k) => crate[k] > 0).map((k) => `${KIT[k].label} ×${crate[k]}`);
+        return parts.length ? parts.join(" · ") : "empty";
+    }
 
     constructor(props: InventoryProps) {
         super(props);
@@ -116,11 +126,13 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                         </span>
                     </div>
                 )}
+                {/* Ordnance is crew property, not personal: it lives in the crate
+                    and gets handed out at staging, two pieces a job. */}
                 <div className={"gearRow eq"}>
                     <span className={"gearSlot"}>✸</span>
                     <span className={"mkNameWrap"}>
-                        <span className={"mkName"}>Frag grenades ×{a.grenades}</span>
-                        <span className={"mkDetail"}>thrown in battle · restock at markets or off bodies</span>
+                        <span className={"mkName"}>Crate — {Inventory.crateLine()}</span>
+                        <span className={"mkDetail"}>picked at staging · restock at markets or off bodies</span>
                     </span>
                 </div>
             </div>);

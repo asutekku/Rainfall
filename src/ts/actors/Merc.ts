@@ -32,7 +32,10 @@ export class Merc extends Actor {
         this.gender = Name.getGender();
         this.name = offer.name;
         this.role = new Role(offer.role);
-        this.grenades = 1;   // every hire walks in with one frag on the belt
+        // Every hire turns up with one frag. It does not stay on their belt —
+        // RunController.outfitHire tips it into the crew crate, because belts
+        // are packed at staging now. See loadout.ts.
+        this.grenades = 1;
         this.skill = this.role.skill;
         this.lifepath = CharacterCreation.randomLifepath();
         this.offerId = offer.id;

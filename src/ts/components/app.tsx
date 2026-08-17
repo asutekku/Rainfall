@@ -14,11 +14,12 @@ import {Creator} from "./creation/creator";
 import {CharacterCreation, CharacterSpec} from "../actors/resources/CharacterCreation";
 import {MobileTab, MobileTabs} from "./mobileTabs";
 import {RunNode, RunState, spawnEncounter} from "../interact/runMap";
+import {Deployment} from "../interact/loadout";
 import {RunController} from "../interact/runController";
 import {Events, EventOutcome, makeCtx} from "../interact/events";
 import {RunEndView} from "./run/runEndView";
 import {DebriefView} from "./run/debriefView";
-import {BattleRecorder, BattleReport} from "../interact/battleReport";
+import {BattleReport} from "../interact/battleReport";
 import {EventView} from "./run/eventView";
 import {MarketView} from "./run/marketView";
 import {SafehouseView} from "./run/safehouseView";
@@ -26,6 +27,7 @@ import {NetDiveView} from "./run/netDiveView";
 import {Crew} from "../interact/crew";
 import {MercOffer} from "../interact/mercMarket";
 import {FixerView} from "./run/fixerView";
+import {StagingView} from "./run/stagingView";
 import {SectorClearView} from "./run/sectorClearView";
 import {BattleNotice, PlaybackBundle} from "./combat/battleScene";
 import {BattleEvent} from "../interact/battleEvents";
@@ -38,7 +40,19 @@ import {AugOffer, Chrome} from "../interact/chrome";
 import {AugPickView} from "./run/augPickView";
 
 /** Which run-loop screen is on top. "combat" falls through to the ops shell. */
-export type RunScreen = "map" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "event" | "net" | "end" | "augpick";
+export type RunScreen = "map" | "staging" | "combat" | "debrief" | "merchant" | "rest" | "hire" | "sector" | "event" | "net" | "end" | "augpick";
+
+/** A rolled wave waiting on the player's orders. */
+export interface PendingFight {
+    /** what the after-action report files it under */
+    kind: string;
+    /** the line the feed opens the fight with */
+    label: string;
+    /** how the staging screen titles it */
+    headline: string;
+    /** rounds to survive, if this one carries a clock */
+    holdout?: number;
+}
 
 /**
  * Where the game is, at the coarsest level. This used to be a `creating`
@@ -81,6 +95,12 @@ export interface InterfaceAppState {
     report: BattleReport | null;
     /** The street encounter being resolved (screen === "event"). */
     eventId: string | null;
+    /**
+     * The fight waiting behind the staging screen. Both a map node and an
+     * encounter that turned ugly end up here, so the two share one path into
+     * combat — and an ambush is still a fight you get to pack for.
+     */
+    pending: PendingFight | null;
     /** Encounters already seen this run (no reruns until the pool dries up). */
     usedEvents: string[];
     /** The crew's shared purse — every payday, hire and store buy runs through it. */
@@ -159,6 +179,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             screen: "map",
             report: null,
             eventId: null,
+            pending: null,
             usedEvents: [],
             crew: new Crew(),
             augOffers: [],
@@ -282,6 +303,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
         }
         if (run && this.state.screen === "net") {
             return <NetDiveView party={this.state.party} onLeave={this.leaveSafehouse}/>;
+        }
+        if (run && this.state.screen === "staging" && this.state.pending) {
+            return <StagingView pending={this.state.pending}
+                                party={this.state.party} enemies={this.state.currentEnemies}
+                                kit={this.state.crew.kit} onDeploy={this.deploySquad}/>;
         }
         if (run && this.state.screen === "event" && this.state.eventId) {
             const ev = Events.byId(this.state.eventId);
@@ -428,6 +454,12 @@ export class App extends React.Component<{}, InterfaceAppState> {
             () => { if (this.state.screen === "combat") { this.beginBattle(); } });
     };
 
+    /** Staging is done: apply the orders and load the street. */
+    private deploySquad = (plan: Deployment) => {
+        this.setState(RunController.deploy(this.state, plan, this.logLength) as any,
+            () => { if (this.state.screen === "combat") { this.beginBattle(); } });
+    };
+
     /** A street encounter resolved: apply its fallout, then advance — or fight. */
     private finishEvent = (outcome: EventOutcome) => {
         const state = this.state;
@@ -457,14 +489,14 @@ export class App extends React.Component<{}, InterfaceAppState> {
             // authored level is an offset on the sector curve (1 = baseline).
             const base = Math.max(1, run.sector + Math.floor(RunController.levelOf(state.party) / 4));
             const enemies = spawnEncounter({...outcome.combat, level: base + outcome.combat.level - 1});
-            Battlefield.deploy(state.party, enemies);
-            BattleRecorder.begin(state.party, enemies, "event", "it turned ugly");
+            // An ambush is still a fight you get to pack for: it goes through
+            // staging like any other, so there is exactly one road into combat.
             this.setState({
-                run: nextRun, eventId: null, screen: "combat",
+                run: nextRun, eventId: null, screen: "staging",
+                pending: {kind: "event", label: "it turned ugly", headline: "IT TURNED UGLY"},
                 currentEnemies: enemies, activeEnemy: enemies[0], activeChar: state.party[0],
-                activeMainPanel: "Combat", mobileTab: "arena",
                 messages: [...lines, ...state.messages].slice(0, this.logLength),
-            } as any, this.beginBattle);
+            } as any);
             return;
         }
         const midState = {...state, run: nextRun} as InterfaceAppState;
@@ -611,6 +643,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
         const boss = foes.some((e) => (e.rank || 0) >= 5);
         this.setState({
             battleId: this.state.battleId + 1,
+            // The board's announcements are per-fight. Left in state they replay
+            // on the next one: the arena unmounts between fights, so its
+            // already-shown guard resets and the last wave's REINFORCEMENTS
+            // banner lands on top of the new contact.
+            notice: null,
             playback: null, turnOrder: [], round: 0, holdLeft: 0, inspecting: null,
             activeMainPanel: "Combat", mobileTab: "arena",
             messages: [FeedLog.contact(foes), ...this.state.messages].slice(0, this.logLength) as any,
@@ -698,17 +735,22 @@ export class App extends React.Component<{}, InterfaceAppState> {
      */
     private maybeReinforce(): void {
         const node = this.state.run && this.state.run.node;
-        if (!node || (node.type !== "elite" && node.type !== "boss")) { return; }
-        if (this.reinforced || this.roundNo !== 2) { return; }
+        // Bosses no longer call anyone. Two extra bodies on top of a heavy took
+        // the squad's odds from 66% to 23% in the sim — the fight stopped being
+        // hard and started being arithmetic you cannot win.
+        if (!node || node.type !== "elite") { return; }
+        if (this.reinforced || this.roundNo < 3) { return; }
         const foes = this.state.currentEnemies;
+        const living = foes.filter((e) => e.canFight()).length;
+        // Only once you are actually winning, and only ever one. Topping the
+        // street back up to the cap meant every kill was undone as it happened,
+        // which is the whole of "reinforcements make it unbeatable".
+        if (living > 2 || living >= FIELD_CAP) { return; }
         const lead = foes.find((e) => e.canFight());
         if (!lead) { return; }
-        const room = FIELD_CAP - foes.filter((e) => e.canFight()).length;
-        if (room <= 0) { this.reinforced = true; return; }
         this.reinforced = true;
-        const want = node.type === "boss" ? 2 : Math.random() < 0.5 ? 2 : 1;
-        const n = Math.min(want, room);
-        const rank = node.type === "boss" ? 2 : 1;
+        const n = 1;
+        const rank = 1;
         const fresh = ActorController.getReinforcements(lead.faction, n, RunController.levelOf(this.state.party), rank);
         fresh.forEach((a, i) => {
             a.position.x = (i - (n - 1) / 2) * 6 + (Math.random() - 0.5) * 3;
@@ -725,8 +767,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
             // the feed alone was not enough: more bodies simply appeared on the
             // street with nothing on screen to say where they came from
             notice: {id: Date.now(), tone: "warn", title: "⚠ REINFORCEMENTS",
-                     sub: `${n} MORE ${faction} INBOUND`},
-            messages: [FeedLog.sys(`⚠ REINFORCEMENTS — ${n} more ${faction} inbound`),
+                     sub: `ONE MORE ${faction} INBOUND`},
+            messages: [FeedLog.sys(`⚠ REINFORCEMENTS — one more ${faction} inbound`),
                 ...this.state.messages].slice(0, this.logLength) as any,
         });
     }

@@ -1,7 +1,8 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {AugOffer, Chrome} from "../../interact/chrome";
-import {Purse} from "../../interact/crew";
+import {Crew, Purse} from "../../interact/crew";
+import {KIT, KIT_ORDER, KIT_PICKS} from "../../interact/loadout";
 import {Economy} from "../../interact/economy";
 import {GetItem} from "../../interact/getItem";
 import Equipment from "../../items/Equipment";
@@ -104,17 +105,25 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 return `${med.name} into the med pouch.`;
             },
         });
-        out.push({
-            name: "Crate of frags", cost: 120, detail: "ordnance · +1 grenade per member",
-            info: [
-                ["Effect", "every standing member pockets one frag grenade"],
-                ["Use", "thrown in battle — 6d6 in a blast radius, armour halved"],
-            ],
-            blurb: "Militech surplus, crate stencils sanded off.",
-            buy: () => {
-                party.forEach((m) => { if (m.canFight()) { m.grenades += 1; } });
-                return "Frags handed round. Everyone stands a little straighter.";
-            },
+        // Ordnance goes into the crew's crate, not onto a belt: what leaves the
+        // crate is decided at staging, two pieces a job. Two kinds on offer per
+        // market, so the flashbang you wanted is not always the one for sale.
+        KIT_ORDER.slice().sort(() => Math.random() - 0.5).slice(0, 2).forEach((item) => {
+            const spec = KIT[item];
+            out.push({
+                name: `${spec.label} ×2`, cost: Math.round(spec.cost * 1.7), detail: "ordnance · into the crate",
+                info: [
+                    ["Effect", spec.blurb],
+                    ["Thrown", spec.when],
+                    ["Carried", `chosen at staging — ${KIT_PICKS} pieces go out on a job`],
+                ],
+                blurb: "Militech surplus, crate stencils sanded off.",
+                buy: () => {
+                    const crate = Crew.active ? Crew.active.kit : null;
+                    if (crate) { crate[item] += 2; }
+                    return `Two ${spec.label.toLowerCase()}s into the crate.`;
+                },
+            });
         });
         return out;
     }

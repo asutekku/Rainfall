@@ -27,6 +27,13 @@ export class Actor extends GameObject {
     public alive: boolean;
     public override position: ObjectPosition;
     public temperament: string;   // tactical AI personality: balanced|aggressive|flanker|camper|berserker
+    /**
+     * Standing orders for this fight: push | steady | hold, set at staging.
+     * Null on anyone nobody gave orders to — every hostile, and the crew before
+     * they deploy — which reads as "steady" everywhere it is consulted. See
+     * loadout.ts for what each one trades.
+     */
+    public stance: string | null;
     public auto: boolean;         // squad member played by the tactical AI instead of the player
     public grenades: number;      // frag grenades on the belt (throwing one is the turn's attack)
     public smokes: number;        // smoke grenades: pop a cloud that spoils shots and laser locks
@@ -274,6 +281,7 @@ export class Actor extends GameObject {
         this.kills = 0;
         this.hireable = false;
         this.temperament = "balanced";
+        this.stance = null;
         this.auto = false;
         this.grenades = 0;
         this.smokes = 0;

@@ -2,12 +2,14 @@ import {describe, expect, test} from "bun:test";
 import {Battlefield} from "../src/ts/interact/battlefield";
 import {BattleRecorder} from "../src/ts/interact/battleReport";
 import {RunController} from "../src/ts/interact/runController";
+import {Crew} from "../src/ts/interact/crew";
+import {emptyKit} from "../src/ts/interact/loadout";
 import {TacticalAI} from "../src/ts/interact/tacticalAI";
 import {fighter} from "./helpers";
 
 describe("RunController.step — the per-turn fight arbiter", () => {
-    const baseState = (party: any[], enemies: any[]): any => ({
-        party, currentEnemies: enemies,
+    const baseState = (party: any[], enemies: any[], crew: Crew = new Crew(0, emptyKit())): any => ({
+        party, currentEnemies: enemies, crew,
         run: {outcome: "active"}, screen: "combat",
         messages: [], mobileTab: "arena", unread: 0, report: null,
     });

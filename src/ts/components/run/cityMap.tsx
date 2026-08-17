@@ -5,6 +5,8 @@ import {LineGeometry} from "three/examples/jsm/lines/LineGeometry.js";
 import {LineMaterial} from "three/examples/jsm/lines/LineMaterial.js";
 import {Actor} from "../../actors/Actor";
 import {NodeType, RunNode, RunState, edgeKey} from "../../interact/runMap";
+import {Forecast, ODDS_LABEL, forecast} from "../../interact/forecast";
+import {RunController} from "../../interact/runController";
 import {Pt} from "../../interact/cityGen";
 
 // node type -> [colour, label, glyph]
@@ -72,6 +74,9 @@ export class CityMap extends React.Component<CityMapProps, {}> {
     private travelDot!: THREE.Mesh;
     private travelAnim: { node: RunNode; pts: THREE.Vector3[]; seg: number; segT: number; speed: number } | null = null;
     private labels: { [id: string]: HTMLDivElement } = {};
+    /** Fight forecasts, held still between real changes — see `readOdds`. */
+    private odds: { [id: string]: Forecast | null } = {};
+    private oddsKey = "";
     private texCache: { [key: string]: THREE.CanvasTexture } = {};
     private raf = 0;
     private t = 0;
@@ -420,9 +425,41 @@ export class CityMap extends React.Component<CityMapProps, {}> {
      * nature when adjacent (the boss is always the visible landmark). Motion is
      * reserved for what's tappable right now.
      */
+    /**
+     * The read on a fight, held still.
+     *
+     * Two things would otherwise make this lie. `applyStates` runs on every
+     * update and a forecast rolls sample waves, so calling it straight through
+     * would let a node wobble between RISKY and EVEN while the player sat there
+     * deciding. And every firefight in a sector draws from the same table, so
+     * rolling each node separately painted two identical nodes as FAVOURED and
+     * RISKY — a difference to act on, invented out of noise.
+     *
+     * So it reads once per node *type* and caches on the things that genuinely
+     * change the answer: where the squad stands, how many of them there are and
+     * what shape they're in. Same run state, same words on the board; two
+     * firefights read the same because they are the same.
+     */
+    private readOdds(run: RunState): { [id: string]: Forecast | null } {
+        const health = this.props.party.reduce((n, p) => n + Math.max(0, Math.round(p.health)), 0);
+        const key = `${run.sector}:${run.position}:${this.props.party.length}:${health}:${run.clearedIds.length}`;
+        if (key === this.oddsKey) { return this.odds; }
+        this.oddsKey = key;
+        this.odds = {};
+        const level = RunController.levelOf(this.props.party);
+        const byType: { [t: string]: Forecast | null } = {};
+        run.nodes.forEach((n) => {
+            if (run.reachableIds.indexOf(n.id) < 0 || run.clearedIds.indexOf(n.id) >= 0) { return; }
+            if (!(n.type in byType)) { byType[n.type] = forecast(this.props.party, n, run.sector, level); }
+            this.odds[n.id] = byType[n.type]!;
+        });
+        return this.odds;
+    }
+
     private applyStates() {
         const run = this.props.run;
         const ms = this.markerScale();
+        const odds = this.readOdds(run);
 
         this.markers.forEach((m) => {
             const id = m.node.id;
@@ -461,6 +498,16 @@ export class CityMap extends React.Component<CityMapProps, {}> {
                 beamMat.color.setHex(t[0]); beamMat.opacity = 0.85; beamMat.linewidth = 3;
                 label.style.display = "block";
                 label.textContent = `${t[1]} · ${Math.round(this.routeLen(run.position, id))}m`;
+                const fc = odds[id];
+                if (fc) {
+                    // Second line, only on fights: how many, and how it looks.
+                    // This is the one place the map can say that signing a third
+                    // body at the fixer's table is what turns GRIM into EVEN.
+                    const read = document.createElement("i");
+                    read.className = "odds o-" + fc.odds;
+                    read.textContent = `${fc.foes} hostile${fc.foes === 1 ? "" : "s"} · ${ODDS_LABEL[fc.odds]}`;
+                    label.appendChild(read);
+                }
                 label.style.borderColor = css(t[0]);
             } else if (reachable && cleared) {
                 apply(0x9aa4ad, 0.16, 0.7, 0.6, 1.15, 0.45);

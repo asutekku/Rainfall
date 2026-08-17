@@ -9,6 +9,7 @@ import {Check} from "./check";
 import {HitQuality, QUALITY_MULT, AIMED_EDGE, coverEdge, outOfRange, rangeEdge, rollQuality} from "./damageModel";
 import {STATUS, StatusKey, applyStatus, clearRoundStatuses, hasStatus, incomingMult,
     outgoingMult, stacksOf, statusEdge, tickStatuses} from "./statuses";
+import {stanceIn, stanceOut} from "./loadout";
 import {BLAST_RADIUS, Battlefield, EMP_RADIUS, FLASH_RADIUS, GRENADE_RANGE, Point} from "./battlefield";
 import {TacticalAI, Plan} from "./tacticalAI";
 import {Economy} from "./economy";
@@ -94,6 +95,9 @@ export class Combat {
         d *= QUALITY_MULT[quality];
         d *= outgoingMult(actor);
         d *= incomingMult(target);
+        // standing orders, set at staging — see loadout.ts for the trade
+        d *= stanceOut(actor);
+        d *= stanceIn(target);
         return Math.max(1, Math.round(d));
     }
 
