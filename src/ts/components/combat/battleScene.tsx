@@ -5,6 +5,7 @@ import {BLAST_RADIUS, Battlefield, Point} from "../../interact/battlefield";
 import {AbilityEvent, BattleEvent, BlastEvent, CoverGoneEvent, HackEvent, MoveEvent, RoutEvent,
     ShotEvent, StabilizeEvent, SuppressEvent} from "../../interact/battleEvents";
 import {Streetscape, generateStreetscape} from "../../interact/streetscape";
+import {STATUS} from "../../interact/statuses";
 import {FactionStyle, styleFor} from "../../actors/resources/factionStyles";
 
 /**
@@ -940,13 +941,27 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                     }
                     break;
                 }
-                case "bleed": {
+                case "bleed": {   // the damage-over-time tick: bleed, fire, toxins
                     const u = this.unitFor(ev.actor);
                     if (u) {
+                        const burning = ev.sources.indexOf("burn") >= 0;
+                        const toxic = !burning && ev.sources.indexOf("toxin") >= 0;
                         this.acts.push({dur: D(0.5), t: 0, start: () => {
                             this.floater(u, String(ev.damage), "tick");
-                            this.spawnSparks(this.unitAnchor(u, 1.1), 0xc02020, 4);
+                            this.spawnSparks(this.unitAnchor(u, 1.1),
+                                burning ? 0xff8a30 : toxic ? 0x8fd94f : 0xc02020, burning ? 7 : 4);
                             if (ev.dropped) { this.floater(u, "DOWN", "down"); }
+                        }});
+                    }
+                    break;
+                }
+                case "status": {   // something stuck to someone — say which
+                    const u = this.unitFor(ev.actor);
+                    if (u) {
+                        const def = STATUS[ev.status];
+                        this.acts.push({dur: D(0.35), t: 0, start: () => {
+                            this.floater(u, ev.warded ? "WARDED" : def.label.toUpperCase(),
+                                ev.warded ? "buff" : def.debuff ? "mark" : "buff");
                         }});
                     }
                     break;

@@ -2,6 +2,7 @@ import {Actor} from "../actors/Actor";
 import {AugLine, AugTier, Cyberware, INSTALL_HL, upgradeHL} from "../items/Cyberware";
 import AUG_LINES from "../../objects/cyberware";
 import {GetItem} from "./getItem";
+import {applyStatus} from "./statuses";
 
 /** One thing a ripperdoc / boss can put in front of the player. */
 export interface AugOffer {
@@ -214,6 +215,11 @@ export class Chrome {
             p.squadInitRt = squadInit;
             p.squadHitRt = squadHit + (i > 0 ? mercHit : 0);
             p.actFirstPending = p.chromeHas("actFirst");
+            // Sandevistan Overclock does what its name says: the opening rounds
+            // are lived at double speed, not merely first.
+            if (p.chromeHas("actFirst")) { applyStatus(p, "overclock", 2); }
+            const spikes = p.chromeNum("thorns");
+            if (spikes > 0) { applyStatus(p, "thorns", spikes); }
             p.grazeUsed = false;
             // self-healing: a granted cyberweapon that was pruned or stripped regrows
             p.cybernetics.forEach((c) => {

@@ -1,28 +1,34 @@
 import type {Actor} from "../../actors/Actor";
+import {STATUS, activeStatuses} from "../../interact/statuses";
 
 /**
  * Row data for the phone battle HUD, kept free of runtime imports (type-only
  * Actor) so tests can load it without dragging the component graph — pulling
  * React + Actor through a component module trips the actors' circular-import
  * order and leaves `class Player extends Actor` with an uninitialised base.
+ *
+ * Both the chips and the card's plain-language list are derived from the
+ * status registry rather than written out here, so adding an effect needs no
+ * edit in the UI at all — declare it in statuses.ts and it shows up.
  */
 
 /**
  * Battle states worth a chip on a 34px row, worst first — only two fit.
  *
- * Deliberately short: a chip has to change what you expect to happen next.
- * MARKED and CRIPPLED do not (nothing you can do about either), so they live
- * in the unit card with the rest of the vocabulary instead of stealing width
- * from the states that are about to cost someone the fight.
+ * A status earns a chip by changing what you expect to happen next. The rest
+ * of the vocabulary lives on the unit card, which has room to say what it
+ * means instead of abbreviating it to three letters nobody can look up.
  */
 export function hudTags(a: Actor): Array<[string, string]> {
     const t: Array<[string, string]> = [];
     if (a.mortallyWounded) { t.push(["DYING", "s-dying"]); }
     else if (a.routed) { t.push(["FLED", "s-down"]); }
     else if (!a.canFight()) { t.push(["DOWN", "s-down"]); }
-    if (a.bleeding > 0) { t.push(["BLD", "s-bad"]); }
-    if (a.stunned > 0) { t.push(["STN", "s-warn"]); }
-    if (a.pinned) { t.push(["PIN", "s-warn"]); }
+    for (const [key] of activeStatuses(a)) {
+        const def = STATUS[key];
+        if (!def.chip) { continue; }
+        t.push([def.chip, "s-" + def.tone]);
+    }
     return t.slice(0, 2);
 }
 
@@ -33,18 +39,22 @@ export function hudArmor(a: Actor): number {
 }
 
 /**
- * Every condition on a unit, spelled out. The row abbreviates because it has
- * 34px; this is the legend behind it, and the only place CRP/MRK are named.
+ * Every status on a unit, spelled out with its live stack count. The row
+ * abbreviates because it has 34px; this is the legend behind it, and the only
+ * place the whole vocabulary is written in words.
  */
-export function unitConditions(a: Actor, marked: boolean): Array<[string, string]> {
-    const c: Array<[string, string]> = [];
-    if (a.mortallyWounded) { c.push(["Dying", "bleeding out — one turn from dead unless stabilised"]); }
-    else if (a.routed) { c.push(["Fled", "morale broke; ran off the street"]); }
-    else if (!a.canFight()) { c.push(["Down", "out of the fight, not dead"]); }
-    if (a.bleeding > 0) { c.push(["Bleeding", `losing health every turn (${a.bleeding})`]); }
-    if (a.stunned > 0) { c.push(["Stunned", "loses the next turn"]); }
-    if (a.pinned) { c.push(["Pinned", "suppressed — can't advance"]); }
-    if (a.crippled) { c.push(["Crippled", "a limb is gone; slower and less accurate"]); }
-    if (marked) { c.push(["Marked", "targeted — incoming fire hits harder"]); }
-    return c;
+export function unitConditions(a: Actor): Array<[string, string, boolean]> {
+    const out: Array<[string, string, boolean]> = [];
+    if (a.mortallyWounded) {
+        out.push(["Dying", "bleeding out — one turn from dead unless stabilised", true]);
+    } else if (a.routed) {
+        out.push(["Fled", "morale broke; ran off the street", true]);
+    } else if (!a.canFight()) {
+        out.push(["Down", "out of the fight, not dead", true]);
+    }
+    for (const [key, n] of activeStatuses(a)) {
+        const def = STATUS[key];
+        out.push([def.label, def.explain(n), def.debuff]);
+    }
+    return out;
 }

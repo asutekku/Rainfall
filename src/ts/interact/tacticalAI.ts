@@ -2,6 +2,7 @@ import {Actor} from "../actors/Actor";
 import {Weapon} from "../items/Weapon";
 import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "./battlefield";
 import {QUALITY_MULT, applySoak, AIMED_EDGE, AIMED_MULT, aimedSP, coverEdge, expectedMult, outOfRange, rangeEdge, rollQuality} from "./damageModel";
+import {SUPPRESS_CUT, hasStatus, incomingMult, outgoingMult, spDelta, statusEdge} from "./statuses";
 
 /**
  * Tactical combat AI.
@@ -68,7 +69,7 @@ const d6 = (): number => Math.floor(Math.random() * 6) + 1;
 /** Body stopping power: the better of worn and subdermal. AP is applySoak's job. */
 function effectiveSP(target: Actor): number {
     const worn = target.equipment.upper ? target.equipment.upper.stoppingPower : 0;
-    return Math.max(worn, target.cyberSP());
+    return Math.max(0, Math.max(worn, target.cyberSP()) + spDelta(target));
 }
 
 /** The armour an aimed shot has to beat: the better of helmet and half the plate. */
@@ -90,8 +91,10 @@ function sampleKineticDamage(w: Weapon): number {
 }
 
 /** Net damage past armour for a landed hit — head shots use head SP and double what gets through. */
-function landedDamage(w: Weapon, target: Actor, aimed: boolean, mult: number): number {
-    const dmg = Math.round(sampleKineticDamage(w) * mult);
+function landedDamage(w: Weapon, target: Actor, aimed: boolean, mult: number,
+                      attacker: Actor): number {
+    const dmg = Math.round(sampleKineticDamage(w) * mult
+        * outgoingMult(attacker) * incomingMult(target));
     return aimed
         ? Math.round(applySoak(dmg, headSP(target), w.ap) * AIMED_MULT)
         : applySoak(dmg, effectiveSP(target), w.ap);
@@ -100,7 +103,7 @@ function landedDamage(w: Weapon, target: Actor, aimed: boolean, mult: number): n
 /** The accuracy edge a shot from `distance` through `coverDV` would carry. */
 function edgeAt(attacker: Actor, target: Actor, distance: number, coverDV: number, aimed: boolean): number {
     const w = attacker.weapon;
-    const base = attacker.attackBonus(w) + (aimed ? AIMED_EDGE : 0);
+    const base = attacker.attackBonus(w) + (aimed ? AIMED_EDGE : 0) + statusEdge(attacker);
     return w.weaponClass === "melee"
         ? base + MELEE_BASE - target.evasion()
         : base + rangeEdge(w.weaponClass, distance) + coverEdge(coverDV);
@@ -119,9 +122,10 @@ function sampleNet(attacker: Actor, target: Actor, distance: number, coverDV: nu
     if (w.autofire) {   // autofire can't aim; the burst multiplier reads off the band
         const maxMult = w.weaponClass === "rifle" ? 4 : 3;
         const mult = Math.min(quality === "graze" ? 1 : quality === "hit" ? 2 : maxMult, maxMult);
-        return applySoak((d6() + d6()) * mult, effectiveSP(target), w.ap);
+        return applySoak(Math.round((d6() + d6()) * mult
+            * outgoingMult(attacker) * incomingMult(target)), effectiveSP(target), w.ap);
     }
-    return landedDamage(w, target, aimed, QUALITY_MULT[quality]);
+    return landedDamage(w, target, aimed, QUALITY_MULT[quality], attacker);
 }
 
 /** Mean net damage across the given distance + cover, optionally aiming for the head. */
@@ -229,14 +233,22 @@ export class TacticalAI {
             if (sniper) { return sniper; }
         }
 
-        // a dug-in target that autofire can't crack is worth pinning instead:
-        // a whole magazine of noise buys a turn where they can't shoot back
+        // A magazine of noise costs a dug-in target a third of its damage for two
+        // turns. The old gate only fired when shooting was mathematically futile
+        // — which nothing is any more, so the tactic had quietly become
+        // unreachable. Compare the trade instead: damage denied against damage
+        // dealt, and take whichever is worth more.
         if (self.weapon.autofire && self.mag >= 10) {
             const dist = Battlefield.gap(here, primary);
             const coverDV = Battlefield.coverPenaltyAt(primary, here);
-            if (coverDV > 0 && !nearest.pinned
-                && expectedNet(self, nearest, dist, coverDV, false) < 1.2
-                && Math.random() < 0.6) {
+            // Symmetric arithmetic: what suppressing denies them, against what
+            // shooting deals. Both sides use the same rollout, so a heavy hitter
+            // is worth silencing and a peashooter is worth simply shooting.
+            const mine = expectedNet(self, nearest, dist, coverDV, false);
+            const theirCover = Battlefield.coverPenaltyAt(here, primary);
+            const denied = expectedNet(nearest, self, dist, theirCover, false) * SUPPRESS_CUT * 2;
+            if (coverDV > 0 && !hasStatus(nearest, "suppressed")
+                && denied > mine && Math.random() < 0.6) {
                 return {suppressTarget: nearest, label: "suppress"};
             }
         }

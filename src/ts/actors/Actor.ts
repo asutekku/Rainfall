@@ -1,4 +1,5 @@
 import {AIMED_MULT, aimedSP, applySoak} from "../interact/damageModel";
+import {StatusBag, StatusKey, applyStatus, clearStatus, spDelta, stacksOf} from "../interact/statuses";
 import {GetItem} from "../interact/getItem";
 import {Armor} from "../items/Armor";
 import {Cyberware, CyberwareEffects} from "../items/Cyberware";
@@ -41,14 +42,18 @@ export class Actor extends GameObject {
 
     // --- battle-scoped combat state: injuries and stances that last exactly
     // one engagement. Battlefield.deploy() wipes the lot before every fight. ---
-    public bleeding: number;      // HP lost at the start of each of this unit's turns
-    public crippled: boolean;     // leg injury: movement halved (visible limp)
-    public stunned: number;       // turns to sit out (flashbangs, big hits, EMP)
-    public pinned: boolean;       // suppressed: next turn is spent keeping their head down
+    /**
+     * Every battle status, by key, in stacks. One bag so one wipe clears the
+     * lot, and so a new effect needs no new field here — see statuses.ts for
+     * the grammar (duration vs intensity) and the rules.
+     */
+    public statuses: StatusBag;
     public mag: number;           // rounds left in the magazine (999 = no magazine to track)
     public routed: boolean;       // morale broke — sprinted off the field, out of the fight
     public hackCooldown: number;  // turns until this netrunner can quickhack again
     public abilityUsed: boolean;  // the rank-5 signature move is spent
+    public adrenalineSpent: boolean; // a berserker finds its second wind once per fight
+    public lockedDown: boolean;   // an elite has already spent its once-per-fight ward
     public moraleTested: boolean; // each unit checks morale at most once per battle
     public equipment: {
         headgear: Armor | null;
@@ -273,14 +278,13 @@ export class Actor extends GameObject {
         this.flashes = 0;
         this.emps = 0;
         this.marking = null;
-        this.bleeding = 0;
-        this.crippled = false;
-        this.stunned = 0;
-        this.pinned = false;
+        this.statuses = {};
         this.mag = 999;
         this.routed = false;
         this.hackCooldown = 0;
         this.abilityUsed = false;
+        this.adrenalineSpent = false;
+        this.lockedDown = false;
         this.moraleTested = false;
         this.stats = {
             int: 1,
@@ -507,13 +511,14 @@ export class Actor extends GameObject {
 
     /** Wipe every battle-scoped injury/stance — called on each fresh deployment. */
     public resetBattleState(): void {
-        this.bleeding = 0;
-        this.crippled = false;
-        this.stunned = 0;
-        this.pinned = false;
+        this.statuses = {};
         this.routed = false;
         this.hackCooldown = 0;
         this.abilityUsed = false;
+        this.adrenalineSpent = false;
+        this.lockedDown = false;
+        this.adrenalineSpent = false;
+        this.lockedDown = false;
         this.moraleTested = false;
         this.marking = null;
         this.mag = this.weapon && this.weapon.weaponClass !== "melee" && this.weapon.shots > 0
@@ -535,6 +540,32 @@ export class Actor extends GameObject {
         }
         return dmg;
     }
+
+    // Named views onto the status bag. The engine and the UI read these the way
+    // they always did; the storage and the stacking rules live in statuses.ts.
+
+    /** HP lost at the start of this unit's turn — a burst that fades. */
+    public get bleeding(): number { return stacksOf(this, "bleed"); }
+    public set bleeding(n: number) {
+        clearStatus(this, "bleed");
+        if (n > 0) { applyStatus(this, "bleed", n); }
+    }
+
+    /** Turns to sit out. The one status that costs a turn, and it caps at one. */
+    public get stunned(): number { return stacksOf(this, "stunned"); }
+    public set stunned(n: number) {
+        clearStatus(this, "stunned");
+        if (n > 0) { applyStatus(this, "stunned", n); }
+    }
+
+    /** Leg injury: movement halved. */
+    public get crippled(): boolean { return stacksOf(this, "crippled") > 0; }
+    public set crippled(v: boolean) {
+        if (v) { applyStatus(this, "crippled", 1); } else { clearStatus(this, "crippled"); }
+    }
+
+    /** Add stacks of a status, respecting Ward and the per-status ceiling. */
+    public afflict(key: StatusKey, n: number = 1): number { return applyStatus(this, key, n); }
 
     /** Enough chrome in the body for EMP and quickhacks to bite. */
     public chromed(): boolean {
@@ -657,9 +688,10 @@ export class Actor extends GameObject {
         const piece: Armor | null = aimedAtHead ? this.equipment.headgear : this.equipment.upper;
         const wornSP: number = piece ? piece.stoppingPower : 0;
         // Subdermal armour doesn't stack with worn armour; use the higher SP.
-        const bodySP: number = Math.max(
-            this.equipment.upper ? this.equipment.upper.stoppingPower : 0, this.cyberSP());
-        const sp: number = aimedAtHead ? aimedSP(wornSP, bodySP) : bodySP;
+        const bodySP: number = Math.max(0, Math.max(
+            this.equipment.upper ? this.equipment.upper.stoppingPower : 0, this.cyberSP())
+            + spDelta(this));
+        const sp: number = aimedAtHead ? aimedSP(Math.max(0, wornSP + spDelta(this)), bodySP) : bodySP;
         let damage: number = applySoak(amount, sp, ap);
         if (aimedAtHead) {
             damage = Math.round(damage * AIMED_MULT);   // a placed shot hits harder
@@ -669,6 +701,9 @@ export class Actor extends GameObject {
             this.iceLeft -= 1;
             const floor = Math.max(1, Math.floor(this.maxHealth * this.chromeFloor()));
             damage = Math.max(0, this.health - floor);
+        }
+        if (damage > 0 && stacksOf(this, "hardened") > 0) {
+            clearStatus(this, "hardened", 1);   // bolted-on plate sheds as it works
         }
         if (damage > 0) {
             // RED ablation: whichever armour actually stopped part of the hit loses 1 SP.
@@ -872,15 +907,24 @@ export class Actor extends GameObject {
     }
 
     /** RED subdermal/skinweave armour uses the highest single SP, not a sum. */
+    /** Subdermal plate — nothing while the chrome is fried. */
     public cyberSP(): number {
+        if (stacksOf(this, "fried")) { return 0; }
         return this.cybernetics.reduce((sp, c) => Math.max(sp, c.effects.sp || 0), 0);
     }
 
     public cyberInitiative(): number {
+        if (stacksOf(this, "fried")) { return 0; }
         return this.cybernetics.reduce((n, c) => n + (c.effects.initiative || 0), 0);
     }
 
+    /** Smartlink and its friends — offline while the chrome is fried. */
     public cyberAttackBonus(): number {
+        if (stacksOf(this, "fried")) { return 0; }
+        return this.rawCyberAttackBonus();
+    }
+
+    private rawCyberAttackBonus(): number {
         return this.cybernetics.reduce((n, c) => n + (c.effects.attackBonus || 0), 0);
     }
 

@@ -7,6 +7,8 @@ import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./message
 import {Skill} from "../items/Skill";
 import {Check} from "./check";
 import {HitQuality, QUALITY_MULT, AIMED_EDGE, coverEdge, outOfRange, rangeEdge, rollQuality} from "./damageModel";
+import {STATUS, StatusKey, applyStatus, clearRoundStatuses, hasStatus, incomingMult,
+    outgoingMult, stacksOf, statusEdge, tickStatuses} from "./statuses";
 import {BLAST_RADIUS, Battlefield, EMP_RADIUS, FLASH_RADIUS, GRENADE_RANGE, Point} from "./battlefield";
 import {TacticalAI, Plan} from "./tacticalAI";
 import {Economy} from "./economy";
@@ -64,12 +66,35 @@ export class Combat {
     public static shotEdge(actor: Actor, target: Actor, distance: number,
                            aimed: boolean = false, bonus: number = 0): number {
         const weapon = actor.weapon;
-        const base: number = actor.attackBonus(weapon) + bonus + (aimed ? AIMED_EDGE : 0);
+        const base: number = actor.attackBonus(weapon) + bonus + (aimed ? AIMED_EDGE : 0)
+            + statusEdge(actor);
         if (weapon.weaponClass === "melee") {
             return base + MELEE_BASE - target.evasion();
         }
         return base + rangeEdge(weapon.weaponClass, distance)
             + coverEdge(Battlefield.coverPenaltyAt(target.position, actor.position));
+    }
+
+    /**
+     * Raw damage into damage on the way to armour, in a fixed order.
+     *
+     *   raw dice -> + flat adds -> x quality -> x outgoing -> x incoming
+     *
+     * Flat before multiplicative, which is the rule Slay the Spire specifies
+     * and the one that keeps the numbers predictable: a +2 support bonus
+     * against a marked target is (raw + 2) x 1.4, not (raw x 1.4) + 2. Armour
+     * comes after, inside receiveDamage. Damage over time never comes through
+     * here at all — it is the answer to plate, so plate does not answer it.
+     */
+    private static pipeline(actor: Actor, target: Actor, raw: number, quality: HitQuality): number {
+        if (raw <= 0) { return 0; }
+        let d = raw;
+        d += this.alphaStrike(actor);    // Solo: the round's opening hit lands harder
+        d += actor.backupDamage();       // Cop "Backup" support fire
+        d *= QUALITY_MULT[quality];
+        d *= outgoingMult(actor);
+        d *= incomingMult(target);
+        return Math.max(1, Math.round(d));
     }
 
     /**
@@ -125,11 +150,7 @@ export class Combat {
         }
         this.stats.hits += 1;
         BattleRecorder.countShot(actor, true);
-        let damage: number = Math.round(weapon.getDamage() * QUALITY_MULT[quality]);
-        if (damage > 0) {
-            damage += this.alphaStrike(actor);    // Solo: the round's opening hit lands harder
-            damage += actor.backupDamage();        // Cop "Backup" support fire
-        }
+        const damage: number = this.pipeline(actor, target, weapon.getDamage(), quality);
         const dealt: number = target.receiveDamage(damage, weapon.ap, aimed);
         this.stats.dmg += dealt;
         BattleRecorder.countDamage(actor, target, dealt);
@@ -137,8 +158,85 @@ export class Combat {
             autofire: false, melee, covered, dropped: !target.canFight(), rounds});
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
         if (aimed && dealt > 0) { this.messages.push(new MessageStr(`${actor.name} lands a head shot!`)); }
-        this.rollCrit(target, dealt, quality);
+        this.afterHit(actor, target, dealt, quality);
         this.registerIfDefeated(actor, target);
+    }
+
+    /**
+     * Put a status on someone, through their Ward if they have one.
+     *
+     * Ward eats a whole application, not a stack — that is what stops a stacking
+     * debuff from being an inevitability and makes it a decision instead.
+     * Everything that inflicts anything goes through here so the board hears
+     * about it exactly once.
+     */
+    private static afflict(_source: Actor | null, target: Actor, key: StatusKey, n: number = 1): boolean {
+        if (!target.alive) { return false; }
+        const landed: number = applyStatus(target, key, n);
+        const def = STATUS[key];
+        this.events.push({kind: "status", actor: target, status: key,
+            stacks: stacksOf(target, key), warded: landed === 0 && def.debuff});
+        if (landed === 0 && def.debuff) {
+            this.messages.push(new MessageStr(`${target.name}'s ward eats it — no ${def.label.toLowerCase()}.`));
+            return false;
+        }
+        if (landed > 0) {
+            this.messages.push(new MessageStr(
+                `${target.name}: ${def.label.toLowerCase()} — ${def.explain(stacksOf(target, key))}.`));
+        }
+        return landed > 0;
+    }
+
+    /**
+     * What a landed hit leaves behind: focus-fire stagger, whatever the weapon
+     * type does to people, spikes coming back the other way, and the old
+     * critical-injury roll.
+     */
+    private static afterHit(actor: Actor, target: Actor, dealt: number, quality: HitQuality): void {
+        if (dealt <= 0) { return; }
+        // concentrating fire is worth something: each hit this round softens the next
+        applyStatus(target, "staggered", 1);
+        this.weaponProc(actor, target, quality);
+        this.spikesBack(actor, target);
+        this.rollCrit(target, dealt, quality);
+    }
+
+    /**
+     * Weapons leave their signature. A crit always procs; an ordinary hit
+     * sometimes does. This is what finally makes the sixteen catalogue weapons
+     * with a non-kinetic damage type do something — they dealt literally no
+     * damage before, tasers and needleguns and net launchers alike, and sat in
+     * shops as loot that could not affect a fight.
+     */
+    private static weaponProc(actor: Actor, target: Actor, quality: HitQuality): void {
+        const w = actor.weapon;
+        const sure: boolean = quality === "crit" || w.diceThrows <= 0;   // the no-damage kit always procs
+        const proc = (key: StatusKey, n: number, chance: number) => {
+            if (sure || Math.random() < chance) { this.afflict(actor, target, key, n); }
+        };
+        switch (w.damageType) {
+            case "stun":     proc("stunned", 1, 0.35); return;
+            case "emp":      proc("fried", 2, 0.5); return;
+            case "drugs":    proc("toxin", 2, 0.5); return;
+            case "entangle": proc("suppressed", 2, 0.5); return;
+            case "special":  proc("blinded", 2, 0.5); return;
+            case "varies":   proc("burn", 2, 0.4); return;
+            default: break;
+        }
+        // kinetic: the shape of the weapon decides what it leaves
+        if (w.weaponClass === "shotgun" || w.weaponClass === "melee") { proc("bleed", 2, 0.18); }
+        else if (w.ap) { proc("shred", 1, 0.25); }
+    }
+
+    /** Reactive plating: whoever lands a hit wears some of it. */
+    private static spikesBack(actor: Actor, target: Actor): void {
+        const spikes: number = stacksOf(target, "thorns");
+        if (spikes <= 0 || !actor.canFight()) { return; }
+        const back: number = actor.directDamage(spikes);
+        if (back > 0) {
+            this.messages.push(new MessageStr(`${target.name}'s plating bites back — ${back} to ${actor.name}.`));
+            this.registerIfDefeated(target, actor);
+        }
     }
 
     /**
@@ -152,18 +250,30 @@ export class Combat {
         if ((dealt < 12 && !(quality === "crit" && dealt >= 6)) || !target.canFight()) { return; }
         const roll: number = Math.floor(Math.random() * 6) + 1;
         if (roll <= 2) {
-            target.bleeding = Math.max(target.bleeding, 2);
-            this.events.push({kind: "crit", actor: target, effect: "bleeding"});
-            this.messages.push(new MessageStr(`${target.name} is bleeding badly.`));
+            // bleed stacks now — three wounds are three wounds, not one
+            this.afflict(null, target, "bleed", 3);
         } else if (roll === 3 && !target.crippled) {
-            target.crippled = true;
+            this.afflict(null, target, "crippled", 1);
             this.events.push({kind: "crit", actor: target, effect: "crippled"});
-            this.messages.push(new MessageStr(`${target.name}'s leg is torn up — half speed.`));
         } else if (roll === 4) {
-            target.stunned = Math.max(target.stunned, 1);
+            this.afflict(null, target, "stunned", 1);
             this.events.push({kind: "crit", actor: target, effect: "stunned"});
-            this.messages.push(new MessageStr(`${target.name} is knocked senseless.`));
         }
+    }
+
+    /**
+     * Elites and bosses button up once when they are hurt: a ward that eats the
+     * next two things thrown at them, and plate to go with it. Once per fight,
+     * and it costs them the turn they spend doing it.
+     */
+    private static lockdown(self: Actor): boolean {
+        if ((self.rank || 0) < 4 || self.lockedDown) { return false; }
+        if (self.health > self.maxHealth * 0.55) { return false; }
+        self.lockedDown = true;
+        this.messages.push(new MessageStr(`${self.name} buttons up — systems locked down.`));
+        this.afflict(self, self, "ward", 2);
+        this.afflict(self, self, "hardened", 4);
+        return true;
     }
 
     /** Solo "Combat Awareness": bonus damage on the round's first landed hit. */
@@ -207,7 +317,7 @@ export class Combat {
         const multiplier: number = Math.min(band, maxMultiplier);
         const d1: number = Math.floor(Math.random() * 6) + 1;
         const d2: number = Math.floor(Math.random() * 6) + 1;
-        const damage: number = (d1 + d2) * multiplier + this.alphaStrike(actor);
+        const damage: number = this.pipeline(actor, target, (d1 + d2) * multiplier, "hit");
         const targetOldHP: number = target.health;
         const dealt: number = target.receiveDamage(damage, actor.weapon.ap);
         this.stats.dmg += dealt;
@@ -215,7 +325,7 @@ export class Combat {
         this.events.push({kind: "shot", actor, target, hit: true, quality, damage: dealt, aimed: false,
             autofire: true, melee: false, covered: cover > 0, dropped: !target.canFight(), rounds: 5});
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
-        this.rollCrit(target, dealt, quality);
+        this.afterHit(actor, target, dealt, quality);
         this.registerIfDefeated(actor, target);
     }
 
@@ -309,6 +419,7 @@ export class Combat {
         const all: Actor[] = [...party, ...enemies].filter((a) => a.canFight() || a.mortallyWounded);
         all.forEach((a) => {
             a.firstHitDone = false;
+            clearRoundStatuses(a);   // focus fire only counts inside a round
             // a target that slipped into smoke breaks the sniper's paint
             if (a.marking && Battlefield.inSmoke({x: a.marking.position.x, y: a.marking.position.y})) {
                 a.marking = null;
@@ -342,35 +453,46 @@ export class Combat {
         }
         if (!c.canFight()) { return this.finishTurn(); }
 
-        // open wounds bleed at the top of the turn — armour doesn't help
-        if (c.bleeding > 0) {
-            const dealt: number = c.directDamage(c.bleeding);
+        // Bleeding, fire and toxins land at the top of the turn, all of them
+        // through armour, and every timed effect sheds a stack afterwards.
+        const stunnedComingIn: boolean = hasStatus(c, "stunned");
+        const tick = tickStatuses(c);
+        if (tick.damage > 0) {
+            const dealt: number = c.directDamage(tick.damage);
             const dropped: boolean = !c.canFight();
-            this.events.push({kind: "bleed", actor: c, damage: dealt, dropped});
-            this.messages.push(new MessageStr(`${c.name} is bleeding out — ${dealt} damage.`));
+            this.events.push({kind: "bleed", actor: c, damage: dealt, dropped, sources: tick.sources});
+            const what = tick.sources.map((k) => STATUS[k].label.toLowerCase()).join(" and ");
+            this.messages.push(new MessageStr(`${c.name} is ${what} — ${dealt} damage.`));
             if (dropped) { return this.finishTurn(); }
         }
-        // flashbanged / EMP-shocked: the turn is spent reeling
-        if (c.stunned > 0) {
-            c.stunned -= 1;
+        // The one status that costs a turn. Everything else is a penalty.
+        if (stunnedComingIn) {
             this.events.push({kind: "skip", actor: c, reason: "stunned"});
             this.messages.push(new MessageStr(`${c.name} reels — stunned.`));
             return this.finishTurn();
         }
         if (c.hackCooldown > 0) { c.hackCooldown -= 1; }
 
+        // Reflex chrome running hot: the wearer takes the turn twice. Spent here
+        // rather than in the initiative queue so the second action reads on the
+        // board as its own beat instead of a mysteriously large one.
+        const doubled: boolean = hasStatus(c, "overclock");
+
+        // Berserkers find another gear once they are hurt — the temperament
+        // finally means something mechanical and not just a set of AI weights.
+        if (c.temperament === "berserker" && c.isSeriouslyWounded()
+            && !hasStatus(c, "adrenaline") && !c.adrenalineSpent) {
+            c.adrenalineSpent = true;
+            this.afflict(c, c, "adrenaline", 3);
+        }
+
         const foes: Actor[] = side === "party" ? enemies : party;
         const allies: Actor[] = side === "party" ? party : enemies;
         const others: Actor[] = [...party, ...enemies].filter((a) => a !== c);
 
-        // suppressed: this turn is spent getting low, not shooting back
-        if (c.pinned) {
-            c.pinned = false;
-            this.events.push({kind: "skip", actor: c, reason: "pinned"});
-            this.messages.push(new MessageStr(`${c.name} keeps their head down.`));
-            this.duckIntoCover(c, foes, others);
-            return this.finishTurn();
-        }
+        // Suppression used to eat the whole turn. It gets you low and spoils
+        // your aim now — the unit still acts, which is the entire point.
+        if (hasStatus(c, "suppressed")) { this.duckIntoCover(c, foes, others); }
         // hostiles check their nerve once the wave is bleeding bodies
         if (side === "enemy" && this.moraleBreaks(c, enemies)) {
             const exit: Point = Battlefield.routExit({x: c.position.x, y: c.position.y});
@@ -381,6 +503,12 @@ export class Combat {
             this.messages.push(new MessageStr(`${c.name} breaks and runs.`));
             return this.finishTurn();
         }
+        // A heavy under real pressure locks itself down. This is the counterplay
+        // demonstration: Ward eats the next two things thrown at it, so a squad
+        // built entirely on stacking debuffs needs a second answer. Deliberately
+        // not behind the rank-5 signature move — that one may never trigger, and
+        // an unreachable counter is the same as no counter.
+        if (!order && this.lockdown(c)) { return this.finishTurn(); }
         // rank-5 signature move fires once, when its trigger lines up
         if (!order && this.bossAbility(c, foes, others)) { return this.finishTurn(); }
 
@@ -389,6 +517,9 @@ export class Combat {
                grenadeAt: order.grenadeAt, label: "manual"}
             : TacticalAI.plan(c, allies, foes);
         this.applyPlan(c, plan, foes, allies, others);
+        if (doubled && c.canFight() && foes.some((f) => f.canFight())) {
+            this.applyPlan(c, TacticalAI.plan(c, allies, foes), foes, allies, others);
+        }
         return this.finishTurn();
     }
 
@@ -553,6 +684,9 @@ export class Combat {
         if (plan.markTarget && plan.markTarget.canFight()) {
             // sniper telegraph: paint the target this turn, fire the steadied shot next
             self.marking = plan.markTarget;
+            // the paint is a squad asset now: everyone hits a marked target harder,
+            // not just the sniper who called it
+            this.afflict(self, plan.markTarget, "marked", 2);
             this.events.push({kind: "mark", actor: self, target: plan.markTarget});
             this.messages.push(new MessageStr(`${self.name} paints ${plan.markTarget.name} with a laser.`));
             return;
@@ -600,7 +734,8 @@ export class Combat {
         if (margin < 0) { dmg = Math.ceil(dmg / 2); }   // partial breach still hurts
         const dealt: number = target.directDamage(dmg);
         const stunned: boolean = margin >= 4 && target.canFight();
-        if (stunned) { target.stunned = Math.max(target.stunned, 1); }
+        this.afflict(self, target, "fried", 2);
+        if (stunned) { this.afflict(self, target, "stunned", 1); }
         BattleRecorder.countShot(self, dealt > 0);
         BattleRecorder.countDamage(self, target, dealt);
         this.events.push({kind: "hack", actor: self, target, damage: dealt, stunned,
@@ -615,7 +750,7 @@ export class Combat {
         self.mag = Math.max(0, self.mag - 10);
         const pinned: boolean = Check.opposed(self,
             self.stats.ref + self.skillFor(self.weapon), target.stats.will).success;
-        if (pinned) { target.pinned = true; }
+        if (pinned) { this.afflict(self, target, "suppressed", 2); }
         this.events.push({kind: "suppress", actor: self, target, pinned});
         this.messages.push(new MessageStr(pinned
             ? `${self.name} hoses ${target.name}'s position — pinned.`
@@ -666,7 +801,10 @@ export class Combat {
             if (type === "flash") {
                 // no wounds, just a white wall of noise: WILL check or lose the turn
                 const held: boolean = Check.redRoll() + t.stats.will >= 13;
-                if (!held) { t.stunned = Math.max(t.stunned, 1); }
+                if (!held) {
+                    this.afflict(self, t, "blinded", 2);
+                    this.afflict(self, t, "stunned", 1);
+                }
                 victims.push({target: t, damage: 0, dodged: held, dropped: false, stunned: !held});
                 this.messages.push(new MessageStr(held
                     ? `${t.name} shakes off the flash.` : `${t.name} is blinded — stunned.`));
@@ -680,8 +818,10 @@ export class Combat {
                 let dmg = 0;
                 for (let i = 0; i < 3; i++) { dmg += Math.floor(Math.random() * 6) + 1; }
                 const dealt: number = t.directDamage(dmg);   // straight through the armour
+                // the point of an EMP is not the damage: their chrome goes dark
+                this.afflict(self, t, "fried", 3);
                 const stunned: boolean = t.canFight() && Check.redRoll() + t.stats.will < 15;
-                if (stunned) { t.stunned = Math.max(t.stunned, 1); }
+                if (stunned) { this.afflict(self, t, "stunned", 1); }
                 BattleRecorder.countShot(self, dealt > 0);
                 BattleRecorder.countDamage(self, t, dealt);
                 victims.push({target: t, damage: dealt, dodged: false, dropped: !t.canFight(), stunned});
@@ -700,6 +840,7 @@ export class Combat {
             victims.push({target: t, damage: dealt, dodged, dropped: !t.canFight()});
             this.messages.push(new MessageStr(
                 `${t.name} ${dodged ? "dives clear — " : ""}takes ${dealt} blast damage.`));
+            if (dealt > 0 && !dodged) { this.afflict(self, t, "bleed", 2); }   // shrapnel opens people up
             this.rollCrit(t, dealt);
             if (foes.indexOf(t) >= 0) { this.registerIfDefeated(self, t); }
         }

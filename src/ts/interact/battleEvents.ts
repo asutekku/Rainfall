@@ -1,6 +1,7 @@
 import {Actor} from "../actors/Actor";
 import {Point} from "./battlefield";
 import type {HitQuality} from "./damageModel";
+import type {StatusKey} from "./statuses";
 
 /**
  * Structured play-by-play of a single combat turn. The engine (Combat) records
@@ -83,19 +84,31 @@ export interface CritEvent {
     effect: "bleeding" | "crippled" | "stunned";
 }
 
-/** Turn-start bleed tick from an open wound. */
+/** Turn-start damage-over-time tick: bleeding, fire, toxins — all through armour. */
 export interface BleedEvent {
     kind: "bleed";
     actor: Actor;
     damage: number;
     dropped: boolean;
+    /** which effects did it, so the board and the feed can name them */
+    sources: StatusKey[];
 }
 
-/** The unit sits its turn out (stunned or suppressed into cover). */
+/** A status landed on (or fell off) a unit — the board announces it. */
+export interface StatusEvent {
+    kind: "status";
+    actor: Actor;
+    status: StatusKey;
+    stacks: number;
+    /** the target's Ward ate it instead */
+    warded: boolean;
+}
+
+/** The unit sits its turn out. Only a stun does this. */
 export interface SkipEvent {
     kind: "skip";
     actor: Actor;
-    reason: "stunned" | "pinned";
+    reason: "stunned";
 }
 
 /** Dry magazine: the turn's attack becomes a reload. */
@@ -176,7 +189,7 @@ export interface MarkEvent {
 
 export type BattleEvent = TurnEvent | MoveEvent | ShotEvent | NoShotEvent | BlastEvent | SaveEvent
     | LevelEvent | MarkEvent | CritEvent | BleedEvent | SkipEvent | ReloadEvent | SuppressEvent
-    | StabilizeEvent | RoutEvent | CoverGoneEvent | AbilityEvent | HackEvent;
+    | StabilizeEvent | RoutEvent | CoverGoneEvent | AbilityEvent | HackEvent | StatusEvent;
 
 /** One resolved turn: the animation script plus the text feed it produced. */
 export interface TurnResult {

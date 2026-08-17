@@ -44,8 +44,8 @@ const AUG_LINES: AugLine[] = [
                 description: "Armour plating grafted beneath the skin (SP 7 on the body)."},
             {name: "Subdermal Armor Mk.II", cost: 1500, effects: {sp: 9},
                 description: "Denser weave, wider coverage (SP 9)."},
-            {name: "Subdermal Armor Mk.III", cost: 2200, effects: {sp: 11, subdermalSelfRepair: true},
-                description: "Self-knitting plate (SP 11) — it regrows whenever the crew patches armour."},
+            {name: "Reactive Subdermal Mk.III", cost: 2200, effects: {sp: 11, subdermalSelfRepair: true, thorns: 3},
+                description: "Self-knitting plate (SP 11) with shaped charges under the weave — it regrows when the crew patches armour, and anything that lands a hit takes 3 straight back."},
         ],
     },
     {

@@ -10,6 +10,7 @@ import {ObjectPosition} from "../utils/ObjectPosition";
 export interface CyberwareEffects {
     // --- combat chassis ---
     sp?: number;                  // subdermal/skinweave body armour (SP)
+    thorns?: number;              // reactive plating: whoever lands a hit wears some of it
     initiative?: number;          // reflex boosters (Kerenzikov, Sandevistan)
     attackBonus?: number;         // targeting scope / smartgun link
     grantsWeapon?: string;        // cyberweapons (Wolvers, popup guns): a real equippable weapon

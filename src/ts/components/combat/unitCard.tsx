@@ -41,8 +41,7 @@ export class UnitCard extends React.Component<UnitCardProps, {}> {
     public override render() {
         const a = this.props.unit;
         const foe = this.props.enemies.indexOf(a) >= 0;
-        const marked = (foe ? this.props.party : this.props.enemies).some((o) => o.marking === a);
-        const conditions = unitConditions(a, marked);
+        const conditions = unitConditions(a);
         const anchor = this.props.party[0];
         const facing = anchor && anchor !== a;
         const dist = facing ? Math.round(Battlefield.distance(anchor!, a)) : null;
@@ -66,7 +65,7 @@ export class UnitCard extends React.Component<UnitCardProps, {}> {
 
                     <dl className={"ucFacts"}>
                         <div><dt>Health</dt><dd>{Math.max(0, Math.ceil(a.health))} / {a.maxHealth}</dd></div>
-                        <div><dt>Armour</dt><dd>{hudArmor(a)} SP
+                        <div><dt>Armour</dt><dd>{hudArmor(a)} SP{" "}
                             <i>soaks {Math.round(soak(hudArmor(a)) * 100)}% of every hit</i></dd></div>
                         {dist !== null && <div><dt>Range</dt><dd>{dist} m from you</dd></div>}
                         {shot && <div><dt>{foe ? "You deal" : "It deals"}</dt><dd>
@@ -104,8 +103,9 @@ export class UnitCard extends React.Component<UnitCardProps, {}> {
                         <div className={"ucCond"}>
                             <h4>Right now</h4>
                             <ul>
-                                {conditions.map(([label, why], i) =>
-                                    <li key={i}><b>{label}</b> — {why}</li>)}
+                                {conditions.map(([label, why, bad], i) =>
+                                    <li key={i} className={bad ? "ucBad" : "ucGood"}>
+                                        <b>{label}</b> — {why}</li>)}
                             </ul>
                         </div>
                     )}
