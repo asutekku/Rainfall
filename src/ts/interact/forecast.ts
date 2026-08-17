@@ -100,6 +100,20 @@ const SAMPLES = 64;
  * waves the node *could* produce. That is honest about what the player can
  * actually know: the fixer said four heavies, not which four.
  */
+/**
+ * The read on a wave that has already been rolled.
+ *
+ * The map has to guess, because the bodies do not exist yet. Staging does not:
+ * by then the wave is standing there, so the same yardstick can be applied to
+ * the real thing and the verdict stops being an estimate.
+ */
+export function forecastWave(party: Actor[], foes: Actor[]): Forecast {
+    const mine = sideStrength(party);
+    const theirs = sideStrength(foes);
+    const ratio = theirs > 0 ? mine / theirs : 99;
+    return {foes: foes.filter((f) => f.canFight()).length, ratio, odds: verdict(ratio)};
+}
+
 export function forecast(party: Actor[], node: RunNode, sector: number, partyLevel: number): Forecast | null {
     if (node.type !== "combat" && node.type !== "elite" && node.type !== "boss") { return null; }
     let theirs = 0;

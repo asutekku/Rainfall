@@ -196,11 +196,14 @@ describe("nobody shoots a body", () => {
         const me = fighter({ref: 9, skill: 9, weapon: "AK-47 Medium Assault", x: 0, y: 5});
         const foe = fighter({x: 0, y: 10});
         foe.health = 1;
-        Combat.attack(me, foe);
+        // pinned: the quality bands keep a 1% miss floor at any edge, and a
+        // fumbled opening shot would fail this on the setup rather than on the
+        // thing it is testing
+        withRandom(0.5, () => Combat.attack(me, foe));
         const first = me.kills;
         expect(first).toBe(1);
-        Combat.attack(me, foe);          // keep shooting the corpse
-        Combat.attack(me, foe);
+        withRandom(0.5, () => Combat.attack(me, foe));   // keep shooting the corpse
+        withRandom(0.5, () => Combat.attack(me, foe));
         expect(me.kills).toBe(first);
     });
 });

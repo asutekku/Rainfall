@@ -6,6 +6,7 @@ import {Armor} from "../items/Armor";
 import {Medical, Scrap} from "../items/Scrap";
 import {Chrome} from "./chrome";
 import {Crew} from "./crew";
+import {Kit, reviveKit} from "./loadout";
 import {GetItem} from "./getItem";
 import type {MercOffer} from "./mercMarket";
 import type {RunState} from "./runMap";
@@ -51,6 +52,7 @@ interface SaveData {
     spec: CharacterSpec;
     members: MemberSnap[];
     funds: number;
+    kit?: Kit;                            // absent in checkpoints written before the crate
     usedEvents: string[];
     run: RunState;                        // plain data throughout (node saved as null)
     savedAt?: number;                     // wall clock, for "12 min ago" on the boot screen
@@ -181,6 +183,7 @@ export class SaveGame {
                 v: 2, spec,
                 members: party.map(memberSnap),
                 funds: crew.funds,
+                kit: crew.kit,
                 usedEvents: usedEvents.slice(),
                 run: {...run, node: null},
                 savedAt: Date.now(),
@@ -198,7 +201,7 @@ export class SaveGame {
             if (data.v !== 2 || !data.members.length || !data.run) { return null; }
             const party = data.members.map((s) =>
                 stamp(s.kind === "merc" && s.offer ? new Merc(s.offer) : new Player(data.spec), s));
-            const crew = new Crew(data.funds).activate();
+            const crew = new Crew(data.funds, reviveKit(data.kit)).activate();
             const run: RunState = {...data.run, node: null, outcome: "active"};
             return {character: party[0]!, party, crew, run, usedEvents: data.usedEvents || [], spec: data.spec};
         } catch {

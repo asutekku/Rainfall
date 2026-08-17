@@ -1,4 +1,4 @@
-import type {InterfaceAppState} from "../components/app";
+import type {InterfaceAppState, PendingFight} from "../components/app";
 import {Actor} from "../actors/Actor";
 import {ActorController} from "../actors/actorController";
 import {Armor} from "../items/Armor";
@@ -11,6 +11,7 @@ import {MercMarket} from "./mercMarket";
 import {Economy} from "./economy";
 import {RunMap, RunNode, RunState, encounterSpec, spawnEncounter} from "./runMap";
 import {Chrome} from "./chrome";
+import {Deployment, Kit, issue, startingKit, stow} from "./loadout";
 
 type Patch = Partial<InterfaceAppState>;
 
@@ -45,7 +46,7 @@ export class RunController {
      * that had just ended).
      *
      * Every run starts on the same footing: patched up, Luck restored, basic
-     * kit, two frags. What the character keeps is what the character *is* —
+     * kit, and a crate with a couple of frags and a smoke in it. What the character keeps is what the character *is* —
      * levels, training, reputation, and the chrome they paid Humanity for.
      * Trauma Team resets the body and doesn't touch the wiring.
      */
@@ -54,17 +55,16 @@ export class RunController {
         character.health = character.maxHealth;
         character.refreshLuck();
         Economy.stripToBasics(character);
-        character.grenades = 2;
         // Cryptobank Cortex: a slice of the previous pot survives into this run.
         const banked = Math.floor(prevFunds * character.chromeNum("deathBank"));
         // Never start alone: the fixer throws in a rookie with the job —
         // or, on a Command Uplink Mk.III, a Veteran already waiting at the corner.
+        const crew = new Crew(Crew.STARTING_FUNDS + banked, startingKit()).activate();
         const starter = new Merc(character.chromeHas("freeVeteranStarter")
             ? MercMarket.starterVeteran(1) : MercMarket.starter(1));
-        RunController.outfitHire(character, starter);
+        RunController.outfitHire(character, starter, crew.kit);
         const party: Actor[] = [character, starter];
         Chrome.armRun(party);        // fresh run, fresh Self-ICE / biomonitor charges
-        const crew = new Crew(Crew.STARTING_FUNDS + banked).activate();
         // Seed a placeholder wave so the combat shell never reads an empty array.
         const enemies = ActorController.getEnemies(2, RunController.levelOf(party));
         Battlefield.deploy(party, enemies);
@@ -74,7 +74,7 @@ export class RunController {
             character, party, crew,
             run: RunController.scout(RunController.freshRun(1), party),
             screen: "map", report: null, offers: [],
-            eventId: null, usedEvents: [],
+            eventId: null, pending: null, usedEvents: [],
             currentEnemies: enemies, activeChar: character, activeEnemy: enemies[0],
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
             messages: lines.slice(0, log),
@@ -113,20 +113,48 @@ export class RunController {
                     [{msg: `— they make ${face.name.split(" ")[0]} — weapons drop, and the crew walks through —`}], log);
             }
         }
+        // The wave is rolled HERE, one screen before the shooting, so staging
+        // can show the player the actual bodies they are about to meet rather
+        // than a plausible sample of them. Nothing is committed until they
+        // deploy — see `deploy` below and staging.tsx.
         const spec = encounterSpec(node, run.sector, RunController.levelOf(state.party));
         const enemies = spawnEncounter(spec);
-        Battlefield.deploy(state.party, enemies);
         // holdout fights carry their clock on the node so the sequencer sees it
         if (spec.holdout) { node.holdout = spec.holdout; } else { delete node.holdout; }
+        return {
+            run: {...run, node}, screen: "staging",
+            pending: RunController.fightOf(node),
+            currentEnemies: enemies, activeEnemy: enemies[0], activeChar: state.party[0],
+        };
+    }
+
+    /** How a node's fight files itself: in the report, in the feed, on the screen. */
+    private static fightOf(node: RunNode): PendingFight {
         const label = node.type === "boss" ? "BOSS — hold nothing back"
             : node.type === "elite" ? "elite contact"
-            : spec.holdout ? `holdout — survive ${spec.holdout} rounds` : "firefight";
-        BattleRecorder.begin(state.party, enemies, node.type, label);
+            : node.holdout ? `holdout — survive ${node.holdout} rounds` : "firefight";
+        const headline = node.type === "boss" ? "BOSS CONTACT"
+            : node.type === "elite" ? "ELITE CONTACT" : "FIREFIGHT";
+        return {kind: node.type, label, headline, ...(node.holdout ? {holdout: node.holdout} : {})};
+    }
+
+    /**
+     * Orders given, hands off the wheel. Stances go onto the AI profiles and
+     * the chosen ordnance comes out of the crate onto belts; only then does the
+     * street load and the recorder start.
+     */
+    public static deploy(state: InterfaceAppState, plan: Deployment, log: number): Patch {
+        const fight = state.pending;
+        if (!fight) { return {}; }
+        const enemies = state.currentEnemies;
+        issue(plan, state.crew.kit);
+        Battlefield.deploy(state.party, enemies);
+        BattleRecorder.begin(state.party, enemies, fight.kind, fight.label);
         return {
-            run: {...run, node}, screen: "combat",
-            currentEnemies: enemies, activeEnemy: enemies[0], activeChar: state.party[0],
+            screen: "combat", pending: null, currentEnemies: enemies,
+            activeEnemy: enemies[0], activeChar: state.party[0],
             activeMainPanel: "Combat", mobileTab: "arena",
-            messages: [{msg: `— ${label} —`} as any, ...state.messages].slice(0, log),
+            messages: [{msg: `— ${fight.label} —`} as any, ...state.messages].slice(0, log),
         };
     }
 
@@ -246,6 +274,9 @@ export class RunController {
         const feed = [...msgs, ...state.messages].slice(0, log);
 
         if (party.every((p) => !p.canFight())) {          // squad wiped → debrief, then run over
+            // Belts are left alone here on purpose: a Trauma Team revive resumes
+            // *this* fight, and a second wind with nothing left to throw would
+            // be a second punishment for going down.
             return {
                 run: {...run, outcome: "lost"}, screen: "debrief",
                 report: BattleRecorder.finish("defeat"),
@@ -253,6 +284,7 @@ export class RunController {
             };
         }
         if (alive.length <= 0) {                           // node cleared → after-action report
+            stow(party, state.crew.kit);   // unthrown ordnance goes back in the crate
             return {
                 screen: "debrief", report: BattleRecorder.finish("victory"),
                 currentEnemies: alive, messages: feed,
@@ -377,8 +409,18 @@ export class RunController {
         return Math.max(0.1, 1 - state.character.chromeNum("hireDiscount"));
     }
 
-    /** Command Uplink: a fresh hire draws on the wearer's requisition codes. */
-    private static outfitHire(character: Actor, merc: Merc): void {
+    /**
+     * Kit a new signing out.
+     *
+     * A hire turns up with a frag on their belt, which now goes straight into
+     * the crew crate: belts are packed at staging, so anything sitting on one
+     * outside a fight would be ordnance nobody chose to bring.
+     *
+     * On a Command Uplink the hire also draws on the wearer's requisition codes.
+     */
+    private static outfitHire(character: Actor, merc: Merc, crate: Kit): void {
+        crate.frag += merc.grenades;
+        merc.grenades = 0;
         if (character.chromeNum("mercGearTier") <= 0) { return; }
         const worn = merc.equipment.upper;
         const better = Economy.nextArmorTier(worn ? worn.maxStoppingPower : 0);
@@ -393,7 +435,7 @@ export class RunController {
         if (!offer || state.party.length >= RunController.SQUAD_CAP) { return null; }
         if (!state.crew.spend(offer.price)) { return null; }
         const merc = new Merc(offer);
-        RunController.outfitHire(state.character, merc);
+        RunController.outfitHire(state.character, merc, state.crew.kit);
         return {
             party: [...state.party, merc],
             messages: [{msg: `${merc.name} (${merc.tier} ${merc.role.name}) signs on for ${offer.price}¥.`} as any,

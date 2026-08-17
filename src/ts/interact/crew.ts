@@ -1,4 +1,5 @@
 import {Actor} from "../actors/Actor";
+import {Kit, startingKit} from "./loadout";
 
 /**
  * The crew's shared purse.
@@ -29,8 +30,18 @@ export class Crew {
 
     public funds: number;
 
-    constructor(funds: number = Crew.STARTING_FUNDS) {
+    /**
+     * The ordnance crate. Grenades used to live permanently on belts, which
+     * meant they were never a decision — whatever you were carrying went to
+     * every fight. Held here instead, they are drawn at staging, two per job,
+     * and what comes back goes in the crate. Shared like the purse, and for the
+     * same reason: it belongs to the crew, not to whoever happened to buy it.
+     */
+    public kit: Kit;
+
+    constructor(funds: number = Crew.STARTING_FUNDS, kit: Kit = startingKit()) {
         this.funds = Math.max(0, Math.floor(funds));
+        this.kit = kit;
     }
 
     /** Make this the purse every static helper spends from. */

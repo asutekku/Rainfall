@@ -1296,6 +1296,127 @@ progress::-moz-progress-bar { background:var(--rust); }
 .dbCasualty button:disabled { color:var(--faint); background:var(--panel2); border-color:var(--line); cursor:not-allowed; }
 
 /* =====================================================================
+   staging — the minute before the shooting
+
+   Combat plays itself, so this is where the game is actually played: the
+   wave you are about to meet, a stance for each of the crew, and two pieces
+   of ordnance out of the crate. One column of cards, which is the same shape
+   on a phone as on a desktop; above the breakpoint the three blocks sit side
+   by side instead of stacking. Every control is a chip a thumb can hit, and
+   DEPLOY is pinned to the bottom where the thumb already is.
+   ===================================================================== */
+.staging { position:fixed; inset:0; z-index:47; overflow-y:auto; display:grid; place-items:start center;
+    font-family:var(--mono); background:radial-gradient(900px 600px at 50% 8%, #1f1210, var(--bg)); }
+.stCard { width:100%; max-width:1080px; padding:18px 16px 0; }
+.stHead { text-align:center; margin-bottom:14px; }
+.stHead h1 { margin:0 0 4px; font-size:26px; letter-spacing:.09em; color:var(--rust);
+    text-shadow:0 0 18px rgba(224,83,63,.4); }
+.stHead p { margin:8px auto 0; max-width:58ch; color:var(--dim); font-size:11px; line-height:1.6; }
+
+/* The verdict, same words and colours the map used — so the read you walked
+   in on and the read you deploy on are visibly the same read. */
+.stOdds { display:inline-block; padding:3px 12px; border:1px solid currentColor;
+    font-size:11px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; }
+.stOdds.o-favoured { color:#7fd67f; }
+.stOdds.o-even { color:#8be0ff; }
+.stOdds.o-risky { color:var(--warn); }
+.stOdds.o-grim { color:#ff6b5e; }
+
+.stCols { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; align-items:start; }
+.stBlock h2 { display:flex; align-items:baseline; gap:8px; margin:0 0 8px; padding-bottom:5px;
+    color:var(--rust); font-size:11px; letter-spacing:.16em; text-transform:uppercase;
+    border-bottom:1px solid var(--line); }
+.stBlock h2 b { color:var(--cyan); font-size:13px; letter-spacing:0; font-variant-numeric:tabular-nums; }
+.stNote { margin:0 0 8px; color:var(--faint); font-size:10px; line-height:1.6; }
+
+/* --- the wave: one line each, tap for the rest ------------------------ */
+.stFoes, .stMembers, .stKits, .stAssign { list-style:none; margin:0; padding:0; }
+.stFoe { margin-bottom:5px; background:var(--panel); border:1px solid var(--line); }
+.stFoeHead { display:flex; align-items:center; gap:8px; width:100%; min-height:44px; padding:6px 9px;
+    font-family:var(--mono); font-size:11px; text-align:left; color:var(--ink);
+    background:transparent; border:0; cursor:pointer; }
+.stRank { width:20px; height:20px; flex:none; display:grid; place-items:center; font-size:11px;
+    border:1px solid var(--crit); color:var(--crit); }
+.stRank.rank-1 { color:var(--dim); border-color:var(--faint); }
+.stRank.rank-2 { color:var(--mid); border-color:var(--line2); }
+.stRank.rank-3 { color:var(--cyan); border-color:var(--cyanDim); }
+.stRank.rank-4 { color:var(--warn); border-color:var(--warn); }
+.stRank.rank-5 { color:var(--crit); border-color:var(--crit); box-shadow:0 0 8px rgba(224,83,63,.5); }
+.stFoeWho { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.stFoeWho b { color:var(--ink); }
+.stFoeWho i { font-style:normal; color:var(--dim); font-size:10px; }
+.stFoeNums { margin-left:auto; flex:none; color:var(--dim); font-size:10px; font-variant-numeric:tabular-nums; }
+.stFoeNums b { color:var(--ink); font-size:12px; }
+.stFoeNums .sep { margin:0 5px; color:var(--faint); }
+.stFoeMore { display:none; margin:0; padding:0 9px 8px; }
+.stFoe.open .stFoeMore { display:block; }
+.stFoeMore div { display:flex; gap:8px; padding:3px 0; border-top:1px solid var(--line); }
+.stFoeMore dt { flex:none; width:66px; color:var(--faint); font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
+.stFoeMore dd { margin:0; color:var(--mid); font-size:10.5px; }
+.stFoeMore dd i { font-style:normal; color:var(--faint); }
+
+/* --- the crew: portrait, health, and three stance chips --------------- */
+.stMember { padding:7px 9px; margin-bottom:5px; background:var(--panel); border:1px solid var(--line); }
+.stMember.down { opacity:.5; }
+.stWho { display:flex; align-items:center; gap:9px; font-size:11px; }
+.stWho img { width:26px; height:26px; flex:none; object-fit:cover; border:1px solid var(--line2); filter:grayscale(.35); }
+.stName { display:flex; flex-direction:column; gap:1px; min-width:0; }
+.stWho b { color:var(--ink); }
+.stWho i { font-style:normal; color:var(--dim); font-size:10px; }
+.stHp { margin-left:auto; flex:none; display:flex; align-items:center; gap:6px; }
+.stBar { width:56px; height:6px; background:var(--bg2); border:1px solid var(--line); }
+.stBar i { display:block; height:100%; background:var(--good); }
+.stHp b { color:var(--ink); font-size:11px; font-variant-numeric:tabular-nums; }
+.stDown { margin:6px 0 0; color:var(--faint); font-size:10px; }
+.stStances { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:7px; }
+.stChip { display:flex; flex-direction:column; align-items:center; gap:2px;
+    min-height:44px; padding:6px 4px; cursor:pointer; font-family:var(--mono); font-size:10.5px;
+    letter-spacing:.08em; text-transform:uppercase; color:var(--dim);
+    background:var(--panel2); border:1px solid var(--line); }
+/* The trade printed on the button: a stance you cannot price is a stance you
+   cannot choose between. */
+.stChip i { display:block; font-style:normal; font-size:8.5px; line-height:1.35; white-space:nowrap;
+    letter-spacing:.02em; text-transform:none; color:var(--faint); }
+.stChip:hover { color:var(--ink); border-color:var(--line2); }
+.stChip.on { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; }
+.stChip.on i { color:#06373a; }
+.stCarry { margin:6px 0 0; color:var(--warn); font-size:10px; letter-spacing:.06em; }
+
+/* --- the crate: what goes out, and when it gets thrown ---------------- */
+.stKit { margin-bottom:5px; }
+.stKit button { display:flex; align-items:center; gap:9px; width:100%; min-height:52px; padding:7px 9px;
+    text-align:left; cursor:pointer; font-family:var(--mono); font-size:11px; color:var(--ink);
+    background:var(--panel); border:1px solid var(--line); }
+.stKit button:hover { border-color:var(--line2); }
+.stKit.on button { border-color:var(--cyan); background:#0d1a1c; box-shadow:inset 0 0 12px rgba(55,225,231,.14); }
+.stKit.out button { opacity:.4; cursor:not-allowed; }
+.stGlyph { width:24px; flex:none; text-align:center; font-size:15px; color:var(--cyan); }
+.stKit.out .stGlyph { color:var(--faint); }
+.stKitWho { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.stKitWho b { color:var(--ink); }
+.stKitWho i { font-style:normal; color:var(--dim); font-size:10px; }
+.stKitWho em { font-style:normal; color:var(--faint); font-size:9.5px; letter-spacing:.04em; }
+.stStock { margin-left:auto; flex:none; display:flex; flex-direction:column; align-items:center; gap:1px;
+    color:var(--ink); font-size:13px; font-variant-numeric:tabular-nums; }
+.stStock i { font-style:normal; color:var(--faint); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; }
+
+/* Who is carrying what — tap to pass it down the line. */
+.stAssign { margin-top:8px; }
+.stAssign button { display:flex; align-items:center; gap:6px; width:100%; min-height:40px; padding:6px 9px;
+    margin-bottom:4px; text-align:left; cursor:pointer; font-family:var(--mono); font-size:10.5px;
+    color:var(--mid); background:var(--panel2); border:1px dashed var(--line2); }
+.stAssign button b { color:var(--cyan); }
+.stAssign button i { margin-left:auto; font-style:normal; color:var(--faint); font-size:9px;
+    letter-spacing:.1em; text-transform:uppercase; }
+
+.stActions { display:flex; justify-content:center; margin-top:16px;
+    position:sticky; bottom:0; z-index:2; background:var(--bg);
+    padding:10px 0 calc(4px + env(safe-area-inset-bottom)); }
+.stActions .prim { font-family:var(--mono); font-size:13px; font-weight:700; padding:12px 34px; min-height:46px;
+    letter-spacing:.1em; color:var(--bg); background:var(--cyan); border:1px solid var(--cyan); cursor:pointer; }
+.stActions .prim:hover { background:#5cf0f5; }
+
+/* =====================================================================
    sector clear — payday spent on people, then the next city over
    ===================================================================== */
 .sectorClear { position:fixed; inset:0; z-index:47; overflow-y:auto; display:grid; place-items:center;
@@ -1454,6 +1575,12 @@ progress::-moz-progress-bar { background:var(--rust); }
 
 @media (max-width: 860px) {
     .scCols { grid-template-columns:1fr; gap:14px; }
+    /* One column, in the order you decide things: who is out there, what your
+       crew does about it, what they carry. Nothing shrinks below thumb size. */
+    .stCols { grid-template-columns:1fr; gap:14px; }
+    .stCard { padding:14px 12px 0; }
+    .stHead h1 { font-size:20px; }
+    .stHead p { font-size:10.5px; }
     .scCard { padding:14px 12px; }
     .scHead h1 { font-size:22px; }
     .hbTrait, .hbKit { display:none; }
