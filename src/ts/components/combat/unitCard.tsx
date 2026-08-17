@@ -3,27 +3,37 @@ import {Actor} from "../../actors/Actor";
 import {soak} from "../../interact/damageModel";
 import {shotPreview} from "../../interact/shotPreview";
 import {Battlefield} from "../../interact/battlefield";
+import {ShownState} from "../../interact/shownState";
 import {hudArmor, unitConditions} from "./hudInfo";
 
 export interface UnitCardProps {
     unit: Actor;
-    /** Everyone on the other side, so "marked" and the range read-out can be worked out. */
+    /** Everyone on the other side, so the range read-out knows which way it points. */
     party: Actor[];
     enemies: Actor[];
+    /** Health as the board is drawing it, so the card agrees with the row behind it. */
+    shown: ShownState;
     onClose: () => void;
 }
+
+interface UnitCardState { detail: boolean; }
 
 /**
  * The card behind a HUD row.
  *
- * Combat plays itself, so a row tap can't mean "target this" any more — it
- * means "what am I looking at". That turns out to be the missing piece: the
- * board is dense with abbreviations (BLD, STN, SP, the ✦ rank pip, AGGRO and
- * its four siblings) whose only explanation used to be a `title` tooltip,
- * which does not exist on a touch screen. This card is that legend, attached
- * to the unit it describes instead of a manual somewhere else.
+ * Combat plays itself, so a row tap can't mean "target this" — it means "what
+ * am I looking at". The first cut answered that with eight rows of statistics
+ * and put what was actually *happening* to the unit last, under all of it. So
+ * a fight's worth of live information sat below a weapon's dice notation and a
+ * sentence about how its AI likes to move.
+ *
+ * It leads with the two things that change while you watch — health, and what
+ * is on the unit right now — and folds the rest away. The reference material
+ * is still the legend for the board's shorthand (SP, the ✦ rank pip, the
+ * temperament chips, none of which explain themselves on a touch screen), so
+ * it stays one tap away rather than being cut.
  */
-export class UnitCard extends React.Component<UnitCardProps, {}> {
+export class UnitCard extends React.Component<UnitCardProps, UnitCardState> {
 
     /** What an AI temperament actually makes a unit do, in words. */
     private static PLAN: { [k: string]: string } = {
@@ -38,6 +48,11 @@ export class UnitCard extends React.Component<UnitCardProps, {}> {
         1: "Street trash", 2: "Trained", 3: "Veteran", 4: "Elite", 5: "Boss",
     };
 
+    constructor(props: UnitCardProps) {
+        super(props);
+        this.state = {detail: false};
+    }
+
     public override render() {
         const a = this.props.unit;
         const foe = this.props.enemies.indexOf(a) >= 0;
@@ -50,6 +65,9 @@ export class UnitCard extends React.Component<UnitCardProps, {}> {
         // for why your merc chips at one target and cuts through another.
         const shot = facing ? shotPreview(foe ? anchor! : a, foe ? a : anchor!) : null;
         const w = a.weapon;
+        const hp = Math.max(0, Math.ceil(this.props.shown.of(a)));
+        const pct = Math.max(0, Math.min(100, (hp / Math.max(1, a.maxHealth)) * 100));
+        const hpCls = pct > 60 ? "h-good" : pct > 30 ? "h-warn" : "h-crit";
         const rank = foe ? Math.max(1, Math.min(5, a.rank || 1)) : 0;
         const sub = foe && a.faction
             ? `${a.faction}${a.archetype ? " " + a.archetype : ""}`
@@ -63,51 +81,49 @@ export class UnitCard extends React.Component<UnitCardProps, {}> {
                         <button className={"ucX"} onClick={this.props.onClose} aria-label={"Close"}>✕</button>
                     </div>
 
-                    <dl className={"ucFacts"}>
-                        <div><dt>Health</dt><dd>{Math.max(0, Math.ceil(a.health))} / {a.maxHealth}</dd></div>
-                        <div><dt>Armour</dt><dd>{hudArmor(a)} SP{" "}
-                            <i>soaks {Math.round(soak(hudArmor(a)) * 100)}% of every hit</i></dd></div>
-                        {dist !== null && <div><dt>Range</dt><dd>{dist} m from you</dd></div>}
-                        {shot && <div><dt>{foe ? "You deal" : "It deals"}</dt><dd>
-                            {!shot.ok
-                                ? <b className={"ucLo"}>Nothing — out of range</b>
-                                : shot.unreachable
-                                ? <b className={"ucLo"}>Nothing — out of reach</b>
-                                : <React.Fragment>
-                                    <b className={shot.expected >= shot.onHit * 0.8 ? "ucHi"
-                                        : shot.expected >= shot.onHit * 0.5 ? "ucMid" : "ucLo"}>
-                                        ~{shot.expected}</b>
-                                    <i> a shot · {Math.round(shot.soaked * 100)}% soaked by armour
-                                        {shot.covered ? " · behind cover" : ""}</i>
-                                  </React.Fragment>}
-                        </dd></div>}
-                        {shot && shot.ok && !shot.unreachable &&
-                            <div><dt>Shot lands</dt><dd className={"ucBands"}>
-                                <span className={"ucLo"}>{Math.round(shot.odds.graze * 100)}% graze</span>
-                                <span>{Math.round(shot.odds.hit * 100)}% clean</span>
-                                <span className={"ucHi"}>{Math.round(shot.odds.crit * 100)}% crit</span>
-                                <i>{shot.onCrit} on a crit</i>
-                            </dd></div>}
-                        <div><dt>Weapon</dt><dd>
-                            {w.name} <i>{w.diceThrows}d6{w.damage ? "+" + w.damage : ""}
-                            {w.ap ? " · ignores armour" : ""}{w.autofire ? " · full auto" : ""}</i>
-                        </dd></div>
-                        {rank > 0 &&
-                            <div><dt>Threat</dt><dd>{UnitCard.THREAT[rank]} <i>rank {rank} of 5</i></dd></div>}
-                        <div><dt>Fights like</dt><dd>
-                            {UnitCard.PLAN[a.temperament] || UnitCard.PLAN["balanced"]}
-                        </dd></div>
-                    </dl>
+                    <div className={"ucVitals"}>
+                        <b className={"ucHp " + hpCls}>{hp}<i>/{a.maxHealth}</i></b>
+                        <span className={"ucBar"}><i className={hpCls} style={{width: pct + "%"}}/></span>
+                    </div>
 
-                    {conditions.length > 0 && (
-                        <div className={"ucCond"}>
-                            <h4>Right now</h4>
-                            <ul>
-                                {conditions.map(([label, why, bad], i) =>
-                                    <li key={i} className={bad ? "ucBad" : "ucGood"}>
-                                        <b>{label}</b> — {why}</li>)}
-                            </ul>
-                        </div>
+                    {conditions.length > 0 ? (
+                        <ul className={"ucCond"}>
+                            {conditions.map(([label, why, bad], i) =>
+                                <li key={i} className={bad ? "ucBad" : "ucGood"}>
+                                    <b>{label}</b> — {why}</li>)}
+                        </ul>
+                    ) : (
+                        <p className={"ucClear"}>Nothing on them.</p>
+                    )}
+
+                    {shot && shot.ok && !shot.unreachable && (
+                        <p className={"ucShot"}>
+                            {foe ? "You deal" : "It deals"} <b>~{shot.expected}</b> a shot
+                            {dist !== null ? ` at ${dist} m` : ""}
+                            <i>{Math.round(shot.soaked * 100)}% soaked · {Math.round(shot.odds.crit * 100)}% crit
+                                {shot.covered ? " · behind cover" : ""}</i>
+                        </p>
+                    )}
+
+                    <button className={"ucMore" + (this.state.detail ? " on" : "")}
+                            aria-expanded={this.state.detail}
+                            onClick={() => this.setState({detail: !this.state.detail})}>
+                        {this.state.detail ? "▾" : "▸"} Details
+                    </button>
+                    {this.state.detail && (
+                        <dl className={"ucFacts"}>
+                            <div><dt>Armour</dt><dd>{hudArmor(a)} SP{" "}
+                                <i>soaks {Math.round(soak(hudArmor(a)) * 100)}% of every hit</i></dd></div>
+                            <div><dt>Weapon</dt><dd>
+                                {w.name} <i>{w.diceThrows}d6{w.damage ? "+" + w.damage : ""}
+                                {w.ap ? " · ignores armour" : ""}{w.autofire ? " · full auto" : ""}</i>
+                            </dd></div>
+                            {rank > 0 &&
+                                <div><dt>Threat</dt><dd>{UnitCard.THREAT[rank]} <i>rank {rank} of 5</i></dd></div>}
+                            <div><dt>Fights like</dt><dd>
+                                {UnitCard.PLAN[a.temperament] || UnitCard.PLAN["balanced"]}
+                            </dd></div>
+                        </dl>
                     )}
                 </div>
             </div>);

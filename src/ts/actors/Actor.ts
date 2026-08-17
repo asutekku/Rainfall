@@ -54,6 +54,8 @@ export class Actor extends GameObject {
     public abilityUsed: boolean;  // the rank-5 signature move is spent
     public adrenalineSpent: boolean; // a berserker finds its second wind once per fight
     public lockedDown: boolean;   // an elite has already spent its once-per-fight ward
+    /** Who was paid for putting this one down — a body is only worth one bounty. */
+    public creditedTo: Actor | null;
     public moraleTested: boolean; // each unit checks morale at most once per battle
     public equipment: {
         headgear: Armor | null;
@@ -285,6 +287,7 @@ export class Actor extends GameObject {
         this.abilityUsed = false;
         this.adrenalineSpent = false;
         this.lockedDown = false;
+        this.creditedTo = null;
         this.moraleTested = false;
         this.stats = {
             int: 1,
@@ -517,8 +520,10 @@ export class Actor extends GameObject {
         this.abilityUsed = false;
         this.adrenalineSpent = false;
         this.lockedDown = false;
+        this.creditedTo = null;
         this.adrenalineSpent = false;
         this.lockedDown = false;
+        this.creditedTo = null;
         this.moraleTested = false;
         this.marking = null;
         this.mag = this.weapon && this.weapon.weaponClass !== "melee" && this.weapon.shots > 0
@@ -683,6 +688,11 @@ export class Actor extends GameObject {
      * through the average armour. See damageModel.ts.
      */
     public receiveDamage(amount: number, ap: boolean = false, aimedAtHead: boolean = false): number {
+        // Nobody shoots a body. `directDamage` has always guarded this and
+        // `receiveDamage` never did, so a unit that had already bled out — or
+        // one that broke and *ran off the street* — still took hits and still
+        // reported them, which is what put damage numbers on corpses.
+        if (!this.alive || this.mortallyWounded || this.routed || this.health <= 0) { return 0; }
         // RED uses body armour SP for normal hits and head armour SP for aimed
         // head shots; limbs are not separately armoured in the core rules.
         const piece: Armor | null = aimedAtHead ? this.equipment.headgear : this.equipment.upper;
@@ -716,6 +726,11 @@ export class Actor extends GameObject {
             } else if (piece) {
                 piece.stoppingPower = Math.max(0, piece.stoppingPower - 1);
             }
+            // Report what was actually taken, not what was swung. A 48 landing
+            // on someone with 35 left used to float "48" over a bar that could
+            // only ever show 35 disappear — and now that the board advances the
+            // health it draws, overkill would drive it straight past zero.
+            damage = Math.min(damage, this.health);
             this.health -= damage;
             if (this.health <= 0) {
                 this.health = 0;

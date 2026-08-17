@@ -168,6 +168,43 @@ describe("ammo, reload and suppression", () => {
     });
 });
 
+describe("nobody shoots a body", () => {
+    test("a unit that is dead, dying or fled takes nothing and reports nothing", () => {
+        for (const setup of [
+            (a: any) => { a.health = 0; a.mortallyWounded = true; },   // DYING
+            (a: any) => { a.routed = true; },                          // ran off the street
+            (a: any) => { a.alive = false; a.health = 0; },            // dead
+        ]) {
+            const t = fighter();
+            setup(t);
+            const before = t.health;
+            expect(t.receiveDamage(20)).toBe(0);
+            expect(t.health).toBe(before);
+        }
+    });
+
+    test("damage reported is damage taken — overkill is not a number the board can draw", () => {
+        const t = fighter();
+        t.health = 3;
+        // 30 raw against no armour would have reported 30 over a bar holding 3
+        expect(t.receiveDamage(30)).toBe(3);
+        expect(t.health).toBe(0);
+    });
+
+    test("a body is worth one bounty, however many rounds go into it", () => {
+        Battlefield.COVER = [];
+        const me = fighter({ref: 9, skill: 9, weapon: "AK-47 Medium Assault", x: 0, y: 5});
+        const foe = fighter({x: 0, y: 10});
+        foe.health = 1;
+        Combat.attack(me, foe);
+        const first = me.kills;
+        expect(first).toBe(1);
+        Combat.attack(me, foe);          // keep shooting the corpse
+        Combat.attack(me, foe);
+        expect(me.kills).toBe(first);
+    });
+});
+
 describe("stabilize: field medicine", () => {
     test("a medic drags a mortally wounded teammate back to their feet", () => {
         Battlefield.COVER = [];

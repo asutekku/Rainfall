@@ -379,7 +379,11 @@ export class Combat {
 
     /** Award the kill/XP/loot when an attack takes the target out of the fight. */
     private static registerIfDefeated(actor: Actor, target: Actor): void {
-        if (!target.canFight()) {
+        // Once, on the way down. This fired on *every* hit that found someone
+        // already out, so a second shot into a body paid a second kill, a
+        // second helping of XP and a second round of loot.
+        if (!target.canFight() && !target.creditedTo) {
+            target.creditedTo = actor;
             actor.kills += 1;
             actor.experience += target.experience;
             BattleRecorder.countXp(actor, target.experience);
@@ -718,7 +722,7 @@ export class Combat {
         const saved: boolean = target.alive && target.mortallyWounded;
         target.bleeding = 0;
         if (saved) { target.stabilize(); }
-        this.events.push({kind: "stabilize", actor: self, target, saved});
+        this.events.push({kind: "stabilize", actor: self, target, saved, hp: target.health});
         this.messages.push(new MessageStr(saved
             ? `${self.name} drags ${target.name} back from the brink.`
             : `${self.name} patches ${target.name} up.`));

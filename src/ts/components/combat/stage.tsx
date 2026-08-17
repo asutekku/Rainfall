@@ -5,9 +5,10 @@ import {Battlefield} from "../../interact/battlefield";
 import {outOfRange} from "../../interact/damageModel";
 import {RunNode, RunState} from "../../interact/runMap";
 import {MainPanel} from "../mainPanel";
-import {BattleScene, PlaybackBundle} from "./battleScene";
+import {BattleNotice, BattleScene, PlaybackBundle} from "./battleScene";
 import {BattleHud} from "./battleHud";
 import {UnitCard} from "./unitCard";
+import {ShownState} from "../../interact/shownState";
 import {CityMap} from "../run/cityMap";
 
 export interface StageProps {
@@ -26,9 +27,15 @@ export interface StageProps {
     holdLeft: number;
     /** The unit whose card is open, if any. */
     inspecting: Actor | null;
+    /** Health as the board is drawing it — see shownState.ts. */
+    shown: ShownState;
+    /** A fight-level announcement for the board (reinforcements, revive). */
+    notice: BattleNotice | null;
     onNotice: (msg: any) => void;
     /** Open (or close, with null) a unit's card — what a HUD row tap means now. */
     onInspect: (a: Actor | null) => void;
+    onImpact: (target: Actor, damage: number) => void;
+    onMend: (target: Actor, hp: number) => void;
     onPickNode: (node: RunNode) => void;
     onPlaybackDone: (id: number) => void;
 }
@@ -57,7 +64,8 @@ export class Stage extends React.Component<StageProps, {}> {
 
     /** Desktop target rail. Selection is the card, not a target — combat is automatic. */
     private strip = (e: Actor, i: number) => {
-        const hpPct = Math.max(0, Math.min(100, (e.health / Math.max(1, e.maxHealth)) * 100));
+        const hp = this.props.shown.of(e);
+        const hpPct = Math.max(0, Math.min(100, (hp / Math.max(1, e.maxHealth)) * 100));
         const hpCls = hpPct > 60 ? "h-good" : hpPct > 30 ? "h-warn" : "h-crit";
         const shooter = this.props.actor;
         const dist = Math.round(Battlefield.distance(shooter, e));
@@ -66,14 +74,14 @@ export class Stage extends React.Component<StageProps, {}> {
         const temper = Stage.TEMPER[e.temperament] || Stage.TEMPER["balanced"]!;
         const sub = e.faction ? `${e.faction}${e.archetype ? " " + e.archetype : ""}` : e.role.name;
         return (
-            <button key={i} className={"es" + (e === this.props.inspecting ? " on" : "") + (e.canFight() ? "" : " dead")}
+            <button key={i} className={"es" + (e === this.props.inspecting ? " on" : "") + (this.props.shown.up(e) ? "" : " dead")}
                     style={{borderLeft: "3px solid " + accentCss(e.faction)}}
                     onClick={() => this.props.onInspect(e)}>
                 <span className={"d rank-" + (e.rank || 1)} title={"threat rank " + (e.rank || 1)}>✦</span>
                 <span className={"nm"}>{e.name} <span className={"lv"}>{sub} · L{e.level}</span></span>
                 <span className={"temp " + temper[1]} title={"AI temperament"}>{temper[0]}</span>
                 <span className={"bar hp"}><i className={hpCls} style={{width: hpPct + "%"}}/></span>
-                <b className={"hpn " + hpCls}>{Math.max(0, Math.ceil(e.health))}</b>
+                <b className={"hpn " + hpCls}>{Math.max(0, Math.ceil(hp))}</b>
                 <span className={"rng" + (unreachable ? " oor" : "")}>{dist}m</span>
                 <span className={"sp"}>SP {this.enemyArmor(e)}</span>
             </button>);
@@ -121,10 +129,15 @@ export class Stage extends React.Component<StageProps, {}> {
                                      playback={this.props.playback}
                                      onPlaybackDone={this.props.onPlaybackDone}
                                      speed={1.6}
+                                     shown={this.props.shown}
+                                     notice={this.props.notice}
+                                     onImpact={this.props.onImpact}
+                                     onMend={this.props.onMend}
                                      activeName={acting ? acting.name : undefined}/>
                         {this.props.inspecting &&
                             <UnitCard unit={this.props.inspecting}
                                       party={this.props.party} enemies={this.props.enemies}
+                                      shown={this.props.shown}
                                       onClose={() => this.props.onInspect(null)}/>}
                     </div>
                 ) : (
@@ -144,6 +157,7 @@ export class Stage extends React.Component<StageProps, {}> {
                 {inFight && <BattleHud party={this.props.party} enemies={this.props.enemies}
                                        acting={acting} next={next}
                                        selected={this.props.inspecting}
+                                       shown={this.props.shown}
                                        onSelect={this.props.onInspect}/>}
 
                 {inFight && <div className={"stageActions"}>{this.statusBar()}</div>}

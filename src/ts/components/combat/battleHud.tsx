@@ -1,6 +1,7 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {hudTags} from "./hudInfo";
+import {ShownState} from "../../interact/shownState";
 
 export interface BattleHudProps {
     party: Actor[];
@@ -11,6 +12,11 @@ export interface BattleHudProps {
     next: Actor | null;
     /** The unit whose card is open, so the row it came from reads as picked. */
     selected: Actor | null;
+    /**
+     * Health as the board is drawing it, not what the engine has already
+     * worked out — the row drops when the round lands, not a turn early.
+     */
+    shown: ShownState;
     onSelect: (a: Actor) => void;
 }
 
@@ -35,8 +41,9 @@ export interface BattleHudProps {
 export class BattleHud extends React.Component<BattleHudProps, {}> {
 
     private row(a: Actor, foe: boolean, i: number) {
-        const out = !a.canFight() && !a.mortallyWounded;
-        const hpPct = Math.max(0, Math.min(100, (a.health / Math.max(1, a.maxHealth)) * 100));
+        const hp = this.props.shown.of(a);
+        const out = !this.props.shown.up(a) && !a.mortallyWounded;
+        const hpPct = Math.max(0, Math.min(100, (hp / Math.max(1, a.maxHealth)) * 100));
         const hpCls = hpPct > 60 ? "h-good" : hpPct > 30 ? "h-warn" : "h-crit";
         const cls = "bhRow" + (foe ? " foe" : i === 0 ? " you" : " pal")
             + (a === this.props.acting ? " on" : a === this.props.next ? " nxt" : "")
@@ -53,13 +60,13 @@ export class BattleHud extends React.Component<BattleHudProps, {}> {
                 </span>
                 <span className={"bhBot"}>
                     <span className={"bhBar"}><i className={hpCls} style={{width: hpPct + "%"}}/></span>
-                    <b className={"bhHp " + hpCls}>{Math.max(0, Math.ceil(a.health))}</b>
+                    <b className={"bhHp " + hpCls}>{Math.max(0, Math.ceil(hp))}</b>
                 </span>
             </button>);
     }
 
     public override render() {
-        const living = this.props.enemies.filter((e) => e.canFight()).length;
+        const living = this.props.enemies.filter((e) => this.props.shown.up(e)).length;
         return (
             <div className={"bhud"}>
                 <div className={"bhCol"}>
