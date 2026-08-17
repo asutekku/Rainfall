@@ -1,8 +1,8 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
-import {MetaFoot} from "./metaOverlay";
 import {Purse} from "../../interact/crew";
 import {EventCheck, EventCtx, EventOutcome, GameEvent, makeCtx, odds, rollCheck} from "../../interact/events";
+import {NodeShell} from "./metaOverlay";
 
 export interface EventViewProps {
     event: GameEvent;
@@ -137,34 +137,28 @@ export class EventView extends React.Component<EventViewProps, EventViewState> {
         const done = this.state.resolved;
         const rolling = this.state.rolling;
         return (
-            <div className={"metaOverlay evWrap"}>
-                <div className={"metaHead"}>
-                    <span className={"metaTitle"}>◈ Encounter</span>
-                    <span className={"evEddies"}>{Math.floor(Purse.balance(this.props.party[0]!))}¥</span>
-                </div>
-                <div className={"ovScroll"}>
-                    <div className={"ovInner"}>
-                        <div className={"mHero ev"}>
-                            <span className={"mHeroGlyph"}><i>◈</i></span>
-                            <span className={"mHeroKicker"}>Street encounter</span>
-                            <h2 className={"mHeroTitle"}>{e.title}</h2>
-                        </div>
-                        <p className={"evFlavor"}>{e.flavor}</p>
-                        {rolling && this.roller(rolling)}
-                        {!done && !rolling && <div className={"evOpts"}>{e.options.map(this.option)}</div>}
-                        {done && (
-                            <div className={"evResult"}>
-                                {done.lines.map((l, i) => <p key={i} style={{animationDelay: `${i * 0.12}s`}}>{l}</p>)}
-                            </div>
-                        )}
+            <NodeShell accent={"ev"} icon={"◈"} label={"Encounter"}
+                       kicker={"Street encounter"} title={e.title}
+                       sub={e.flavor}
+                       eddies={Purse.balance(this.props.party[0]!)}
+                       guide={!done && !rolling
+                           ? <React.Fragment>
+                               Pick <b>one</b> — the run moves on after. Greyed options say what they need;
+                               a <b>check</b> rolls a d10 + the named stat, and the odds shown are yours.
+                           </React.Fragment>
+                           : undefined}
+                       foot={done
+                           ? <button className={"metaLeave"} onClick={() => this.props.onDone(done)}>
+                               {done.combat ? "Weapons out ▸" : "Move on ▸"}
+                           </button>
+                           : null}>
+                {rolling && this.roller(rolling)}
+                {!done && !rolling && <div className={"evOpts"}>{e.options.map(this.option)}</div>}
+                {done && (
+                    <div className={"evResult"}>
+                        {done.lines.map((l, i) => <p key={i} style={{animationDelay: `${i * 0.12}s`}}>{l}</p>)}
                     </div>
-                </div>
-                {done && <MetaFoot>
-                    <button className={"metaLeave" + (done.combat ? " metaDanger" : "")}
-                            onClick={() => this.props.onDone(done)}>
-                        {done.combat ? "Weapons out ▸" : "Move on ▸"}
-                    </button>
-                </MetaFoot>}
-            </div>);
+                )}
+            </NodeShell>);
     }
 }

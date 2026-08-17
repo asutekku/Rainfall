@@ -438,10 +438,11 @@ export const EVENTS: GameEvent[] = [
                 },
             },
             {
-                label: "Just take the deck hardware",
+                label: "Just take the deck hardware", detail: "safe · a guaranteed 70¥",
                 run: (ctx) => { Purse.earn(ctx.leader, 70); return {lines: ["Stripped for parts. 70¥. The body keeps its secrets."]}; },
             },
-            {label: "Leave the dead alone", run: (ctx) => { hum(ctx.leader, 2); return {lines: ["You close their eyes. It costs nothing and it isn't nothing (+2 Humanity)."]}; }},
+            {label: "Leave the dead alone", detail: "+2 Humanity",
+                run: (ctx) => { hum(ctx.leader, 2); return {lines: ["You close their eyes. It costs nothing and it isn't nothing (+2 Humanity)."]}; }},
         ],
     },
     {
@@ -471,7 +472,7 @@ export const EVENTS: GameEvent[] = [
         flavor: "A dead-network payphone. Ringing. For you, apparently.",
         options: [
             {
-                label: "Answer it",
+                label: "Answer it", detail: "coin flip — free intel, or the whole squad eats feedback",
                 run: (ctx) => {
                     if (Math.random() < 0.5) {
                         return {lines: ["A synthetic voice reads you tomorrow's obituaries — including where they died. The map lights up."], reveal: 3};
@@ -500,7 +501,7 @@ export const EVENTS: GameEvent[] = [
         flavor: "Katana still in hand, back against a dumpster, bleeding through lacquered armour. He watches you approach.",
         options: [
             {
-                label: "Patch him up", detail: "he'll remember this",
+                label: "Patch him up", detail: "+1 REP · +3 Humanity · he'll remember this",
                 run: (ctx) => {
                     ctx.leader.gainReputation(1);
                     hum(ctx.leader, 3);
@@ -509,7 +510,7 @@ export const EVENTS: GameEvent[] = [
                 },
             },
             {
-                label: "Finish him and loot the armour",
+                label: "Finish him and loot the armour", detail: "60¥ · −6 Humanity · −1 REP",
                 run: (ctx) => {
                     Purse.earn(ctx.leader, 60);
                     hum(ctx.leader, -6);
@@ -569,7 +570,7 @@ export const EVENTS: GameEvent[] = [
         flavor: "A Scav van, doors open, engine ticking. Coolers in the back. Nobody in sight. Nobody visible, anyway.",
         options: [
             {
-                label: "Loot the coolers",
+                label: "Loot the coolers", detail: "50/50 — real salvage, or a Scav ambush",
                 run: (ctx) => {
                     if (Math.random() < 0.5) {
                         const name = grantWeapon(ctx.leader, 2, 4);
@@ -599,7 +600,7 @@ export const EVENTS: GameEvent[] = [
                 },
             },
             {
-                label: "Put it down, strip the chrome",
+                label: "Put it down, strip the chrome", detail: "50¥ · −4 Humanity",
                 run: (ctx) => {
                     Purse.earn(ctx.leader, 50);
                     hum(ctx.leader, -4);
@@ -614,7 +615,7 @@ export const EVENTS: GameEvent[] = [
         flavor: "Corpse-drones wheel over something in a drainage ditch. Their salvage tags are still unclaimed.",
         options: [
             {
-                label: "Search the body",
+                label: "Search the body", detail: "eddies, a gun… or the contact toxin that got them",
                 run: (ctx) => {
                     const roll = Math.random();
                     if (roll < 0.4) { Purse.earn(ctx.leader, 90); return {lines: ["A courier, judging by the shoes. 90¥ in a hidden belt."]}; }
@@ -641,7 +642,7 @@ export const EVENTS: GameEvent[] = [
         flavor: "A basement crowd, a chalk circle, two augmented rats the size of terriers. The odds board is optimistic.",
         options: [
             {
-                label: "Bet 50¥ on the ugly one",
+                label: "Bet 50¥ on the ugly one", detail: "50/50 — pays 120¥",
                 req: needEddies(50),
                 run: (ctx) => {
                     pay(ctx, 50);
@@ -695,7 +696,7 @@ export const EVENTS: GameEvent[] = [
                 },
             },
             {
-                label: "Rob him yourselves",
+                label: "Rob him yourselves", detail: "80¥ · −5 Humanity · −1 REP",
                 run: (ctx) => {
                     Purse.earn(ctx.leader, 80);
                     hum(ctx.leader, -5);

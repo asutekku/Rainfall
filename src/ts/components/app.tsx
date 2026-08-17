@@ -25,9 +25,8 @@ import {SafehouseView} from "./run/safehouseView";
 import {NetDiveView} from "./run/netDiveView";
 import {Crew} from "../interact/crew";
 import {MercOffer} from "../interact/mercMarket";
-import {HireBoard} from "./run/hireBoard";
+import {FixerView} from "./run/fixerView";
 import {SectorClearView} from "./run/sectorClearView";
-import {MetaOverlay} from "./run/metaOverlay";
 import {OrderCtx, PlaybackBundle} from "./combat/battleScene";
 import {BattleEvent} from "../interact/battleEvents";
 import {FeedLog, missionClock} from "../interact/feedLog";
@@ -260,11 +259,9 @@ export class App extends React.Component<{}, InterfaceAppState> {
                                onQuit={this.gotoTitle}/>;
         }
         if (run && this.state.screen === "hire") {
-            return <MetaOverlay title={"☰ Fixer’s Table"} onLeave={this.leaveMeta}>
-                <HireBoard offers={this.state.offers} party={this.state.party}
-                           funds={this.state.crew.funds} cap={RunController.SQUAD_CAP}
-                           onHire={this.hireMerc}/>
-            </MetaOverlay>;
+            return <FixerView offers={this.state.offers} party={this.state.party}
+                              funds={this.state.crew.funds} cap={RunController.SQUAD_CAP}
+                              onHire={this.hireMerc} onLeave={this.leaveMeta}/>;
         }
         if (run && this.state.screen === "merchant") {
             return <MarketView party={this.state.party} onLeave={this.leaveMeta}/>;
