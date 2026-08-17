@@ -106,23 +106,29 @@ describe("ammo, reload and suppression", () => {
         expect(me.pinned).toBe(false);
     });
 
-    test("autofire hoses an uncrackable covered target instead of whiffing", () => {
-        withRandom(0.5, () => {
-            Battlefield.COVER = [{x: 0, y: 38, kind: "crate"}];
+    // This used to assert the opposite: against SP 18 behind cover, flat armour
+    // subtraction meant an autofire burst mathematically could not do damage,
+    // so the AI suppressed instead of firing into a wall. The soak curve has no
+    // walls — the burst is worth taking now, and the AI takes it.
+    test("no target is uncrackable: autofire puts damage through SP 18 behind cover", () => {
+        Battlefield.COVER = [{x: 0, y: 38, kind: "crate"}];
+        const gun = require("../src/ts/items/Equipment").default.weapons
+            .find((w: any) => w.autofire && w.weaponClass !== "melee" && w.shots >= 10);
+        let landed = 0, shots = 0;
+        for (let i = 0; i < 40; i++) {
             const auto = fighter({ref: 5, skill: 5, x: 0, y: 0});
-            const gun = require("../src/ts/items/Equipment").default.weapons
-                .find((w: any) => w.autofire && w.weaponClass !== "melee" && w.shots >= 10);
             auto.weapon = gun.clone();
             auto.resetBattleState();
             const tank = fighter({x: 0, y: 40});
             tank.equipment.upper = new (require("../src/ts/items/Armor").Armor)(
                 "upper", "Test Plate", "test", 1, 18, 0, "");
             const res = Combat.takeTurn(auto, [auto], [tank]);
-            const supp = res.events.find((e) => e.kind === "suppress") as SuppressEvent | undefined;
-            expect(supp).toBeTruthy();
-            expect(supp!.pinned).toBe(true);
-            expect(tank.pinned).toBe(true);
-        });
+            const shot = res.events.find((e) => e.kind === "shot") as any;
+            if (shot && shot.hit) { shots += 1; if (shot.damage > 0) { landed += 1; } }
+        }
+        expect(shots).toBeGreaterThan(30);   // fumbles are the only way to whiff now
+        // every shot that connects gets something through — that is the floor
+        expect(landed).toBe(shots);
     });
 });
 

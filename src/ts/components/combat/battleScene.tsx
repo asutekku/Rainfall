@@ -1536,15 +1536,27 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         if (hit) { this.spawnSparks(toward, color, 8); }
     }
 
-    /** Damage numbers, flinch, fall — the moment a volley lands. */
+    /**
+     * Damage numbers, flinch, fall — the moment a volley lands.
+     *
+     * Every shot produces a number now, so the floater's job changed: it used
+     * to distinguish "hit" from "nothing happened", and it now distinguishes
+     * how well the shot connected. A graze and a crit are the same event with
+     * different weight behind them, and the board should say which it was.
+     */
     private impact(ev: ShotEvent, target: UnitView) {
         if (!ev.hit) {
             this.floater(target, "MISS", "miss");
         } else if (ev.damage <= 0) {
             this.floater(target, "ARMOR", "soak");
             this.spawnSparks(this.unitAnchor(target, 1.3), 0x9aa4ad, 5);
+        } else if (ev.quality === "graze") {
+            this.floater(target, "GRAZE " + ev.damage, "soak");
+            this.spawnSparks(this.unitAnchor(target, 1.3), 0xff9a70, 4);
+            target.flinch = 0.1;
         } else {
-            const big = ev.damage >= 15 || ev.aimed;
+            const big = ev.quality === "crit" || ev.damage >= 15 || ev.aimed;
+            if (ev.quality === "crit") { this.floater(target, "CRIT", "crit"); }
             // multi-round volleys read as a rain of ticks summing to the roll
             const n = ev.actor.weapon.weaponClass === "shotgun" ? 4
                 : Math.max(1, Math.min(ev.rounds || 1, ev.damage));

@@ -1,5 +1,6 @@
 import {Actor} from "../actors/Actor";
 import {Point} from "./battlefield";
+import type {HitQuality} from "./damageModel";
 
 /**
  * Structured play-by-play of a single combat turn. The engine (Combat) records
@@ -30,7 +31,9 @@ export interface ShotEvent {
     actor: Actor;
     target: Actor;
     hit: boolean;
-    /** HP that actually got past armour (0 on a miss or a fully-soaked hit) */
+    /** how well it connected — drives the damage multiplier and the floater label */
+    quality: HitQuality;
+    /** HP that actually got past armour (0 on a miss) */
     damage: number;
     aimed: boolean;
     autofire: boolean;

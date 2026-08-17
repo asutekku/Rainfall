@@ -1536,6 +1536,9 @@ progress::-moz-progress-bar { background:var(--rust); }
 .ucFacts dd { margin:0; min-width:0; color:var(--ink); font-size:12px; line-height:1.5; }
 .ucFacts dd i { font-style:normal; color:var(--dim); font-size:11px; }
 .ucFacts dd b { font-variant-numeric:tabular-nums; }
+/* the three outcome bands, spaced so they read as a mix and not one long word */
+.ucBands { display:flex; flex-wrap:wrap; gap:4px 10px; align-items:baseline; }
+.ucBands > i { flex-basis:100%; }
 .ucHi { color:var(--good); }
 .ucMid { color:var(--warn); }
 .ucLo { color:var(--crit); }

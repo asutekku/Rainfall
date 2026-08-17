@@ -133,30 +133,29 @@ describe("aimed-shot judgement (no more whiff wars)", () => {
         return t;
     };
 
-    test("a low-skill shooter never gambles on -8 head shots", () => {
+    const aimRate = (cfg: {ref: number; skill: number}, y: number) => {
         Battlefield.COVER = [];
-        let aimedShots = 0;
-        for (let i = 0; i < 25; i++) {
-            const me = fighter({ref: 2, skill: 0, weapon: "WSA Autopistol", x: 0, y: 5});
-            const tank = armoured(0, 15);
-            const res = Combat.takeTurn(me, [me], [tank]);
+        let aimed = 0, shots = 0;
+        for (let i = 0; i < 30; i++) {
+            const me = fighter({...cfg, weapon: "WSA Autopistol", x: 0, y: 5});
+            const res = Combat.takeTurn(me, [me], [armoured(0, y)]);
             const shot = res.events.find((e) => e.kind === "shot") as ShotEvent | undefined;
-            if (shot && shot.aimed) { aimedShots += 1; }
+            if (shot) { shots += 1; if (shot.aimed) { aimed += 1; } }
         }
-        expect(aimedShots).toBe(0);
+        return shots ? aimed / shots : 0;
+    };
+
+    // The old pair of tests asserted "a low-skill shooter never aims" and "a
+    // crack shot sometimes does" against absolute thresholds tuned to the RED
+    // -8-on-a-d10 penalty. The decision is exact arithmetic now — expected
+    // damage placed vs expected damage centre-mass — so the durable property is
+    // the ordering, not the absolute rate.
+    test("placing a shot is a trade skill wins more often than it loses", () => {
+        expect(aimRate({ref: 10, skill: 10}, 12)).toBeGreaterThanOrEqual(aimRate({ref: 2, skill: 0}, 12));
     });
 
-    test("a crack shot may still take the head shot against heavy armour", () => {
-        Battlefield.COVER = [];
-        let aimedShots = 0;
-        for (let i = 0; i < 25; i++) {
-            const me = fighter({ref: 10, skill: 10, weapon: "WSA Autopistol", x: 0, y: 5});
-            const tank = armoured(0, 12);
-            const res = Combat.takeTurn(me, [me], [tank]);
-            const shot = res.events.find((e) => e.kind === "shot") as ShotEvent | undefined;
-            if (shot && shot.aimed) { aimedShots += 1; }
-        }
-        expect(aimedShots).toBeGreaterThan(0);
+    test("a crack shot does take the placed shot when the plate is heavy", () => {
+        expect(aimRate({ref: 10, skill: 10}, 12)).toBeGreaterThan(0);
     });
 });
 

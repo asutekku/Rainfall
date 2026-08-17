@@ -1,3 +1,4 @@
+import {AIMED_MULT, aimedSP, applySoak} from "../interact/damageModel";
 import {GetItem} from "../interact/getItem";
 import {Armor} from "../items/Armor";
 import {Cyberware, CyberwareEffects} from "../items/Cyberware";
@@ -640,19 +641,28 @@ export class Actor extends GameObject {
         this.luck = this.maxLuck;
     }
 
+    /**
+     * Take a hit.
+     *
+     * Armour soaks a share of the damage on a diminishing curve rather than
+     * subtracting a flat number, and a floor guarantees something always gets
+     * through. Under flat subtraction a 1d6 pistol against the SP 12 every
+     * sector-1 goon wears dealt zero every single time — not a weak weapon, a
+     * disconnected one — and at levels 3 and 5 the average weapon dealt zero
+     * through the average armour. See damageModel.ts.
+     */
     public receiveDamage(amount: number, ap: boolean = false, aimedAtHead: boolean = false): number {
         // RED uses body armour SP for normal hits and head armour SP for aimed
         // head shots; limbs are not separately armoured in the core rules.
         const piece: Armor | null = aimedAtHead ? this.equipment.headgear : this.equipment.upper;
         const wornSP: number = piece ? piece.stoppingPower : 0;
         // Subdermal armour doesn't stack with worn armour; use the higher SP.
-        let sp: number = aimedAtHead ? wornSP : Math.max(wornSP, this.cyberSP());
-        if (ap) {
-            sp = Math.floor(sp / 2); // armour-piercing halves SP
-        }
-        let damage: number = Math.max(0, amount - sp);
+        const bodySP: number = Math.max(
+            this.equipment.upper ? this.equipment.upper.stoppingPower : 0, this.cyberSP());
+        const sp: number = aimedAtHead ? aimedSP(wornSP, bodySP) : bodySP;
+        let damage: number = applySoak(amount, sp, ap);
         if (aimedAtHead) {
-            damage *= 2; // head shots double the damage that gets through
+            damage = Math.round(damage * AIMED_MULT);   // a placed shot hits harder
         }
         // Self-ICE: a killing blow trips the breaker instead (once per run per charge).
         if (damage >= this.health && this.iceLeft > 0 && this.alive && !this.mortallyWounded) {

@@ -5,8 +5,8 @@ import {GetItem} from "./getItem";
 import {Messages} from "./messages";
 import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./messageSchema";
 import {Skill} from "../items/Skill";
-import {rangeDV} from "./rangeTable";
 import {Check} from "./check";
+import {HitQuality, QUALITY_MULT, AIMED_EDGE, coverEdge, outOfRange, rangeEdge, rollQuality} from "./damageModel";
 import {BLAST_RADIUS, Battlefield, EMP_RADIUS, FLASH_RADIUS, GRENADE_RANGE, Point} from "./battlefield";
 import {TacticalAI, Plan} from "./tacticalAI";
 import {Economy} from "./economy";
@@ -14,6 +14,9 @@ import {BattleRecorder} from "./battleReport";
 import {BattleEvent, BlastType, BlastVictim, TurnResult} from "./battleEvents";
 
 const Log = en_US.Log;
+
+/** Baseline edge for a melee swing before the target's evasion is taken off. */
+const MELEE_BASE = 12;
 
 export class Combat {
     private static messages: any = [];
@@ -53,6 +56,41 @@ export class Combat {
     /** Lightweight telemetry for balancing (read + reset by the headless sim). */
     public static stats = {shots: 0, hits: 0, aimed: 0, dmg: 0};
 
+    /**
+     * The accuracy `edge` behind a shot: the shooter's attack bonus, what the
+     * range costs, and what cover costs. Melee trades the range term for the
+     * target's evasion. Feeds qualityOdds — see damageModel.ts.
+     */
+    public static shotEdge(actor: Actor, target: Actor, distance: number,
+                           aimed: boolean = false, bonus: number = 0): number {
+        const weapon = actor.weapon;
+        const base: number = actor.attackBonus(weapon) + bonus + (aimed ? AIMED_EDGE : 0);
+        if (weapon.weaponClass === "melee") {
+            return base + MELEE_BASE - target.evasion();
+        }
+        return base + rangeEdge(weapon.weaponClass, distance)
+            + coverEdge(Battlefield.coverPenaltyAt(target.position, actor.position));
+    }
+
+    /**
+     * Draw the shot's quality, letting Luck rescue a fumble.
+     *
+     * Luck used to convert a miss into a hit inside Check.resolve, and the
+     * obvious translation — let it promote a graze into a hit — turned out to
+     * be far too strong: a Luck 6 merc fires about five times a fight, so it
+     * upgraded nearly every graze it drew. The bands collapsed to 90% "hit",
+     * and worse, the odds the unit card quotes would have been a lie.
+     *
+     * So it keeps its original, narrower job: the shot that would have been
+     * wasted isn't. Everything else Luck is for lives outside the firefight,
+     * on the street checks that events roll.
+     */
+    private static drawQuality(actor: Actor, edge: number): HitQuality {
+        const q: HitQuality = rollQuality(edge);
+        if (q === "miss" && actor.luck > 0 && actor.spendLuck(1) > 0) { return "graze"; }
+        return q;
+    }
+
     public static attack(actor: Actor, target: Actor, aimed: boolean = false, bonus: number = 0): any {
         const weapon = actor.weapon;
         const distance: number = Utils.distance(actor.position, target.position);
@@ -62,39 +100,32 @@ export class Combat {
         }
         const melee: boolean = weapon.weaponClass === "melee";
         const covered: boolean = !melee && Battlefield.coverPenaltyAt(target.position, actor.position) > 0;
-        // rounds leaving the barrel, for the tracer animation (RED aimed shots are single, careful rounds)
+        // rounds leaving the barrel, for the tracer animation (aimed shots are single, careful rounds)
         const rounds: number = melee || aimed ? 1 : Math.max(1, Math.min(weapon.rateOfFire || 1, 3));
-        if (!melee && rangeDV(weapon.weaponClass, distance) === null) {
+        if (!melee && outOfRange(weapon.weaponClass, distance)) {
             this.events.push({kind: "noshot", actor});
             this.messages.push(new MessageStr(`${actor.name}: no shot — out of range.`));
             return;
         }
         this.stats.shots += 1; if (aimed) { this.stats.aimed += 1; }
         const targetOldHP: number = target.health;
-        if (!this.didAttackHit(actor, target, distance, aimed, bonus)) {
-            // Smartgun Array: the first miss each fight is salvaged into a graze.
-            if (!melee && actor.chromeHas("grazeOnMiss") && !actor.grazeUsed) {
-                actor.grazeUsed = true;
-                const grazeDmg: number = Math.ceil(weapon.getDamage() / 2);
-                const dealt: number = target.receiveDamage(grazeDmg, weapon.ap, false);
-                this.stats.hits += 1; this.stats.dmg += dealt;
-                BattleRecorder.countShot(actor, dealt > 0);
-                BattleRecorder.countDamage(actor, target, dealt);
-                this.events.push({kind: "shot", actor, target, hit: true, damage: dealt, aimed,
-                    autofire: false, melee, covered, dropped: !target.canFight(), rounds});
-                this.messages.push(new MessageStr(`${actor.name}'s smartgun array turns the miss into a graze — ${dealt} damage.`));
-                this.registerIfDefeated(actor, target);
-                return;
-            }
+        let quality: HitQuality = this.drawQuality(actor, this.shotEdge(actor, target, distance, aimed, bonus));
+        // Smartgun Array: the first fumble each fight is salvaged into a graze.
+        if (quality === "miss" && !melee && actor.chromeHas("grazeOnMiss") && !actor.grazeUsed) {
+            actor.grazeUsed = true;
+            quality = "graze";
+            this.messages.push(new MessageStr(`${actor.name}'s smartgun array salvages the shot.`));
+        }
+        if (quality === "miss") {
             BattleRecorder.countShot(actor, false);
-            this.events.push({kind: "shot", actor, target, hit: false, damage: 0, aimed,
+            this.events.push({kind: "shot", actor, target, hit: false, quality, damage: 0, aimed,
                 autofire: false, melee, covered, dropped: false, rounds});
             this.messages.push(new MessageStr(aimed ? 'MISS! (aimed)' : 'MISS!'));
             return;
         }
         this.stats.hits += 1;
         BattleRecorder.countShot(actor, true);
-        let damage: number = weapon.getDamage();
+        let damage: number = Math.round(weapon.getDamage() * QUALITY_MULT[quality]);
         if (damage > 0) {
             damage += this.alphaStrike(actor);    // Solo: the round's opening hit lands harder
             damage += actor.backupDamage();        // Cop "Backup" support fire
@@ -102,11 +133,11 @@ export class Combat {
         const dealt: number = target.receiveDamage(damage, weapon.ap, aimed);
         this.stats.dmg += dealt;
         BattleRecorder.countDamage(actor, target, dealt);
-        this.events.push({kind: "shot", actor, target, hit: true, damage: dealt, aimed,
+        this.events.push({kind: "shot", actor, target, hit: true, quality, damage: dealt, aimed,
             autofire: false, melee, covered, dropped: !target.canFight(), rounds});
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
         if (aimed && dealt > 0) { this.messages.push(new MessageStr(`${actor.name} lands a head shot!`)); }
-        this.rollCrit(target, dealt);
+        this.rollCrit(target, dealt, quality);
         this.registerIfDefeated(actor, target);
     }
 
@@ -115,8 +146,10 @@ export class Combat {
      * through armour risks leaving a mark — an open bleed, a torn-up leg, or
      * a stunned turn. Everything here heals the moment the fight ends.
      */
-    private static rollCrit(target: Actor, dealt: number): void {
-        if (dealt < 12 || !target.canFight()) { return; }
+    private static rollCrit(target: Actor, dealt: number, quality: HitQuality = "hit"): void {
+        // A critical band is the other way in: a clean hit that lands somewhere
+        // soft leaves a mark even when the number itself was modest.
+        if ((dealt < 12 && !(quality === "crit" && dealt >= 6)) || !target.canFight()) { return; }
         const roll: number = Math.floor(Math.random() * 6) + 1;
         if (roll <= 2) {
             target.bleeding = Math.max(target.bleeding, 2);
@@ -143,24 +176,26 @@ export class Combat {
     }
 
     /**
-     * RED autofire: a single Autofire check; on a hit, damage is 2d6 multiplied
-     * by the amount the check beat the DV, capped by the weapon's autofire
-     * rating (x3 for SMGs, x4 for assault rifles). Both dice reading 6 is a
-     * Critical Injury (+5 damage).
+     * Autofire: a burst of 2d6, multiplied by how much of it stayed on target.
+     *
+     * The multiplier used to be the margin by which the to-hit check beat the
+     * DV, which made autofire the swingiest thing in the game *and* tied it to
+     * the roll that no longer exists. It now reads off the same quality band as
+     * every other shot — a graze walks one burst across them, a crit puts the
+     * whole magazine in — capped by the weapon's rating (x3 SMG, x4 rifle).
      */
     private static autofireAttack(actor: Actor, target: Actor, distance: number): void {
-        const dv: number | null = rangeDV(actor.weapon.weaponClass, distance);
-        if (dv === null) {
+        if (outOfRange(actor.weapon.weaponClass, distance)) {
             this.events.push({kind: "noshot", actor});
             this.messages.push(new MessageStr('OUT OF RANGE'));
             return;
         }
         const cover: number = Battlefield.coverPenaltyAt(target.position, actor.position);
         this.stats.shots += 1;
-        const check = Check.resolve(actor, actor.attackBonus(actor.weapon), dv + cover);
-        if (!check.success) {
+        const quality: HitQuality = this.drawQuality(actor, this.shotEdge(actor, target, distance));
+        if (quality === "miss") {
             BattleRecorder.countShot(actor, false);
-            this.events.push({kind: "shot", actor, target, hit: false, damage: 0, aimed: false,
+            this.events.push({kind: "shot", actor, target, hit: false, quality, damage: 0, aimed: false,
                 autofire: true, melee: false, covered: cover > 0, dropped: false, rounds: 5});
             this.messages.push(new MessageStr('MISS!'));
             return;
@@ -168,21 +203,19 @@ export class Combat {
         this.stats.hits += 1;
         BattleRecorder.countShot(actor, true);
         const maxMultiplier: number = actor.weapon.weaponClass === "rifle" ? 4 : 3;
-        const multiplier: number = Math.max(1, Math.min(check.margin, maxMultiplier));
+        const band: number = quality === "graze" ? 1 : quality === "hit" ? 2 : maxMultiplier;
+        const multiplier: number = Math.min(band, maxMultiplier);
         const d1: number = Math.floor(Math.random() * 6) + 1;
         const d2: number = Math.floor(Math.random() * 6) + 1;
-        let damage: number = (d1 + d2) * multiplier + this.alphaStrike(actor);
-        if (d1 === 6 && d2 === 6) {
-            damage += 5; // Critical Injury
-        }
+        const damage: number = (d1 + d2) * multiplier + this.alphaStrike(actor);
         const targetOldHP: number = target.health;
         const dealt: number = target.receiveDamage(damage, actor.weapon.ap);
         this.stats.dmg += dealt;
         BattleRecorder.countDamage(actor, target, dealt);
-        this.events.push({kind: "shot", actor, target, hit: true, damage: dealt, aimed: false,
+        this.events.push({kind: "shot", actor, target, hit: true, quality, damage: dealt, aimed: false,
             autofire: true, melee: false, covered: cover > 0, dropped: !target.canFight(), rounds: 5});
         this.messages.push(Messages.getCombatMessage(actor, target, targetOldHP, dealt));
-        this.rollCrit(target, dealt);
+        this.rollCrit(target, dealt, quality);
         this.registerIfDefeated(actor, target);
     }
 
@@ -258,26 +291,6 @@ export class Combat {
         } else {
             this.messages.push(new MessageStr(`${actor.name} flatlines.`));
         }
-    }
-
-    /**
-     * Cyberpunk RED attack resolution. Melee is an opposed check against the
-     * target's evasion; ranged compares the attack roll to the weapon's DV for
-     * its class at the current distance (out of range = automatic miss).
-     */
-    private static didAttackHit(actor: Actor, target: Actor, distance: number,
-                                aimed: boolean = false, bonus: number = 0): boolean {
-        const weapon = actor.weapon;
-        const atkMod: number = actor.attackBonus(weapon) + (aimed ? -8 : 0) + bonus;   // RED Aimed Shot: -8 to hit
-        if (weapon.weaponClass === "melee") {
-            return Check.opposed(actor, atkMod, target.evasion()).success;
-        }
-        const dv: number | null = rangeDV(weapon.weaponClass, distance);
-        if (dv === null) {
-            return false; // target beyond the weapon's effective range
-        }
-        const cover: number = Battlefield.coverPenaltyAt(target.position, actor.position);
-        return Check.resolve(actor, atkMod, dv + cover).success;
     }
 
     // =====================================================================
