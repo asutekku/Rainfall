@@ -146,15 +146,17 @@ export class EventView extends React.Component<EventViewProps, EventViewState> {
                                Pick <b>one</b> — the run moves on after. Greyed options say what they need;
                                a <b>check</b> rolls a d10 + the named stat, and the odds shown are yours.
                            </React.Fragment>
-                           : undefined}>
+                           : undefined}
+                       foot={done
+                           ? <button className={"metaLeave"} onClick={() => this.props.onDone(done)}>
+                               {done.combat ? "Weapons out ▸" : "Move on ▸"}
+                           </button>
+                           : null}>
                 {rolling && this.roller(rolling)}
                 {!done && !rolling && <div className={"evOpts"}>{e.options.map(this.option)}</div>}
                 {done && (
                     <div className={"evResult"}>
                         {done.lines.map((l, i) => <p key={i} style={{animationDelay: `${i * 0.12}s`}}>{l}</p>)}
-                        <button className={"metaLeave"} onClick={() => this.props.onDone(done)}>
-                            {done.combat ? "Weapons out ▸" : "Move on ▸"}
-                        </button>
                     </div>
                 )}
             </NodeShell>);

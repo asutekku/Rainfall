@@ -73,15 +73,22 @@ export class NetDiveView extends React.Component<NetDiveViewProps, NetDiveViewSt
                        sub={"A live cable into a nearby corp architecture, still warm from " +
                             "whoever cut it open. Data fortresses hold eddies — and ICE."}
                        eddies={Purse.balance(this.props.party[0]!)}
-                       onLeave={!r ? () => this.props.onLeave(["— left the jack-point cold —"]) : undefined}
-                       leaveLabel={"Walk on ▸"} leaveGhost={true}
                        guide={!r
                            ? <React.Fragment>
                                Pick how deep to dive, then jack in — <b>one dive</b>, then the trace burns
                                the line. {runner.name.split(" ")[0]} runs it (best Interface, rank {runner.interfaceRank()}).
                                Eddies siphoned go to the crew purse; black ICE burns <b>real HP</b>.
                            </React.Fragment>
-                           : undefined}>
+                           : undefined}
+                       foot={r
+                           ? <button className={"metaLeave"} onClick={() => this.props.onLeave(this.summary(r))}>
+                               Jack out ▸
+                           </button>
+                           : <React.Fragment>
+                               <button className={"metaLeaveGhost"}
+                                       onClick={() => this.props.onLeave(["— left the jack-point cold —"])}>Walk on ▸</button>
+                               <button className={"metaLeave netGo"} onClick={this.dive}>⌁ Jack in ▸</button>
+                           </React.Fragment>}>
                 {!r && (
                     <div className={"evOpts"}>
                         {DIFFICULTIES.map(([d, blurb]) => (
@@ -92,7 +99,6 @@ export class NetDiveView extends React.Component<NetDiveViewProps, NetDiveViewSt
                                 <span className={"evOptMeta"}><em>{blurb}</em></span>
                             </button>
                         ))}
-                        <button className={"metaLeave netGo"} onClick={this.dive}>⌁ Jack in ▸</button>
                     </div>
                 )}
                 {r && (
@@ -102,9 +108,6 @@ export class NetDiveView extends React.Component<NetDiveViewProps, NetDiveViewSt
                             {" — "}{r.floorsCleared}/{r.totalFloors} floors · {r.eddiesGained}¥
                         </p>
                         {r.log.slice(-6).map((l, i) => <p key={i} className={"netLog"}>{l}</p>)}
-                        <button className={"metaLeave"} onClick={() => this.props.onLeave(this.summary(r))}>
-                            Jack out ▸
-                        </button>
                     </div>
                 )}
             </NodeShell>);

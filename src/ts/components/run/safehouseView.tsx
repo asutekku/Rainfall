@@ -53,7 +53,7 @@ export class SafehouseView extends React.Component<SafehouseViewProps, Safehouse
                        onLeave={done
                            ? () => this.props.onLeave([done])
                            : () => this.props.onLeave(["— no time to rest —"])}
-                       leaveLabel={done ? "Move out ▸" : "Skip — rest nothing ▸"}
+                       leaveLabel={done ? "Move out ▸" : "Skip the night ▸"}
                        leaveGhost={!done}
                        guide={!done
                            ? <React.Fragment>

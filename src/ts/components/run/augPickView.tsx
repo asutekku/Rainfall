@@ -48,14 +48,12 @@ export class AugPickView extends React.Component<AugPickViewProps, {}> {
                        guide={<React.Fragment>
                            Take <b>one</b> of the two — the install is free, but the <b>Humanity</b> cost
                            is paid now and never comes back. Skipping costs nothing.
-                       </React.Fragment>}>
+                       </React.Fragment>}
+                       foot={<button className={"metaLeaveGhost"} onClick={() => this.props.onPick(null)}>
+                           Keep your soul — skip ▸
+                       </button>}>
                 <div className={"augCards"}>
                     {this.props.offers.map(this.card)}
-                </div>
-                <div className={"augSkipRow"}>
-                    <button className={"metaLeave"} onClick={() => this.props.onPick(null)}>
-                        Keep your soul — skip ▸
-                    </button>
                 </div>
             </NodeShell>);
     }

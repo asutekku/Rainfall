@@ -472,14 +472,15 @@ progress::-moz-progress-bar { background:var(--rust); }
 .crHead h1 { margin:0; font-size:22px; letter-spacing:.04em; }
 .crHead h1::before { content:"◤ "; color:var(--rust); }
 .crHead p { margin:3px 0 0; color:var(--dim); font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
-.crActions { display:flex; gap:8px; }
-.crActions button { font-family:var(--mono); font-size:12px; padding:8px 12px; cursor:pointer;
+/* Reroll / Reset edit what's on screen, so they stay beside it. Cancel and
+   Deploy moved to the bottom action bar — see .metaFoot. */
+.crTools { display:flex; gap:8px; }
+.crTools button { font-family:var(--mono); font-size:12px; padding:8px 12px; cursor:pointer;
     color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
-.crActions button:hover { color:var(--ink); border-color:var(--cyanDim); }
-.crActions .prim { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; letter-spacing:.03em; }
-.crActions .prim:hover { background:#5cf0f5; }
+.crTools button:hover { color:var(--ink); border-color:var(--cyanDim); }
 
 .crBody { flex:1; min-height:0; display:flex; }
+.creator > .metaFoot { flex:none; }
 .crRoster { width:210px; flex:none; padding:12px; border-right:1px solid var(--line);
     overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
 .crMerc { display:flex; align-items:center; gap:9px; padding:8px; cursor:pointer; text-align:left;
@@ -779,8 +780,8 @@ progress::-moz-progress-bar { background:var(--rust); }
     /* --- character creation: stack the roster over the editor --- */
     .crHead { flex-direction:column; align-items:stretch; gap:11px; padding:13px 14px; }
     .crHead h1 { font-size:18px; }
-    .crActions { flex-wrap:wrap; }
-    .crActions button { flex:1 1 auto; min-height:44px; }
+    .crTools { flex-wrap:wrap; }
+    .crTools button { flex:1 1 auto; min-height:44px; }
     .crBody { flex-direction:column; min-height:0; }
     .crRoster {
         width:auto; flex:none; flex-direction:row; gap:6px; padding:9px 12px;
@@ -840,6 +841,36 @@ progress::-moz-progress-bar { background:var(--rust); }
 .metaTitle { color:var(--cyan); font-weight:700; letter-spacing:.06em; }
 .metaLeave { font-family:var(--mono); color:var(--bg); background:var(--cyan); border:1px solid var(--cyan); font-weight:700; padding:7px 14px; cursor:pointer; }
 .metaLeave:hover { background:#5cf0f5; }
+.metaLeave.metaDanger { background:var(--crit); border-color:var(--crit); color:#fff; }
+.metaLeave.metaDanger:hover { background:#f0674f; }
+
+/* =====================================================================
+   The action bar every overlay ends with.
+
+   Continue / Leave / Move on used to sit in the title bar at the top
+   right — measured at 12px from the top of a 844px phone screen, which is
+   the one corner a thumb cannot reach without regripping. The overlay is
+   already a flex column with a scrolling middle, so a footer here lands on
+   the bottom edge at every size with no fixed positioning to fight.
+   ===================================================================== */
+.metaFoot { flex:none; border-top:1px solid var(--line); background:var(--panel);
+    padding:12px 20px calc(12px + env(safe-area-inset-bottom)); }
+.metaFootInner { display:flex; justify-content:flex-end; gap:10px;
+    width:100%; max-width:640px; margin:0 auto; }
+.metaFoot button { min-height:44px; padding:11px 20px; font-size:13px; }
+/* The confirming action sits on the right — the side a thumb rests on — with
+   the way out pushed to the far left so the two can't be hit for each other.
+   Alone, a button has nothing to be separated from. */
+.metaFoot .metaLeaveGhost:not(:only-child) { margin-right:auto; }
+
+@media (max-width: 860px) {
+    /* Phones get the whole width: the primary stretches to fill whatever the
+       secondary doesn't need, and a lone action takes the entire bar. */
+    .metaFoot { padding:10px 14px calc(10px + env(safe-area-inset-bottom)); }
+    .metaFootInner { gap:8px; }
+    .metaFootInner > button { flex:1 1 auto; min-height:48px; padding:12px 14px; }
+    .metaFootInner > .metaLeaveGhost:not(:only-child) { flex:0 1 auto; padding:12px; }
+}
 .metaOverlay > .itemCollection, .metaOverlay > .redPanel { flex:1; min-height:0; overflow-y:auto; padding:12px 20px; }
 
 /* run-over screen */
@@ -855,8 +886,10 @@ progress::-moz-progress-bar { background:var(--rust); }
 .runEndStats span { display:flex; flex-direction:column; gap:3px; padding:9px 18px; background:var(--panel); border:1px solid var(--line); }
 .runEndStats i { font-style:normal; color:var(--dim); font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
 .runEndStats b { color:var(--cyan); font-size:18px; font-variant-numeric:tabular-nums; }
-.runEndActions { display:flex; flex-direction:column; gap:9px; align-items:stretch; }
-.runEndActions button { font-family:var(--mono); font-size:13px; padding:11px 16px; cursor:pointer; color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
+.runEndActions { display:flex; flex-direction:column; gap:9px; align-items:stretch;
+    position:sticky; bottom:0; z-index:2; background:var(--bg);
+    padding:10px 0 calc(4px + env(safe-area-inset-bottom)); }
+.runEndActions button { font-family:var(--mono); font-size:13px; padding:11px 16px; cursor:pointer; min-height:44px; color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
 .runEndActions button:hover { color:var(--ink); border-color:var(--cyanDim); }
 .runEndActions .prim { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; }
 .runEndActions .prim:hover { background:#5cf0f5; }
@@ -943,9 +976,14 @@ progress::-moz-progress-bar { background:var(--rust); }
     padding:8px 12px; cursor:pointer; color:var(--cyan); background:var(--panel); border:1px dashed var(--line2); }
 .dbKit:hover { color:var(--bg); background:var(--cyan); border-color:var(--cyan); }
 
-.debriefActions { display:flex; justify-content:center; gap:9px; margin-top:18px; }
+/* Sticky to the bottom of the scrollport: the card scrolls behind it, so the
+   action that ends the screen is always under a thumb instead of below a
+   fold that a long debrief pushes it past. */
+.debriefActions { display:flex; justify-content:center; gap:9px; margin-top:18px;
+    position:sticky; bottom:0; z-index:2; background:var(--bg);
+    padding:10px 0 calc(4px + env(safe-area-inset-bottom)); }
 .debriefActions button { font-family:var(--mono); font-size:13px; padding:11px 22px; cursor:pointer;
-    color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
+    min-height:44px; color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
 .debriefActions button:hover { color:var(--ink); border-color:var(--cyanDim); }
 .debriefActions .prim { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; }
 .debriefActions .prim:hover { background:#5cf0f5; }
@@ -1064,7 +1102,6 @@ progress::-moz-progress-bar { background:var(--rust); }
 
 .evResult { display:flex; flex-direction:column; gap:8px; border-left:2px solid var(--rare); padding:4px 0 4px 14px; margin-top:16px; }
 .evResult p { margin:0; color:var(--ink); font-size:13px; line-height:1.6; animation:heroInFlat .4s ease both; }
-.evResult .metaLeave { align-self:flex-start; margin-top:10px; }
 .evEddies { color:var(--warn); font-variant-numeric:tabular-nums; font-weight:700; }
 .metaLeaveGhost { font-family:var(--mono); color:var(--dim); background:none; border:1px solid var(--line2); padding:7px 14px; cursor:pointer; }
 .metaLeaveGhost:hover { color:var(--mid); border-color:var(--cyanDim); }
@@ -1072,7 +1109,7 @@ progress::-moz-progress-bar { background:var(--rust); }
 /* NET access node */
 .netWrap .metaTitle { color:#2ee6a8; }
 .evOpt.netSel { border-color:#2ee6a8; box-shadow:inset 0 0 12px rgba(46,230,168,.12); }
-.metaLeave.netGo { align-self:center; margin-top:8px; background:#2ee6a8; border-color:#2ee6a8; color:var(--bg); }
+.metaLeave.netGo { background:#2ee6a8; border-color:#2ee6a8; color:var(--bg); }
 .metaLeave.netGo:hover { filter:brightness(1.15); background:#2ee6a8; }
 .netWrap .evResult { border-left-color:#2ee6a8; }
 .netGood { color:var(--good); font-weight:700; letter-spacing:.06em; }
@@ -1243,8 +1280,10 @@ progress::-moz-progress-bar { background:var(--rust); }
 .scBar i { display:block; height:100%; background:var(--good); }
 /* the block heading already carries the purse — don't print it twice */
 .sectorClear .hbHead { display:none; }
-.scActions { display:flex; justify-content:center; margin-top:18px; }
-.scActions .prim { font-family:var(--mono); font-size:13px; font-weight:700; padding:11px 26px;
+.scActions { display:flex; justify-content:center; margin-top:18px;
+    position:sticky; bottom:0; z-index:2; background:var(--bg);
+    padding:10px 0 calc(4px + env(safe-area-inset-bottom)); }
+.scActions .prim { font-family:var(--mono); font-size:13px; font-weight:700; padding:11px 26px; min-height:44px;
     color:var(--bg); background:var(--cyan); border:1px solid var(--cyan); }
 .scActions .prim:hover { background:#5cf0f5; }
 
@@ -1298,6 +1337,7 @@ progress::-moz-progress-bar { background:var(--rust); }
 .tCareerRec { color:var(--faint) !important; font-size:10px !important; letter-spacing:.05em; }
 
 .tActions { display:flex; flex-direction:column; gap:9px; }
+.tBtn { min-height:52px; }
 .tBtn { display:flex; flex-direction:column; gap:4px; align-items:flex-start; text-align:left;
     width:100%; padding:13px 16px; cursor:pointer; font-family:var(--mono);
     color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
@@ -1591,7 +1631,6 @@ progress::-moz-progress-bar { background:var(--rust); }
 .augBill { margin-top:auto; padding-top:8px; font-size:11px; color:var(--dim); border-top:1px dashed var(--line); align-self:stretch; }
 .augBill b { color:var(--crit); }
 .augBill i { font-style:normal; color:var(--faint); }
-.augSkipRow { display:flex; justify-content:center; padding:14px 0 4px; }
 
 /* --- ripperdoc counter (market) ---------------------------------------- */
 .mkWarn { font-style:normal; color:var(--warn); text-transform:none; letter-spacing:0; }

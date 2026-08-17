@@ -342,7 +342,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                                 ? ` Someone else's account covers ${100 - this.price(100)}% — prices shown are yours.`
                                 : "")}
                        eddies={Purse.balance(leader)}
-                       onLeave={this.props.onLeave} leaveLabel={"Leave ▸"}
+                       onLeave={this.props.onLeave} leaveLabel={"Leave the market ▸"}
                        guide={<React.Fragment>
                            Tap a row to unfold the full spec, tap the <b>price</b> to buy.
                            Bought gear lands in your stash — equip it from the Gear tab.
