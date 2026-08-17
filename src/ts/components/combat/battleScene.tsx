@@ -6,6 +6,7 @@ import {AbilityEvent, BattleEvent, BlastEvent, CoverGoneEvent, HackEvent, MoveEv
     ShotEvent, StabilizeEvent, SuppressEvent} from "../../interact/battleEvents";
 import {Streetscape, generateStreetscape} from "../../interact/streetscape";
 import {STATUS} from "../../interact/statuses";
+import {ShownState} from "../../interact/shownState";
 import {FactionStyle, styleFor} from "../../actors/resources/factionStyles";
 
 /**
@@ -26,12 +27,36 @@ export interface PlaybackBundle {
     events: BattleEvent[];
 }
 
+/**
+ * Something happened to the fight itself, and the board should say so.
+ *
+ * The opening contact banner was the only on-screen announcement the arena had,
+ * and it was wired exclusively to a fresh street. Reinforcements arriving and a
+ * Trauma Team revive both only ever reached the text feed — so more hostiles
+ * simply appeared, and being dragged back onto your feet was indistinguishable
+ * from a new encounter.
+ */
+export interface BattleNotice {
+    id: number;
+    title: string;
+    sub: string;
+    tone: "warn" | "good";
+}
+
 export interface BattleSceneProps {
     party: Actor[];
     enemies: Actor[];
     battleId: number;                       // new value = new encounter = new street
     playback: PlaybackBundle | null;        // latest resolved turn to animate
     onPlaybackDone: (id: number) => void;
+    /** A round landed: the board's health walks down at the moment it is drawn. */
+    onImpact: (target: Actor, damage: number) => void;
+    /** A medic got someone back up: the board's health follows it the other way. */
+    onMend: (target: Actor, hp: number) => void;
+    /** Health as the board is drawing it, rather than what the engine already knows. */
+    shown: ShownState;
+    /** A fight-level announcement to put over the street (reinforcements, revive). */
+    notice: BattleNotice | null;
     speed: number;                          // playback rate multiplier
     activeName?: string | undefined;        // unit whose turn it is (ring highlight)
 }
@@ -129,6 +154,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
     private ventSprites: Array<{s: THREE.Sprite; phase: number}> = [];
     /** Floaters still on screen per unit, so a second one stacks instead of overlapping. */
     private floaters: Map<string, number> = new Map();
+    private noticeShown = 0;
 
     // ------------------------------------------------------------ lifecycle --
 
@@ -136,6 +162,11 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
 
     public override componentDidUpdate() {
         if (!this.renderer) { return; }
+        const n = this.props.notice;
+        if (n && n.id !== this.noticeShown) {
+            this.noticeShown = n.id;
+            this.banner(n.title, n.sub, n.tone === "good" ? "#7fd67f" : "#f0a830", 2600);
+        }
         if (this.props.battleId !== this.builtBattle) { this.rebuild(); }
         // reinforcements: new hostiles joined an ongoing fight — dress and place them
         for (const a of this.props.enemies) {
@@ -247,21 +278,28 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         this.showBanner(foes, boss);
     }
 
-    /** Faction contact banner over the opening dolly. */
-    private showBanner(foes: Actor[], boss: Actor | undefined) {
+    /** Anything the fight needs to say out loud, over the street. */
+    private banner(title: string, sub: string, accent: string, ms: number, boss: boolean = false) {
         const host = this.overlay.current;
-        if (!host || !foes.length) { return; }
-        const lead = boss || foes[0]!;
-        const faction = (lead.faction || "HOSTILES").toUpperCase();
-        const accent = "#" + styleFor(lead.faction).accent.toString(16).padStart(6, "0");
+        if (!host) { return; }
         const el = document.createElement("div");
         el.className = "bsBanner" + (boss ? " boss" : "");
         el.style.borderColor = accent;
-        el.innerHTML = boss
-            ? `<b style="color:${accent}">⚠ ${faction}</b><span>${lead.name} — ${lead.archetype || "heavy"}</span>`
-            : `<b style="color:${accent}">⚠ ${faction}</b><span>${foes.length} HOSTILE${foes.length > 1 ? "S" : ""}</span>`;
+        el.innerHTML = `<b style="color:${accent}">${title}</b><span>${sub}</span>`;
         host.appendChild(el);
-        window.setTimeout(() => el.remove(), boss ? 3400 : 2600);
+        window.setTimeout(() => el.remove(), ms);
+    }
+
+    /** Faction contact banner over the opening dolly. */
+    private showBanner(foes: Actor[], boss: Actor | undefined) {
+        if (!foes.length) { return; }
+        const lead = boss || foes[0]!;
+        const faction = (lead.faction || "HOSTILES").toUpperCase();
+        const accent = "#" + styleFor(lead.faction).accent.toString(16).padStart(6, "0");
+        this.banner(`⚠ ${faction}`,
+            boss ? `${lead.name} — ${lead.archetype || "heavy"}`
+                 : `${foes.length} HOSTILE${foes.length > 1 ? "S" : ""}`,
+            accent, boss ? 3400 : 2600, !!boss);
     }
 
     /** Tear down a unit's sniper beam (target dropped, lock spent, or rebuild). */
@@ -947,6 +985,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                         const burning = ev.sources.indexOf("burn") >= 0;
                         const toxic = !burning && ev.sources.indexOf("toxin") >= 0;
                         this.acts.push({dur: D(0.5), t: 0, start: () => {
+                            this.props.onImpact(ev.actor, ev.damage);
                             this.floater(u, String(ev.damage), "tick");
                             this.spawnSparks(this.unitAnchor(u, 1.1),
                                 burning ? 0xff8a30 : toxic ? 0x8fd94f : 0xc02020, burning ? 7 : 4);
@@ -993,6 +1032,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                             this.focusGoal.set(t.visPos.x, 0, t.visPos.y);
                             s.crouch = 1;   // kneel over them
                             this.spawnPulse(t, 0x7fd67f);
+                            this.props.onMend((ev as StabilizeEvent).target, (ev as StabilizeEvent).hp);
                             this.floater(t, (ev as StabilizeEvent).saved ? "＋ BACK UP" : "＋ PATCHED", "buff");
                         }, end: () => {
                             if ((ev as StabilizeEvent).saved) { t.fallen = 0; t.faded = false; }
@@ -1020,6 +1060,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                             this.frameDuel(s.visPos, t.visPos);
                             this.spawnSparks(this.unitAnchor(t, 1.5), 0x66e9ff, 14);
                             this.spawnPulse(t, 0x66e9ff);
+                            this.props.onImpact(h.target, h.damage);
                             this.floater(t, "⚡ SHORTED " + (h.damage > 0 ? h.damage : ""), "hack");
                             if (h.stunned) {
                                 window.setTimeout(() => this.floater(t, "SYSTEMS LOCKED", "hack"), 300);
@@ -1193,7 +1234,11 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         // every round leaving the barrel gets a tracer: bursts as a stitched
         // string of shots, shotguns as one trigger pull spraying a pellet fan
         const shotgun = ev.actor.weapon.weaponClass === "shotgun";
-        const shots = shotgun ? 1 : Math.max(1, ev.rounds || (ev.autofire ? 5 : 1));
+        const burst = shotgun ? 1 : Math.max(1, ev.rounds || (ev.autofire ? 5 : 1));
+        // A burst that drops its target stops on the round that did it. The
+        // full string used to walk across the body and only *then* let it fall,
+        // which is most of what "the AI is shooting a corpse" actually was.
+        const shots = ev.dropped ? Math.min(burst, 2) : burst;
         const pellets = shotgun ? 6 : 1;
         const gapT = ev.autofire ? 0.09 : 0.13;
         const flight = 0.16;
@@ -1295,6 +1340,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                 } else if (v.damage <= 0) {
                     this.floater(u, v.dodged ? "DIVES CLEAR" : "ARMOR", "soak");
                 } else {
+                    this.props.onImpact(v.target, v.damage);
                     this.floater(u, (v.dodged ? "½ " : "") + String(v.damage), v.damage >= 15 ? "dmg-big" : "dmg");
                     if (v.stunned) { this.floater(u, "✶ STUNNED", "crit"); }
                 }
@@ -1566,10 +1612,12 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             this.floater(target, "ARMOR", "soak");
             this.spawnSparks(this.unitAnchor(target, 1.3), 0x9aa4ad, 5);
         } else if (ev.quality === "graze") {
+            this.props.onImpact(ev.target, ev.damage);
             this.floater(target, "GRAZE " + ev.damage, "soak");
             this.spawnSparks(this.unitAnchor(target, 1.3), 0xff9a70, 4);
             target.flinch = 0.1;
         } else {
+            this.props.onImpact(ev.target, ev.damage);
             const big = ev.quality === "crit" || ev.damage >= 15 || ev.aimed;
             if (ev.quality === "crit") { this.floater(target, "CRIT", "crit"); }
             // multi-round volleys read as a rain of ticks summing to the roll
@@ -1986,10 +2034,13 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
                 u.tag.style.display = "block";
                 u.tag.style.left = anchor.x + "px";
                 u.tag.style.top = anchor.y + "px";
-                const hp = Math.max(0, Math.min(100, (a.health / Math.max(1, a.maxHealth)) * 100));
+                // the nameplate draws the board's health too, or it would drop
+                // ahead of the round that emptied it
+                const shownHp = this.props.shown.of(a);
+                const hp = Math.max(0, Math.min(100, (shownHp / Math.max(1, a.maxHealth)) * 100));
                 u.hpFill.style.width = hp + "%";
-                u.tag.classList.toggle("hurt", a.isSeriouslyWounded());
-                u.tag.classList.toggle("downed", !a.canFight());
+                u.tag.classList.toggle("hurt", shownHp > 0 && shownHp <= a.maxHealth / 2);
+                u.tag.classList.toggle("downed", !this.props.shown.up(a));
                 u.tag.classList.toggle("cov", a.canFight() && Battlefield.nearCover(u.visPos));
                 u.tag.classList.toggle("on", this.props.activeName === a.name);
             } else {

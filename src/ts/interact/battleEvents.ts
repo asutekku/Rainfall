@@ -132,6 +132,8 @@ export interface StabilizeEvent {
     target: Actor;
     /** target was mortally wounded and is back up (at 1 HP) */
     saved: boolean;
+    /** health the target is left on, so the board can follow it up as well as down */
+    hp: number;
 }
 
 /** Morale breaks: the unit sprints off the field and out of the fight. */

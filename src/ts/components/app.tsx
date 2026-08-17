@@ -27,9 +27,10 @@ import {Crew} from "../interact/crew";
 import {MercOffer} from "../interact/mercMarket";
 import {FixerView} from "./run/fixerView";
 import {SectorClearView} from "./run/sectorClearView";
-import {PlaybackBundle} from "./combat/battleScene";
+import {BattleNotice, PlaybackBundle} from "./combat/battleScene";
 import {BattleEvent} from "../interact/battleEvents";
 import {FeedLog, missionClock} from "../interact/feedLog";
+import {ShownState} from "../interact/shownState";
 import {SaveGame, SaveHeader} from "../interact/saveGame";
 import {Career, CareerStore} from "../interact/career";
 import {TitleView} from "./titleView";
@@ -98,6 +99,8 @@ export interface InterfaceAppState {
     holdLeft: number;
     /** The unit whose card is open over the arena. */
     inspecting: Actor | null;
+    /** Something the fight needs to announce over the street. */
+    notice: BattleNotice | null;
 }
 
 /**
@@ -123,6 +126,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private markRound = 0;                   // round separator waiting to land in the feed
     private markHoldLeft = -1;               // holdout rounds left, shown on the separator
     private reinforced = false;              // the once-per-battle reinforcement wave arrived
+    /** Health as the board is drawing it — walked forward by the playback, not by the engine. */
+    private shown = new ShownState();
 
     constructor(props: any) {
         super(props);
@@ -163,6 +168,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             round: 0,
             holdLeft: 0,
             inspecting: null,
+            notice: null,
         };
     }
 
@@ -308,7 +314,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
                    turnOrder={this.state.turnOrder}
                    round={this.state.round} holdLeft={this.state.holdLeft}
                    inspecting={this.state.inspecting}
+                   shown={this.shown}
+                   notice={this.state.notice}
                    onInspect={this.inspectUnit}
+                   onImpact={this.onImpact}
+                   onMend={this.onMend}
                    onPickNode={this.enterNode}
                    onPlaybackDone={this.onPlaybackDone}/>
             <MobileTabs tab={this.state.mobileTab} more={this.state.mobileMore}
@@ -509,9 +519,25 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     /** Spend the one-per-run revive and resume the current fight. */
+    /**
+     * Trauma Team drags the squad back up mid-fight.
+     *
+     * This used to run `beginBattle`, which bumps `battleId` — the arena's
+     * signal for "new encounter". So a revive regenerated the street, rebuilt
+     * every unit, replayed the opening dolly and announced the contact again:
+     * mechanically a resume, visually a completely fresh fight. It resumes now,
+     * on the same street, and says what actually happened.
+     */
     private reviveRun = () => {
         const patch = RunController.revive(this.state, this.logLength);
-        if (patch) { this.setState(patch as any, this.beginBattle); }
+        if (!patch) { return; }
+        this.resumeSequencer();
+        this.setState({...(patch as any),
+            playback: null, turnOrder: [], inspecting: null,
+            notice: {id: Date.now(), tone: "good", title: "✚ BACK UP",
+                     sub: "TRAUMA TEAM — THE SQUAD IS ON ITS FEET"},
+            activeMainPanel: "Combat", mobileTab: "arena",
+        }, () => { this.syncShown(); this.scheduleAdvance(1400); });
     };
 
     /**
@@ -554,15 +580,27 @@ export class App extends React.Component<{}, InterfaceAppState> {
     }
 
     private resetSequencer() {
+        this.resumeSequencer();
+        this.roundNo = 0;
+        this.markRound = 0;
+        this.markHoldLeft = -1;
+        this.reinforced = false;
+    }
+
+    /**
+     * Drop the in-flight turn without forgetting the fight.
+     *
+     * A revive picks up an engagement already in progress, so the round counter
+     * and the spent reinforcement wave have to survive it — otherwise coming
+     * back up rewinds a holdout clock you were about to beat, and calls in
+     * backup that already arrived.
+     */
+    private resumeSequencer() {
         this.clearTurnTimer();
         this.queue = [];
         this.pendingMsgs = [];
         this.pendingEvents = [];
         this.viewPaused = false;
-        this.roundNo = 0;
-        this.markRound = 0;
-        this.markHoldLeft = -1;
-        this.reinforced = false;
     }
 
     /** A combat node just opened: fresh street, fresh initiative, first turn. */
@@ -577,7 +615,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             activeMainPanel: "Combat", mobileTab: "arena",
             messages: [FeedLog.contact(foes), ...this.state.messages].slice(0, this.logLength) as any,
             // a boss entrance holds the camera on the heavy before the fight starts
-        }, () => this.scheduleAdvance(boss ? 2100 : 500));
+        }, () => { this.syncShown(); this.scheduleAdvance(boss ? 2100 : 500); });
     };
 
     private scheduleAdvance(ms: number) {
@@ -684,12 +722,38 @@ export class App extends React.Component<{}, InterfaceAppState> {
         const faction = (lead.faction || "hostile").toUpperCase();
         this.setState({
             currentEnemies: [...foes, ...fresh],
+            // the feed alone was not enough: more bodies simply appeared on the
+            // street with nothing on screen to say where they came from
+            notice: {id: Date.now(), tone: "warn", title: "⚠ REINFORCEMENTS",
+                     sub: `${n} MORE ${faction} INBOUND`},
             messages: [FeedLog.sys(`⚠ REINFORCEMENTS — ${n} more ${faction} inbound`),
                 ...this.state.messages].slice(0, this.logLength) as any,
         });
     }
 
     /** Resolve one unit's turn through the engine and ship it to the animator. */
+    /**
+     * A round landed in the arena — walk the shown health down to match.
+     *
+     * The engine already applied this damage when the turn resolved; this is
+     * the board catching up at the moment the player can see why.
+     */
+    private onImpact = (target: Actor, damage: number) => {
+        this.shown.hit(target, damage);
+        this.forceUpdate();
+    };
+
+    /** A medic patched someone up — the board follows health up as well as down. */
+    private onMend = (target: Actor, hp: number) => {
+        this.shown.mend(target, hp);
+        this.forceUpdate();
+    };
+
+    /** Bring the board level with the engine (fight start, and after every playback). */
+    private syncShown(): void {
+        this.shown.sync([...this.state.party, ...this.state.currentEnemies]);
+    }
+
     private resolveTurn = (unit: Actor) => {
         const res = Combat.takeTurn(unit, this.state.party, this.state.currentEnemies);
         this.pendingMsgs = res.messages;
@@ -701,6 +765,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
     /** The scene finished animating a turn: commit its surveillance line, move on. */
     private onPlaybackDone = (id: number) => {
         if (id !== this.playId || !this.state.playback) { return; }
+        // whatever the animation did not account for, the truth wins here
+        this.syncShown();
         // one overwatch line per turn (plus loot/level lines the summary can't carry)
         const time = missionClock(this.battleStart);
         const lines: any[] = [
