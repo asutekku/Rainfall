@@ -611,6 +611,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
         const boss = foes.some((e) => (e.rank || 0) >= 5);
         this.setState({
             battleId: this.state.battleId + 1,
+            // The board's announcements are per-fight. Left in state they replay
+            // on the next one: the arena unmounts between fights, so its
+            // already-shown guard resets and the last wave's REINFORCEMENTS
+            // banner lands on top of the new contact.
+            notice: null,
             playback: null, turnOrder: [], round: 0, holdLeft: 0, inspecting: null,
             activeMainPanel: "Combat", mobileTab: "arena",
             messages: [FeedLog.contact(foes), ...this.state.messages].slice(0, this.logLength) as any,
@@ -698,17 +703,22 @@ export class App extends React.Component<{}, InterfaceAppState> {
      */
     private maybeReinforce(): void {
         const node = this.state.run && this.state.run.node;
-        if (!node || (node.type !== "elite" && node.type !== "boss")) { return; }
-        if (this.reinforced || this.roundNo !== 2) { return; }
+        // Bosses no longer call anyone. Two extra bodies on top of a heavy took
+        // the squad's odds from 66% to 23% in the sim — the fight stopped being
+        // hard and started being arithmetic you cannot win.
+        if (!node || node.type !== "elite") { return; }
+        if (this.reinforced || this.roundNo < 3) { return; }
         const foes = this.state.currentEnemies;
+        const living = foes.filter((e) => e.canFight()).length;
+        // Only once you are actually winning, and only ever one. Topping the
+        // street back up to the cap meant every kill was undone as it happened,
+        // which is the whole of "reinforcements make it unbeatable".
+        if (living > 2 || living >= FIELD_CAP) { return; }
         const lead = foes.find((e) => e.canFight());
         if (!lead) { return; }
-        const room = FIELD_CAP - foes.filter((e) => e.canFight()).length;
-        if (room <= 0) { this.reinforced = true; return; }
         this.reinforced = true;
-        const want = node.type === "boss" ? 2 : Math.random() < 0.5 ? 2 : 1;
-        const n = Math.min(want, room);
-        const rank = node.type === "boss" ? 2 : 1;
+        const n = 1;
+        const rank = 1;
         const fresh = ActorController.getReinforcements(lead.faction, n, RunController.levelOf(this.state.party), rank);
         fresh.forEach((a, i) => {
             a.position.x = (i - (n - 1) / 2) * 6 + (Math.random() - 0.5) * 3;
@@ -725,8 +735,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
             // the feed alone was not enough: more bodies simply appeared on the
             // street with nothing on screen to say where they came from
             notice: {id: Date.now(), tone: "warn", title: "⚠ REINFORCEMENTS",
-                     sub: `${n} MORE ${faction} INBOUND`},
-            messages: [FeedLog.sys(`⚠ REINFORCEMENTS — ${n} more ${faction} inbound`),
+                     sub: `ONE MORE ${faction} INBOUND`},
+            messages: [FeedLog.sys(`⚠ REINFORCEMENTS — one more ${faction} inbound`),
                 ...this.state.messages].slice(0, this.logLength) as any,
         });
     }

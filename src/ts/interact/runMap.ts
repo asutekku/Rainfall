@@ -192,15 +192,23 @@ export class RunMap {
         nodes[bossIdx]!.type = "boss";
         const others = nodes.map((_n, i) => i).filter((i) => i !== entryIdx && i !== bossIdx);
         const shuffled = others.sort(() => Math.random() - 0.5);
-        // one guaranteed shop, safehouse, fixer's table, street event and NET
-        // jack-point (a Netrunner's payday can't be a map lottery); the rest is trouble
+        // Four guaranteed stops — a shop, a safehouse, a hire board and a NET
+        // jack-point — because each is load-bearing and none can be a map
+        // lottery. The hire board most of all: crew size is the single biggest
+        // lever on whether a fight is winnable (an elite runs 20% with a squad
+        // of two and 70% with a squad of four), so a sector that never offers
+        // one is a sector you lose.
+        //
+        // Everything else is trouble. The street event used to be guaranteed as
+        // well, on top of a 24% roll for more of them, which left barely two
+        // fights in five and made a sector read as a shopping trip with
+        // occasional gunfire.
         const extra: NodeType[] = ["merchant", "rest", "hire", "net"];
         shuffled.forEach((i, k) => {
-            nodes[i]!.type = k === 0 ? "merchant" : k === 1 ? "rest" : k === 2 ? "hire" : k === 3 ? "event"
-                : k === 4 ? "net"
-                : Math.random() < 0.24 ? "event"
-                : (sector > 1 && Math.random() < 0.22) ? "elite"
-                : Math.random() < 0.2 ? Utils.pickRandom(extra)
+            nodes[i]!.type = k === 0 ? "merchant" : k === 1 ? "rest" : k === 2 ? "hire" : k === 3 ? "net"
+                : Math.random() < 0.14 ? "event"
+                : (sector > 1 && Math.random() < 0.24) ? "elite"
+                : Math.random() < 0.1 ? Utils.pickRandom(extra)
                 : "combat";
         });
 

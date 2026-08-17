@@ -844,6 +844,15 @@ progress::-moz-progress-bar { background:var(--rust); }
 .cityLabel { position:absolute; transform:translate(-50%,-50%); white-space:nowrap;
     font-family:var(--mono); font-size:10px; letter-spacing:.08em; text-transform:uppercase; color:var(--ink);
     background:rgba(8,8,14,.72); border:1px solid var(--cyanDim); padding:2px 7px; text-shadow:0 0 8px rgba(55,225,231,.5); }
+/* The fight read under a reachable node's name. Combat resolves itself, so the
+   decision that used to happen in the fight now happens here — the map has to
+   say what it is asking you to walk into, and hiring has to visibly change it. */
+.cityLabel .odds { display:block; font-style:normal; margin-top:2px; font-size:9px;
+    letter-spacing:.1em; font-weight:700; text-shadow:none; }
+.cityLabel .o-favoured { color:#7fd67f; }
+.cityLabel .o-even { color:#8be0ff; }
+.cityLabel .o-risky { color:var(--warn); }
+.cityLabel .o-grim { color:#ff6b5e; }
 .cityHint { position:absolute; left:12px; bottom:10px; z-index:2; color:var(--dim);
     font-size:11px; letter-spacing:.1em; text-transform:uppercase; pointer-events:none; }
 
