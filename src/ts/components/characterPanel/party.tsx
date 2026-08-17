@@ -7,7 +7,6 @@ interface PartyProps {
     party: any;
     activeSelection: any;
     friendly: boolean;
-    onToggleAuto?: (a: Actor) => void;
     onCycleTemperament?: (a: Actor) => void;
     /** Open the full character sheet for a member (the › affordance). */
     onOpenSheet?: (a: Actor) => void;
@@ -45,7 +44,6 @@ export class Party extends React.Component<PartyProps, PartyStats> {
         return <CharacterComponent actor={e} friendly={this.props.friendly} key={i}
                                    isPlayer={this.props.friendly && i === 0}
                                    update={this.handleClick} selected={this.getSelected()}
-                                   onToggleAuto={this.props.onToggleAuto}
                                    onCycleTemperament={this.props.onCycleTemperament}
                                    onOpenSheet={this.props.onOpenSheet}/>;
     }

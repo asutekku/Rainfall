@@ -1,10 +1,9 @@
 import * as React from "react";
 import * as THREE from "three";
 import {Actor} from "../../actors/Actor";
-import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "../../interact/battlefield";
+import {BLAST_RADIUS, Battlefield, Point} from "../../interact/battlefield";
 import {AbilityEvent, BattleEvent, BlastEvent, CoverGoneEvent, HackEvent, MoveEvent, RoutEvent,
     ShotEvent, StabilizeEvent, SuppressEvent} from "../../interact/battleEvents";
-import {aimPreview} from "../../interact/aimPreview";
 import {Streetscape, generateStreetscape} from "../../interact/streetscape";
 import {FactionStyle, styleFor} from "../../actors/resources/factionStyles";
 
@@ -17,24 +16,13 @@ import {FactionStyle, styleFor} from "../../actors/resources/factionStyles";
  * The scene is a *playback* renderer: the engine resolves one unit's turn into
  * a BattleEvent script, this component animates it (walk, muzzle flash,
  * tracers, impacts, falls), then reports done so the sequencer can hand out
- * the next turn. While the player is giving orders it doubles as the input
- * surface: ground clicks pick a move (clamped to the unit's run range), enemy
- * clicks pick a target, and an overlay chip shows the live to-hit odds.
+ * the next turn. Combat is fully automatic — the scene is a viewer, not an
+ * input surface.
  */
 
 export interface PlaybackBundle {
     id: number;
     events: BattleEvent[];
-}
-
-export interface OrderCtx {
-    actor: Actor;
-    pendingMove: Point | null;
-    target: Actor | null;
-    aimed: boolean;
-    /** street taps place a blast point instead of a move */
-    grenadeMode: boolean;
-    grenadeAt: Point | null;
 }
 
 export interface BattleSceneProps {
@@ -43,14 +31,14 @@ export interface BattleSceneProps {
     battleId: number;                       // new value = new encounter = new street
     playback: PlaybackBundle | null;        // latest resolved turn to animate
     onPlaybackDone: (id: number) => void;
-    orders: OrderCtx | null;                // non-null = awaiting this unit's orders
-    onPickMove: (p: Point) => void;
-    onPickTarget: (a: Actor) => void;
-    speed: number;                          // 1 = normal, >1 = faster playback (auto mode)
+    speed: number;                          // playback rate multiplier
     activeName?: string | undefined;        // unit whose turn it is (ring highlight)
 }
 
 // ---------------------------------------------------------------------------
+
+/** Middle of the street down its length (Battlefield runs y 0-44) — the phone camera's anchor. */
+const ARENA_MID = 22;
 
 const COL = {
     you: 0x37e1e7, ally: 0x7fd67f, foe: 0xe0533f, foeElite: 0xf0a830,
@@ -138,26 +126,14 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
     private coverViews: Map<string, THREE.Group> = new Map();
     private signMats: Array<{mat: THREE.MeshBasicMaterial; base: number; flicker: boolean; phase: number}> = [];
     private ventSprites: Array<{s: THREE.Sprite; phase: number}> = [];
-
-    // order-mode scenery
-    private rangeDisc!: THREE.Mesh;
-    private rangeRing!: THREE.Mesh;
-    private moveMark!: THREE.Group;
-    private movePath!: THREE.Line;
-    private targetRing!: THREE.Mesh;
-    private losLine!: THREE.Line;
-    private losMat!: THREE.LineBasicMaterial;
-    private hoverMark!: THREE.Mesh;
-    private throwRing!: THREE.Mesh;
-    private blastDisc!: THREE.Mesh;
-    private blastRing!: THREE.Mesh;
-    private hitChip!: HTMLDivElement;
+    /** Floaters still on screen per unit, so a second one stacks instead of overlapping. */
+    private floaters: Map<string, number> = new Map();
 
     // ------------------------------------------------------------ lifecycle --
 
     public override componentDidMount() { this.init(); }
 
-    public override componentDidUpdate(prev: BattleSceneProps) {
+    public override componentDidUpdate() {
         if (!this.renderer) { return; }
         if (this.props.battleId !== this.builtBattle) { this.rebuild(); }
         // reinforcements: new hostiles joined an ongoing fight — dress and place them
@@ -171,7 +147,6 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         }
         const pb = this.props.playback;
         if (pb && pb.id !== this.playingId && pb.id !== this.doneId) { this.beginPlayback(pb); }
-        if (prev.orders !== this.props.orders) { this.syncOrderMarkers(); }
     }
 
     public override componentWillUnmount() {
@@ -180,8 +155,6 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         window.removeEventListener("resize", this.resize);
         if (this.renderer) {
             const el = this.renderer.domElement;
-            el.removeEventListener("pointerdown", this.onDown);
-            el.removeEventListener("pointermove", this.onMove);
             this.renderer.dispose();
             if (el.parentNode) { el.parentNode.removeChild(el); }
         }
@@ -202,12 +175,9 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         this.renderer.setClearColor(0x07080c, 1);
         host.appendChild(this.renderer.domElement);
 
-        this.buildOrderMarkers();
         this.buildRain();
         this.rebuild();
 
-        this.renderer.domElement.addEventListener("pointerdown", this.onDown);
-        this.renderer.domElement.addEventListener("pointermove", this.onMove);
         window.addEventListener("resize", this.resize);
         this.ro = new ResizeObserver(this.resize);
         this.ro.observe(host);
@@ -243,7 +213,6 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         this.props.party.forEach((a, i) => this.units.push(this.buildUnit(a, i === 0 ? "you" : "ally")));
         this.props.enemies.forEach((a) => this.units.push(this.buildUnit(a, "foe")));
         this.units.forEach((u) => this.snapUnit(u));
-        this.syncOrderMarkers();
         // opening dolly: start tight on the hostiles, sweep out to the overview
         const foes = this.props.enemies.filter((e) => e.canFight());
         const boss = foes.find((f) => (f.rank || 0) >= 5);
@@ -909,10 +878,18 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
     }
 
     /** Back out to the tactical overview. */
+    /**
+     * A phone board is narrow and tall, so a flatter angle spreads the street's
+     * 44m of depth down the frame instead of foreshortening it into a band.
+     */
+    private baseElevation(): number {
+        return this.camera && this.camera.aspect < 1.2 ? 0.6 : 0.62;
+    }
+
     private frameOverview() {
         this.camYawG = 0;
         this.camZoomG = 1;
-        this.camElG = 0.62;
+        this.camElG = this.baseElevation();
     }
 
     // ------------------------------------------------------------- playback --
@@ -1728,6 +1705,14 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
     }
 
     /** HTML damage/status floater above a unit. */
+    /**
+     * HTML damage/status floater above a unit.
+     *
+     * Everything used to anchor at the same height, so a hit that also started
+     * a bleed printed "34" and "BLEEDING" on top of one another — the two most
+     * important words on screen, illegible. Floaters still alive on the same
+     * unit stack upwards instead.
+     */
     private floater(u: UnitView, text: string, cls: string) {
         const host = this.overlay.current;
         if (!host) { return; }
@@ -1736,241 +1721,33 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         el.textContent = text;
         const p = this.toScreen(this.unitAnchor(u, 2.4));
         if (!p) { return; }
+        const live = this.floaters.get(u.actor.name) || 0;
+        this.floaters.set(u.actor.name, live + 1);
         el.style.left = p.x + "px";
-        el.style.top = p.y + "px";
+        el.style.top = (p.y - live * 18) + "px";
         host.appendChild(el);
-        window.setTimeout(() => el.remove(), 1300);
+        window.setTimeout(() => {
+            el.remove();
+            const n = (this.floaters.get(u.actor.name) || 1) - 1;
+            if (n > 0) { this.floaters.set(u.actor.name, n); } else { this.floaters.delete(u.actor.name); }
+        }, 1300);
     }
-
-    // ------------------------------------------------------- order markers --
-
-    private buildOrderMarkers() {
-        this.rangeDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.MeshBasicMaterial({
-            color: 0x37e1e7, transparent: true, opacity: 0.07, depthWrite: false}));
-        this.rangeDisc.rotation.x = -Math.PI / 2;
-        this.rangeDisc.position.y = 0.04;
-        this.rangeRing = new THREE.Mesh(new THREE.RingGeometry(0.985, 1, 64), new THREE.MeshBasicMaterial({
-            color: 0x37e1e7, transparent: true, opacity: 0.55, side: THREE.DoubleSide, depthWrite: false}));
-        this.rangeRing.rotation.x = -Math.PI / 2;
-        this.rangeRing.position.y = 0.05;
-
-        this.moveMark = new THREE.Group();
-        const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, 1.6, 0.06),
-            new THREE.MeshBasicMaterial({color: 0x37e1e7, transparent: true, opacity: 0.9}));
-        post.position.y = 0.8;
-        const gem = new THREE.Mesh(new THREE.OctahedronGeometry(0.28),
-            new THREE.MeshBasicMaterial({color: 0x37e1e7, wireframe: true}));
-        gem.position.y = 1.85;
-        this.moveMark.add(post, gem);
-
-        this.movePath = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineDashedMaterial({
-            color: 0x37e1e7, transparent: true, opacity: 0.8, dashSize: 0.7, gapSize: 0.45}));
-        this.movePath.position.y = 0.12;
-
-        this.targetRing = new THREE.Mesh(new THREE.RingGeometry(1.0, 1.22, 4), new THREE.MeshBasicMaterial({
-            color: 0xe0533f, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false}));
-        this.targetRing.rotation.x = -Math.PI / 2;
-        this.targetRing.position.y = 0.07;
-
-        this.losMat = new THREE.LineBasicMaterial({color: 0xe0533f, transparent: true, opacity: 0.65});
-        this.losLine = new THREE.Line(new THREE.BufferGeometry(), this.losMat);
-
-        this.hoverMark = new THREE.Mesh(new THREE.RingGeometry(0.35, 0.5, 24), new THREE.MeshBasicMaterial({
-            color: 0x8be0ff, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false}));
-        this.hoverMark.rotation.x = -Math.PI / 2;
-        this.hoverMark.position.y = 0.06;
-
-        // frag mode: amber throw-range ring + red blast preview disc
-        this.throwRing = new THREE.Mesh(new THREE.RingGeometry(0.985, 1, 64), new THREE.MeshBasicMaterial({
-            color: 0xf0a830, transparent: true, opacity: 0.5, side: THREE.DoubleSide, depthWrite: false}));
-        this.throwRing.rotation.x = -Math.PI / 2;
-        this.throwRing.position.y = 0.05;
-        this.blastDisc = new THREE.Mesh(new THREE.CircleGeometry(1, 40), new THREE.MeshBasicMaterial({
-            color: 0xe0533f, transparent: true, opacity: 0.14, depthWrite: false}));
-        this.blastDisc.rotation.x = -Math.PI / 2;
-        this.blastDisc.position.y = 0.04;
-        this.blastRing = new THREE.Mesh(new THREE.RingGeometry(0.96, 1, 48), new THREE.MeshBasicMaterial({
-            color: 0xe0533f, transparent: true, opacity: 0.8, side: THREE.DoubleSide, depthWrite: false}));
-        this.blastRing.rotation.x = -Math.PI / 2;
-        this.blastRing.position.y = 0.05;
-
-        for (const o of [this.rangeDisc, this.rangeRing, this.moveMark, this.movePath, this.targetRing,
-                         this.losLine, this.hoverMark, this.throwRing, this.blastDisc, this.blastRing]) {
-            o.visible = false;
-            this.scene.add(o);
-        }
-        const chip = document.createElement("div");
-        chip.className = "bsHitChip";
-        chip.style.display = "none";
-        this.hitChip = chip;
-        // attached to overlay on first sync (overlay ref not live during ctor)
-    }
-
-    /** Reflect the order context (or its absence) into the marker objects. */
-    private syncOrderMarkers() {
-        if (!this.renderer) { return; }
-        if (this.hitChip && !this.hitChip.parentNode && this.overlay.current) {
-            this.overlay.current.appendChild(this.hitChip);
-        }
-        const o = this.props.orders;
-        const show = !!o;
-        this.rangeDisc.visible = show && !o!.grenadeMode;
-        this.rangeRing.visible = show && !o!.grenadeMode;
-        if (!o) {
-            this.hoverMark.visible = false;
-            this.moveMark.visible = this.movePath.visible = false;
-            this.targetRing.visible = this.losLine.visible = false;
-            this.throwRing.visible = this.blastDisc.visible = this.blastRing.visible = false;
-            if (this.hitChip) { this.hitChip.style.display = "none"; }
-            return;
-        }
-        const a = o.actor;
-        const run = a.runMeters();
-        this.rangeDisc.scale.setScalar(run);
-        this.rangeRing.scale.setScalar(run);
-        this.rangeDisc.position.set(a.position.x, 0.04, a.position.y);
-        this.rangeRing.position.set(a.position.x, 0.05, a.position.y);
-
-        // frag mode: amber throw range + red blast preview where the pin lands
-        this.throwRing.visible = o.grenadeMode;
-        if (o.grenadeMode) {
-            this.throwRing.scale.setScalar(GRENADE_RANGE);
-            this.throwRing.position.set(a.position.x, 0.05, a.position.y);
-        }
-        const showBlast = o.grenadeMode && !!o.grenadeAt;
-        this.blastDisc.visible = this.blastRing.visible = showBlast;
-        if (showBlast && o.grenadeAt) {
-            this.blastDisc.scale.setScalar(BLAST_RADIUS);
-            this.blastRing.scale.setScalar(BLAST_RADIUS);
-            this.blastDisc.position.set(o.grenadeAt.x, 0.04, o.grenadeAt.y);
-            this.blastRing.position.set(o.grenadeAt.x, 0.05, o.grenadeAt.y);
-            if (this.hitChip) {
-                const caught = [...this.props.party, ...this.props.enemies].filter((t) =>
-                    t.canFight() && Battlefield.gap({x: t.position.x, y: t.position.y}, o.grenadeAt!) <= BLAST_RADIUS);
-                const friendly = caught.filter((t) => this.props.party.indexOf(t) >= 0).length;
-                this.hitChip.style.display = "block";
-                this.hitChip.style.borderColor = friendly ? "#f0a830" : "#e0533f";
-                this.hitChip.textContent = `✸ ${caught.length} in blast`
-                    + (friendly ? ` — ${friendly} FRIENDLY!` : "") + ` · ~15 dmg`;
-                const p = this.toScreen(new THREE.Vector3(o.grenadeAt.x, 1.6, o.grenadeAt.y));
-                if (p) { this.hitChip.style.left = p.x + "px"; this.hitChip.style.top = p.y + "px"; }
-            }
-            this.targetRing.visible = this.losLine.visible = false;
-            this.moveMark.visible = this.movePath.visible = false;
-            return;
-        }
-        if (o.grenadeMode) {   // frag mode but no pin yet
-            this.targetRing.visible = this.losLine.visible = false;
-            this.moveMark.visible = this.movePath.visible = false;
-            if (this.hitChip) { this.hitChip.style.display = "none"; }
-            return;
-        }
-
-        if (o.pendingMove) {
-            this.moveMark.visible = true;
-            this.moveMark.position.set(o.pendingMove.x, 0, o.pendingMove.y);
-            this.movePath.visible = true;
-            this.movePath.geometry.setFromPoints(
-                this.routeAround({x: a.position.x, y: a.position.y}, o.pendingMove)
-                    .map((p) => new THREE.Vector3(p.x, 0, p.y)));
-            this.movePath.computeLineDistances();
-        } else {
-            this.moveMark.visible = this.movePath.visible = false;
-        }
-
-        if (o.target && o.target.canFight()) {
-            const from: Point = o.pendingMove || {x: a.position.x, y: a.position.y};
-            const prev = aimPreview(a, o.target, from, o.aimed);
-            this.targetRing.visible = true;
-            this.targetRing.position.set(o.target.position.x, 0.07, o.target.position.y);
-            this.losLine.visible = true;
-            this.losLine.geometry.setFromPoints([
-                new THREE.Vector3(from.x, 1.3, from.y),
-                new THREE.Vector3(o.target.position.x, 1.3, o.target.position.y)]);
-            const col = !prev.ok ? 0x5a626b : prev.pct >= 60 ? 0x7fd67f : prev.pct >= 30 ? 0xf0a830 : 0xe0533f;
-            this.losMat.color.setHex(col);
-            (this.targetRing.material as THREE.MeshBasicMaterial).color.setHex(col);
-            if (this.hitChip) {
-                this.hitChip.style.display = "block";
-                this.hitChip.style.borderColor = "#" + col.toString(16).padStart(6, "0");
-                this.hitChip.textContent = !prev.ok ? "NO SHOT — out of range"
-                    : `${prev.pct}%${o.aimed ? " ◎ head" : ""} · ${Math.round(prev.dist)}m${prev.covered ? " · COVER" : ""}`;
-                const p = this.toScreen(new THREE.Vector3(o.target.position.x, 2.6, o.target.position.y));
-                if (p) { this.hitChip.style.left = p.x + "px"; this.hitChip.style.top = p.y + "px"; }
-            }
-        } else {
-            this.targetRing.visible = this.losLine.visible = false;
-            if (this.hitChip) { this.hitChip.style.display = "none"; }
-        }
-    }
-
-    // ---------------------------------------------------------------- input --
-
-    private ndc(ev: PointerEvent): THREE.Vector2 {
-        const rect = this.renderer.domElement.getBoundingClientRect();
-        return new THREE.Vector2(
-            ((ev.clientX - rect.left) / rect.width) * 2 - 1,
-            -((ev.clientY - rect.top) / rect.height) * 2 + 1);
-    }
-
-    private groundPoint(ndc: THREE.Vector2): Point | null {
-        const ray = new THREE.Raycaster();
-        ray.setFromCamera(ndc, this.camera);
-        const hit = new THREE.Vector3();
-        if (!ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), 0), hit)) { return null; }
-        return {x: hit.x, y: hit.z};
-    }
-
-    /** Clamp a wished point to `max` metres from the acting unit + arena bounds. */
-    private clampToRange(a: Actor, p: Point, max: number): Point {
-        const from: Point = {x: a.position.x, y: a.position.y};
-        const gap = Battlefield.gap(from, p);
-        const t = gap > max ? max / gap : 1;
-        return Battlefield.clamp({x: from.x + (p.x - from.x) * t, y: from.y + (p.y - from.y) * t});
-    }
-
-    private orderReach(o: OrderCtx): number {
-        return o.grenadeMode ? GRENADE_RANGE : o.actor.runMeters();
-    }
-
-    private onDown = (ev: PointerEvent) => {
-        const o = this.props.orders;
-        const n = this.ndc(ev);
-        if (!o) { return; }
-        if (!o.grenadeMode) {   // in frag mode every tap places the blast pin, foes included
-            const ray = new THREE.Raycaster();
-            ray.setFromCamera(n, this.camera);
-            const foes = this.units.filter((u) => u.side === "foe" && u.actor.canFight());
-            const hits = ray.intersectObjects(foes.map((u) => u.pick));
-            const first = hits[0];
-            if (first) {
-                const u = foes.find((f) => f.pick === first.object);
-                if (u) { this.props.onPickTarget(u.actor); return; }
-            }
-        }
-        const g = this.groundPoint(n);
-        if (g) { this.props.onPickMove(this.clampToRange(o.actor, g, this.orderReach(o))); }
-    };
-
-    private onMove = (ev: PointerEvent) => {
-        const o = this.props.orders;
-        if (!o) { return; }
-        const g = this.groundPoint(this.ndc(ev));
-        if (!g) { this.hoverMark.visible = false; return; }
-        const p = this.clampToRange(o.actor, g, this.orderReach(o));
-        this.hoverMark.visible = true;
-        this.hoverMark.position.set(p.x, 0.06, p.y);
-    };
 
     // --------------------------------------------------------------- camera --
 
     private fitCamera(w: number, h: number) {
         this.camera.aspect = w / Math.max(1, h);
         this.camera.updateProjectionMatrix();
-        // pull back until the arena width fits the horizontal frustum
         const halfV = Math.tan((50 * Math.PI / 180) / 2);
         const halfH = halfV * this.camera.aspect;
-        this.camDist = Math.max(34, 27.5 / halfH + 12);
+        // Pull back until the street fits the horizontal frustum — but on a
+        // portrait board, fitting all 48m of it put the camera 90 units out and
+        // squeezed every unit into a thin band across the middle with the rest
+        // of the frame empty asphalt. Frame the width units actually fight over
+        // and let the canyon walls crop instead.
+        const half = this.camera.aspect < 1.2 ? 16 : 27.5;
+        this.camDist = Math.max(30, half / halfH + 12);
+        this.camElG = this.baseElevation();
     }
 
     private toScreen(v: THREE.Vector3): {x: number; y: number} | null {
@@ -2176,7 +1953,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             }
 
             // overlay tag — names only while a unit is on the move (keeps the
-            // street readable; strips and the order bar identify everyone else)
+            // street readable; the HUD and the hostile rail name everyone else)
             const anchor = this.toScreen(this.unitAnchor(u, u.fallen > 0.5 ? 1.0 : 2.35));
             if (anchor && u.walking && !u.faded) {
                 u.tag.style.display = "block";
@@ -2193,14 +1970,6 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
             }
         }
 
-        // order markers track live state (hit chip follows the camera drift)
-        if (this.props.orders) { this.syncOrderMarkers(); }
-        if (this.moveMark.visible && !this.reduced) { this.moveMark.rotation.y += dt * 2; }
-        if (this.targetRing.visible && !this.reduced) { this.targetRing.rotation.z += dt * 1.6; }
-        if (this.blastRing.visible && !this.reduced) {
-            this.blastRing.scale.setScalar(BLAST_RADIUS * (1 + Math.sin(this.t * 4) * 0.04));
-        }
-
         // camera rig: an elevated view from the squad side that eases between an
         // overview and an engagement frame (yaw'd so shooter and target sit on
         // opposite sides of the screen, zoomed to fit them)
@@ -2209,12 +1978,23 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
         this.camYaw += (this.camYawG - this.camYaw) * ease;
         this.camZoom += (this.camZoomG - this.camZoom) * ease;
         this.camEl += (this.camElG - this.camEl) * ease;
-        const dist = this.camDist * this.camZoom;
+        // Duel frames zoom in by shrinking camZoom. On a portrait board the base
+        // distance is already close, so an unfloored duel zoom put units through
+        // the bottom edge — hold a floor so the frame tightens without cropping.
+        const minDist = this.camera.aspect < 1.2 ? 42 : 0;
+        const dist = Math.max(minDist, this.camDist * this.camZoom);
         const drift = this.reduced ? 0 : Math.sin(this.t * 0.12) * 1.6;
         // duel frames look at the action dead-centre; the overview biases ahead
         const duel = Math.min(1, Math.abs(this.camYaw) / 0.25 + (1 - this.camZoom) * 2);
         const lookX = this.focus.x * (0.8 + 0.2 * duel);
-        const lookZ = this.focus.z + 4 * (1 - duel);
+        // The focus chases whoever is acting, which on a portrait board threw a
+        // third of the frame away on empty tarmac: a squad member on the near
+        // line dragged the view off the bottom of the arena, a hostile on the
+        // far line pushed everyone up into a band. Damp the follow toward the
+        // middle of the street — the camera still leans toward the action, but
+        // the fight stays composed inside the 0-44m the units live in.
+        const raw = this.focus.z + 4 * (1 - duel);
+        const lookZ = this.camera.aspect < 1.2 ? ARENA_MID + (raw - ARENA_MID) * 0.45 : raw;
         let cx = lookX + drift - Math.sin(this.camYaw) * Math.cos(this.camEl) * dist;
         const cz = lookZ - Math.cos(this.camYaw) * Math.cos(this.camEl) * dist;
         let cy = Math.sin(this.camEl) * dist;
@@ -2232,7 +2012,7 @@ export class BattleScene extends React.Component<BattleSceneProps, {}> {
 
     public override render() {
         return (
-            <div className={"bs" + (this.props.orders ? " picking" : "")}>
+            <div className={"bs"}>
                 <div className={"bsCanvas"} ref={this.mount}/>
                 <div className={"bsOverlay"} ref={this.overlay}/>
             </div>);

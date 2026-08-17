@@ -3,7 +3,7 @@ import {aimPreview} from "../src/ts/interact/aimPreview";
 import {Battlefield} from "../src/ts/interact/battlefield";
 import {fighter} from "./helpers";
 
-describe("aimPreview — the order bar's to-hit odds", () => {
+describe("aimPreview — to-hit odds for the AI and the unit card", () => {
     test("a crack shot at close range is near-certain (only a fumble misses)", () => {
         Battlefield.COVER = [];
         const me = fighter({ref: 10, skill: 10, weapon: "WSA Autopistol", x: 0, y: 0});

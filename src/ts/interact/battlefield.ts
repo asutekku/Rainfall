@@ -24,6 +24,17 @@ const COVER_RADIUS = 3;  // metres: how close you must be to a cover point to be
 const COVER_DV = 4;      // extra DV to hit a target that is behind cover
 const MIN_SEP = 2.5;     // metres: no two units share a cell — melee is adjacent, not stacked
 
+/**
+ * Most hostiles that may stand on the street at once.
+ *
+ * Not a balance number — a layout one. The phone battle HUD gives its hostile
+ * column a fixed 172px with the scrollbar suppressed, which fits exactly four
+ * rows, so a fifth body did not crowd the list: it fell below the fold with
+ * nothing on screen to say it existed. Encounters spawn within this and
+ * reinforcements top up to it rather than adding on top.
+ */
+export const FIELD_CAP = 4;
+
 export const BLAST_RADIUS = 6;    // metres: frag grenade kill zone
 export const GRENADE_RANGE = 22;  // metres: how far a frag can be thrown
 export const SMOKE_RADIUS = 5;    // metres: smoke cloud footprint

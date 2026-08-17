@@ -2,7 +2,6 @@ import * as React from 'react';
 
 interface SidebarProps {
     active: string;
-    auto: boolean;
     /**
      * The squad is standing on the map, so the checkpoint is current and
      * leaving costs nothing. Off the map it stays hidden — quitting out of a
@@ -10,7 +9,6 @@ interface SidebarProps {
      */
     canQuit: boolean;
     activeSelection: any;
-    onAuto: any;
     onQuit: any;
 }
 
@@ -39,10 +37,7 @@ export class Sidebar extends React.Component<SidebarProps, {}> {
                         {icon}
                     </button>
                 ))}
-                <span className={"navSep"}/>
-                <button title={this.props.auto ? "Auto: on" : "Auto"}
-                        className={this.props.auto ? "act-on" : ""}
-                        onClick={this.props.onAuto}>▸</button>
+                {this.props.canQuit && <span className={"navSep"}/>}
                 {this.props.canQuit &&
                     <button title={"Quit to title — the run is checkpointed here"}
                             onClick={this.props.onQuit}>⏻</button>}

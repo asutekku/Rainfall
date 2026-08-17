@@ -3,9 +3,11 @@ import {Battlefield, Point} from "./battlefield";
 import {rangeDV} from "./rangeTable";
 
 /**
- * Exact to-hit odds for the order UI (XCOM-style "63%"). Uses the real RED
- * dice distribution — exploding 10s, fumbling 1s — but ignores Luck top-ups,
- * so the shown number is the floor of what the shot can do.
+ * Exact to-hit odds. Uses the real RED dice distribution — exploding 10s,
+ * fumbling 1s — but ignores Luck top-ups, so the number is the floor of what
+ * the shot can do. Read by the tactical AI (via pAtLeast) to reason about its
+ * own chances, and by the unit card so a player watching an automatic fight
+ * can see *why* their merc keeps missing.
  */
 
 export interface AimPreview {
