@@ -3,11 +3,11 @@ import {Adversary} from "../src/ts/actors/Enemies/Adversary";
 import {ActorController} from "../src/ts/actors/actorController";
 import {ARCHETYPES} from "../src/ts/actors/resources/archetypes";
 import {Role} from "../src/ts/actors/resources/Role";
-import {Battlefield} from "../src/ts/interact/battlefield";
+import {Battlefield, FIELD_CAP} from "../src/ts/interact/battlefield";
 import {AbilityEvent, BleedEvent, BlastEvent, CoverGoneEvent, HackEvent, RoutEvent, ShotEvent,
     SkipEvent, StabilizeEvent, SuppressEvent} from "../src/ts/interact/battleEvents";
 import {Combat} from "../src/ts/interact/combat";
-import {encounterSpec} from "../src/ts/interact/runMap";
+import {encounterSpec, spawnEncounter} from "../src/ts/interact/runMap";
 import {fighter, withRandom} from "./helpers";
 
 const byTitle = (t: string) => ARCHETYPES.find((a) => a.title === t)!;
@@ -352,5 +352,28 @@ describe("holdout and reinforcements", () => {
             expect(a.rank).toBe(2);
             expect(a.faction).toBe("Maelstrom");
         });
+    });
+
+    // The phone HUD's hostile column is a fixed 172px with its scrollbar hidden,
+    // so exactly four rows fit. A fifth hostile did not crowd the list, it fell
+    // off the bottom of it with nothing on screen to say it was there.
+    test("no encounter spawns more hostiles than the field cap", () => {
+        for (const type of ["combat", "elite", "boss"]) {
+            const node = {id: "n", type, junction: 0, pos: {x: 0, y: 0}} as any;
+            for (const roll of [0.1, 0.5, 0.9]) {
+                const spec = withRandom(roll, () => encounterSpec(node, 3, 6));
+                const spawned = withRandom(roll, () => spawnEncounter(spec));
+                expect(spawned.length).toBeLessThanOrEqual(FIELD_CAP);
+            }
+        }
+    });
+
+    test("backup only tops the street up to the cap, never past it", () => {
+        // what App.maybeReinforce works out before it calls getReinforcements
+        const room = (standing: number, want: number) =>
+            Math.min(want, Math.max(0, FIELD_CAP - standing));
+        expect(room(2, 2)).toBe(2);     // two down, two in — back to four
+        expect(room(3, 2)).toBe(1);     // only one seat left
+        expect(room(4, 2)).toBe(0);     // full street, nobody joins
     });
 });

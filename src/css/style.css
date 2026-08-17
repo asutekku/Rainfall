@@ -130,7 +130,10 @@ nav button.act-on { color:var(--good); border-left-color:var(--good); background
 .es .lv { color:var(--dim); font-size:10px; }
 .es .bar { flex:1; height:8px; background:#0b0b10; border:1px solid var(--line); overflow:hidden; }
 .es .bar i { display:block; height:100%; }
-.es .bar.hp i { background:linear-gradient(90deg,#a3382b,var(--crit)); }
+/* the bar shows the shape, the figure says whether the damage that just
+   floated off was lethal — same health colours as the phone HUD */
+.es .hpn { flex:none; min-width:26px; text-align:right; font-size:11px; font-weight:700;
+    font-variant-numeric:tabular-nums; }
 .es .rng { color:var(--cyanDim); white-space:nowrap; font-variant-numeric:tabular-nums; }
 .es .rng.oor { color:var(--crit); }
 .es .sp { color:var(--dim); white-space:nowrap; }
@@ -140,6 +143,14 @@ nav button.act-on { color:var(--good); border-left-color:var(--good); background
 .t-flank { color:var(--warn); border-color:var(--warn); }
 .t-camp { color:var(--cyanDim); border-color:var(--cyanDim); }
 .t-steady { color:var(--dim); border-color:var(--line2); }
+
+/* health colours, shared by the hostile rail and the phone HUD */
+.h-good { color:#7fd67f; }
+.bar .h-good, .bhBar .h-good { background:linear-gradient(90deg,#4f9a4f,#7fd67f); }
+.h-warn { color:#f0a830; }
+.bar .h-warn, .bhBar .h-warn { background:linear-gradient(90deg,#c1841f,#f0a830); }
+.h-crit { color:#e0533f; }
+.bar .h-crit, .bhBar .h-crit { background:linear-gradient(90deg,#a3382b,#e0533f); }
 
 /* stage action bar (combat only) */
 .stageActions { flex:none; background:var(--panel); border:1px solid var(--line); border-top:1px solid var(--rust); }
@@ -295,9 +306,6 @@ main.panel > .panelBody { flex:1; min-height:0; overflow-y:auto; padding:12px; }
 .pcGear span { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .pcGear .gearSp { color:var(--mid); flex:none; }
 .pcCtl { display:inline-flex; align-items:center; gap:4px; margin-left:auto; }
-.autoChip { font-size:9px; letter-spacing:.06em; padding:0 4px; border:1px solid var(--line2); color:var(--dim); cursor:pointer; }
-.autoChip:hover { color:var(--mid); }
-.autoChip.on { color:var(--good); border-color:var(--good); }
 .pcr .temp { cursor:pointer; }
 
 .badge { font-size:9px; padding:0 4px; border:1px solid; letter-spacing:.05em; }
@@ -647,8 +655,10 @@ progress::-moz-progress-bar { background:var(--rust); }
     .bhCol { min-width:0; display:flex; flex-direction:column;
         background:var(--panel); border:1px solid var(--line); }
     .bhCol h5 { flex:none; margin:0; padding:3px 7px; border-bottom:1px solid var(--line);
-        color:var(--dim); font-size:8.5px; font-weight:700; letter-spacing:.14em;
+        color:var(--dim); font-size:9px; font-weight:700; letter-spacing:.12em;
         white-space:nowrap; overflow:hidden; font-variant-numeric:tabular-nums; }
+    /* 4 rows fit exactly, which is why the field is capped at 4 hostiles —
+       a fifth would land below the fold of a list with no scrollbar to hint it */
     .bhList { flex:1; min-height:0; overflow-y:auto; scrollbar-width:none; padding:3px; }
     .bhList::-webkit-scrollbar { display:none; }
     .bhRow { position:relative; display:block; width:100%; height:34px; margin:0 0 3px;
@@ -656,35 +666,43 @@ progress::-moz-progress-bar { background:var(--rust); }
         background:var(--bg2); border:1px solid var(--line); border-left:3px solid var(--line2); }
     .bhRow:last-child { margin-bottom:0; }
     .bhRow.out { opacity:.38; }
+    /* The left edge is the IFF and nothing else. Faction accents used to paint
+       it, which put a Chrome ganger in the same cyan as your own merc. */
+    .bhRow.you { border-left-color:var(--cyan); }
+    .bhRow.pal { border-left-color:var(--good); }
+    .bhRow.foe { border-left-color:var(--crit); }
     /* the acting unit: thicker outline + TURN tag, both layout-neutral */
     .bhRow.on { box-shadow:inset 0 0 0 1.5px var(--cyan), 0 0 8px rgba(55,225,231,.3); }
     .bhRow.on::after { content:"TURN"; position:absolute; top:0; right:0; padding:1px 4px;
-        background:var(--cyan); color:var(--bg); font-size:7.5px; font-weight:800; letter-spacing:.12em; }
+        background:var(--cyan); color:var(--bg); font-size:8px; font-weight:800; letter-spacing:.12em; }
     .bhRow.foe.on { box-shadow:inset 0 0 0 1.5px var(--crit), 0 0 8px rgba(224,83,63,.35); }
     .bhRow.foe.on::after { background:var(--crit); color:var(--ink); }
-    /* the targeted hostile, when it isn't also the one acting */
-    .bhRow.tgt:not(.on) { box-shadow:inset 0 0 0 1px var(--cyanDim); }
-    .bhTop { display:flex; align-items:center; gap:3px; padding-right:28px; }
+    /* up next: the only other part of the queue worth a pixel, said quietly —
+       this replaced a whole INITIATIVE row that shrank as the round went */
+    .bhRow.nxt::after { content:"NEXT"; position:absolute; top:0; right:0; padding:1px 4px;
+        background:var(--line); color:var(--dim); font-size:8px; font-weight:800; letter-spacing:.12em; }
+    /* the unit whose card is open */
+    .bhRow.sel:not(.on) { box-shadow:inset 0 0 0 1px var(--mid); }
+    .bhTop { display:flex; align-items:center; gap:3px; padding-right:30px; }
     .bhName { min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
         color:var(--ink); font-size:10px; font-weight:600; line-height:1.4; }
     .bhRow.you .bhName { color:var(--cyan); }
+    .bhRow.pal .bhName { color:var(--good); }
     .bhRow.foe .bhName { color:#f0968a; }
     .bhTags { display:flex; gap:2px; flex:none; }
-    .bhTags i { font-style:normal; font-size:7.5px; font-weight:700; letter-spacing:.06em;
-        padding:0 2px; border:1px solid; line-height:1.5; }
+    .bhTags i { font-style:normal; font-size:9px; font-weight:700; letter-spacing:.04em;
+        padding:0 3px; border:1px solid; line-height:1.4; }
     .bhTags .s-bad { color:var(--crit); border-color:var(--crit); }
     .bhTags .s-warn { color:var(--warn); border-color:var(--warn); }
     .bhTags .s-down { color:var(--dim); border-color:var(--line2); }
     .bhTags .s-dying { color:var(--ink); background:var(--crit); border-color:var(--crit); }
-    .bhTags .s-mrk { color:#ff2a2a; border-color:#ff2a2a; }
-    .bhBot { display:flex; align-items:center; gap:5px; margin-top:2px; }
+    .bhBot { display:flex; align-items:center; gap:6px; margin-top:2px; }
     .bhBar { flex:1; height:6px; background:#0b0b10; border:1px solid var(--line); overflow:hidden; }
     .bhBar i { display:block; height:100%; transition:width .25s ease; }
-    .bhBar .h-good { background:linear-gradient(90deg,#4f9a4f,#7fd67f); }
-    .bhBar .h-warn { background:linear-gradient(90deg,#c1841f,#f0a830); }
-    .bhBar .h-crit { background:linear-gradient(90deg,#a3382b,#e0533f); }
-    .bhSp { flex:none; min-width:28px; text-align:right; color:var(--dim);
-        font-size:8.5px; font-variant-numeric:tabular-nums; }
+    /* health left, in figures. The bar alone could not tell you whether the 34
+       that just floated off a hostile had finished them. */
+    .bhHp { flex:none; min-width:24px; text-align:right; font-size:11px; font-weight:700;
+        font-variant-numeric:tabular-nums; line-height:1; }
 
     /* --- action bar in the thumb zone --- */
     /* the status line is one fixed-height clipped row: a long name or weapon
@@ -702,7 +720,6 @@ progress::-moz-progress-bar { background:var(--rust); }
     .feed .log { font-size:11px; line-height:1.55; padding:6px 9px; }
     .pc { padding:9px 10px; }
     .pc .pf { width:42px; height:42px; }
-    .autoChip { min-height:24px; padding:0 7px; display:inline-flex; align-items:center; }
 
     /* More-sheet dedupe: Combat and Inventory already live on the tab bar
        as Arena and Gear — showing them again in More is pure noise */
@@ -828,10 +845,15 @@ progress::-moz-progress-bar { background:var(--rust); }
 .cityHint { position:absolute; left:12px; bottom:10px; z-index:2; color:var(--dim);
     font-size:11px; letter-spacing:.1em; text-transform:uppercase; pointer-events:none; }
 
-/* combat is fully auto — a passive status line, no action buttons */
+/* Combat plays itself, so this line carries only what the board cannot: which
+   round is resolving, whether there is a clock to survive, and what the unit
+   acting right now is holding. It used to say LIVE / RESOLVING (the auto flag,
+   spelled out) and repeat whose turn it was — which the TURN tag already says. */
 .autoStatus { display:flex; align-items:center; gap:10px; padding:8px 12px;
     color:var(--dim); font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
-.autoStatus .autoDot { color:var(--good); }
+.autoStatus .asRound { color:var(--mid); font-weight:700; font-variant-numeric:tabular-nums; }
+.autoStatus .asHold { color:var(--warn); font-weight:700; border:1px solid var(--warn);
+    padding:1px 6px; font-variant-numeric:tabular-nums; }
 .autoStatus .wpn { margin-left:auto; text-transform:none; letter-spacing:0; color:var(--mid); }
 .autoStatus .wpn b { color:var(--cyan); }
 
@@ -874,21 +896,23 @@ progress::-moz-progress-bar { background:var(--rust); }
 .metaOverlay > .itemCollection, .metaOverlay > .redPanel { flex:1; min-height:0; overflow-y:auto; padding:12px 20px; }
 
 /* run-over screen */
-.runEnd { position:fixed; inset:0; z-index:47; display:grid; place-items:center; font-family:var(--mono);
+/* A flex column, not a sticky bar over a scrolling card. The actions used to
+   be `position:sticky; bottom:0` with an opaque background — so on any viewport
+   the card outgrew (which was every real phone) they sat on top of the content
+   they had pushed off the bottom, and a dark card shows no scrollbar to say so.
+   As a flex footer they are pinned and cannot occlude: only the middle moves. */
+.runEnd { position:fixed; inset:0; z-index:47; display:flex; flex-direction:column;
+    align-items:center; justify-content:center; font-family:var(--mono);
     background:radial-gradient(800px 500px at 50% 30%, #14141e, var(--bg)); }
 .runEnd.win { background:radial-gradient(800px 500px at 50% 30%, #10201c, var(--bg)); }
-.runEndCard { text-align:center; max-width:460px; padding:0 24px; }
+.runEndCard { display:flex; flex-direction:column; text-align:center;
+    width:100%; max-width:460px; max-height:100%; padding:0 24px; }
+.reScroll { flex:0 1 auto; min-height:0; overflow-y:auto; padding-top:14px; }
 .runEndCard h1 { margin:0 0 6px; font-size:34px; letter-spacing:.08em; }
 .runEnd.win h1 { color:var(--good); text-shadow:0 0 18px rgba(127,214,127,.5); }
 .runEnd.lose h1 { color:var(--crit); text-shadow:0 0 18px rgba(224,83,63,.5); }
-.runEndFlavor { color:var(--mid); font-size:13px; line-height:1.6; margin:0 0 20px; }
-.runEndStats { display:flex; justify-content:center; gap:10px; margin-bottom:22px; }
-.runEndStats span { display:flex; flex-direction:column; gap:3px; padding:9px 18px; background:var(--panel); border:1px solid var(--line); }
-.runEndStats i { font-style:normal; color:var(--dim); font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
-.runEndStats b { color:var(--cyan); font-size:18px; font-variant-numeric:tabular-nums; }
-.runEndActions { display:flex; flex-direction:column; gap:9px; align-items:stretch;
-    position:sticky; bottom:0; z-index:2; background:var(--bg);
-    padding:10px 0 calc(4px + env(safe-area-inset-bottom)); }
+.runEndActions { flex:none; display:flex; flex-direction:column; gap:9px; align-items:stretch;
+    padding:14px 0 calc(10px + env(safe-area-inset-bottom)); }
 .runEndActions button { font-family:var(--mono); font-size:13px; padding:11px 16px; cursor:pointer; min-height:44px; color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
 .runEndActions button:hover { color:var(--ink); border-color:var(--cyanDim); }
 .runEndActions .prim { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; }
@@ -1042,11 +1066,15 @@ progress::-moz-progress-bar { background:var(--rust); }
    drift — visible on ▤ and ⌁). The corners of the rotated frame poke
    ~13px past the box, hence the margins. */
 .mHero { display:flex; flex-direction:column; align-items:center; text-align:center; gap:6px; margin:6px 0 18px; }
+/* The rotated frame reaches ~13px past this 64px box on every side and its
+   glow throws another 24 — which landed on the kicker below, because the
+   spacing was measured against the box instead of the diamond. Reserve the
+   diamond's real footprint, and keep the glow inside it. */
 .mHeroGlyph { position:relative; width:64px; height:64px; display:grid; place-items:center;
-    font-size:30px; line-height:1; margin:14px 0 18px; color:var(--cyanDim);
+    font-size:30px; line-height:1; margin:10px 0 26px; color:var(--cyanDim);
     animation:heroInFlat .5s ease both; }
 .mHeroGlyph::before { content:""; position:absolute; inset:0; border:1px solid currentColor; transform:rotate(45deg);
-    box-shadow:0 0 24px color-mix(in srgb, currentColor 24%, transparent),
+    box-shadow:0 0 15px color-mix(in srgb, currentColor 22%, transparent),
         inset 0 0 14px color-mix(in srgb, currentColor 11%, transparent); }
 .mHeroGlyph i { font-style:normal; line-height:1; position:relative; }
 .mHero.ev .mHeroGlyph { color:var(--rare); }
@@ -1082,15 +1110,19 @@ progress::-moz-progress-bar { background:var(--rust); }
 .evRollWho { color:var(--mid); font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
 /* same rotated-::before trick as the hero glyph: the number stays upright
    and dead-centre while only the frame is a diamond */
+/* Same trap, worse: this 76px box reaches 16px past itself at rest and ~25px
+   mid-diePop (scale 1.18), so the die physically crossed the name line above it
+   on every roll, then threw a 30px glow over the maths below. Margins are sized
+   for the popped diamond, and the glow is pulled in to match. */
 .evDie { position:relative; width:76px; height:76px; display:grid; place-items:center; font-size:34px; font-weight:800;
-    color:var(--ink); font-variant-numeric:tabular-nums; line-height:1; margin:14px 0 16px; }
+    color:var(--ink); font-variant-numeric:tabular-nums; line-height:1; margin:28px 0 32px; }
 .evDie::before { content:""; position:absolute; inset:0; border:2px solid currentColor; transform:rotate(45deg); }
 .evDie i { font-style:normal; line-height:1; position:relative; }
 .evDie.spin { animation:dieSpin .35s linear infinite; color:var(--rare); }
 .evDie.win { color:var(--good); animation:diePop .5s ease both; }
-.evDie.win::before { box-shadow:0 0 30px rgba(127,214,127,.45), inset 0 0 18px rgba(127,214,127,.15); }
+.evDie.win::before { box-shadow:0 0 18px rgba(127,214,127,.4), inset 0 0 18px rgba(127,214,127,.15); }
 .evDie.lose { color:var(--crit); animation:dieShake .45s ease both; }
-.evDie.lose::before { box-shadow:0 0 30px rgba(224,83,63,.45), inset 0 0 18px rgba(224,83,63,.15); }
+.evDie.lose::before { box-shadow:0 0 18px rgba(224,83,63,.4), inset 0 0 18px rgba(224,83,63,.15); }
 @keyframes dieSpin { 0% { transform:scale(1); filter:blur(0); } 50% { transform:scale(1.08); filter:blur(.6px); } 100% { transform:scale(1); filter:blur(0); } }
 @keyframes diePop { 0% { transform:scale(.9); } 55% { transform:scale(1.18); } 100% { transform:scale(1); } }
 @keyframes dieShake { 0%,100% { transform:translateX(0); } 20% { transform:translate(-4px,2px); } 40% { transform:translate(4px,-2px); } 60% { transform:translate(-3px,-2px); } 80% { transform:translate(3px,2px); } }
@@ -1290,12 +1322,28 @@ progress::-moz-progress-bar { background:var(--rust); }
 /* Which run this was: a career of six reads as a record, not six false starts. */
 .reRunNo { display:block; margin-bottom:4px; color:var(--rust); font-size:10px;
     letter-spacing:.22em; text-transform:uppercase; }
-.reRecord { display:block; margin:-10px 0 20px; color:var(--faint); font-size:10px;
-    letter-spacing:.12em; text-transform:uppercase; }
+
+/* How far it got, on one line. Three stat tiles used to sit here; two of them
+   (level, lifetime kills) are already on the title screen's career strip, and
+   this screen has one screenful to spend. */
+.reReached { display:flex; flex-direction:column; gap:3px; align-items:center; margin:2px 0 16px; }
+.reReached > b { color:var(--cyan); font-size:17px; letter-spacing:.04em; font-variant-numeric:tabular-nums; }
+.reRecord { color:var(--faint); font-size:10px; letter-spacing:.12em; text-transform:uppercase; }
 .reRecord.best { color:var(--warn); }
 
+/* The carry-over contract in one sentence, with the merc's name in it. */
+.reCarry { margin:0 0 14px; color:var(--mid); font-size:12.5px; line-height:1.65; }
+.reCarry b { color:var(--ink); }
+
+/* ...and the full breakdown folded behind it. Open on the first wipe, when the
+   death loop still needs explaining; shut afterwards, when it is furniture. */
+.reLedgerToggle { width:100%; font-family:var(--mono); font-size:11px; letter-spacing:.08em;
+    padding:9px 12px; min-height:38px; cursor:pointer; color:var(--dim);
+    background:none; border:1px solid var(--line); }
+.reLedgerToggle:hover, .reLedgerToggle.on { color:var(--cyan); border-color:var(--cyanDim); }
+
 /* Kept / lost, side by side — the carry-over contract, stated once and plainly. */
-.reLedger { display:grid; grid-template-columns:1fr 1fr; gap:1px; margin-bottom:22px;
+.reLedger { display:grid; grid-template-columns:1fr 1fr; gap:1px; margin:10px 0 4px;
     background:var(--line); border:1px solid var(--line); text-align:left; }
 .reLedger > div { background:var(--panel); padding:13px 15px 15px; }
 .reLedger h2 { margin:0 0 10px; font-size:10px; letter-spacing:.14em; text-transform:uppercase;
@@ -1409,12 +1457,10 @@ progress::-moz-progress-bar { background:var(--rust); }
 @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
 
 /* ---------------------------------------------------------------------
-   3D battle arena (BattleScene) — street canyon, unit tags, floaters,
-   XCOM-style order bar.
+   3D battle arena (BattleScene) — street canyon, unit tags, floaters.
    --------------------------------------------------------------------- */
 .bs { position:relative; flex:1; min-height:0; border:1px solid var(--line);
     background:#07080c; overflow:hidden; }
-.bs.picking { cursor:crosshair; }
 .bsCanvas { position:absolute; inset:0; }
 .bsCanvas canvas { display:block; }
 .bsOverlay { position:absolute; inset:0; pointer-events:none; overflow:hidden; }
@@ -1455,53 +1501,50 @@ progress::-moz-progress-bar { background:var(--rust); }
 .bsFloat.f-cov { color:var(--cyan); font-size:11px; }
 .bsFloat.f-down { color:var(--crit); font-size:17px; letter-spacing:.14em; }
 
-/* live to-hit chip over the targeted hostile */
-.bsHitChip { position:absolute; transform:translate(-50%,-130%); padding:2px 7px;
-    font-size:11px; font-weight:600; color:var(--ink); white-space:nowrap;
-    background:rgba(6,6,12,.88); border:1px solid var(--cyan); }
-
-/* initiative queue above the action bar — fixed height so chips arriving
-   at round one (or clearing on a wipe) never move the bar or the HUD */
-.turnRow { display:flex; gap:5px; align-items:center; padding:5px 8px 0;
-    height:27px; overflow-x:auto; overflow-y:hidden; scrollbar-width:none; }
-.turnRow .trLabel { font-size:9px; letter-spacing:.14em; color:var(--faint); flex:none; }
-.tc { flex:none; font-size:10px; padding:1px 7px; border:1px solid var(--line2);
-    color:var(--mid); background:var(--bg2); }
-.tc.pal { border-color:#1f5f63; }
-.tc.foe { border-color:#5f2c26; color:#d8988c; }
-.tc.now { color:var(--ink); border-color:var(--cyan); background:var(--sel);
-    box-shadow:0 0 8px rgba(55,225,231,.25); }
-.tc.out { opacity:.35; text-decoration:line-through; }
-
-/* order bar */
-.orderActs { display:flex; gap:6px; padding:8px; align-items:center; flex-wrap:wrap; }
-.ordWho { color:var(--cyan); font-weight:600; font-size:12px; }
-.ordTgt { font-size:11px; color:var(--dim); border:1px dashed var(--line2); padding:4px 8px; }
-.ordTgt.has { color:var(--ink); border-style:solid; }
-.ordTgt .pct { margin-left:4px; }
-.ordTgt .pct.hi { color:var(--good); }
-.ordTgt .pct.mid { color:var(--warn); }
-.ordTgt .pct.lo { color:var(--crit); }
-.ordTgt .covTag { color:var(--cyan); font-style:normal; font-size:9px; letter-spacing:.1em; }
-.ob { background:var(--bg2); border:1px solid var(--line2); color:var(--mid);
-    font-size:11px; padding:5px 9px; letter-spacing:.05em; }
-.ob:hover:not(:disabled) { border-color:var(--cyan); color:var(--ink); }
-.ob:disabled { opacity:.4; cursor:default; }
-.ob.set { border-color:var(--cyan); color:var(--cyan); }
-.ob.go { border-color:var(--rust); color:var(--ink); background:#231512; }
-.ob.go:hover:not(:disabled) { border-color:var(--rustHot); background:#2c1a15; }
-.ob.slim { margin-left:10px; padding:2px 8px; }
-.nowTurn { color:var(--mid); }
-
-/* mobile: keep the order bar tappable */
 @media (max-width: 760px) {
-    .orderActs { gap:5px; padding:6px; }
-    .ob { padding:7px 8px; font-size:10px; }
-    .ordTgt { font-size:10px; padding:5px 6px; }
-    .turnRow .tc { font-size:9px; }
     .bsTag .bsHp { width:36px; }
     .bsTag { font-size:9px; }
 }
+
+/* ---------------------------------------------------------------------
+   Unit card — what a battle HUD row tap means now that combat takes no
+   orders. It doubles as the legend for the board's shorthand: SP, the ✦
+   threat pip and the AGGRO/RUSH/FLANK/CAMP/STEADY chips had no explanation
+   anywhere a touch screen could reach, because `title` tooltips need a
+   mouse. Everything they stand for is spelled out here, in words.
+   --------------------------------------------------------------------- */
+.ucWrap { position:absolute; inset:0; z-index:5; display:flex; align-items:flex-end;
+    justify-content:center; padding:10px; background:rgba(4,4,9,.55); }
+.uc { width:100%; max-width:420px; max-height:100%; overflow-y:auto;
+    background:var(--panel); border:1px solid var(--cyanDim); border-left:3px solid var(--cyan);
+    font-family:var(--mono); padding:10px 12px 12px;
+    box-shadow:0 -6px 26px rgba(0,0,0,.55); animation:ucIn .18s ease both; }
+.uc.foe { border-color:#5f2c26; border-left-color:var(--crit); }
+@keyframes ucIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
+.ucHead { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;
+    padding-bottom:7px; border-bottom:1px solid var(--line); }
+.ucName { color:var(--cyan); font-size:14px; letter-spacing:.03em; }
+.uc.foe .ucName { color:#f0968a; }
+.ucSub { color:var(--dim); font-size:10px; letter-spacing:.06em; text-transform:uppercase; }
+.ucX { margin-left:auto; flex:none; min-width:34px; min-height:34px; background:none;
+    border:1px solid var(--line2); color:var(--dim); font-size:13px; cursor:pointer; }
+.ucX:hover { color:var(--ink); border-color:var(--cyanDim); }
+.ucFacts { margin:0; padding:8px 0 0; display:flex; flex-direction:column; gap:6px; }
+.ucFacts > div { display:flex; gap:10px; align-items:baseline; }
+.ucFacts dt { flex:none; width:88px; color:var(--faint); font-size:10px;
+    letter-spacing:.1em; text-transform:uppercase; }
+.ucFacts dd { margin:0; min-width:0; color:var(--ink); font-size:12px; line-height:1.5; }
+.ucFacts dd i { font-style:normal; color:var(--dim); font-size:11px; }
+.ucFacts dd b { font-variant-numeric:tabular-nums; }
+.ucHi { color:var(--good); }
+.ucMid { color:var(--warn); }
+.ucLo { color:var(--crit); }
+.ucCond { margin-top:10px; padding-top:8px; border-top:1px solid var(--line); }
+.ucCond h4 { margin:0 0 5px; color:var(--faint); font-size:10px; font-weight:700;
+    letter-spacing:.14em; text-transform:uppercase; }
+.ucCond ul { margin:0; padding:0; list-style:none; display:flex; flex-direction:column; gap:4px; }
+.ucCond li { color:var(--mid); font-size:11.5px; line-height:1.5; }
+.ucCond li b { color:var(--warn); font-weight:700; }
 
 /* ---------------------------------------------------------------------
    Surveillance feed — one overwatch line per resolved turn.
@@ -1520,9 +1563,6 @@ progress::-moz-progress-bar { background:var(--rust); }
 .fe.sys { color:var(--dim); font-size:11px; }
 .fe.sys .x { color:var(--dim); }
 
-/* frag mode */
-.ob.frag { border-color:#6b4a1e; color:var(--warn); }
-.ob.frag.set { border-color:var(--warn); background:#241a0d; box-shadow:0 0 8px rgba(240,168,48,.25); }
 .bsFloat.f-tick { color:#ff9a70; font-size:12px; }
 .bsFloat.f-mark { color:#ff2a2a; font-size:12px; letter-spacing:.12em; text-shadow:0 0 10px rgba(255,42,42,.6); }
 .bsFloat.f-crit { color:#ffb050; font-size:13px; letter-spacing:.12em; text-shadow:0 0 10px rgba(255,176,80,.6); }
@@ -1646,8 +1686,6 @@ progress::-moz-progress-bar { background:var(--rust); }
 .psychoFlag { font-style:normal; color:var(--crit); letter-spacing:.14em; }
 .psychoFlag.warn { color:var(--warn); }
 .mkPips { font-style:normal; color:var(--cyan); font-size:10px; letter-spacing:.14em; }
-.reKeepChrome { display:block; margin-top:8px; color:var(--cyan); font-size:10px; letter-spacing:.05em; line-height:1.7; }
-.reKeepLost b { color:var(--mid); }
 
 @media (prefers-reduced-motion: no-preference) {
     .augCard { animation:panelIn .34s cubic-bezier(.22,.9,.3,1) both; }

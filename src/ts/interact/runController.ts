@@ -19,7 +19,7 @@ type Patch = Partial<InterfaceAppState>;
  * stands on a waypoint and may move to any adjacent one. Entering an uncleared
  * node triggers its encounter/screen; entering a cleared node just relocates
  * (free backtracking). Each method takes the current app state and returns a
- * `setState` patch, so `App` stays a thin React shell owning the auto timer.
+ * `setState` patch, so `App` stays a thin React shell owning the turn timer.
  */
 export class RunController {
     /** Party yardstick for scaling encounters (highest member level). */
@@ -78,7 +78,7 @@ export class RunController {
             currentEnemies: enemies, activeChar: character, activeEnemy: enemies[0],
             activeMainPanel: "Combat", mobileTab: "arena", mobileMore: false, unread: 0,
             messages: lines.slice(0, log),
-            playback: null, orders: null, turnOrder: [], auto: true,
+            playback: null, turnOrder: [], round: 0, holdLeft: 0, inspecting: null,
         };
     }
 

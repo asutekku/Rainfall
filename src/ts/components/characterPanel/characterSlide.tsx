@@ -9,7 +9,6 @@ export interface CharCompProps {
     selected: string;
     /** This is YOUR character (pinned on top of the roster). */
     isPlayer?: boolean | undefined;
-    onToggleAuto?: ((a: Actor) => void) | undefined;
     onCycleTemperament?: ((a: Actor) => void) | undefined;
     /** Open the member's full character sheet (the › affordance). */
     onOpenSheet?: ((a: Actor) => void) | undefined;
@@ -29,22 +28,21 @@ export class CharacterComponent extends React.Component<CharCompProps, {}> {
         return null;
     }
 
+    /**
+     * Playstyle, and only playstyle. There used to be an AUTO/MANUAL chip
+     * beside it; every fight is fought by the AI now, so how a member fights
+     * is the whole of what there is to set — and it is always on show rather
+     * than hidden behind a mode the player no longer picks.
+     */
     private controls(a: Actor) {
-        if (!this.props.friendly || !this.props.onToggleAuto) { return null; }
+        if (!this.props.friendly || !this.props.onCycleTemperament) { return null; }
         const temper = TEMPER[a.temperament] || TEMPER["balanced"]!;
         return (
             <span className={"pcCtl"}>
-                <span className={"autoChip" + (a.auto ? " on" : "")}
-                      title={"Toggle AI control"}
-                      onClick={(e) => { e.stopPropagation(); this.props.onToggleAuto!(a); }}>
-                    {a.auto ? "AUTO" : "MANUAL"}
+                <span className={"temp " + temper[1]} title={"Playstyle — tap to change"}
+                      onClick={(e) => { e.stopPropagation(); this.props.onCycleTemperament!(a); }}>
+                    {temper[0]}
                 </span>
-                {a.auto && (
-                    <span className={"temp " + temper[1]} title={"Click to change AI playstyle"}
-                          onClick={(e) => { e.stopPropagation(); this.props.onCycleTemperament!(a); }}>
-                        {temper[0]}
-                    </span>
-                )}
             </span>);
     }
 

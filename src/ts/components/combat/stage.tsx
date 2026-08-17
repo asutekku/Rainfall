@@ -1,51 +1,44 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {accentCss} from "../../actors/resources/factionStyles";
-import {Battlefield, Point} from "../../interact/battlefield";
+import {Battlefield} from "../../interact/battlefield";
 import {rangeDV} from "../../interact/rangeTable";
-import {aimPreview} from "../../interact/aimPreview";
 import {RunNode, RunState} from "../../interact/runMap";
 import {MainPanel} from "../mainPanel";
-import {BattleScene, OrderCtx, PlaybackBundle} from "./battleScene";
+import {BattleScene, PlaybackBundle} from "./battleScene";
 import {BattleHud} from "./battleHud";
+import {UnitCard} from "./unitCard";
 import {CityMap} from "../run/cityMap";
 
 export interface StageProps {
     actor: Actor;
-    enemy: Actor;
     party: Actor[];
     enemies: Actor[];
     view: string;
     screen: string;
     run: RunState | null;
     messages: any;
-    auto: boolean;
     battleId: number;
     playback: PlaybackBundle | null;
-    orders: OrderCtx | null;
     turnOrder: Actor[];
+    /** Fight clock: which round is resolving, and how many are left to survive on a holdout. */
+    round: number;
+    holdLeft: number;
+    /** The unit whose card is open, if any. */
+    inspecting: Actor | null;
     onNotice: (msg: any) => void;
-    onSelectAlly: (a: Actor) => void;
-    onSelectEnemy: (a: Actor) => void;
-    onGotoCombat: () => void;
+    /** Open (or close, with null) a unit's card — what a HUD row tap means now. */
+    onInspect: (a: Actor | null) => void;
     onPickNode: (node: RunNode) => void;
     onPlaybackDone: (id: number) => void;
-    onPickMove: (p: Point) => void;
-    onClearMove: () => void;
-    onPickTarget: (a: Actor) => void;
-    onToggleAim: () => void;
-    onToggleGrenade: () => void;
-    onExecute: () => void;
-    onPass: () => void;
-    onToggleAuto: () => void;
 }
 
 /**
  * The centre stage. Between fights it shows the holographic city map; in a
- * fight it shows the 3D street arena. Turns resolve one unit at a time: AI
- * turns play back as animations, and when a squad member set to manual comes
- * up the bottom bar switches to XCOM-style orders (move / target / aimed shot
- * / execute), with the street itself as the input surface.
+ * fight it shows the 3D street arena and resolves turns one unit at a time,
+ * every one of them played by the tactical AI. Nothing here takes orders —
+ * the board is a thing to read, so everything on it earns its space by
+ * telling you something you cannot get from the row above it.
  */
 export class Stage extends React.Component<StageProps, {}> {
 
@@ -62,97 +55,45 @@ export class Stage extends React.Component<StageProps, {}> {
         return Math.max(sp, a.cyberSP());
     }
 
+    /** Desktop target rail. Selection is the card, not a target — combat is automatic. */
     private strip = (e: Actor, i: number) => {
         const hpPct = Math.max(0, Math.min(100, (e.health / Math.max(1, e.maxHealth)) * 100));
-        const orders = this.props.orders;
-        const active = orders && orders.target ? e === orders.target : e.name === this.props.enemy.name;
-        const shooter = orders ? orders.actor : this.props.actor;
+        const hpCls = hpPct > 60 ? "h-good" : hpPct > 30 ? "h-warn" : "h-crit";
+        const shooter = this.props.actor;
         const dist = Math.round(Battlefield.distance(shooter, e));
         const cls = shooter.weapon.weaponClass;
         const outOfRange = cls !== "melee" && rangeDV(cls, dist) === null;
         const temper = Stage.TEMPER[e.temperament] || Stage.TEMPER["balanced"]!;
         const sub = e.faction ? `${e.faction}${e.archetype ? " " + e.archetype : ""}` : e.role.name;
         return (
-            <button key={i} className={"es" + (active ? " on" : "") + (e.canFight() ? "" : " dead")}
+            <button key={i} className={"es" + (e === this.props.inspecting ? " on" : "") + (e.canFight() ? "" : " dead")}
                     style={{borderLeft: "3px solid " + accentCss(e.faction)}}
-                    onClick={() => this.props.onSelectEnemy(e)}>
+                    onClick={() => this.props.onInspect(e)}>
                 <span className={"d rank-" + (e.rank || 1)} title={"threat rank " + (e.rank || 1)}>✦</span>
                 <span className={"nm"}>{e.name} <span className={"lv"}>{sub} · L{e.level}</span></span>
                 <span className={"temp " + temper[1]} title={"AI temperament"}>{temper[0]}</span>
-                <span className={"bar hp"}><i style={{width: hpPct + "%"}}/></span>
+                <span className={"bar hp"}><i className={hpCls} style={{width: hpPct + "%"}}/></span>
+                <b className={"hpn " + hpCls}>{Math.max(0, Math.ceil(e.health))}</b>
                 <span className={"rng" + (outOfRange ? " oor" : "")}>{dist}m</span>
                 <span className={"sp"}>SP {this.enemyArmor(e)}</span>
             </button>);
     };
 
-    /** Initiative queue chips: whose turn it is, and who's up next. The row
-     *  renders even while empty (fight opening, wipe) at a fixed height, so
-     *  chips arriving can't push the layout around — the phone HUD sits
-     *  right on top of this bar. */
-    private turnChips() {
-        const order = this.props.turnOrder;
-        return (
-            <div className={"turnRow"}>
-                <span className={"trLabel"}>INITIATIVE</span>
-                {order.slice(0, 8).map((a, i) => {
-                    const foe = this.props.enemies.indexOf(a) >= 0;
-                    const dead = !a.canFight();
-                    return <span key={i}
-                                 className={"tc" + (foe ? " foe" : " pal") + (i === 0 ? " now" : "") + (dead ? " out" : "")}>
-                        {foe ? "✦" : "◈"} {a.name.split(" ")[0]}
-                    </span>;
-                })}
-            </div>);
-    }
-
-    /** XCOM-style order bar for the unit awaiting commands. */
-    private orderBar(o: OrderCtx) {
-        const target = o.target && o.target.canFight() ? o.target : null;
-        const prev = target ? aimPreview(o.actor, target, o.pendingMove || undefined, o.aimed) : null;
-        const w = o.actor.weapon;
-        const canAim = !!target && !w.autofire && w.weaponClass !== "melee" && !o.grenadeMode;
-        const frags = o.actor.grenades || 0;
-        const pctCls = prev && prev.ok ? (prev.pct >= 60 ? "hi" : prev.pct >= 30 ? "mid" : "lo") : "lo";
-        return (
-            <div className={"acts orderActs"}>
-                <span className={"ordWho"}>◈ {o.actor.name}</span>
-                <button className={"ob" + (o.pendingMove ? " set" : "")}
-                        title={o.pendingMove ? "clear the planned move" : "tap the street to set a move"}
-                        onClick={this.props.onClearMove} disabled={!o.pendingMove}>
-                    {o.pendingMove ? "⊹ MOVE SET ✕" : "⊹ TAP STREET TO MOVE"}
-                </button>
-                <span className={"ordTgt" + (target || (o.grenadeMode && o.grenadeAt) ? " has" : "")}>
-                    {o.grenadeMode
-                        ? (o.grenadeAt ? "✸ BLAST POINT SET" : "✸ TAP STREET FOR BLAST POINT")
-                        : target
-                        ? <React.Fragment>✦ {target.name} {prev && (prev.ok
-                            ? <b className={"pct " + pctCls}>{prev.pct}%</b>
-                            : <b className={"pct lo"}>NO SHOT</b>)}{prev && prev.covered ? <i className={"covTag"}> COVER</i> : null}</React.Fragment>
-                        : "✦ TAP A HOSTILE TO TARGET"}
-                </span>
-                {frags > 0 &&
-                    <button className={"ob frag" + (o.grenadeMode ? " set" : "")} onClick={this.props.onToggleGrenade}
-                            title={"Frag grenade: 6d6 in a blast radius, armour halved — friend and foe alike"}>✸ FRAG ×{frags}</button>}
-                {canAim &&
-                    <button className={"ob" + (o.aimed ? " set" : "")} onClick={this.props.onToggleAim}
-                            title={"Aimed head shot: -8 to hit, double damage through head armour"}>◎ AIM</button>}
-                <button className={"ob go"} onClick={this.props.onExecute}
-                        disabled={!o.pendingMove && !target && !(o.grenadeMode && o.grenadeAt)}>▶ EXECUTE</button>
-                <button className={"ob"} onClick={this.props.onPass} title={"do nothing this turn"}>SKIP</button>
-                <button className={"ob"} onClick={this.props.onToggleAuto} title={"let the AI play the whole squad"}>▸ AUTO</button>
-            </div>);
-    }
-
-    /** Auto is the whole show for now — manual control stays parked off-stage. */
+    /**
+     * One fixed-height line under the board. It used to say "LIVE" or
+     * "RESOLVING" (the auto flag, spelled out) and repeat whose turn it was —
+     * which the TURN tag on the HUD row already says. What it says now is the
+     * only thing the board cannot: which round this is, whether there is a
+     * clock to survive, and what the unit acting right now is holding.
+     */
     private statusBar() {
-        const w = this.props.actor.weapon;
-        const active = this.props.turnOrder[0];
+        const acting = this.props.turnOrder[0];
+        const w = (acting || this.props.actor).weapon;
         return (
             <div className={"autoStatus"}>
-                <span className={"autoDot"}>▸</span> {this.props.auto ? "LIVE" : "RESOLVING"}
-                {active ? <span className={"nowTurn"}> — {active.name}'s turn</span> : null}
-                {!this.props.auto &&
-                    <button className={"ob slim"} onClick={this.props.onToggleAuto}>▸ AUTO</button>}
+                <span className={"asRound"}>ROUND {Math.max(1, this.props.round)}</span>
+                {this.props.holdLeft > 0 &&
+                    <span className={"asHold"}>HOLD {this.props.holdLeft} MORE</span>}
                 <span className={"wpn"}>
                     <b>{w.name}</b> · {w.diceThrows}d6{w.damage ? "+" + w.damage : ""}
                     {w.ap ? " AP" : ""}{w.autofire ? " · AUTO" : ""}
@@ -167,9 +108,8 @@ export class Stage extends React.Component<StageProps, {}> {
             return <CityMap run={this.props.run} party={this.props.party} onPick={this.props.onPickNode}/>;
         }
         const inFight = combat && this.props.screen === "combat";
-        const orders = this.props.orders;
-        const activeName = orders ? orders.actor.name
-            : this.props.turnOrder.length ? this.props.turnOrder[0]!.name : undefined;
+        const acting = this.props.turnOrder[0] || null;
+        const next = this.props.turnOrder.find((a, i) => i > 0 && a.canFight()) || null;
         return (
             <section id={"stage"}>
                 {inFight && <div className={"strips"}>{this.props.enemies.map(this.strip)}</div>}
@@ -180,11 +120,12 @@ export class Stage extends React.Component<StageProps, {}> {
                                      battleId={this.props.battleId}
                                      playback={this.props.playback}
                                      onPlaybackDone={this.props.onPlaybackDone}
-                                     orders={orders}
-                                     onPickMove={this.props.onPickMove}
-                                     onPickTarget={this.props.onPickTarget}
-                                     speed={this.props.auto ? 1.6 : 1}
-                                     activeName={activeName}/>
+                                     speed={1.6}
+                                     activeName={acting ? acting.name : undefined}/>
+                        {this.props.inspecting &&
+                            <UnitCard unit={this.props.inspecting}
+                                      party={this.props.party} enemies={this.props.enemies}
+                                      onClose={() => this.props.onInspect(null)}/>}
                     </div>
                 ) : (
                     <React.Fragment>
@@ -201,17 +142,11 @@ export class Stage extends React.Component<StageProps, {}> {
 
                 {/* phone battle HUD — replaces the docked log under the breakpoint */}
                 {inFight && <BattleHud party={this.props.party} enemies={this.props.enemies}
-                                       acting={orders ? orders.actor : this.props.turnOrder[0] || null}
-                                       target={orders ? orders.target : this.props.enemy}
-                                       onSelectAlly={this.props.onSelectAlly}
-                                       onSelectEnemy={this.props.onSelectEnemy}/>}
+                                       acting={acting} next={next}
+                                       selected={this.props.inspecting}
+                                       onSelect={this.props.onInspect}/>}
 
-                {inFight && (
-                    <div className={"stageActions"}>
-                        {this.turnChips()}
-                        {orders ? this.orderBar(orders) : this.statusBar()}
-                    </div>
-                )}
+                {inFight && <div className={"stageActions"}>{this.statusBar()}</div>}
             </section>);
     }
 }
