@@ -1,3 +1,4 @@
+import {traitSum} from "../actors/resources/traits";
 import {Actor} from "../actors/Actor";
 import {Kit, startingKit} from "./loadout";
 
@@ -92,6 +93,11 @@ export class Purse {
     }
 
     public static earn(actor: Actor, amount: number): number {
+        // "Owes the Wrong People": a slice of every payday goes somewhere else
+        // before it reaches the crate. The discount on their fee is what pays
+        // for it, so the trade is up front rather than a nasty surprise.
+        const skim = traitSum(actor.traits, "payCut");
+        if (skim > 0) { amount = amount * Math.max(0, 1 - skim); }
         const crew = this.crewOf(actor);
         if (crew) { return crew.earn(amount); }
         const gain = Math.max(0, Math.floor(amount));

@@ -1262,22 +1262,24 @@ progress::-moz-progress-bar { background:var(--rust); }
 .hbFunds { margin-left:auto; color:var(--good); font-size:14px; font-variant-numeric:tabular-nums; }
 .hbNote { margin:0 0 6px; color:var(--warn); font-size:10px; }
 .hbOffers { list-style:none; margin:0; padding:0; overflow-y:auto; min-height:0; }
-.hbOffer { display:flex; align-items:center; gap:9px; padding:6px 9px; margin-bottom:5px;
+.hbOffer { display:flex; align-items:flex-start; gap:9px; padding:8px 9px; margin-bottom:5px;
     background:var(--panel); border:1px solid var(--line); border-left:2px solid var(--line2); font-size:11px; }
 .hbOffer.tier-pro { border-left-color:var(--cyanDim); }
 .hbOffer.tier-veteran { border-left-color:var(--warn); }
 .hbOffer.tier-legend { border-left-color:var(--rare); }
 .hbOffer.hired { opacity:.5; }
 .hbFace { width:26px; height:26px; object-fit:cover; border:1px solid var(--line2); filter:grayscale(.35); }
-.hbWho { display:flex; flex-direction:column; gap:1px; min-width:118px; }
-.hbWho b, .hbWho i { white-space:nowrap; }
+.hbWho { flex:none; display:flex; flex-direction:column; gap:1px; width:128px; }
+.hbWho b, .hbWho i { white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .hbWho b { color:var(--ink); }
 .hbWho i { font-style:normal; font-size:10px; }
-.hbTier { color:var(--mid); font-size:9px; letter-spacing:.12em; text-transform:uppercase; }
+.hbTier { flex:none; padding-top:3px; color:var(--mid); font-size:9px; letter-spacing:.12em; text-transform:uppercase; }
 .hbOffer.tier-legend .hbTier { color:var(--rare); }
-.hbTrait { color:var(--faint); font-size:10px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.hbKit { margin-left:auto; color:var(--dim); font-size:10px; white-space:nowrap; }
-.hbBuy { font-family:var(--mono); font-size:11px; font-weight:700; padding:5px 11px; white-space:nowrap;
+/* the traits are the reason to read the row, so they get the space and wrap
+   rather than being ellipsed into meaninglessness */
+.hbTrait { flex:1 1 auto; min-width:110px; color:var(--faint); font-size:10px; }
+.hbKit { flex:none; color:var(--dim); font-size:10px; white-space:nowrap; padding-top:2px; }
+.hbBuy { flex:none; font-family:var(--mono); font-size:11px; font-weight:700; padding:5px 11px; white-space:nowrap;
     color:var(--bg); background:var(--cyan); border:1px solid var(--cyan); }
 .hbBuy:hover:enabled { background:#5cf0f5; }
 .hbBuy:disabled { color:var(--faint); background:var(--panel2); border-color:var(--line); cursor:not-allowed; }
@@ -1408,8 +1410,25 @@ progress::-moz-progress-bar { background:var(--rust); }
 /* the hire board's who-column now carries three lines: name, class, faction */
 .hbWho em { display:block; font-style:normal; font-size:9.5px; letter-spacing:.08em;
     text-transform:uppercase; font-family:var(--mono); }
-/* the perk is what you are buying; the flavour trait rides underneath it */
-.hbTrait i { display:block; font-style:italic; color:var(--faint); font-size:9.5px; }
+/* the faction perk sits above the traits; each trait says what it does and
+   colours by which way it cuts, because "cheap because flawed" is the whole
+   trade the board is asking the player to price. */
+.hbPerk { display:block; color:var(--mid); font-size:9.5px; margin-bottom:2px; }
+/* trait names as chips — scannable at a glance, blurb on hover */
+.hbTraits { display:flex; flex-wrap:wrap; gap:3px; margin-top:3px; }
+.hbTraits i { font-style:normal; font-family:var(--mono); font-size:9px; letter-spacing:.04em;
+    padding:1px 5px; border:1px solid currentColor; border-radius:2px; white-space:nowrap;
+    cursor:help; }
+.hbTraits i.boon { color:var(--good); }
+.hbTraits i.flaw { color:var(--warn); }
+
+/* traits on the unit card and the character sheet: same colour language as the
+   hire board, so a flaw reads the same wherever the player meets it */
+.ucTraits { margin:0 0 8px; padding:0 0 0 12px; list-style:none; font-size:10px; line-height:1.5; color:var(--dim); }
+.ucTraits li { position:relative; }
+.ucTraits li::before { content:"\25C7"; position:absolute; left:-12px; }
+.ucTraits li.boon b, .roleEdge.boon b { color:var(--good); }
+.ucTraits li.flaw b, .roleEdge.flaw b { color:var(--warn); }
 
 /* --- defensive profile badge ------------------------------------------
    One badge, four screens (hire board, staging, battle HUD, unit card).

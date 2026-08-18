@@ -2,6 +2,7 @@ import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {ProfileBadge} from "../general/profileBadge";
 import {PROFILE, profileOf} from "../../interact/profile";
+import {TRAITS} from "../../actors/resources/traits";
 import {soak} from "../../interact/damageModel";
 import {shotPreview} from "../../interact/shotPreview";
 import {Battlefield} from "../../interact/battlefield";
@@ -85,6 +86,15 @@ export class UnitCard extends React.Component<UnitCardProps, UnitCardState> {
                         <span className={"ucSub"}>{sub} · L{a.level}</span>
                         <button className={"ucX"} onClick={this.props.onClose} aria-label={"Close"}>✕</button>
                     </div>
+
+                    {a.traits.length > 0 && (
+                        <ul className={"ucTraits"}>
+                            {a.traits.map((t) => TRAITS[t] && (
+                                <li key={t} className={TRAITS[t]!.price < 1 ? "flaw" : "boon"}>
+                                    <b>{TRAITS[t]!.name}</b> — {TRAITS[t]!.blurb}
+                                    {t === "badBlood" && a.grudge ? ` (${a.grudge})` : ""}
+                                </li>))}
+                        </ul>)}
 
                     {/* the whole point of the badge, in words: what beats this one */}
                     <p className={"ucProf pr-" + profileOf(a)}>

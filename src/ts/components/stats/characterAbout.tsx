@@ -1,4 +1,5 @@
 import * as React from "react";
+import {TRAITS} from "../../actors/resources/traits";
 import {Actor} from "../../actors/Actor";
 import {StatListItem} from "../statListItem";
 import {CharacterPortrait} from "./characterPortrait";
@@ -52,6 +53,11 @@ export class CharacterAbout extends React.Component<AboutProps, AboutState> {
                     <StatListItem name={"Class:"} value={a.role.name}/>
                     <StatListItem name={"Fights as:"} value={a.role.role}/>
                     <div className={"roleEdge"}>◆ {a.role.edge}</div>
+                    {a.traits.map((t) => TRAITS[t] && (
+                        <div key={t} className={"roleEdge " + (TRAITS[t]!.price < 1 ? "flaw" : "boon")}>
+                            ◇ <b>{TRAITS[t]!.name}</b> — {TRAITS[t]!.blurb}
+                            {t === "badBlood" && a.grudge ? ` (${a.grudge})` : ""}
+                        </div>))}
                     <StatListItem name={"Level:"} value={a.level.toString()}/>
                     <StatListItem name={"Experience:"} value={`${a.experience}/${a.maxExperience}`}/>
                     <div className={"statCard"}>

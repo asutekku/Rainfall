@@ -10,6 +10,7 @@ import {HitQuality, QUALITY_MULT, AIMED_EDGE, coverEdge, outOfRange, rangeEdge, 
 import {STATUS, StatusKey, applyStatus, clearRoundStatuses, hasStatus, incomingMult,
     outgoingMult, stacksOf, statusEdge, tickStatuses} from "./statuses";
 import {stanceIn, stanceOut} from "./loadout";
+import {traitRiders} from "../actors/resources/traits";
 import {BLAST_RADIUS, Battlefield, EMP_RADIUS, FLASH_RADIUS, GRENADE_RANGE, Point} from "./battlefield";
 import {TacticalAI, Plan} from "./tacticalAI";
 import {Economy} from "./economy";
@@ -68,7 +69,7 @@ export class Combat {
                            aimed: boolean = false, bonus: number = 0): number {
         const weapon = actor.weapon;
         const base: number = actor.attackBonus(weapon) + bonus + (aimed ? AIMED_EDGE : 0)
-            + statusEdge(actor);
+            + statusEdge(actor) + actor.traitEdge();
         if (weapon.weaponClass === "melee") {
             return base + MELEE_BASE - target.evasion();
         }
@@ -95,6 +96,9 @@ export class Combat {
         d *= QUALITY_MULT[quality];
         d *= outgoingMult(actor);
         d *= incomingMult(target);
+        // Traits ride the same stack the statuses and stances already use.
+        d *= actor.traitOut() * actor.grudgeAgainst(target.faction);
+        d *= target.traitIn();
         // standing orders, set at staging — see loadout.ts for the trade
         d *= stanceOut(actor);
         d *= stanceIn(target);
@@ -202,6 +206,8 @@ export class Combat {
         applyStatus(target, "staggered", 1);
         this.weaponProc(actor, target, quality);
         this.classProc(actor, target, quality);
+        this.traitProc(actor, target, quality);
+        target.tookHit = true;   // Glass Jaw only bills the opening hit
         this.spikesBack(actor, target);
         this.rollCrit(target, dealt, quality);
     }
@@ -251,6 +257,15 @@ export class Combat {
         if (quality === "crit" || Math.random() < rider.chance) {
             this.afflict(actor, target, rider.key, rider.stacks);
         }
+    }
+
+    /** What the *traits* leave behind — a Butcher's cuts, and whatever comes next. */
+    private static traitProc(actor: Actor, target: Actor, quality: HitQuality): void {
+        traitRiders(actor.traits).forEach((r) => {
+            if (quality === "crit" || Math.random() < r.chance) {
+                this.afflict(actor, target, r.key, r.stacks);
+            }
+        });
     }
 
     /** Reactive plating: whoever lands a hit wears some of it. */

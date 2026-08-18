@@ -4,6 +4,7 @@ import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "./battlefield";
 import {QUALITY_MULT, applySoak, AIMED_EDGE, AIMED_MULT, aimedSP, coverEdge, expectedMult, outOfRange, rangeEdge, rollQuality} from "./damageModel";
 import {SUPPRESS_CUT, hasStatus, incomingMult, outgoingMult, spDelta, statusEdge} from "./statuses";
 import {lineGap, lineThreat} from "./loadout";
+import {traitHas} from "../actors/resources/traits";
 
 /**
  * Tactical combat AI.
@@ -473,7 +474,10 @@ export class TacticalAI {
             const dist = Battlefield.gap(spot, pos(foe));
             const cover = Battlefield.coverPenaltyAt(pos(foe), spot);
             const shot = bestNet(self, foe, dist, cover);
-            const pick = shot.value * lineThreat(foe);
+            // Tunnel Vision finishes what it started: the current target keeps a
+            // thumb on the scale until it goes down.
+            const stuck = traitHas(self.traits, "sticky") && self.marking === foe ? 1.6 : 1;
+            const pick = shot.value * lineThreat(foe) * stuck;
             if (pick > bestPick) {
                 bestPick = pick;
                 offense = shot.value;
@@ -511,7 +515,7 @@ export class TacticalAI {
             prof.off * offense
             + prof.kill * killBonus
             + prof.cover * inCover
-            - prof.def * threat * (1 + (1 - hpFrac) * prof.risk)
+            - prof.def * self.caution() * threat * (1 + (1 - hpFrac) * prof.risk)
             - prof.progress * nearestGap
             - campPenalty
             - crowding

@@ -3,6 +3,7 @@ import {Formation, formationFor} from "../actors/resources/factionStyles";
 import {Chrome} from "./chrome";
 import {applyStatus} from "./statuses";
 import {crewFaction} from "../actors/resources/factionStyles";
+import {traitOpeners} from "../actors/resources/traits";
 import {Utils} from "../utils/utils";
 
 /**
@@ -74,6 +75,7 @@ function openWith(a: Actor): void {
     const f = crewFaction(a.faction);
     if (f && f.opener) { applyStatus(a, "adrenaline", f.opener); }
     if (f && f.smoke) { a.smokes += f.smoke; }
+    traitOpeners(a.traits).forEach((o) => applyStatus(a, o.key, o.stacks));
 }
 
 export class Battlefield {
