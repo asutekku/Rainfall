@@ -18,6 +18,10 @@ export interface HireBoardProps {
  * Who's for hire. Used both between sectors and at the fixer's table on the
  * map — same board, different stock. A candidate stays on the list once hired
  * so the roster reads as a record of what the crew paid for.
+ *
+ * `cap` is the payroll ceiling, not the number of seats on a street: the crew
+ * can carry more bodies than it can deploy, and which four walk in is decided
+ * at staging. Signing a sixth is buying a substitute, not a fifth gun.
  */
 export class HireBoard extends React.Component<HireBoardProps, {}> {
 
@@ -39,7 +43,7 @@ export class HireBoard extends React.Component<HireBoardProps, {}> {
                 {hired
                     ? <span className={"hbHired"}>ON THE CREW</span>
                     : <button className={"hbBuy"} disabled={full || broke}
-                              title={full ? "Squad is full" : broke ? "Not enough eddies" : `Hire for ${o.price}¥`}
+                              title={full ? "Payroll is full" : broke ? "Not enough eddies" : `Hire for ${o.price}¥`}
                               onClick={() => this.props.onHire(o.id)}>{o.price}¥</button>}
             </li>);
     };
@@ -52,9 +56,12 @@ export class HireBoard extends React.Component<HireBoardProps, {}> {
                     <span className={"hbCrew"}>Crew {this.props.party.length}/{this.props.cap}</span>
                     <span className={"hbFunds"}>{this.props.funds}¥</span>
                 </div>
-                {full && <p className={"hbNote"}>Squad is full — no room on the payroll.</p>}
+                {full && <p className={"hbNote"}>Payroll is full — pay somebody off before signing anyone new.</p>}
                 <ul className={"hbOffers"}>{this.props.offers.map(this.offer)}</ul>
-                <p className={"hbHint"}>SP = armour · skill = weapon rating · tap the price to hire</p>
+                <p className={"hbHint"}>
+                    SP = armour · skill = weapon rating · tap the price to hire.
+                    Four walk onto a street; the rest wait with the van.
+                </p>
             </div>);
     }
 }

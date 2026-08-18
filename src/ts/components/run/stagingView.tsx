@@ -1,9 +1,9 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {accentCss} from "../../actors/resources/factionStyles";
-import {ODDS_LABEL, forecastWave} from "../../interact/forecast";
-import {Deployment, KIT, KIT_ORDER, KIT_PICKS, Kit, KitId, KitPick, STANCES, STANCE_ORDER,
-    Stance, stanceOf} from "../../interact/loadout";
+import {ODDS_LABEL, forecastWave, sideStrength} from "../../interact/forecast";
+import {Deployment, KIT, KIT_ORDER, KIT_PICKS, Kit, KitId, KitPick, SQUAD_CAP, STANCES,
+    STANCE_ORDER, Stance, stanceOf} from "../../interact/loadout";
 import type {PendingFight} from "../app";
 
 export interface StagingViewProps {
@@ -19,9 +19,31 @@ export interface StagingViewProps {
 interface StagingState {
     /** stance per party index — indices, because two hires can share a name */
     stances: Stance[];
+    /** who walks in, per party index. The payroll is bigger than the squad now. */
+    going: boolean[];
     picks: KitPick[];
     /** which hostile's line is expanded on a phone */
     open: number;
+}
+
+/**
+ * Who the screen opens with selected.
+ *
+ * Your character is always in: they are the run, and Trauma Team, chrome and
+ * reputation all key off them being on the street. The remaining seats go to
+ * the strongest hires by the same power measure the forecast is fitted on, so
+ * signing a Legend and finding the screen has benched them by default can't
+ * happen. Everything after that is the player deliberately sitting somebody
+ * down — usually somebody who is hurt.
+ */
+function openWith(party: Actor[]): boolean[] {
+    const you = party.find((p) => !p.hireable);
+    const seats = SQUAD_CAP - (you ? 1 : 0);
+    const ranked = party
+        .filter((p) => p !== you && p.canFight())
+        .sort((a, b) => sideStrength([b]) - sideStrength([a]))
+        .slice(0, seats);
+    return party.map((p) => p === you || ranked.indexOf(p) >= 0);
 }
 
 const THREAT = ["", "Street", "Pro", "Heavy", "Elite", "Legend"];
@@ -53,9 +75,53 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
 
     public override state: StagingState = {
         stances: this.props.party.map(stanceOf),
+        going: openWith(this.props.party),
         picks: [],
         open: -1,
     };
+
+    // ------------------------------------------------------------ the squad --
+
+    /** The selection as the engine will read it: you first, then the chosen. */
+    private squadOf(going: boolean[]): Actor[] {
+        const party = this.props.party;
+        const you = party.find((p) => !p.hireable);
+        const hires = party.filter((p, i) => going[i] && p.canFight() && p !== you);
+        return you && you.canFight() ? [you, ...hires] : hires;
+    }
+
+    private squad(): Actor[] {
+        return this.squadOf(this.state.going);
+    }
+
+    /**
+     * Bench somebody, or bring them back. Your character is not a toggle — they
+     * run the crew, and the whole run is written around them being in the fight.
+     */
+    private toggleGoing = (i: number) => {
+        const a = this.props.party[i]!;
+        if (!a.hireable || !a.canFight()) { return; }
+        const going = this.state.going.slice();
+        if (going[i]) { going[i] = false; }
+        else if (this.squad().length < SQUAD_CAP) { going[i] = true; }
+        else { return; }
+        // Ordnance follows the bodies: what a benched carrier was holding is
+        // passed to whoever is still walking in, rather than quietly staying in
+        // the van with them.
+        this.setState({going, picks: this.reseat(this.state.picks, this.squadOf(going))});
+    };
+
+    /** Move any pick whose carrier isn't deploying onto the lightest-loaded body. */
+    private reseat(picks: KitPick[], squad: Actor[]): KitPick[] {
+        if (!squad.length) { return []; }
+        const out: KitPick[] = [];
+        picks.forEach((p) => {
+            if (squad.indexOf(p.carrier) >= 0) { out.push(p); return; }
+            const load = (x: Actor) => out.filter((q) => q.carrier === x).length;
+            out.push({...p, carrier: squad.slice().sort((x, y) => load(x) - load(y))[0]!});
+        });
+        return out;
+    }
 
     private setStance(i: number, stance: Stance): void {
         const stances = this.state.stances.slice();
@@ -90,7 +156,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
 
     /** Spread ordnance across the crew before doubling anyone up. */
     private nextCarrier(): Actor | null {
-        const able = this.props.party.filter((p) => p.canFight());
+        const able = this.squad();
         if (!able.length) { return null; }
         const load = (a: Actor) => this.state.picks.filter((p) => p.carrier === a).length;
         return able.slice().sort((a, b) => load(a) - load(b))[0]!;
@@ -98,7 +164,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
 
     /** Hand a picked piece to somebody else — tap the carrier name to cycle. */
     private passTo = (idx: number) => {
-        const able = this.props.party.filter((p) => p.canFight());
+        const able = this.squad();
         if (able.length < 2) { return; }
         const picks = this.state.picks.slice();
         const pick = picks[idx]!;
@@ -108,9 +174,16 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
     };
 
     private deploy = () => {
+        const squad = this.squad();
+        if (!squad.length) { return; }
         this.props.onDeploy({
-            stances: this.props.party.map((actor, i) => ({actor, stance: this.state.stances[i]!})),
-            picks: this.state.picks,
+            squad,
+            // Orders are for the people receiving them — the benched keep
+            // whatever stance they last fought under.
+            stances: this.props.party
+                .map((actor, i) => ({actor, stance: this.state.stances[i]!}))
+                .filter(({actor}) => squad.indexOf(actor) >= 0),
+            picks: this.reseat(this.state.picks, squad),
         });
     };
 
@@ -144,9 +217,12 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
     private member = (a: Actor, i: number) => {
         const hp = Math.max(0, Math.min(100, (a.health / Math.max(1, a.maxHealth)) * 100));
         const down = !a.canFight();
-        const carrying = this.state.picks.filter((p) => p.carrier === a);
+        const you = !a.hireable;
+        const going = !down && this.state.going[i] === true;
+        const noSeats = this.squad().length >= SQUAD_CAP;
+        const carrying = going ? this.state.picks.filter((p) => p.carrier === a) : [];
         return (
-            <li key={i} className={"stMember" + (down ? " down" : "")}>
+            <li key={i} className={"stMember" + (down ? " down" : going ? "" : " benched")}>
                 <div className={"stWho"}>
                     <img src={a.role.portrait} alt={""}/>
                     <span className={"stName"}>
@@ -161,16 +237,39 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                 {down ? (
                     <p className={"stDown"}>Down — sitting this one out.</p>
                 ) : (
-                    <div className={"stStances"}>
-                        {STANCE_ORDER.map((s) => (
-                            <button key={s} className={"stChip" + (this.state.stances[i] === s ? " on" : "")}
-                                    title={STANCES[s].blurb}
-                                    onClick={() => this.setStance(i, s)}>
-                                {STANCES[s].label}
-                                <i>{STANCES[s].trade[0]}</i><i>{STANCES[s].trade[1]}</i>
-                            </button>
-                        ))}
-                    </div>
+                    <React.Fragment>
+                        <div className={"stGo"}>
+                            {you ? (
+                                <span className={"stChip on locked"}
+                                      title={"You run this crew — you walk in on every job"}>
+                                    Going<i>you</i>
+                                </span>
+                            ) : (
+                                <button className={"stChip" + (going ? " on" : "")}
+                                        disabled={!going && noSeats}
+                                        title={going ? "Leave them with the van"
+                                            : noSeats ? `Only ${SQUAD_CAP} walk onto a street`
+                                            : "Bring them along"}
+                                        onClick={() => this.toggleGoing(i)}>
+                                    {going ? "Going" : "Benched"}
+                                    <i>{going ? "tap to bench"
+                                        : noSeats ? "no seats left" : "tap to bring"}</i>
+                                </button>
+                            )}
+                        </div>
+                        {going && (
+                            <div className={"stStances"}>
+                                {STANCE_ORDER.map((s) => (
+                                    <button key={s} className={"stChip" + (this.state.stances[i] === s ? " on" : "")}
+                                            title={STANCES[s].blurb}
+                                            onClick={() => this.setStance(i, s)}>
+                                        {STANCES[s].label}
+                                        <i>{STANCES[s].trade[0]}</i><i>{STANCES[s].trade[1]}</i>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </React.Fragment>
                 )}
                 {carrying.length > 0 &&
                     <p className={"stCarry"}>Carrying {carrying.map((p) => KIT[p.item].label).join(" + ")}</p>}
@@ -201,9 +300,12 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
 
     public override render() {
         const {party, enemies, pending} = this.props;
-        const fc = forecastWave(party, enemies);
+        const squad = this.squad();
+        // The verdict reads the squad, not the payroll: benching somebody has
+        // to be visible as a worse fight, or the choice is being made blind.
+        const fc = forecastWave(squad, enemies);
         const picks = this.state.picks;
-        const able = party.filter((p) => p.canFight());
+        const benched = party.filter((p) => p.canFight()).length - squad.length;
         return (
             <div className={"staging"}>
                 <div className={"stCard"}>
@@ -226,7 +328,14 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                         </section>
 
                         <section className={"stBlock"}>
-                            <h2>Orders <b>{able.length} up</b></h2>
+                            <h2>The crew <b>{squad.length}/{SQUAD_CAP} going</b></h2>
+                            {benched > 0 && (
+                                <p className={"stNote"}>
+                                    {benched === 1 ? "One stays" : `${benched} stay`} with the van —
+                                    they keep their wounds but they keep their life, and the odds
+                                    above already count what walks in without them.
+                                </p>
+                            )}
                             <ul className={"stMembers"}>{party.map(this.member)}</ul>
                         </section>
 
@@ -237,7 +346,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                                 comes — spent when thrown, back in the crate when it doesn't.
                             </p>
                             <ul className={"stKits"}>{KIT_ORDER.map(this.kitRow)}</ul>
-                            {picks.length > 0 && able.length > 1 &&
+                            {picks.length > 0 && squad.length > 1 &&
                                 <ul className={"stAssign"}>
                                     {picks.map((p, i) => (
                                         <li key={i}>
@@ -252,7 +361,9 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                     </div>
 
                     <div className={"stActions"}>
-                        <button className={"prim"} onClick={this.deploy}>Deploy ▸</button>
+                        <button className={"prim"} onClick={this.deploy} disabled={squad.length <= 0}>
+                            Deploy {squad.length} ▸
+                        </button>
                     </div>
                 </div>
             </div>);

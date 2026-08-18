@@ -11,7 +11,7 @@ import {MercMarket} from "./mercMarket";
 import {Economy} from "./economy";
 import {RunMap, RunNode, RunState, encounterSpec, spawnEncounter} from "./runMap";
 import {Chrome} from "./chrome";
-import {Deployment, Kit, issue, startingKit, stow} from "./loadout";
+import {Deployment, Kit, ROSTER_CAP, SQUAD_CAP, issue, startingKit, stow} from "./loadout";
 
 type Patch = Partial<InterfaceAppState>;
 
@@ -28,8 +28,12 @@ export class RunController {
         return party.reduce((m, p) => Math.max(m, p.level), 1);
     }
 
-    /** Squad size ceiling: you plus three on the payroll. */
-    public static readonly SQUAD_CAP: number = 4;
+    /**
+     * Re-exported from `loadout`, which owns them: the staging screen needs the
+     * same two numbers and cannot import this class without closing a cycle.
+     */
+    public static readonly SQUAD_CAP: number = SQUAD_CAP;
+    public static readonly ROSTER_CAP: number = ROSTER_CAP;
 
     /** A brand-new sector: fresh city, road-graph waypoints, squad at the entry. */
     public static freshRun(sector: number = 1): RunState {
@@ -71,7 +75,7 @@ export class RunController {
         const lines: any[] = [{msg: opening}];
         if (banked > 0) { lines.push({msg: `— the Cryptobank Cortex releases ${banked}¥ from cold storage —`}); }
         return {
-            character, party, crew,
+            character, party, squad: party.slice(), crew,
             run: RunController.scout(RunController.freshRun(1), party),
             screen: "map", report: null, offers: [],
             eventId: null, pending: null, usedEvents: [],
@@ -142,20 +146,45 @@ export class RunController {
      * Orders given, hands off the wheel. Stances go onto the AI profiles and
      * the chosen ordnance comes out of the crate onto belts; only then does the
      * street load and the recorder start.
+     *
+     * From here to the debrief the fight is about `squad`, not `party`: the
+     * benched are on the payroll but not on the street, so they cannot shoot,
+     * cannot be shot, and cannot be a casualty.
      */
     public static deploy(state: InterfaceAppState, plan: Deployment, log: number): Patch {
         const fight = state.pending;
         if (!fight) { return {}; }
         const enemies = state.currentEnemies;
+        const squad = RunController.fieldable(plan.squad, state.party);
         issue(plan, state.crew.kit);
-        Battlefield.deploy(state.party, enemies);
-        BattleRecorder.begin(state.party, enemies, fight.kind, fight.label);
+        Battlefield.deploy(squad, enemies);
+        BattleRecorder.begin(squad, enemies, fight.kind, fight.label);
+        const benched = state.party.length - squad.length;
         return {
-            screen: "combat", pending: null, currentEnemies: enemies,
-            activeEnemy: enemies[0], activeChar: state.party[0],
+            screen: "combat", pending: null, currentEnemies: enemies, squad,
+            activeEnemy: enemies[0], activeChar: squad[0],
             activeMainPanel: "Combat", mobileTab: "arena",
-            messages: [{msg: `— ${fight.label} —`} as any, ...state.messages].slice(0, log),
+            messages: [
+                {msg: `— ${fight.label} —`} as any,
+                ...(benched > 0 ? [{msg: `— ${benched} left holding the van —`} as any] : []),
+                ...state.messages].slice(0, log),
         };
+    }
+
+    /**
+     * The squad as the engine is allowed to see it: on the payroll, able to
+     * fight, your character always in, and never more than there are seats.
+     *
+     * The staging screen enforces all of this already; this is the seam that
+     * stops a stale selection (a merc who bled out on the previous node, a save
+     * restored mid-run) from putting a body on the street that shouldn't be there.
+     */
+    public static fieldable(picked: Actor[] | undefined, party: Actor[]): Actor[] {
+        const you = party.find((p) => !p.hireable);
+        const chosen = (picked || party).filter((p) => party.indexOf(p) >= 0 && p.canFight());
+        const hires = chosen.filter((p) => p !== you);
+        const ordered = you && you.canFight() ? [you, ...hires] : hires;
+        return ordered.slice(0, RunController.SQUAD_CAP);
     }
 
     /** Leave a merchant / rest node (clears it) and stand on it, back on the map. */
@@ -262,7 +291,9 @@ export class RunController {
 
     /** One resolved round in a combat node: wipe or clear → debrief, else continue. */
     public static step(state: InterfaceAppState, msgs: any[], log: number): Patch {
-        const party = state.party;
+        // Only the deployed are in this fight — the benched are on the payroll,
+        // not on the street, so they neither lose it nor stow anything from it.
+        const party = RunController.fieldable(state.squad, state.party);
         const run = state.run;
         if (!run) { return {}; }
         // Squad Biomonitor: a dropping merc gets pulled back before the ledger closes.
@@ -393,11 +424,12 @@ export class RunController {
         const lost = report ? report.casualties : [];
         lost.forEach((c) => notes.unshift({msg: `${c.name} didn't make it off the street.`}));
         const party = lost.length ? state.party.filter((p) => lost.indexOf(p) < 0) : state.party;
-        if (!run) { return {screen: "map", report: null, party}; }
+        const squad = lost.length ? state.squad.filter((p) => lost.indexOf(p) < 0) : state.squad;
+        if (!run) { return {screen: "map", report: null, party, squad}; }
         if (report && report.outcome === "defeat") {
-            return {screen: "end", report: null, party, messages: [...notes, ...state.messages].slice(0, log)};
+            return {screen: "end", report: null, party, squad, messages: [...notes, ...state.messages].slice(0, log)};
         }
-        return {...RunController.advance(state, run.node!, notes, log), report: null, party};
+        return {...RunController.advance(state, run.node!, notes, log), report: null, party, squad};
     }
 
     // =====================================================================
@@ -429,10 +461,10 @@ export class RunController {
         }
     }
 
-    /** Put a candidate on the payroll if the purse and the squad cap allow it. */
+    /** Put a candidate on the payroll if the purse and the roster cap allow it. */
     public static hire(state: InterfaceAppState, id: string, log: number): Patch | null {
         const offer = state.offers.find((o) => o.id === id);
-        if (!offer || state.party.length >= RunController.SQUAD_CAP) { return null; }
+        if (!offer || state.party.length >= RunController.ROSTER_CAP) { return null; }
         if (!state.crew.spend(offer.price)) { return null; }
         const merc = new Merc(offer);
         RunController.outfitHire(state.character, merc, state.crew.kit);
@@ -455,7 +487,7 @@ export class RunController {
         Chrome.armRun(state.party);        // fresh sector, fresh Self-ICE / biomonitor charges
         return {
             run: RunController.scout(RunController.freshRun(sector), state.party),
-            screen: "map", report: null, offers: [],
+            screen: "map", report: null, offers: [], squad: state.party.slice(),
             eventId: null, usedEvents: [],       // new streets, fresh encounter pool
             activeMainPanel: "Combat", mobileTab: "arena",
             messages: [
@@ -517,14 +549,15 @@ export class RunController {
         const run = state.run;
         const allowance = RunController.reviveAllowance(state);
         if (!run || run.revivesUsed >= allowance) { return null; }
-        state.party.forEach((p) => p.revive());
+        const squad = RunController.fieldable(state.squad, state.party);
+        squad.forEach((p) => p.revive());
         // Trauma Platinum Mk.II: the extraction crew patches armour on the way up.
         if (state.character.chromeHas("reviveRepairs")) {
-            state.party.forEach((p) => Economy.repairArmor(p));
+            squad.forEach((p) => Economy.repairArmor(p));
         }
         // The ledger was sealed when the squad went down — open a fresh one so the
         // resumed fight gets its own debrief.
-        BattleRecorder.begin(state.party, state.currentEnemies,
+        BattleRecorder.begin(squad, state.currentEnemies,
             run.node ? run.node.type : "combat", "second wind");
         const used = run.revivesUsed + 1;
         return {

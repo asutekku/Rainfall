@@ -13,7 +13,10 @@ import {CityMap} from "../run/cityMap";
 
 export interface StageProps {
     actor: Actor;
+    /** The payroll — what the map and the character panels are about. */
     party: Actor[];
+    /** Who is on the street: the payroll minus whoever was benched at staging. */
+    squad: Actor[];
     enemies: Actor[];
     view: string;
     screen: string;
@@ -124,7 +127,7 @@ export class Stage extends React.Component<StageProps, {}> {
 
                 {inFight ? (
                     <div className={"arena"}>
-                        <BattleScene party={this.props.party} enemies={this.props.enemies}
+                        <BattleScene party={this.props.squad} enemies={this.props.enemies}
                                      battleId={this.props.battleId}
                                      playback={this.props.playback}
                                      onPlaybackDone={this.props.onPlaybackDone}
@@ -136,7 +139,7 @@ export class Stage extends React.Component<StageProps, {}> {
                                      activeName={acting ? acting.name : undefined}/>
                         {this.props.inspecting &&
                             <UnitCard unit={this.props.inspecting}
-                                      party={this.props.party} enemies={this.props.enemies}
+                                      party={this.props.squad} enemies={this.props.enemies}
                                       shown={this.props.shown}
                                       onClose={() => this.props.onInspect(null)}/>}
                     </div>
@@ -154,7 +157,7 @@ export class Stage extends React.Component<StageProps, {}> {
                 )}
 
                 {/* phone battle HUD — replaces the docked log under the breakpoint */}
-                {inFight && <BattleHud party={this.props.party} enemies={this.props.enemies}
+                {inFight && <BattleHud party={this.props.squad} enemies={this.props.enemies}
                                        acting={acting} next={next}
                                        selected={this.props.inspecting}
                                        shown={this.props.shown}

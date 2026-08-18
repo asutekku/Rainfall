@@ -1368,6 +1368,16 @@ progress::-moz-progress-bar { background:var(--rust); }
 .stBar i { display:block; height:100%; background:var(--good); }
 .stHp b { color:var(--ink); font-size:11px; font-variant-numeric:tabular-nums; }
 .stDown { margin:6px 0 0; color:var(--faint); font-size:10px; }
+/* Going / benched. The payroll now holds more bodies than the street has room
+   for, so the first order given on this screen is who gets in the van — and a
+   benched body has to read as a deliberate choice, not as a broken one. */
+.stGo { margin-top:7px; }
+.stGo .stChip { width:100%; min-height:34px; flex-direction:row; gap:8px; justify-content:center; }
+.stGo .stChip i { font-size:9px; }
+.stChip:disabled { opacity:.4; cursor:not-allowed; }
+.stChip.locked { cursor:default; }
+.stMember.benched { opacity:.62; border-style:dashed; }
+.stMember.benched .stWho img { filter:grayscale(1); }
 .stStances { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:7px; }
 .stChip { display:flex; flex-direction:column; align-items:center; gap:2px;
     min-height:44px; padding:6px 4px; cursor:pointer; font-family:var(--mono); font-size:10.5px;

@@ -25,7 +25,7 @@ describe("stances are the AI dial, exposed", () => {
     test("issuing orders rewrites the profile the AI will plan on", () => {
         const a = fighter();
         a.temperament = "balanced";
-        issue({stances: [{actor: a, stance: "push"}], picks: []}, emptyKit());
+        issue({squad: [a], stances: [{actor: a, stance: "push"}], picks: []}, emptyKit());
         expect(a.temperament).toBe("aggressive");
         expect(a.stance).toBe("push");
     });
@@ -60,7 +60,8 @@ describe("stances are the AI dial, exposed", () => {
     test("the trade is applied to real damage, both ways", () => {
         const push = fighter();
         const held = fighter();
-        issue({stances: [{actor: push, stance: "push"}, {actor: held, stance: "hold"}], picks: []}, emptyKit());
+        issue({squad: [push, held], stances: [{actor: push, stance: "push"},
+            {actor: held, stance: "hold"}], picks: []}, emptyKit());
         expect(stanceOut(push)).toBeCloseTo(STANCES.push.out);
         expect(stanceIn(held)).toBeCloseTo(STANCES.hold.incoming);
         // a pushing shooter into a dug-in target is the two multiplied
@@ -76,7 +77,8 @@ describe("stances are the AI dial, exposed", () => {
 });
 
 describe("ordnance is crew property, drawn per job", () => {
-    const plan = (picks: Deployment["picks"]): Deployment => ({stances: [], picks});
+    const plan = (picks: Deployment["picks"]): Deployment =>
+        ({squad: picks.map((p) => p.carrier), stances: [], picks});
 
     test("a crew opens with something in the crate", () => {
         expect(kitTotal(startingKit())).toBeGreaterThan(0);
