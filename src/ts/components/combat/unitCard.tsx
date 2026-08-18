@@ -1,5 +1,7 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {ProfileBadge} from "../general/profileBadge";
+import {PROFILE, profileOf} from "../../interact/profile";
 import {soak} from "../../interact/damageModel";
 import {shotPreview} from "../../interact/shotPreview";
 import {Battlefield} from "../../interact/battlefield";
@@ -78,10 +80,17 @@ export class UnitCard extends React.Component<UnitCardProps, UnitCardState> {
             <div className={"ucWrap"} onClick={this.props.onClose}>
                 <div className={"uc" + (foe ? " foe" : "")} onClick={(e) => e.stopPropagation()}>
                     <div className={"ucHead"}>
+                        <ProfileBadge unit={a}/>
                         <b className={"ucName"}>{a.name}</b>
                         <span className={"ucSub"}>{sub} · L{a.level}</span>
                         <button className={"ucX"} onClick={this.props.onClose} aria-label={"Close"}>✕</button>
                     </div>
+
+                    {/* the whole point of the badge, in words: what beats this one */}
+                    <p className={"ucProf pr-" + profileOf(a)}>
+                        <b>{PROFILE[profileOf(a)].label}</b> — {PROFILE[profileOf(a)].blurb}.
+                        <em>Bring: {PROFILE[profileOf(a)].counter}</em>
+                    </p>
 
                     <div className={"ucVitals"}>
                         <b className={"ucHp " + hpCls}>{hp}<i>/{a.maxHealth}</i></b>

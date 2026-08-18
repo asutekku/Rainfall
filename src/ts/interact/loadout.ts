@@ -27,6 +27,31 @@ import {Actor} from "../actors/Actor";
  * fight you micromanage from the sideline.
  */
 
+// -------------------------------------------------------------- the crew --
+
+/**
+ * How many bodies walk onto a street. Four is what the encounter tables, the
+ * field cap and the battle HUD are all built around, and it stays four.
+ */
+export const SQUAD_CAP = 4;
+
+/**
+ * How many the crew can carry on the payroll.
+ *
+ * This used to be the same number as SQUAD_CAP, which meant the roster was
+ * never a decision: whoever you owned, you deployed. Two more slots than seats
+ * is the smallest change that makes staging ask a question — the hurt Veteran
+ * or the untouched Rookie — and it is a question the forecast is already
+ * equipped to answer, since the odds readout moves the moment you bench
+ * somebody.
+ *
+ * Six rather than eight on purpose. The payroll is paid out of the same purse
+ * as guns and armour, so every slot past four is a body you are feeding
+ * instead of a weapon you are buying; at six that trade still stings, which is
+ * what keeps it a choice.
+ */
+export const ROSTER_CAP = 6;
+
 // ------------------------------------------------------------------ stance --
 
 export type Stance = "push" | "steady" | "hold";
@@ -176,6 +201,14 @@ export interface KitPick { item: KitId; carrier: Actor; }
 
 /** Everything the staging screen decides, handed to the engine in one go. */
 export interface Deployment {
+    /**
+     * Who walks onto the street, in order, your character first.
+     *
+     * The payroll can hold more bodies than there are seats, so this is a
+     * genuine subset and not a formality: the hurt Veteran or the fresh Rookie
+     * is the first real question staging asks.
+     */
+    squad: Actor[];
     stances: Array<{ actor: Actor; stance: Stance }>;
     picks: KitPick[];
 }

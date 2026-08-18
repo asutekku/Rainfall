@@ -15,6 +15,10 @@
     --rust:#b85c49; --rustHot:#d06a52; --cyan:#37e1e7; --cyanDim:#1f9aa0;
     /* state */
     --good:#7fd67f; --warn:#f0a830; --crit:#e0533f; --rare:#c56bff;
+    /* defensive profiles — bronze plate, azure chrome, violet ghost. Kept clear
+       of the rank colours (cyan/amber/red) because a threat star and a profile
+       badge sit side by side on every hostile row. */
+    --plate:#c98a3f; --chrome:#4fa8ff; --ghost:#b07cf0;
     /* interaction surfaces */
     --sel:#191622; --hover:#15151d;
     --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
@@ -1368,6 +1372,16 @@ progress::-moz-progress-bar { background:var(--rust); }
 .stBar i { display:block; height:100%; background:var(--good); }
 .stHp b { color:var(--ink); font-size:11px; font-variant-numeric:tabular-nums; }
 .stDown { margin:6px 0 0; color:var(--faint); font-size:10px; }
+/* Going / benched. The payroll now holds more bodies than the street has room
+   for, so the first order given on this screen is who gets in the van — and a
+   benched body has to read as a deliberate choice, not as a broken one. */
+.stGo { margin-top:7px; }
+.stGo .stChip { width:100%; min-height:34px; flex-direction:row; gap:8px; justify-content:center; }
+.stGo .stChip i { font-size:9px; }
+.stChip:disabled { opacity:.4; cursor:not-allowed; }
+.stChip.locked { cursor:default; }
+.stMember.benched { opacity:.62; border-style:dashed; }
+.stMember.benched .stWho img { filter:grayscale(1); }
 .stStances { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:7px; }
 .stChip { display:flex; flex-direction:column; align-items:center; gap:2px;
     min-height:44px; padding:6px 4px; cursor:pointer; font-family:var(--mono); font-size:10.5px;
@@ -1381,6 +1395,52 @@ progress::-moz-progress-bar { background:var(--rust); }
 .stChip.on { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; }
 .stChip.on i { color:#06373a; }
 .stCarry { margin:6px 0 0; color:var(--warn); font-size:10px; letter-spacing:.06em; }
+
+/* --- defensive profile badge ------------------------------------------
+   One badge, four screens (hire board, staging, battle HUD, unit card).
+   Colour carries the category and the glyph carries it again, so the read
+   survives a colour-blind player and a 10px row alike.
+
+   The profile classes set a custom property rather than `color` directly:
+   .ucProf also wants to set a colour for its body text, and two single-class
+   selectors fighting over `color` is decided by source order, which is not a
+   thing any of these rules should depend on. */
+.pr-plate { --pc:var(--plate); }
+.pr-chrome { --pc:var(--chrome); }
+.pr-ghost { --pc:var(--ghost); }
+
+.prof { flex:none; display:inline-flex; align-items:center; gap:4px; color:var(--pc,var(--dim)); }
+/* Filled, where the threat star beside it is outlined. Two boxed glyphs on one
+   row with the same treatment read as one control with a typo in it; the fill
+   is what makes "rank" and "profile" land as different questions. */
+.prof i { display:grid; place-items:center; width:17px; height:17px; flex:none;
+    font-style:normal; font-size:12px; line-height:1; border-radius:2px;
+    border:1px solid currentColor;
+    background:color-mix(in srgb, currentColor 22%, transparent); }
+.prof b { font-family:var(--mono); font-size:9px; font-weight:600; letter-spacing:.1em;
+    text-transform:uppercase; }
+
+/* staging: the wave summed by profile — the line the ordnance pick is made against */
+.stTally { margin:0 0 7px; padding:0; list-style:none; display:flex; flex-direction:column; gap:4px; }
+.stTally li { display:flex; align-items:center; gap:7px; padding:5px 8px;
+    background:var(--panel); border:1px solid var(--line); font-size:10.5px; }
+.stTally li > b { font-family:var(--mono); font-size:11px; color:var(--ink); font-variant-numeric:tabular-nums; }
+.stTally li > i { font-style:normal; color:var(--dim); min-width:0; }
+
+/* unit card: the badge spelled out, because the card is where you go to learn */
+.ucProf { margin:0 0 8px; padding:7px 9px; font-size:10.5px; line-height:1.5;
+    color:var(--mid); background:var(--panel2); border-left:2px solid var(--pc,var(--line2)); }
+.ucProf b { font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--pc,var(--ink)); }
+.ucProf em { display:block; margin-top:3px; font-style:normal; color:var(--ink); }
+
+/* the crew panel's gear line: the badge sits with SP, which is what it reads */
+.pcGear .prof i { width:15px; height:15px; font-size:11px; }
+.pcGear .prof b { display:none; }
+
+/* the battle HUD row is 34px and already crowded — icon only, no word */
+.bhTop .prof i { width:15px; height:15px; font-size:11px; }
+.bhTop .prof b { display:none; }
 
 /* --- the crate: what goes out, and when it gets thrown ---------------- */
 .stKit { margin-bottom:5px; }

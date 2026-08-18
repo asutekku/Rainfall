@@ -31,10 +31,12 @@ export class FixerView extends React.Component<FixerViewProps, {}> {
                        sub={"A booth at the back of a noodle bar, three phones face-down. " +
                             "The fixer deals in people — hired guns, vouched for, mid-job rates."}
                        guide={<React.Fragment>
-                           Hire mercs to fill the squad — they fight beside you, level up, and carry
-                           their own gear, <b>but they die for real</b>. {room > 0
-                               ? <React.Fragment>Room for <b>{room}</b> more.</React.Fragment>
-                               : "The squad is full."} Mid-sector is the expensive way to hire:
+                           Hire mercs to deepen the crew — they fight beside you, level up, and carry
+                           their own gear, <b>but they die for real</b>. Only <b>four</b> walk onto
+                           any street; anyone past that is a body you can bench when they're hurt.
+                           {" "}{room > 0
+                               ? <React.Fragment>Room for <b>{room}</b> more on the payroll.</React.Fragment>
+                               : "The payroll is full."} Mid-sector is the expensive way to hire:
                            the board after each boss runs cheaper.
                        </React.Fragment>}>
                 <HireBoard offers={this.props.offers} party={this.props.party}

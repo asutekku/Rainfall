@@ -68,7 +68,15 @@ export interface InterfaceAppState {
     character: Actor;
     activeChar: Actor | undefined;
     activeEnemy: Actor | undefined;
+    /** The payroll — everyone the crew is paying, up to RunController.ROSTER_CAP. */
     party: Actor[];
+    /**
+     * Who is actually on the street for the fight in progress: a subset of the
+     * payroll, at most RunController.SQUAD_CAP, chosen at staging. Off a
+     * battlefield it tracks the payroll, so every screen that isn't a fight can
+     * keep reading `party` and mean it.
+     */
+    squad: Actor[];
     currentEnemies: Actor[];
     messages: Message[];
     /** Title screen, character creation, or a live run. */
@@ -166,6 +174,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             activeChar: undefined,
             activeEnemy: undefined,
             party: [],
+            squad: [],
             currentEnemies: [],
             messages: [],
             phase: "title",
@@ -277,7 +286,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (run && this.state.screen === "sector") {
             return <SectorClearView sector={run.sector} funds={this.state.crew.funds}
                                     party={this.state.party} offers={this.state.offers}
-                                    cap={RunController.SQUAD_CAP}
+                                    cap={RunController.ROSTER_CAP}
                                     onHire={this.hireMerc} onContinue={this.nextSector}/>;
         }
         if (run && this.state.screen === "end") {
@@ -294,7 +303,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         }
         if (run && this.state.screen === "hire") {
             return <FixerView offers={this.state.offers} party={this.state.party}
-                              funds={this.state.crew.funds} cap={RunController.SQUAD_CAP}
+                              funds={this.state.crew.funds} cap={RunController.ROSTER_CAP}
                               onHire={this.hireMerc} onLeave={this.leaveMeta}/>;
         }
         if (run && this.state.screen === "merchant") {
@@ -328,13 +337,16 @@ export class App extends React.Component<{}, InterfaceAppState> {
                      activeSelection={this.updateSelection}
                      onQuit={this.gotoTitle}/>
             <section id={"feedcol"}>
-                <Party name={"Squad"} party={this.state.party} activeSelection={this.getCharacter} friendly={true}
+                <Party name={this.state.screen === "combat" ? "On the street" : "Crew"}
+                       party={this.state.screen === "combat" ? this.state.squad : this.state.party}
+                       activeSelection={this.getCharacter} friendly={true}
                        onCycleTemperament={this.cycleTemperament}
                        onOpenSheet={this.openSheet}/>
                 <ActionLog actor={this.getCurrentActor()} messages={this.state.messages}/>
             </section>
             <Stage actor={this.getCurrentActor()}
-                   party={this.state.party} enemies={this.state.currentEnemies}
+                   party={this.state.party} squad={this.state.squad}
+                   enemies={this.state.currentEnemies}
                    view={this.state.activeMainPanel} screen={this.state.screen} run={this.state.run}
                    messages={this.combatController} onNotice={this.pushNotice}
                    battleId={this.state.battleId}
@@ -413,6 +425,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         Battlefield.deploy(g.party, enemies);
         this.setState({
             phase: "run", characterSpec: g.spec, character: g.character, party: g.party,
+            squad: g.party.slice(),
             crew: g.crew.activate(), run: RunController.scout(g.run, g.party),
             usedEvents: g.usedEvents, screen: "map",
             currentEnemies: enemies, activeChar: g.character, activeEnemy: enemies[0],
@@ -690,7 +703,9 @@ export class App extends React.Component<{}, InterfaceAppState> {
         // only the reason when it actually ran out, which is something only the
         // caller that beat it knows.
         const held = !lost && byClock;
-        const standing = this.state.party.filter((p) => p.canFight()).length;
+        // The squad, not the payroll: whoever stayed with the van is still on
+        // their feet and has no business in a count of who survived the street.
+        const standing = this.state.squad.filter((p) => p.canFight()).length;
         this.clearTurnTimer();
         this.setState({...rest, ...extra, playback: null, turnOrder: [], inspecting: null,
             notice: {
@@ -716,7 +731,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     }
 
     private fightOver(): boolean {
-        return this.state.party.every((p) => !p.canFight())
+        return this.state.squad.every((p) => !p.canFight())
             || this.state.currentEnemies.every((e) => !e.canFight() && !e.mortallyWounded);
     }
 
@@ -724,7 +739,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private advanceTurn = () => {
         if (this.state.phase !== "run" || this.state.screen !== "combat") { return; }
         if (this.state.playback) { return; }
-        if (!this.state.party.length || !this.state.currentEnemies.length) { return; }
+        if (!this.state.squad.length || !this.state.currentEnemies.length) { return; }
         if (this.fightOver()) { return; }
         // combat is behind another panel — hold the fight until the player returns
         if (this.state.activeMainPanel !== "Combat") { this.viewPaused = true; return; }
@@ -736,7 +751,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
                 if (n.alive && (n.canFight() || n.mortallyWounded)) { unit = n; break; }
             }
             if (!unit) {
-                this.queue = Combat.beginRound(this.state.party, this.state.currentEnemies);
+                this.queue = Combat.beginRound(this.state.squad, this.state.currentEnemies);
                 if (!this.queue.length) { return; }
                 this.roundNo += 1;
                 const hold = this.holdoutRounds();
@@ -768,7 +783,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     /** Holdout survived: the hostiles disengage, the squad keeps the street. */
     private maybeEndHoldout(hold: number): boolean {
         if (hold <= 0 || this.roundNo <= hold) { return false; }
-        if (!this.state.party.some((p) => p.canFight())) { return false; }
+        if (!this.state.squad.some((p) => p.canFight())) { return false; }
         this.state.currentEnemies.forEach((e) => { if (e.canFight()) { e.routed = true; } });
         const lines = [FeedLog.sys("— clock beaten: hostiles disengage — street held —")];
         // the round that was about to start never happens — drop its separator
@@ -811,7 +826,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         this.reinforced = true;
         const n = 1;
         const rank = 1;
-        const fresh = ActorController.getReinforcements(lead.faction, n, RunController.levelOf(this.state.party), rank);
+        const fresh = ActorController.getReinforcements(lead.faction, n, RunController.levelOf(this.state.squad), rank);
         fresh.forEach((a, i) => {
             a.position.x = (i - (n - 1) / 2) * 6 + (Math.random() - 0.5) * 3;
             a.position.y = 41 + Math.random() * 2;
@@ -853,11 +868,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     /** Bring the board level with the engine (fight start, and after every playback). */
     private syncShown(): void {
-        this.shown.sync([...this.state.party, ...this.state.currentEnemies]);
+        this.shown.sync([...this.state.squad, ...this.state.currentEnemies]);
     }
 
     private resolveTurn = (unit: Actor) => {
-        const res = Combat.takeTurn(unit, this.state.party, this.state.currentEnemies);
+        const res = Combat.takeTurn(unit, this.state.squad, this.state.currentEnemies);
         this.pendingMsgs = res.messages;
         this.pendingEvents = res.events;
         this.playId += 1;
@@ -872,8 +887,9 @@ export class App extends React.Component<{}, InterfaceAppState> {
         // one overwatch line per turn (plus loot/level lines the summary can't carry)
         const time = missionClock(this.battleStart);
         // Everyone on the street, so two people who share a surname get told
-        // apart the same way on every line they appear on.
-        const cast = [...this.state.party, ...this.state.currentEnemies];
+        // apart the same way on every line they appear on. The benched are not
+        // on it, and disambiguating against them would rename people who are.
+        const cast = [...this.state.squad, ...this.state.currentEnemies];
         const lines: any[] = [
             ...FeedLog.keepLegacy(this.pendingMsgs, time, cast),
             ...FeedLog.fromTurn(this.pendingEvents, time, cast),
