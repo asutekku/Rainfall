@@ -37,20 +37,31 @@ export const ARCHETYPES: Archetype[] = [
     {faction: "Bozos", title: "Booster", rank: 1, ref: 5, dex: 5, body: 5, will: 4, skill: 3, luck: 3,
         bodySP: 7, headSP: 0, weapons: ["pistol", "smg"], minDice: 0, temperament: "aggressive", portrait: "rockerboy", reward: 1},
 
-    // ---- Rank 2: gangers (SP 0-12, HP ~40-45) ----
+    // ---- Rank 2: gangers (SP 0-10, HP ~35-45) ----
     {faction: "Animals", title: "Bruiser", rank: 2, ref: 5, dex: 6, body: 8, will: 6, skill: 4, luck: 2,
         bodySP: 0, headSP: 0, weapons: ["melee"], minDice: 3, temperament: "berserker", portrait: "nomad", reward: 2},
+    // SP 9, not 11. Armour is a damage multiplier, not a subtraction, so a point
+    // of it is worth far more than the ladder in the header suggests: SP 11
+    // nearly triples a body's effective health where SP 4 adds two thirds. These
+    // two wore rank 3's plate on rank 2's pay, and it showed — a themed Tyger
+    // Claws or Maelstrom wave was a 56-64% fight for a crew of three where the
+    // rest of the rank ran 86-100%.
     {faction: "Tyger Claws", title: "Enforcer", rank: 2, ref: 7, dex: 7, body: 5, will: 5, skill: 5, luck: 3,
-        bodySP: 11, headSP: 0, weapons: ["melee"], minDice: 2, temperament: "flanker", portrait: "solo", reward: 2},
+        bodySP: 9, headSP: 0, weapons: ["melee"], minDice: 2, temperament: "flanker", portrait: "solo", reward: 2},
     {faction: "Maelstrom", title: "Raider", rank: 2, ref: 5, dex: 5, body: 7, will: 6, skill: 4, luck: 3,
-        bodySP: 12, headSP: 0, weapons: ["smg", "pistol"], minDice: 0, temperament: "aggressive", portrait: "solo", reward: 2},
+        bodySP: 10, headSP: 0, weapons: ["smg", "pistol"], minDice: 0, temperament: "aggressive", portrait: "solo", reward: 2},
     {faction: "Wraiths", title: "Raider", rank: 2, ref: 5, dex: 5, body: 6, will: 5, skill: 4, luck: 3,
         bodySP: 7, headSP: 4, weapons: ["shotgun", "rifle"], minDice: 0, temperament: "aggressive", portrait: "nomad",
         reward: 2, smokes: 1},
-    {faction: "Chrome", title: "Ghoul", rank: 2, ref: 6, dex: 7, body: 7, will: 6, skill: 4, luck: 1,
-        bodySP: 11, headSP: 0, weapons: ["melee"], minDice: 2, temperament: "berserker", portrait: "solo", reward: 3},
 
     // ---- Rank 3: elites (SP 11-13, HP ~40-45) ----
+    // The Ghoul was filed under rank 2 while being paid rank-3 money — and it
+    // fought like the money: 45 HP behind SP 11, closing to melee, in a rank
+    // whose other members average 39 HP. A themed Chrome wave was a 5% fight for
+    // an opening squad and a 38% one for a crew of three, against 71-95% for the
+    // rest of rank 2. It is a rank-3 body; this is where it goes.
+    {faction: "Chrome", title: "Ghoul", rank: 3, ref: 6, dex: 7, body: 7, will: 6, skill: 4, luck: 1,
+        bodySP: 11, headSP: 0, weapons: ["melee"], minDice: 2, temperament: "berserker", portrait: "solo", reward: 3},
     {faction: "6th Street", title: "Veteran", rank: 3, ref: 6, dex: 6, body: 6, will: 6, skill: 6, luck: 4,
         bodySP: 11, headSP: 7, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker", portrait: "cop",
         reward: 3, smokes: 1},
@@ -121,15 +132,34 @@ export function pickArchetypeOfRank(rank: number): Archetype {
 }
 
 /**
- * Pick ONE faction for a themed encounter: a random faction that fields at
- * least one archetype inside the level's rank band, so a whole wave can be
- * drawn from it. A Maelstrom fight should feel like Maelstrom, not a grab-bag.
+ * Pick ONE faction for a themed encounter: a faction that fields at least one
+ * archetype inside the level's rank band, so a whole wave can be drawn from it.
+ * A Maelstrom fight should feel like Maelstrom, not a grab-bag.
+ *
+ * Weighted by how much of the band the faction can actually serve, which is the
+ * only thing that keeps the band meaning what it says. Drawn flat, it did not:
+ * a wave is themed, so the faction decides the ranks, and at level 1 — band
+ * [1,1,1,2], nominally three mooks to one ganger — five of the eight eligible
+ * factions field nothing but rank 2. Sixty-two percent of sector-1 waves came
+ * out as full ganger squads: three Maelstrom Raiders on 45 HP behind SP 12,
+ * against the two bodies a run opens with. The band asked for a quarter.
  */
 export function pickFaction(level: number): string {
     const band = rankBand(level);
-    const eligible = [...new Set(ARCHETYPES.filter((a) => band.indexOf(a.rank) >= 0)
+    const factions = [...new Set(ARCHETYPES.filter((a) => band.indexOf(a.rank) >= 0)
         .map((a) => a.faction))];
-    return eligible[(Math.random() * eligible.length) << 0] || ARCHETYPES[0]!.faction;
+    if (!factions.length) { return ARCHETYPES[0]!.faction; }
+    // a faction's weight is the number of band slots it can field a body for
+    const weights = factions.map((f) => band.filter((r) =>
+        ARCHETYPES.some((a) => a.faction === f && a.rank === r)).length);
+    const total = weights.reduce((n, w) => n + w, 0);
+    if (total <= 0) { return factions[(Math.random() * factions.length) << 0]!; }
+    let roll = Math.random() * total;
+    for (let i = 0; i < factions.length; i++) {
+        roll -= weights[i]!;
+        if (roll <= 0) { return factions[i]!; }
+    }
+    return factions[factions.length - 1]!;
 }
 
 /** Pick an archetype from a specific faction, weighted toward the level's rank band. */

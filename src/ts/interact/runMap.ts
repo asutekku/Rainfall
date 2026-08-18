@@ -12,7 +12,7 @@ import {Utils} from "../utils/utils";
  * relocates (so you can backtrack and take other branches). Clearing the boss
  * wins the run.
  */
-export type NodeType = "combat" | "elite" | "merchant" | "rest" | "hire" | "event" | "net" | "boss";
+export type NodeType = "entry" | "combat" | "elite" | "merchant" | "rest" | "hire" | "event" | "net" | "boss";
 
 export interface RunNode {
     id: string;
@@ -188,7 +188,12 @@ export class RunMap {
             }
         }
 
-        // types: entry is pre-cleared ground; boss farthest; spread the rest
+        // types: entry is pre-cleared ground; boss farthest; spread the rest.
+        // The entry is typed for what it is. It used to keep the "combat" every
+        // node is minted with, which put a firefight marker on the one waypoint
+        // that can never be one — and made it impossible to count the fights a
+        // squad has actually had, because the free one was always in the ledger.
+        nodes[entryIdx]!.type = "entry";
         nodes[bossIdx]!.type = "boss";
         const others = nodes.map((_n, i) => i).filter((i) => i !== entryIdx && i !== bossIdx);
         const shuffled = others.sort(() => Math.random() - 0.5);
@@ -277,13 +282,43 @@ export interface EncounterSpec {
 }
 
 /**
+ * How many firefights a squad gets through before the street stops going easy
+ * on them.
+ *
+ * A run opens two-strong with a sidearm and one free rookie, and the map gives
+ * 19% of runs no first move that isn't a firefight — so the opening fights of a
+ * run are the shakedown, not the job. Measured over 1760 of them, the two-strong
+ * squad won 48%: not a difficulty, a coin toss on the faction draw, resolved
+ * before the player had made a single decision.
+ *
+ * Counted in fights and not in waypoints on purpose. Waypoints would let a
+ * shopping trip spend the allowance — walk to the fixer and the safehouse first,
+ * which is exactly what a careful player does, and the shakedown is over before
+ * the first shot.
+ */
+const SHAKEDOWN = 2;
+
+/** Firefights the squad has already cleared this sector. */
+export function fightsCleared(state: RunState): number {
+    return state.nodes.filter((n) => state.clearedIds.indexOf(n.id) >= 0
+        && (n.type === "combat" || n.type === "elite" || n.type === "boss")).length;
+}
+
+/**
  * How hard a node's fight is. The sector drives it, not the party's level:
  * a character who survives several runs keeps their levels but starts each run
  * in basic kit, and scaling off party level would erase that progress by
  * spawning level-20 gangers in sector 1. A strong crew still nudges it up a
  * little, so the curve doesn't go flat.
+ *
+ * `fought` is how many firefights the squad has already cleared this sector, and
+ * it carries the ramp *inside* a sector. Without it every firefight in sector 1
+ * was the same fight: the one you walk into off the boot screen with two bodies
+ * and a sidearm was rolled from the same table as the one before the boss, by
+ * which point you have a four-strong crew and salvage.
  */
-export function encounterSpec(node: RunNode, sector: number, partyLevel: number): EncounterSpec {
+export function encounterSpec(node: RunNode, sector: number, partyLevel: number,
+                              fought: number = 0): EncounterSpec {
     const base = Math.max(1, sector + Math.floor(partyLevel / 4));
     // Boss rank climbs with the sector: sector 1 fields a ganger boss, the
     // Flak-and-MetalGear tier only shows up once the crew can punch through it.
@@ -291,12 +326,30 @@ export function encounterSpec(node: RunNode, sector: number, partyLevel: number)
     switch (node.type) {
         case "elite": return {boss: false, amount: 3, level: base + 1, rank: 3};
         case "boss": return {boss: true, amount: 1, level: base + 2, rank: bossRank};
-        // never fewer than 3 — a 2v1 auto-resolves before the street even loads.
-        // A quarter of firefights carry a holdout clock: survive, don't sweep.
-        default: return {
-            boss: false, amount: 3 + (Math.random() < 0.35 ? 1 : 0), level: base, rank: 0,
-            ...(Math.random() < 0.25 ? {holdout: 4} : {}),
-        };
+        default:
+            // The shakedown: street mooks. `rank: 1` forces the rank-1 archetype
+            // tier the way an elite node forces rank 3 — Street punks, Scav
+            // harvesters and Bozos boosters, which is what "the first enemies you
+            // meet" was always meant to mean. Three of them, same as any other
+            // firefight: the shakedown is the tier of the opposition, not a
+            // smaller fight. Two bodies resolved in 2.6 rounds with the squad
+            // barely scratched, which is a cutscene, not an opening fight.
+            if (sector <= 1 && fought < SHAKEDOWN) {
+                return {boss: false, amount: 3, level: base, rank: 1};
+            }
+            return {
+                boss: false,
+                // never fewer than 3 — a 2v1 auto-resolves before the street even
+                // loads. The fourth body waits until the crew has had a payday or
+                // two to grow into one.
+                amount: 3 + (fought >= SHAKEDOWN + 2 && Math.random() < 0.35 ? 1 : 0),
+                level: base, rank: 0,
+                // A quarter of firefights carry a holdout clock: survive, don't
+                // sweep. Never on a sector's opening fights — a clock on a fight
+                // you were already losing is a second punishment, and it landed
+                // on a quarter of first contacts.
+                ...(fought >= SHAKEDOWN && Math.random() < 0.25 ? {holdout: 4} : {}),
+            };
     }
 }
 

@@ -20,6 +20,26 @@ describe("themed encounters", () => {
         }
     });
 
+    /**
+     * The wave is themed, so the faction picks the ranks — which means drawing
+     * the faction flat throws the rank band away. It did: at level 1 the band is
+     * three mooks to one ganger, and five of the eight factions in it field
+     * nothing but gangers, so 62% of sector-1 waves came out as full ganger
+     * squads. The draw is weighted by band share now, and this is the guard.
+     */
+    test("the rank band survives the faction draw", () => {
+        let rank1 = 0, bodies = 0;
+        for (let i = 0; i < 400; i++) {
+            ActorController.getEnemies(3, 1).forEach((e) => {
+                bodies++;
+                if (e.rank === 1) { rank1++; }
+            });
+        }
+        // band [1,1,1,2] asks for 75% mooks; the themed rule costs some of that,
+        // but it must land nearer the band than the 38% a flat draw produced
+        expect(rank1 / bodies).toBeGreaterThan(0.6);
+    });
+
     test("an elite wave shares faction AND rank", () => {
         for (let i = 0; i < 10; i++) {
             const wave = ActorController.getEliteWave(3, 5, 3);

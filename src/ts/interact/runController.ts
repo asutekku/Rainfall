@@ -9,7 +9,7 @@ import {Battlefield} from "./battlefield";
 import {Crew, Purse} from "./crew";
 import {MercMarket} from "./mercMarket";
 import {Economy} from "./economy";
-import {RunMap, RunNode, RunState, encounterSpec, spawnEncounter} from "./runMap";
+import {RunMap, RunNode, RunState, encounterSpec, fightsCleared, spawnEncounter} from "./runMap";
 import {Chrome} from "./chrome";
 import {Deployment, Kit, issue, startingKit, stow} from "./loadout";
 
@@ -117,7 +117,7 @@ export class RunController {
         // can show the player the actual bodies they are about to meet rather
         // than a plausible sample of them. Nothing is committed until they
         // deploy — see `deploy` below and staging.tsx.
-        const spec = encounterSpec(node, run.sector, RunController.levelOf(state.party));
+        const spec = encounterSpec(node, run.sector, RunController.levelOf(state.party), fightsCleared(run));
         const enemies = spawnEncounter(spec);
         // holdout fights carry their clock on the node so the sequencer sees it
         if (spec.holdout) { node.holdout = spec.holdout; } else { delete node.holdout; }
