@@ -4,8 +4,8 @@ import {accentCss} from "../../actors/resources/factionStyles";
 import {ProfileBadge, ProfileChip} from "../general/profileBadge";
 import {PROFILE, profileOf, profileTally} from "../../interact/profile";
 import {ODDS_LABEL, forecastWave, sideStrength} from "../../interact/forecast";
-import {Deployment, KIT, KIT_ORDER, KIT_PICKS, Kit, KitId, KitPick, SQUAD_CAP, STANCES,
-    STANCE_ORDER, Stance, stanceOf} from "../../interact/loadout";
+import {Deployment, KIT, KIT_ORDER, KIT_PICKS, Kit, KitId, KitPick, LINES, LINE_ORDER, Line,
+    SQUAD_CAP, STANCES, STANCE_ORDER, Stance, lineOf, stanceOf} from "../../interact/loadout";
 import type {PendingFight} from "../app";
 
 export interface StagingViewProps {
@@ -23,6 +23,8 @@ interface StagingState {
     stances: Stance[];
     /** who walks in, per party index. The payroll is bigger than the squad now. */
     going: boolean[];
+    /** standing orders on distance, per party index — defaults to the class's own */
+    lines: Line[];
     picks: KitPick[];
     /** which hostile's line is expanded on a phone */
     open: number;
@@ -95,6 +97,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         const going = openWith(party);
         return {
             stances: party.map(stanceOf),
+            lines: party.map(lineOf),
             going,
             picks: StagingView.defaultPicks(squadFrom(party, going), kit),
             open: -1,
@@ -170,6 +173,12 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         return out;
     }
 
+    private setLine(i: number, line: Line): void {
+        const lines = this.state.lines.slice();
+        lines[i] = line;
+        this.setState({lines});
+    }
+
     private setStance(i: number, stance: Stance): void {
         const stances = this.state.stances.slice();
         stances[i] = stance;
@@ -229,6 +238,9 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
             // whatever stance they last fought under.
             stances: this.props.party
                 .map((actor, i) => ({actor, stance: this.state.stances[i]!}))
+                .filter(({actor}) => squad.indexOf(actor) >= 0),
+            lines: this.props.party
+                .map((actor, i) => ({actor, line: this.state.lines[i]!}))
                 .filter(({actor}) => squad.indexOf(actor) >= 0),
             picks: this.reseat(this.state.picks, squad),
         });
@@ -308,7 +320,19 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                             )}
                         </div>
                         {going && (
-                            <div className={"stStances"}>
+                            <div className={"stStances stLines"} data-dial={"where"}>
+                                {LINE_ORDER.map((l) => (
+                                    <button key={l} className={"stChip" + (this.state.lines[i] === l ? " on" : "")}
+                                            title={LINES[l].blurb}
+                                            onClick={() => this.setLine(i, l)}>
+                                        {LINES[l].label}
+                                        <i>{LINES[l].trade[0]}</i><i>{LINES[l].trade[1]}</i>
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                        {going && (
+                            <div className={"stStances"} data-dial={"how"}>
                                 {STANCE_ORDER.map((s) => (
                                     <button key={s} className={"stChip" + (this.state.stances[i] === s ? " on" : "")}
                                             title={STANCES[s].blurb}

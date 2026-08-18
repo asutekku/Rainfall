@@ -28,7 +28,7 @@ export class Medicine {
      * BODY. A Mortally Wounded character must be stabilised before they heal.
      */
     public static rest(actor: Actor): number {
-        // Techie "Maker" services gear during downtime, repairing ablated armour.
+        // Rigger "Maker" services gear during downtime, repairing ablated armour.
         const repair: number = actor.makerRepair();
         if (repair > 0) {
             for (const piece of [actor.equipment.headgear, actor.equipment.upper]) {

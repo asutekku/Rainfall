@@ -2,7 +2,10 @@ import {Actor} from "../actors/Actor";
 import {Weapon} from "../items/Weapon";
 import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "./battlefield";
 import {QUALITY_MULT, applySoak, AIMED_EDGE, AIMED_MULT, aimedSP, coverEdge, expectedMult, outOfRange, rangeEdge, rollQuality} from "./damageModel";
-import {SUPPRESS_CUT, hasStatus, incomingMult, outgoingMult, spDelta, statusEdge} from "./statuses";
+import {BURN_TICK, SUPPRESS_CUT, applyStatus, clearStatus, hasStatus, incomingMult, outgoingMult,
+    spDelta, stacksOf, statusEdge} from "./statuses";
+import {lineGap, lineThreat} from "./loadout";
+import {traitHas} from "../actors/resources/traits";
 
 /**
  * Tactical combat AI.
@@ -32,6 +35,8 @@ export interface Plan {
     markTarget?: Actor | undefined;
     /** spend the turn patching this ally up (adjacent) */
     stabilizeTarget?: Actor | undefined;
+    /** spend the turn laying plate on this ally (adjacent) */
+    bolsterTarget?: Actor | undefined;
     /** netrunner quickhack on a chromed target */
     hackTarget?: Actor | undefined;
     /** hose a dug-in target with autofire to pin them */
@@ -169,9 +174,21 @@ function pointToward(from: Point, to: Point, maxDist: number): Point {
     return {x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t};
 }
 
-/** The range this weapon wants to fight at (its low-DV band, kept off point-blank). */
-function preferredGap(w: Weapon): number {
+/**
+ * The range this weapon wants to fight at (its low-DV band, kept off
+ * point-blank), scaled by the standing orders on distance.
+ *
+ * The line is a real commitment, not a hint: a Breacher ordered to Overwatch
+ * genuinely stands too far back for a shotgun and the range falloff bills them
+ * for it. That is the point — the mistake has to be visible in the numbers or
+ * the dial is decoration.
+ */
+function preferredGap(w: Weapon, scale: number = 1): number {
     if (w.weaponClass === "melee") { return 2.5; }   // adjacent cell, not on top of the target
+    return baseGap(w) * scale;
+}
+
+function baseGap(w: Weapon): number {
     switch (w.weaponClass) {
         case "shotgun": return 10;
         case "pistol": return 14;
@@ -181,6 +198,73 @@ function preferredGap(w: Weapon): number {
         case "sniper": return 60;
         default: return 14;
     }
+}
+
+/**
+ * What a turn is worth if it is simply spent shooting.
+ *
+ * This is the bar. Every support action in this file used to be gated by a
+ * hand-written rule — "only if I'm above 35% health", "only if they're within
+ * 8 metres" — which meant a medic's turn was never actually compared against
+ * anything. The one exception was suppression, which already did the honest
+ * thing: measure what the tactic denies and take it only when that beats what
+ * shooting deals. Everything below now follows that example.
+ *
+ * The currency is expected HP swing: damage dealt, damage prevented and damage
+ * restored are all the same number pointed in different directions, so they can
+ * be compared without a fudge factor.
+ *
+ * The effect on whether a support class is worth a seat, over 800 fights a cell
+ * with a crew of three:
+ *
+ *                                   3 v 3      3 v 3      3 v 4
+ *                                   rank-3     rank-2     rank-3
+ *     Gunner + Breacher + Marksman    41%        95%         4%
+ *     Gunner + Breacher + Medtech     41%        98%         5%
+ *     Gunner + Breacher + Rigger      34%        98%         4%
+ *
+ * A Medtech now holds a seat against a damage class outright, and beats one in
+ * a fight that is actually winnable — where before this they were a Gunner with
+ * worse numbers and a heal that did not exist. The Rigger still trails in the
+ * hardest cell, and honestly should: plate that sheds a stack per hit is worth
+ * little against damage that was going to overwhelm you anyway. Neither is a
+ * trap pick any more, which was the bar.
+ */
+function shootingValue(self: Actor, foes: Actor[]): number {
+    const here = pos(self);
+    let best = 0;
+    for (const f of foes) {
+        const d = Battlefield.gap(here, pos(f));
+        best = Math.max(best, bestNet(self, f, d, Battlefield.coverPenaltyAt(pos(f), here)).value);
+    }
+    return best;
+}
+
+/** Expected damage landing on this body next round, from everyone still up. */
+function incomingOn(who: Actor, foes: Actor[]): number {
+    const at = pos(who);
+    return foes.reduce((n, f) => {
+        const d = Battlefield.gap(at, pos(f));
+        return n + expectedNet(f, who, d, Battlefield.coverPenaltyAt(at, pos(f)), false);
+    }, 0);
+}
+
+/** Stacks of plate a bolster lays on. */
+const BOLSTER_STACKS = 4;
+
+/**
+ * What plating an ally is worth, measured rather than guessed: run the same
+ * incoming-damage rollout against the modified state and take the difference.
+ *
+ * Applying and then removing exactly the stacks we added leaves whatever they
+ * already had intact, so this is a genuine what-if and not a side effect.
+ */
+function bolsterValue(ally: Actor, foes: Actor[]): number {
+    const before = incomingOn(ally, foes);
+    applyStatus(ally, "hardened", BOLSTER_STACKS);
+    const after = incomingOn(ally, foes);
+    clearStatus(ally, "hardened", BOLSTER_STACKS);
+    return Math.max(0, before - after);
 }
 
 export class TacticalAI {
@@ -204,7 +288,7 @@ export class TacticalAI {
         if (!foes.length) { return {label: "hold"}; }
 
         // a teammate bleeding out on the pavement outranks every gunfight
-        const medic = this.stabilizePlan(self, _allies);
+        const medic = this.stabilizePlan(self, _allies, foes);
         if (medic) { return medic; }
 
         // a netrunner with a clear head shorts the biggest chrome in view
@@ -226,6 +310,12 @@ export class TacticalAI {
         if (self.weapon.weaponClass === "melee" && Battlefield.gap(here, primary) > run + MELEE_REACH) {
             return {moveTo: pointToward(here, primary, run * 2), sprint: true, label: "sprint"};
         }
+
+        // Plating on whoever is about to need it, when that beats shooting.
+        // Sits below the melee sprint on purpose: a brawler out of reach has one
+        // job this turn and it is closing the distance.
+        const brace = this.bolsterPlan(self, _allies, foes);
+        if (brace) { return brace; }
 
         // snipers play their own game: paint, then fire the steadied shot
         if (self.weapon.weaponClass === "sniper") {
@@ -282,8 +372,7 @@ export class TacticalAI {
      * Field medicine: an ally is mortally wounded (or bleeding) within reach
      * and we're healthy enough to break contact — go pull them back.
      */
-    private static stabilizePlan(self: Actor, allies: Actor[]): Plan | null {
-        if (self.health < self.maxHealth * 0.35) { return null; }   // no medics about to drop themselves
+    private static stabilizePlan(self: Actor, allies: Actor[], foes: Actor[]): Plan | null {
         const here = pos(self);
         const hurt = allies.filter((a) => a !== self && a.alive
                 && ((a.mortallyWounded && !a.routed) || (a.canFight() && a.bleeding > 0)))
@@ -291,10 +380,44 @@ export class TacticalAI {
         if (!hurt) { return null; }
         const gap = Battlefield.gap(here, pos(hurt));
         if (gap > self.runMeters() + 3) { return null; }   // out of reach this turn
-        // dying teammates are always worth the trip; mere bleeders only when close
-        if (!hurt.mortallyWounded && gap > 8) { return null; }
+
+        // What the trip is worth: a body pulled off the pavement shoots again,
+        // and a bleed stopped is damage that never lands. Both priced in the
+        // same currency as the shot being given up.
+        const revived = hurt.mortallyWounded ? shootingValue(hurt, foes) * 2 : 0;
+        const bleedStopped = hurt.bleeding * BURN_TICK;
+        const worth = revived + bleedStopped + self.healPower();
+        if (worth < shootingValue(self, foes)) { return null; }
+
         const moveTo = gap > 3 ? pointToward(here, pos(hurt), self.runMeters()) : undefined;
         return {moveTo, stabilizeTarget: hurt, label: "medic"};
+    }
+
+    /**
+     * Riggers and medics plate up whoever is about to get hit.
+     *
+     * The Rigger had no in-fight job at all: their armour work happened between
+     * nodes, so on a street they were a Gunner with worse numbers. This is the
+     * job — and it is chosen the same way suppression is, by measuring what the
+     * plating actually saves against what the shot would have dealt.
+     */
+    private static bolsterPlan(self: Actor, allies: Actor[], foes: Actor[]): Plan | null {
+        if (!self.canBolster()) { return null; }
+        const here = pos(self);
+        const reach = self.runMeters() + 3;
+        let best: Actor | undefined;
+        let bestWorth = shootingValue(self, foes);
+        for (const a of allies) {
+            if (a === self) { continue; }   // this is a thing you do for somebody else
+            if (!a.canFight() || Battlefield.gap(here, pos(a)) > reach) { continue; }
+            if (stacksOf(a, "hardened") > 0) { continue; }   // don't paint over wet paint
+            const worth = bolsterValue(a, foes);
+            if (worth > bestWorth) { bestWorth = worth; best = a; }
+        }
+        if (!best) { return null; }
+        const gap = Battlefield.gap(here, pos(best));
+        const moveTo = gap > 3 ? pointToward(here, pos(best), self.runMeters()) : undefined;
+        return {moveTo, bolsterTarget: best, label: "brace"};
     }
 
     /** Netrunner Short Circuit: cooldown up, chromed target in range → burn it. */
@@ -407,7 +530,7 @@ export class TacticalAI {
 
     /** Candidate destinations reachable this turn. */
     private static candidates(self: Actor, here: Point, primary: Point, foes: Actor[], run: number): Point[] {
-        const want = preferredGap(self.weapon);
+        const want = preferredGap(self.weapon, lineGap(self));
         const gapToPrimary = Battlefield.gap(here, primary);
 
         // advance/retreat to the weapon's preferred range along the current bearing
@@ -451,11 +574,21 @@ export class TacticalAI {
         let target: Actor | undefined;
         let aimed = false;
         let killBonus = 0;
+        // Target choice is weighted by how much each foe is *asking* to be shot:
+        // whoever is holding the front line draws fire off the people behind
+        // them. The score still uses the true expected damage — only the pick
+        // between equally juicy targets is biased.
+        let bestPick = 0;
         for (const foe of foes) {
             const dist = Battlefield.gap(spot, pos(foe));
             const cover = Battlefield.coverPenaltyAt(pos(foe), spot);
             const shot = bestNet(self, foe, dist, cover);
-            if (shot.value > offense) {
+            // Tunnel Vision finishes what it started: the current target keeps a
+            // thumb on the scale until it goes down.
+            const stuck = traitHas(self.traits, "sticky") && self.marking === foe ? 1.6 : 1;
+            const pick = shot.value * lineThreat(foe) * stuck;
+            if (pick > bestPick) {
+                bestPick = pick;
                 offense = shot.value;
                 target = foe;
                 aimed = shot.aimed;
@@ -491,7 +624,7 @@ export class TacticalAI {
             prof.off * offense
             + prof.kill * killBonus
             + prof.cover * inCover
-            - prof.def * threat * (1 + (1 - hpFrac) * prof.risk)
+            - prof.def * self.caution() * threat * (1 + (1 - hpFrac) * prof.risk)
             - prof.progress * nearestGap
             - campPenalty
             - crowding

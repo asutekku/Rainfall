@@ -282,7 +282,7 @@ export const EVENTS: GameEvent[] = [
         options: [
             {
                 label: "Flash a badge", detail: "Cop only — professional courtesy",
-                req: (ctx) => ctx.party.some((p) => p.isCop()) ? null : "no Cop in the crew",
+                req: (ctx) => ctx.party.some((p) => p.isClass("gunner")) ? null : "no Gunner in the crew",
                 run: () => ({lines: ["Nods all around. \"Stay safe out there, officer.\" The sawhorses part."]}),
             },
             {
@@ -461,7 +461,7 @@ export const EVENTS: GameEvent[] = [
             },
             {
                 label: "Techie: strip the terminal", detail: "Techie only",
-                req: (ctx) => ctx.party.some((p) => p.isTechie()) ? null : "no Techie in the crew",
+                req: (ctx) => ctx.party.some((p) => p.isClass("rigger")) ? null : "no Rigger in the crew",
                 run: (ctx) => { Purse.earn(ctx.leader, 90); return {lines: ["The Techie unbolts the whole faceplate. Scrap and coin box: 90¥."]}; },
             },
             {label: "Nothing's free", run: () => ({lines: ["Six languages of no."]})},
@@ -749,7 +749,7 @@ export const EVENTS: GameEvent[] = [
             },
             {
                 label: "Fixer's discount", detail: "Fixer only — 30¥, better odds",
-                req: (ctx) => ctx.party.some((p) => p.isFixer()) ? (Purse.canAfford(ctx.leader, 30) ? null : "need 30¥") : "no Fixer in the crew",
+                req: (ctx) => ctx.party.some((p) => p.isClass("netrunner")) ? (Purse.canAfford(ctx.leader, 30) ? null : "need 30¥") : "no Netrunner in the crew",
                 run: (ctx) => {
                     pay(ctx, 30);
                     const name = grantWeapon(ctx.leader, 3, 4);

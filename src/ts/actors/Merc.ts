@@ -1,10 +1,12 @@
 import {GetItem} from "../interact/getItem";
 import {TacticalAI} from "../interact/tacticalAI";
 import {Armor} from "../items/Armor";
+import {Cyberware} from "../items/Cyberware";
 import {Actor} from "./Actor";
 import {Name} from "./resources/Name";
 import {Role} from "./resources/Role";
 import {CharacterCreation} from "./resources/CharacterCreation";
+import {traitSum} from "./resources/traits";
 import type {MercOffer} from "../interact/mercMarket";
 
 /**
@@ -36,7 +38,6 @@ export class Merc extends Actor {
         // RunController.outfitHire tips it into the crew crate, because belts
         // are packed at staging now. See loadout.ts.
         this.grenades = 1;
-        this.skill = this.role.skill;
         this.lifepath = CharacterCreation.randomLifepath();
         this.offerId = offer.id;
         this.offer = offer;
@@ -62,7 +63,15 @@ export class Merc extends Actor {
         this.stats.ma.run = st.move * 3;
         this.stats.ma.leap = st.move / 4;
 
+        this.faction = offer.faction;
+        this.traits = offer.traits.slice();
+        this.grudge = offer.grudge;
         this.equipment.upper = new Armor("upper", offer.armorName, "", 1, offer.armorSP, 0, "");
+        // A chrome-faction hire's protection is wiring, not a jacket — which is
+        // what makes them read Chrome on the badge and fold to an EMP.
+        if (offer.cyberSP > 0) {
+            this.cybernetics.push(Cyberware.plating(`${offer.faction} Subdermal`, offer.cyberSP));
+        }
 
         this.level = offer.level;
         this.experience = 0;
@@ -75,6 +84,8 @@ export class Merc extends Actor {
 
     /** What Trauma Team wants to scrape this one off the pavement. */
     public buyoutCost(): number {
-        return Math.max(200, Math.round(this.fee * 0.4 / 10) * 10);
+        // "Union Rates": their people cover most of the wake-up bill.
+        const cover = Math.min(0.9, traitSum(this.traits, "buyoutCut"));
+        return Math.max(60, Math.round(this.fee * 0.4 * (1 - cover) / 10) * 10);
     }
 }

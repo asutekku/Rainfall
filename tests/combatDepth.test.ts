@@ -211,7 +211,7 @@ describe("nobody shoots a body", () => {
 describe("stabilize: field medicine", () => {
     test("a medic drags a mortally wounded teammate back to their feet", () => {
         Battlefield.COVER = [];
-        const medic = fighter({x: 0, y: 5});
+        const medic = fighter({cls: "medtech", x: 0, y: 5});
         const down = fighter({x: 2, y: 5});
         down.health = 0;
         down.mortallyWounded = true;
@@ -219,8 +219,21 @@ describe("stabilize: field medicine", () => {
         const stab = res.events.find((e) => e.kind === "stabilize") as StabilizeEvent;
         expect(stab.saved).toBe(true);
         expect(down.mortallyWounded).toBe(false);
-        expect(down.health).toBe(1);
         expect(down.canFight()).toBe(true);
+        // A Medtech doesn't just stop the dying — they put HP back, which is
+        // what their class edge has always claimed and never did.
+        expect(down.health).toBeGreaterThan(1);
+    });
+
+    test("anyone else can drag a body back, but only to its feet", () => {
+        Battlefield.COVER = [];
+        const grunt = fighter({cls: "gunner", x: 0, y: 5});
+        const down = fighter({x: 2, y: 5});
+        down.health = 0;
+        down.mortallyWounded = true;
+        Combat.takeTurn(grunt, [grunt, down], [fighter({x: 0, y: 30})]);
+        expect(down.mortallyWounded).toBe(false);
+        expect(down.health).toBe(1);
     });
 
     test("stopping a bleed counts as the turn too", () => {

@@ -1,9 +1,9 @@
 import * as React from "react";
-import {default as roles} from "../actors/resources/roles";
+import {CLASSES, classFromLegacyRole} from "../actors/resources/classes";
 import type {Career} from "../interact/career";
 import type {SaveHeader} from "../interact/saveGame";
 
-const ROLE_MAP: any = roles;
+const ROLE_MAP: any = CLASSES;
 
 export interface TitleViewProps {
     /** The checkpointed run, described without rebuilding it. Null if there is none. */
@@ -70,11 +70,11 @@ export class TitleView extends React.Component<TitleViewProps, TitleViewState> {
     }
 
     private veteran(career: Career) {
-        const role = ROLE_MAP[career.spec.role || "solo"];
+        const role = ROLE_MAP[classFromLegacyRole(career.spec.role)];
         const last = career.lastRun;
         return (
             <div className={"tCareer"}>
-                <img src={`src/media/portraits/${career.spec.role || "solo"}.png`} alt={role ? role.name : ""}/>
+                <img src={`src/media/portraits/${role ? role.portrait : "cop"}.png`} alt={role ? role.name : ""}/>
                 <div className={"tCareerBody"}>
                     <b>{career.name}</b>
                     <span>{role ? role.name : ""} · Level {career.merc.level} · {career.kills} kills</span>

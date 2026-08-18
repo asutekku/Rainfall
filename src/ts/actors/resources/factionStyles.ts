@@ -77,3 +77,105 @@ export function formationFor(faction: string | undefined): Formation {
 export function accentCss(faction: string | undefined): string {
     return "#" + styleFor(faction).accent.toString(16).padStart(6, "0");
 }
+
+// ------------------------------------------------------- crews for hire --
+
+/**
+ * The eight factions that take money.
+ *
+ * Faction is the second axis of a hire's identity: the class says what they do
+ * on a street, the faction says what they are made of. Their kit decides their
+ * Plate / Chrome / Ghost profile (see profile.ts), which is what makes the
+ * triangle point both ways — your crew is counterable too, and a Chrome-heavy
+ * squad walking into an EMP is a bad night.
+ *
+ * The perks here are the three role abilities that had no business being combat
+ * classes: the Fixer's cut, the Corporate's discount and the Nomad's
+ * scavenging. They were always economy perks wearing a class costume, and a
+ * faction is where an economy perk belongs.
+ *
+ * MaxTac, Cyberpsycho, Arasaka, Militech and Trauma Team stay hostile-only —
+ * the ones you can put on a payroll are the ones you can pay.
+ */
+export type CrewProfile = "plate" | "chrome" | "ghost";
+
+export interface CrewFaction {
+    /** How their kit reads, and therefore which side of the triangle they sit on. */
+    armour: CrewProfile;
+    /** Fee multiplier on the hire board — the price ladder does the balancing. */
+    fee: number;
+    /** One line for the hire board: who these people are. */
+    reads: string;
+    /** One line: what signing them actually buys. */
+    perk: string;
+    /** Every eddie through their hands is this much bigger. */
+    cut?: number;
+    /** Fraction off every market bill. */
+    discount?: number;
+    /** Extra chance to strip something off a body. */
+    scav?: number;
+    /** Edge behind the wheel. */
+    moto?: number;
+    /** Nothing to switch off: immune to `fried`. */
+    noChrome?: boolean;
+    /** Smoke on the belt at every deployment. */
+    smoke?: number;
+    /** Stacks of `adrenaline` they open a fight with. */
+    opener?: number;
+}
+
+export const CREW_FACTIONS: { [id: string]: CrewFaction } = {
+    "Street": {
+        armour: "ghost", fee: 0.8, cut: 0.2,
+        reads: "local kids with pistols and nerve",
+        perk: "Knows who fences what — every payday 20% bigger",
+    },
+    "Scav": {
+        armour: "ghost", fee: 0.7, scav: 0.15,
+        reads: "no armour, all desperation",
+        perk: "Strips the bodies everyone else walks past",
+    },
+    "Wraiths": {
+        armour: "ghost", fee: 1, moto: 3, smoke: 1,
+        reads: "badlands raiders, smoke and knives",
+        perk: "Runs every fight with smoke on the belt",
+    },
+    "6th Street": {
+        armour: "plate", fee: 1, discount: 0.1,
+        reads: "neighbourhood militia, flak and discipline",
+        perk: "Militia quartermaster — 10% off every market bill",
+    },
+    "Animals": {
+        armour: "plate", fee: 1.1, noChrome: true,
+        reads: "no chrome, just meat and mass",
+        perk: "Nothing to switch off — EMP and quickhacks do nothing",
+    },
+    "Tyger Claws": {
+        armour: "chrome", fee: 1.35, opener: 2,
+        reads: "wired reflexes, monowire, blades",
+        perk: "Strikes first and strikes hot — opens every fight on adrenaline",
+    },
+    "Maelstrom": {
+        armour: "chrome", fee: 1.3, opener: 3,
+        reads: "too much chrome, not enough left",
+        perk: "Does not stop — opens hard and keeps going",
+    },
+    "Chrome": {
+        armour: "chrome", fee: 1.5,
+        reads: "full-conversion, barely people",
+        perk: "The heaviest subdermals money buys — and an EMP undoes all of it",
+    },
+};
+
+export const HIREABLE_FACTIONS: string[] = Object.keys(CREW_FACTIONS);
+
+/** The crew perks for a faction (empty for hostiles and for the factionless). */
+export function crewFaction(faction: string | undefined): CrewFaction | null {
+    return (faction && CREW_FACTIONS[faction]) || null;
+}
+
+/** One numeric perk, defaulting to nothing. */
+export function factionPerk(faction: string | undefined, key: "cut" | "discount" | "scav" | "moto"): number {
+    const f = crewFaction(faction);
+    return (f && f[key]) || 0;
+}

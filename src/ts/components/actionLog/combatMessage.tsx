@@ -9,10 +9,8 @@ export class CombatMessage extends React.Component<{ message: MessageCombat }> {
     damageCaused = `<span class='hitRed'>[${this.props.message.prevHP} -> ${this.props.message.prevHP - this.props.message.damage <= 0 ? 0 : this.props.message.prevHP - this.props.message.damage}]</span>`;
     damageType = 'hit';
 
-    actorName = (actor: Actor): string => {
-        console.log('ActorName(): ' + actor.name);
-        return `<span style='color: ${actor.skill.color}'>[${actor.name}]</span>`;
-    };
+    actorName = (actor: Actor): string =>
+        `<span style='color: ${actor.role.color}'>[${actor.name}]</span>`;
 
     weaponName = (weapon: Weapon): string => {
         return `<span class='weaponBlue'>[${weapon.name}]</span>`;
@@ -47,7 +45,7 @@ export class CombatMessage extends React.Component<{ message: MessageCombat }> {
 }
 
 export class DeathMessage extends React.Component<{ dead: Actor, killer: Actor }> {
-    actorName = (actor: Actor) => <span style={{color: actor.skill.color}}>[{actor.name}]</span>;
+    actorName = (actor: Actor) => <span style={{color: actor.role.color}}>[{actor.name}]</span>;
     public override render = (): any => <div className={'actionMessage'}>{'>'}{this.actorName(this.props.killer)} killed {this.actorName(this.props.dead)}.</div>;
 }
 

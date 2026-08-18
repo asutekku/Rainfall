@@ -107,8 +107,8 @@ export class RunController {
         }
         // combat / elite / boss
         if (node.type === "combat") {
-            // Rockerboy "Charismatic Impact": street crews sometimes make the
-            // legend and stand down — the fight is won before it starts (no
+            // Enforcer "Bad Reputation": street crews sometimes read the cyberlimbs
+            // and stand down — the fight is won before it starts (no
             // loot, no XP: not getting shot at is the payout).
             const face = state.party.filter((p) => p.canFight() && p.standDownChance() > 0)
                 .sort((a, b) => b.standDownChance() - a.standDownChance())[0];
@@ -222,9 +222,9 @@ export class RunController {
                 extra = [...extra, {msg: "— sector clear: the crew stands down, patched up and re-plated —"}];
             }
             if (node.type === "elite") { you.gainReputation(1); }
-            // Techie "Maker": between stops they service the crew's armour.
+            // Rigger "Maker": between stops they service the crew's armour.
             const patched = RunController.makerPass(state.party);
-            if (patched > 0) { extra = [...extra, {msg: `— the Techie patches ${patched} SP back into the squad's armour —`}]; }
+            if (patched > 0) { extra = [...extra, {msg: `— the Rigger patches ${patched} SP back into the squad's armour —`}]; }
             const combatNode = node.type === "combat" || node.type === "elite" || node.type === "boss";
             if (combatNode) {
                 // Nanosurgeons: the swarm closes the wearer's wounds after a fight.
@@ -261,11 +261,11 @@ export class RunController {
     }
 
     /**
-     * Techie "Maker": between stops they patch up HALF of each piece's lost SP.
-     * A second Techie doesn't stack — one pair of hands on the workbench.
+     * Rigger "Maker": between stops they patch up HALF of each piece's lost SP.
+     * A second Rigger doesn't stack — one pair of hands on the workbench.
      */
     private static makerPass(party: Actor[]): number {
-        if (!party.some((t) => t.isTechie() && t.canFight())) { return 0; }
+        if (!party.some((t) => t.isClass("rigger") && t.canFight())) { return 0; }
         let total = 0;
         party.forEach((m) => {
             [m.equipment.upper, m.equipment.headgear].forEach((a: any) => {

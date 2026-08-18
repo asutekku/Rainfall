@@ -1,12 +1,14 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {Merc} from "../../actors/Merc";
-import {default as roles} from "../../actors/resources/roles";
+import {CLASSES} from "../../actors/resources/classes";
 import {MercOffer} from "../../interact/mercMarket";
 import {ProfileChip} from "../general/profileBadge";
 import {profileFrom} from "../../interact/profile";
+import {TRAITS} from "../../actors/resources/traits";
+import {accentCss, crewFaction} from "../../actors/resources/factionStyles";
 
-const ROLE_MAP: any = roles;
+const ROLE_MAP: any = CLASSES;
 
 export interface HireBoardProps {
     offers: MercOffer[];
@@ -28,21 +30,39 @@ export interface HireBoardProps {
 export class HireBoard extends React.Component<HireBoardProps, {}> {
 
     private offer = (o: MercOffer) => {
-        const role = ROLE_MAP[o.role] || ROLE_MAP["solo"];
+        const role = ROLE_MAP[o.role] || ROLE_MAP["gunner"];
+        const fac = crewFaction(o.faction);
         const hired = this.props.party.some((p) => (p as Merc).offerId === o.id);
         const full = this.props.party.length >= this.props.cap;
         const broke = this.props.funds < o.price;
         return (
-            <li key={o.id} className={"hbOffer tier-" + o.tier.toLowerCase() + (hired ? " hired" : "")}>
-                <img className={"hbFace"} src={`src/media/portraits/${o.role}.png`} alt={role.name}/>
+            <li key={o.id} className={"hbOffer tier-" + o.tier.toLowerCase() + (hired ? " hired" : "")}
+                style={{borderLeft: "3px solid " + accentCss(o.faction)}}>
+                <img className={"hbFace"} src={`src/media/portraits/${role.portrait}.png`} alt={role.name}/>
                 <span className={"hbWho"}>
                     <b>{o.name}</b>
                     <i style={{color: role.color}}>{role.name} · L{o.level}</i>
+                    <em style={{color: accentCss(o.faction)}}>{o.faction}</em>
                 </span>
-                <ProfileChip profile={profileFrom(o.armorSP, 0)} withLabel={true}/>
+                <ProfileChip profile={profileFrom(o.armorSP, o.cyberSP, o.faction)} withLabel={true}/>
                 <span className={"hbTier"}>{o.tier}</span>
-                <span className={"hbTrait"}>{o.trait}</span>
-                <span className={"hbKit"}>SP {o.armorSP} · skill {o.skill}</span>
+                <span className={"hbTrait"}>
+                    {fac && <b className={"hbPerk"} title={fac.reads}>{fac.perk}</b>}
+                    {/* Names on the board, detail on hover: three full sentences in a
+                        narrow column wraps to one word a line, and a name is the thing
+                        the player actually learns to recognise. */}
+                    <span className={"hbTraits"}>
+                        {o.traits.map((t) => TRAITS[t] && (
+                            <i key={t} className={TRAITS[t]!.price < 1 ? "flaw" : "boon"}
+                               title={TRAITS[t]!.blurb}>
+                                {TRAITS[t]!.name}
+                                {t === "badBlood" && o.grudge ? `: ${o.grudge}` : ""}
+                            </i>))}
+                    </span>
+                </span>
+                <span className={"hbKit"}>
+                    {o.cyberSP > 0 ? `chrome SP ${o.cyberSP}` : `SP ${o.armorSP}`} · skill {o.skill}
+                </span>
                 {hired
                     ? <span className={"hbHired"}>ON THE CREW</span>
                     : <button className={"hbBuy"} disabled={full || broke}

@@ -486,11 +486,11 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (outcome.reveal) {
             // intel: uncover N random still-hidden waypoints on the holo-map.
             // A Media in the crew works their sources: one extra waypoint.
-            const mediaBonus = state.party.some((p) => p.isMedia() && p.canFight()) ? 1 : 0;
+            const scoutBonus = state.party.some((p) => p.isClass("marksman") && p.canFight()) ? 1 : 0;
             const known = new Set([...nextRun.clearedIds, ...nextRun.reachableIds, ...nextRun.revealedIds]);
             const hidden = nextRun.nodes.filter((n) => !known.has(n.id) && n.type !== "boss");
             const picked: string[] = [];
-            for (let i = 0; i < outcome.reveal + mediaBonus && hidden.length > 0; i++) {
+            for (let i = 0; i < outcome.reveal + scoutBonus && hidden.length > 0; i++) {
                 picked.push(hidden.splice((Math.random() * hidden.length) << 0, 1)[0]!.id);
             }
             if (picked.length) {

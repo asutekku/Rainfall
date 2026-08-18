@@ -49,9 +49,9 @@ export class Economy {
         if (killer.faction) { return []; }              // enemies don't keep loot
         const msgs: string[] = [];
         const rank = victim.rank || 1;
-        // Nomads strip a wreck to the frame — their finds come up more often.
+        // Scavs strip a wreck to the frame — their finds come up more often.
         // Magpie Optics chrome tags salvage the same way, and they stack.
-        const chance = 0.2 + 0.06 * rank + (killer.isNomad() ? 0.12 : 0) + killer.chromeNum("scavBonus");
+        const chance = 0.2 + 0.06 * rank + killer.scavengeBonus() + killer.chromeNum("scavBonus");
         if (victim.weapon && victim.weapon.name !== "Fists" && Math.random() < chance) {
             const w = victim.weapon.clone();
             w.equipped = false;
@@ -253,9 +253,9 @@ export class Economy {
     }
 
     /**
-     * The sticker price after the best discount in the crew: a Corporate's
-     * company account or an Expense Chip, whichever runs deeper (they don't
-     * stack). With neither, this IS the sticker price.
+     * The sticker price after the best discount in the crew: a 6th Street
+     * quartermaster's account or an Expense Chip, whichever runs deeper (they
+     * don't stack). With neither, this IS the sticker price.
      */
     public static marketPrice(cost: number, party: Actor[]): number {
         const discount = party.reduce((m, p) => Math.max(m, p.canFight() ? p.marketDiscount() : 0), 0);
@@ -264,7 +264,7 @@ export class Economy {
 
     /**
      * What fraction of sticker price the fence pays: 40% street rate, and a
-     * standing Fixer's "Operator" cut makes every payout 20% bigger (48%).
+     * Street crew's "Operator" contacts make every payout 20% bigger (48%).
      */
     public static fenceRate(party: Actor[]): number {
         const cut = party.reduce((m, p) => Math.max(m, p.canFight() ? p.fixerCut() : 0), 0);
