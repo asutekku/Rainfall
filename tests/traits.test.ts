@@ -6,6 +6,8 @@ import {
 } from "../src/ts/actors/resources/traits";
 import {MercMarket} from "../src/ts/interact/mercMarket";
 import {STATUS} from "../src/ts/interact/statuses";
+import {Battlefield} from "../src/ts/interact/battlefield";
+import {TacticalAI} from "../src/ts/interact/tacticalAI";
 import {fighter} from "./helpers";
 
 describe("the table keeps its two rules", () => {
@@ -164,5 +166,81 @@ describe("the board prices what it is selling", () => {
         const plain = new Merc({...offer, traits: []});
         const union = new Merc({...offer, traits: ["unionRates"]});
         expect(union.buyoutCost()).toBeLessThan(plain.buyoutCost());
+    });
+});
+
+describe("support actions are chosen by arithmetic, not by hand-written gates", () => {
+    test("a Medtech spends the turn on a dying ally rather than shooting", () => {
+        Battlefield.COVER = [];
+        const medic = fighter({cls: "medtech", x: 0, y: 5});
+        const down = fighter({x: 2, y: 5});
+        down.health = 0;
+        down.mortallyWounded = true;
+        const plan = TacticalAI.plan(medic, [medic, down], [fighter({x: 0, y: 30})]);
+        expect(plan.stabilizeTarget).toBe(down);
+    });
+
+    test("a hurt medic still goes — the old rule benched them below 35% health", () => {
+        // The gate was arbitrary: a medic on 30% health standing next to a body
+        // bleeding out was told to shoot instead. Now it is priced.
+        Battlefield.COVER = [];
+        const medic = fighter({cls: "medtech", x: 0, y: 5});
+        medic.health = Math.floor(medic.maxHealth * 0.3);
+        const down = fighter({x: 2, y: 5});
+        down.health = 0;
+        down.mortallyWounded = true;
+        const plan = TacticalAI.plan(medic, [medic, down], [fighter({x: 0, y: 30})]);
+        expect(plan.stabilizeTarget).toBe(down);
+    });
+
+    // A body with no weapon and no armour has nothing to prevent and nothing to
+    // give up, so these need real kit or the arithmetic is comparing two zeroes.
+    const armed = (cfg: any) => fighter({weapon: "WSA Autopistol", ...cfg});
+
+    test("a Rigger plates an ally when there is real fire to soak", () => {
+        // Deliberately lopsided: three rifles bearing down, and the Rigger
+        // holding a pistol. That is exactly the trade the arithmetic exists to
+        // resolve — their own shot is worth little, the plate is worth a lot.
+        Battlefield.COVER = [];
+        const rig = armed({cls: "rigger", x: 0, y: 5});
+        const mate = armed({x: 2, y: 5});
+        const foes = [
+            fighter({weapon: "AKR-20 Medium Assault", skill: 8, x: 0, y: 14}),
+            fighter({weapon: "AKR-20 Medium Assault", skill: 8, x: 4, y: 14}),
+            fighter({weapon: "AKR-20 Medium Assault", skill: 8, x: -4, y: 14}),
+        ];
+        const plan = TacticalAI.plan(rig, [rig, mate], foes);
+        expect(plan.bolsterTarget).toBe(mate);
+    });
+
+    test("...and shoots instead when the plate would not be worth the turn", () => {
+        // The flip side, and the reason this is arithmetic rather than a rule:
+        // against two pistols there is little to prevent, so the Rigger fires.
+        Battlefield.COVER = [];
+        const rig = armed({cls: "rigger", x: 0, y: 5});
+        const mate = armed({x: 2, y: 5});
+        const foes = [armed({x: 0, y: 12}), armed({x: 3, y: 12})];
+        const plan = TacticalAI.plan(rig, [rig, mate], foes);
+        expect(plan.bolsterTarget).toBeUndefined();
+    });
+
+    test("nobody plates themselves instead of doing their job", () => {
+        Battlefield.COVER = [];
+        const rig = armed({cls: "rigger", x: 0, y: 5});
+        const plan = TacticalAI.plan(rig, [rig], [armed({x: 0, y: 12})]);
+        expect(plan.bolsterTarget).toBeUndefined();
+    });
+
+    test("a Gunner has no plate to hand out", () => {
+        Battlefield.COVER = [];
+        const gun = armed({cls: "gunner", x: 0, y: 5});
+        const mate = armed({x: 2, y: 5});
+        const foes = [
+            fighter({weapon: "AKR-20 Medium Assault", skill: 8, x: 0, y: 14}),
+            fighter({weapon: "AKR-20 Medium Assault", skill: 8, x: 4, y: 14}),
+            fighter({weapon: "AKR-20 Medium Assault", skill: 8, x: -4, y: 14}),
+        ];
+        const plan = TacticalAI.plan(gun, [gun, mate], foes);
+        expect(plan.bolsterTarget).toBeUndefined();
     });
 });

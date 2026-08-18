@@ -1033,6 +1033,23 @@ export class Actor extends GameObject {
         return faction && this.grudge === faction ? 1.4 : 1;
     }
 
+    /**
+     * Medtech "Field Surgery": HP a patch-up puts back.
+     *
+     * The class edge claimed they "patch harder than anyone" while
+     * `stabilizeAlly` only ever cleared bleeding — the healing did not exist.
+     * It does now, and only for the class whose job it is.
+     */
+    public healPower(): number {
+        if (!this.isClass("medtech")) { return 0; }
+        return Math.max(4, this.roleRank * 2 + this.skills.tech.firstAid);
+    }
+
+    /** Riggers and medics carry plate to hand out; nobody else does. */
+    public canBolster(): boolean {
+        return this.isClass("rigger") || this.isClass("medtech");
+    }
+
     /** Netrunner "Interface": quickhacks, and NET dives run on this rank. */
     public isNetrunner(): boolean { return this.isClass("netrunner"); }
 

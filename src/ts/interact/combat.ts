@@ -718,6 +718,10 @@ export class Combat {
             this.stabilizeAlly(self, plan.stabilizeTarget);
             return;
         }
+        if (plan.bolsterTarget && plan.bolsterTarget.canFight()) {
+            this.bolsterAlly(self, plan.bolsterTarget);
+            return;
+        }
         if (plan.hackTarget && plan.hackTarget.canFight()) {
             this.quickhack(self, plan.hackTarget);
             return;
@@ -763,10 +767,29 @@ export class Combat {
         const saved: boolean = target.alive && target.mortallyWounded;
         target.bleeding = 0;
         if (saved) { target.stabilize(); }
+        // A Medtech puts HP back, not just a bandage on. Everyone else can stop
+        // a bleed and drag a body off the pavement; the healing is the class.
+        const mended: number = self.healPower() > 0 && target.canFight()
+            ? target.heal(self.healPower()) : 0;
         this.events.push({kind: "stabilize", actor: self, target, saved, hp: target.health});
         this.messages.push(new MessageStr(saved
             ? `${self.name} drags ${target.name} back from the brink.`
-            : `${self.name} patches ${target.name} up.`));
+            : mended > 0
+                ? `${self.name} patches ${mended} HP back into ${target.name}.`
+                : `${self.name} patches ${target.name} up.`));
+    }
+
+    /**
+     * Field plating: a Rigger or Medtech spends their turn armouring somebody
+     * else. Chosen by the AI only when the damage it prevents beats the damage
+     * their own shot would have dealt — see TacticalAI.bolsterPlan.
+     */
+    private static bolsterAlly(self: Actor, target: Actor): void {
+        if (Battlefield.distance(self, target) > 3.5) { return; }
+        this.afflict(self, target, "hardened", 4);
+        this.events.push({kind: "stabilize", actor: self, target, saved: false, hp: target.health});
+        this.messages.push(new MessageStr(
+            `${self.name} braces ${target.name} — plate on, and it holds for a few hits.`));
     }
 
     /** Netrunner Short Circuit: burn a chromed target's systems — armour means nothing. */
