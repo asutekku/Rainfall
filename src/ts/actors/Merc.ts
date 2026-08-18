@@ -1,6 +1,7 @@
 import {GetItem} from "../interact/getItem";
 import {TacticalAI} from "../interact/tacticalAI";
 import {Armor} from "../items/Armor";
+import {Cyberware} from "../items/Cyberware";
 import {Actor} from "./Actor";
 import {Name} from "./resources/Name";
 import {Role} from "./resources/Role";
@@ -36,7 +37,6 @@ export class Merc extends Actor {
         // RunController.outfitHire tips it into the crew crate, because belts
         // are packed at staging now. See loadout.ts.
         this.grenades = 1;
-        this.skill = this.role.skill;
         this.lifepath = CharacterCreation.randomLifepath();
         this.offerId = offer.id;
         this.offer = offer;
@@ -62,7 +62,13 @@ export class Merc extends Actor {
         this.stats.ma.run = st.move * 3;
         this.stats.ma.leap = st.move / 4;
 
+        this.faction = offer.faction;
         this.equipment.upper = new Armor("upper", offer.armorName, "", 1, offer.armorSP, 0, "");
+        // A chrome-faction hire's protection is wiring, not a jacket — which is
+        // what makes them read Chrome on the badge and fold to an EMP.
+        if (offer.cyberSP > 0) {
+            this.cybernetics.push(Cyberware.plating(`${offer.faction} Subdermal`, offer.cyberSP));
+        }
 
         this.level = offer.level;
         this.experience = 0;

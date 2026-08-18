@@ -133,6 +133,102 @@ export function stanceOf(a: Actor): Stance {
     return "steady";
 }
 
+// -------------------------------------------------------------- the line --
+
+/**
+ * Where a body is told to stand.
+ *
+ * Stance says how hard they fight; the line says from how far. The two are
+ * separate because they trade against different things: stance buys damage
+ * with damage, and the line buys accuracy with exposure — and the range bands
+ * already price the second one without any new arithmetic. A shotgun's sweet
+ * spot is 0-12m and a sniper's starts at 25m, so a Marksman sent to point and a
+ * Breacher sent to overwatch are both making a mistake the damage model can
+ * see, which is exactly the kind of mistake worth letting a player make.
+ *
+ * Distance alone was not enough — the same lesson the stance dial had to learn.
+ * Scaling the standoff and nothing else moved win rates 4-5pp with no consistent
+ * sign, because a squad's incoming damage per round is roughly fixed: everybody
+ * shoots, so standing further back only means somebody else gets shot.
+ *
+ * So the line also decides *who they shoot* (see `threat`). That makes it a real
+ * trade, and it only pays when the bodies absorb differently — which is exactly
+ * what factions now guarantee. Measured over 800 fights a cell, with a plate
+ * Bulwark (SP 12), a ghost Marksman (SP 5) and a Gunner (SP 11) —
+ *
+ *                              bulwark   all    marksman
+ *                              on point  mid    on point
+ *     crew 3 v 3 rank-3           29%    19%      22%
+ *     crew 3 v 3 rank-2           89%    81%      79%
+ *     crew 3 v 2 rank-3           94%    93%      93%
+ *
+ * — ten points for putting the right body out front in a fight that is actually
+ * in doubt, and nothing at all in one that isn't, which is how a dial should
+ * behave. Note the first column is only available to a crew that HAS a plate
+ * body to put there: the line dial and faction kit are one feature in two
+ * halves, and neither is worth much alone.
+ *
+ * Defaults come from the class, so the screen opens on orders that already make
+ * sense and the dial is there for the fights where they don't.
+ */
+export type Line = "point" | "mid" | "overwatch";
+
+export interface LineSpec {
+    label: string;
+    /** multiplier on the weapon's preferred standoff distance */
+    gap: number;
+    /**
+     * How much the enemy AI wants to shoot this one.
+     *
+     * This is the half that makes the dial a decision rather than a nudge.
+     * Distance alone moved win rates 4-5pp — the same "inside the noise" trap
+     * the stance dial fell into before it was given a real trade. Drawing fire
+     * is the trade the line was always about: the body at the front is the body
+     * they shoot, and the one hanging back is the one they don't.
+     *
+     * It is also the tank, arriving for free. A Bulwark on point with four
+     * points of plate is not asserted to be a tank by a stat — the enemy
+     * targeting genuinely prefers them, and the plate is what makes that a good
+     * trade for you rather than a bad one.
+     */
+    threat: number;
+    blurb: string;
+    /** the trade, printed on the chip */
+    trade: [string, string];
+}
+
+export const LINES: { [k in Line]: LineSpec } = {
+    point: {label: "Point", gap: 0.55, threat: 1.6,
+            blurb: "walk it in and draw the fire — they will shoot you first",
+            trade: ["close", "shot at"]},
+    mid: {label: "Mid", gap: 1, threat: 1,
+          blurb: "the range the weapon was built for",
+          trade: ["sweet spot", "even"]},
+    overwatch: {label: "Overwatch", gap: 1.7, threat: 0.6,
+                blurb: "hang back — harder to reach, and further out than the gun likes",
+                trade: ["far", "ignored"]},
+};
+
+export const LINE_ORDER: Line[] = ["point", "mid", "overwatch"];
+
+/** Which line button should already be lit: the one this class fights on. */
+export function lineOf(a: Actor): Line {
+    if (a.line && (LINES as { [k: string]: LineSpec })[a.line]) { return a.line as Line; }
+    return (a.role && a.role.line) || "mid";
+}
+
+/** How much enemy targeting wants this body: >1 draws fire, <1 deflects it. */
+export function lineThreat(a: Actor): number {
+    const spec = a.line ? (LINES as { [k: string]: LineSpec })[a.line] : null;
+    return spec ? spec.threat : LINES[(a.role && a.role.line) || "mid"].threat;
+}
+
+/** The multiplier the AI applies to its weapon's preferred standoff. */
+export function lineGap(a: Actor): number {
+    const spec = a.line ? (LINES as { [k: string]: LineSpec })[a.line] : null;
+    return spec ? spec.gap : LINES[(a.role && a.role.line) || "mid"].gap;
+}
+
 // --------------------------------------------------------------------- kit --
 
 export type KitId = "frag" | "smoke" | "flash" | "emp";
@@ -210,6 +306,8 @@ export interface Deployment {
      */
     squad: Actor[];
     stances: Array<{ actor: Actor; stance: Stance }>;
+    /** Standing orders on distance, per deploying body. */
+    lines: Array<{ actor: Actor; line: Line }>;
     picks: KitPick[];
 }
 
@@ -223,6 +321,9 @@ export function issue(plan: Deployment, crate: Kit): void {
         if (!spec) { return; }
         actor.temperament = spec.temperament;
         actor.stance = stance;
+    });
+    plan.lines.forEach(({actor, line}) => {
+        if (LINES[line]) { actor.line = line; }
     });
     plan.picks.forEach(({item, carrier}) => {
         if (crate[item] <= 0) { return; }

@@ -8,6 +8,7 @@ import {Vehicle} from "../items/Vehicle";
 import {Item} from "../items/Item";
 import {Weapon} from "../items/Weapon";
 import {Name} from "./resources/Name";
+import {factionPerk} from "./resources/factionStyles";
 import {Role} from "./resources/Role";
 import {CharacterCreation, Lifepath} from "./resources/CharacterCreation";
 import {Statistics} from "./resources/Statistics";
@@ -18,7 +19,6 @@ export class Actor extends GameObject {
     public item: any;
     public name: string;
     public role: Role;
-    public skill: any;
     public level: number;
     public experience: number;
     public health: number;
@@ -34,6 +34,8 @@ export class Actor extends GameObject {
      * loadout.ts for what each one trades.
      */
     public stance: string | null;
+    /** Standing orders on distance: point / mid / overwatch (null = the class's own). */
+    public line: string | null;
     public auto: boolean;         // squad member played by the tactical AI instead of the player
     public grenades: number;      // frag grenades on the belt (throwing one is the turn's attack)
     public smokes: number;        // smoke grenades: pop a cloud that spoils shots and laser locks
@@ -251,7 +253,6 @@ export class Actor extends GameObject {
         this.gender = Name.getGender();
         this.name = `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
         this.role = role;
-        this.skill = role.skill;
         this.level = 1;
         this.experience = 0;
         this.alive = true;
@@ -282,6 +283,7 @@ export class Actor extends GameObject {
         this.hireable = false;
         this.temperament = "balanced";
         this.stance = null;
+        this.line = null;
         this.auto = false;
         this.grenades = 0;
         this.smokes = 0;
@@ -801,12 +803,12 @@ export class Actor extends GameObject {
         return this.fixerCut() + this.chromeNum("eddieBonus");
     }
 
-    /** Market prices down: the better of a Corporate's account and an Expense Chip. */
+    /** Market prices down: the better of a militia quartermaster and an Expense Chip. */
     public marketDiscount(): number {
         return Math.max(this.corpDiscount(), this.chromeNum("priceDiscount"));
     }
 
-    /** RED Reputation (0-10), earned through notable deeds (Rockerboys gain faster). */
+    /** RED Reputation (0-10), earned through notable deeds (Enforcers gain faster). */
     public gainReputation(amount: number): void {
         this.reputation = Math.min(10, this.reputation + amount + this.repGainBonus());
     }
@@ -835,24 +837,25 @@ export class Actor extends GameObject {
         return this.moveStat() * 2 * (this.crippled ? 0.5 : 1);   // a shot-up leg is half speed
     }
 
-    /** RED Initiative: 1d10 + REF (+ Solo Initiative Reaction + reflex boosters). */
+    /** RED Initiative: 1d10 + REF (+ a Marksman's head start + reflex boosters). */
     public rollInitiative(): number {
         return Math.floor(Math.random() * 10) + 1 + this.stats.ref
             + this.initiativeBonus() + this.cyberInitiative() + this.squadInitRt;
     }
 
-    public isSolo(): boolean {
-        return this.role.name === "Solo";
+    /** True when this unit fights as `id` (see classes.ts). */
+    public isClass(id: string): boolean {
+        return this.role.id === id;
     }
 
-    /** Solo "Combat Awareness": always the first to move — +rank Initiative. */
+    /** Marksman "Glassing": already looking down the street — +rank Initiative. */
     public initiativeBonus(): number {
-        return this.isSolo() ? this.roleRank : 0;
+        return this.isClass("marksman") ? this.roleRank : 0;
     }
 
-    /** Solo "Combat Awareness": the opening hit of each round lands +rank×2 damage. */
+    /** Marksman "Glassing": the opening hit of each round lands +rank×2 damage. */
     public alphaStrikeBonus(): number {
-        return this.isSolo() ? this.roleRank * 2 : 0;
+        return this.isClass("marksman") ? this.roleRank * 2 : 0;
     }
 
     /** Configure RED combat-relevant stats and derive HP and Humanity. */
@@ -955,58 +958,70 @@ export class Actor extends GameObject {
         return this.cybernetics.some((c) => c.effects.ignoreWoundPenalty === true);
     }
 
-    public isNetrunner(): boolean {
-        return this.role.name === "Netrunner";
-    }
+    /**
+     * The class passives.
+     *
+     * These are the old Cyberpunk 2020 Role Abilities, re-homed rather than
+     * thrown away: the Solo's alpha strike is the Marksman's, the Techie's
+     * armour work is the Rigger's, the Cop's supporting fire is the Gunner's,
+     * the Rockerboy's reputation is the Enforcer's. The three that were purely
+     * economic — the Fixer's cut, the Corporate's discount, the Nomad's
+     * scavenging — had no business being combat classes at all and now belong
+     * to factions (see factionStyles.ts), which is where a discount always
+     * should have lived.
+     */
 
-    // --- Remaining RED Role Abilities (rank = roleRank) ---
-    public isNomad(): boolean { return this.role.name === "Nomad"; }
-    public isFixer(): boolean { return this.role.name === "Fixer"; }
-    public isCop(): boolean { return this.role.name === "Cop"; }
-    public isCorporate(): boolean { return this.role.name === "Corporate"; }
-    public isMedia(): boolean { return this.role.name === "Media"; }
-    public isRockerboy(): boolean { return this.role.name === "Rockerboy"; }
-    public isTechie(): boolean { return this.role.name === "Techie"; }
+    /**
+     * The faction perks — the three old role abilities that were only ever
+     * economics. A crew's faction decides what their kit is made of and what
+     * doors their name opens; neither of those is a battlefield job.
+     */
 
-    /** Nomad "Moto": bonus to Driving checks (and calling in family rides). */
-    public motoBonus(): number { return this.isNomad() ? this.roleRank : 0; }
+    /** Street "Operator": every eddie that passes through their hands is bigger. */
+    public fixerCut(): number { return factionPerk(this.faction, "cut"); }
 
-    /** Fixer "Operator": every eddie that passes through their hands is 20% bigger. */
-    public fixerCut(): number { return this.isFixer() ? 0.2 : 0; }
+    /** 6th Street "Quartermaster": the militia account covers a slice of every bill. */
+    public corpDiscount(): number { return factionPerk(this.faction, "discount"); }
 
-    /** Cop "Backup": called-in support adds damage each round of a fight. */
-    public backupDamage(): number { return this.isCop() ? this.roleRank : 0; }
+    /** Wraiths "Badlands": bonus behind the wheel. */
+    public motoBonus(): number { return factionPerk(this.faction, "moto"); }
 
-    /** Corporate "Teamwork": the company account picks up 10% of every market bill. */
-    public corpDiscount(): number { return this.isCorporate() ? 0.1 : 0; }
+    /** Scav "Harvester": better odds of stripping something off a body. */
+    public scavengeBonus(): number { return factionPerk(this.faction, "scav"); }
 
-    /** Facedown / COOL-check edge: Rockerboy fame, plus chrome that glints right. */
+    /** Netrunner "Interface": quickhacks, and NET dives run on this rank. */
+    public isNetrunner(): boolean { return this.isClass("netrunner"); }
+
+    /** Gunner "Covering Fire": adds weight to every landed hit. */
+    public backupDamage(): number { return this.isClass("gunner") ? this.roleRank : 0; }
+
+    /** Facedown / COOL-check edge: an Enforcer's reputation, plus chrome that glints right. */
     public facedownBonus(): number {
-        return (this.isRockerboy() ? this.roleRank : 0) + this.chromeNum("facedownBonus");
+        return (this.isClass("enforcer") ? this.roleRank : 0) + this.chromeNum("facedownBonus");
     }
 
     /**
-     * Rockerboy "Charismatic Impact": chance a ganger crew recognises the legend
-     * and stands down before the shooting starts (10-20%, capped).
+     * Enforcer "Bad Reputation": chance a ganger crew sees the cyberlimbs and
+     * stands down before the shooting starts (10-20%, capped).
      */
     public standDownChance(): number {
-        return this.isRockerboy() ? Math.min(0.2, 0.08 + this.roleRank * 0.02) : 0;
+        return this.isClass("enforcer") ? Math.min(0.2, 0.08 + this.roleRank * 0.02) : 0;
     }
 
-    /** Rockerboys earn Reputation faster through exposure. */
+    /** Enforcers earn Reputation faster — the street tells stories about them. */
     public repGainBonus(): number {
-        return (this.isRockerboy() ? 1 : 0) + this.chromeNum("repBonus");
+        return (this.isClass("enforcer") ? 1 : 0) + this.chromeNum("repBonus");
     }
 
-    /** Techie "Maker": services the crew's gear between stops (repairs half the lost SP). */
-    public makerRepair(): number { return this.isTechie() ? this.roleRank : 0; }
+    /** Rigger "Maker": services the crew's gear between stops (repairs half the lost SP). */
+    public makerRepair(): number { return this.isClass("rigger") ? this.roleRank : 0; }
 
-    /** Media "Credibility": how many streets ahead this member's sources see (others 1). */
+    /** Marksman "Glassing": how many streets ahead their optics read (others 1). */
     public intelRange(): number {
-        return Math.max(this.isMedia() ? 2 : 1, 1 + this.chromeNum("scoutRange"));
+        return Math.max(this.isClass("marksman") ? 2 : 1, 1 + this.chromeNum("scoutRange"));
     }
 
-    /** RED Interface rank: a Netrunner uses its Role Ability rank; others have a basic 2. */
+    /** RED Interface rank: a Netrunner uses its class rank; everyone else has a basic 2. */
     public interfaceRank(): number {
         return this.isNetrunner() ? this.roleRank : 2;
     }
@@ -1019,21 +1034,6 @@ export class Actor extends GameObject {
     /** Overwrite the skill tree from a save-file snapshot. */
     public restoreSkills(data: any): void {
         if (data && data.ref && data.tech) { this.skills = data; }
-    }
-
-    /** One line on what this role's passive actually does in the run. */
-    public roleEdge(): string {
-        const r = this.roleRank;
-        if (this.isSolo()) { return `Combat Awareness: strikes first (+${r} Initiative), and the opening hit each round lands +${r * 2} damage.`; }
-        if (this.isCop()) { return `Backup: +${r} damage on every landed hit — someone's always covering.`; }
-        if (this.isNetrunner()) { return `Interface ${r}: the crew's deck-jockey — NET dives run on this rank.`; }
-        if (this.isTechie()) { return "Maker: patches up half the squad's armour damage after every cleared node."; }
-        if (this.isFixer()) { return "Operator: every eddie through your hands is 20% bigger — loot and fence alike."; }
-        if (this.isCorporate()) { return "Teamwork: the company account covers 10% of everything at the markets."; }
-        if (this.isNomad()) { return "Family knows salvage: noticeably better scavenge odds off every body."; }
-        if (this.isMedia()) { return "Credibility: sources see one street further — the map ahead holds no surprises."; }
-        if (this.isRockerboy()) { return `Charismatic Impact: +${r} on COOL event checks, and some crews stand down on sight (${Math.round(this.standDownChance() * 100)}%).`; }
-        return "No role edge.";
     }
 
     /*draw(context) {

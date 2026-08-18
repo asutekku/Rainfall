@@ -4,7 +4,7 @@ import {Name} from "./Name";
 /** A partial description of a character; anything omitted is rolled randomly. */
 export interface CharacterSpec {
     name?: string;
-    role?: string;   // role key: solo | netrunner | fixer | ...
+    role?: string;   // combat class id: bulwark | marksman | netrunner | ...
     roleRank?: number;
     stats?: {
         ref?: number; dex?: number; body?: number; will?: number; emp?: number;
@@ -22,7 +22,10 @@ export interface Lifepath {
     lifeGoal: string;
 }
 
-const ROLES: string[] = ["rockerboy", "solo", "netrunner", "techie", "media", "cop", "corporate", "fixer", "nomad"];
+// The nine combat classes, in the order the creation screen lays them out:
+// front line, then damage, then control, then support.
+const ROLES: string[] = ["bulwark", "enforcer", "breacher", "gunner", "marksman",
+    "netrunner", "cooker", "medtech", "rigger"];
 
 // RED Complete Package point-buy: 62 points spread across the ten STATS, each 2-8.
 export const STAT_KEYS: string[] = ["int", "ref", "dex", "tech", "cool", "will", "luck", "move", "body", "emp"];
@@ -60,17 +63,28 @@ const LIFE_GOAL: string[] = [
     "Leave a legacy on the Street", "Just survive one more night",
 ];
 
-// Signature stat lines per role — each totals STAT_BUDGET (62), each stat 2-8.
+/**
+ * Signature stat lines per class — each totals STAT_BUDGET (62), each stat 2-8.
+ *
+ * Read down the columns rather than across: REF and DEX buy accuracy and
+ * evasion, BODY buys the HP that lets a front-liner stand there, TECH and INT
+ * carry the Netrunner and the Rigger, and COOL is what survives a facedown. A
+ * Bulwark is the only class that spends its budget on staying upright.
+ */
 const ROLE_STATS: { [role: string]: Required<NonNullable<CharacterSpec["stats"]>> } = {
-    solo:       {ref: 8, dex: 7, body: 7, will: 7, move: 6, int: 5, tech: 4, cool: 6, luck: 6, emp: 6},
-    rockerboy:  {ref: 6, dex: 6, body: 5, will: 7, move: 6, int: 6, tech: 4, cool: 8, luck: 6, emp: 8},
-    netrunner:  {ref: 7, dex: 6, body: 5, will: 6, move: 5, int: 8, tech: 8, cool: 6, luck: 6, emp: 5},
-    techie:     {ref: 6, dex: 7, body: 6, will: 6, move: 6, int: 7, tech: 8, cool: 5, luck: 6, emp: 5},
-    media:      {ref: 6, dex: 5, body: 5, will: 6, move: 6, int: 7, tech: 5, cool: 8, luck: 7, emp: 7},
-    cop:        {ref: 7, dex: 6, body: 7, will: 7, move: 6, int: 6, tech: 5, cool: 6, luck: 6, emp: 6},
-    corporate:  {ref: 6, dex: 5, body: 6, will: 6, move: 5, int: 8, tech: 6, cool: 8, luck: 6, emp: 6},
-    fixer:      {ref: 6, dex: 6, body: 5, will: 5, move: 6, int: 7, tech: 5, cool: 8, luck: 8, emp: 6},
-    nomad:      {ref: 7, dex: 6, body: 8, will: 6, move: 8, int: 5, tech: 6, cool: 5, luck: 6, emp: 5},
+    // front line — bought with BODY and WILL, paid for out of REF
+    bulwark:   {ref: 5, dex: 5, body: 8, will: 8, move: 6, int: 5, tech: 6, cool: 7, luck: 6, emp: 6},
+    enforcer:  {ref: 7, dex: 7, body: 8, will: 7, move: 7, int: 4, tech: 4, cool: 7, luck: 6, emp: 5},
+    // damage — three different ways to spend the same budget
+    breacher:  {ref: 7, dex: 7, body: 7, will: 7, move: 6, int: 5, tech: 6, cool: 6, luck: 6, emp: 5},
+    gunner:    {ref: 7, dex: 6, body: 7, will: 7, move: 6, int: 5, tech: 6, cool: 6, luck: 7, emp: 5},
+    marksman:  {ref: 8, dex: 8, body: 5, will: 7, move: 5, int: 7, tech: 5, cool: 6, luck: 7, emp: 4},
+    // control — thin bodies carrying expensive heads
+    netrunner: {ref: 7, dex: 6, body: 5, will: 6, move: 5, int: 8, tech: 8, cool: 6, luck: 6, emp: 5},
+    cooker:    {ref: 6, dex: 7, body: 5, will: 6, move: 6, int: 7, tech: 8, cool: 5, luck: 7, emp: 5},
+    // support — EMP-adjacent brains, and the hands that keep everyone standing
+    medtech:   {ref: 6, dex: 7, body: 6, will: 7, move: 6, int: 7, tech: 7, cool: 5, luck: 5, emp: 6},
+    rigger:    {ref: 6, dex: 6, body: 6, will: 6, move: 5, int: 7, tech: 8, cool: 5, luck: 6, emp: 7},
 };
 
 export class CharacterCreation {
@@ -133,7 +147,7 @@ export class CharacterCreation {
     public static defaultSpec(): CharacterSpec {
         return {
             name: CharacterCreation.randomName(),
-            role: "solo",
+            role: "gunner",
             roleRank: 4,
             stats: {int: 5, ref: 7, dex: 6, tech: 5, cool: 6, will: 6, luck: 6, move: 6, body: 7, emp: 8},
             lifepath: CharacterCreation.randomLifepath(),

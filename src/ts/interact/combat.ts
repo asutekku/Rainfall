@@ -90,7 +90,7 @@ export class Combat {
     private static pipeline(actor: Actor, target: Actor, raw: number, quality: HitQuality): number {
         if (raw <= 0) { return 0; }
         let d = raw;
-        d += this.alphaStrike(actor);    // Solo: the round's opening hit lands harder
+        d += this.alphaStrike(actor);    // Marksman: the round's opening hit lands harder
         d += actor.backupDamage();       // Cop "Backup" support fire
         d *= QUALITY_MULT[quality];
         d *= outgoingMult(actor);
@@ -201,6 +201,7 @@ export class Combat {
         // concentrating fire is worth something: each hit this round softens the next
         applyStatus(target, "staggered", 1);
         this.weaponProc(actor, target, quality);
+        this.classProc(actor, target, quality);
         this.spikesBack(actor, target);
         this.rollCrit(target, dealt, quality);
     }
@@ -230,6 +231,26 @@ export class Combat {
         // kinetic: the shape of the weapon decides what it leaves
         if (w.weaponClass === "shotgun" || w.weaponClass === "melee") { proc("bleed", 2, 0.18); }
         else if (w.ap) { proc("shred", 1, 0.25); }
+    }
+
+    /**
+     * What the *class* leaves behind, on top of what the weapon does.
+     *
+     * This is the seam that makes a class mean something in a fight rather than
+     * being a stat line with a portrait: an Enforcer staggers, a Breacher
+     * shreds, a Gunner suppresses, a Cooker sets people on fire. Every status
+     * here already existed with its own grammar and its own counterplay — the
+     * classes are what finally make them reachable from a hiring decision.
+     *
+     * A crit always procs, the same rule the weapon rider uses, so focusing a
+     * target rewards you twice over.
+     */
+    private static classProc(actor: Actor, target: Actor, quality: HitQuality): void {
+        const rider = actor.role && actor.role.rider;
+        if (!rider) { return; }
+        if (quality === "crit" || Math.random() < rider.chance) {
+            this.afflict(actor, target, rider.key, rider.stacks);
+        }
     }
 
     /** Reactive plating: whoever lands a hit wears some of it. */
@@ -280,7 +301,7 @@ export class Combat {
         return true;
     }
 
-    /** Solo "Combat Awareness": bonus damage on the round's first landed hit. */
+    /** Marksman "Glassing": bonus damage on the round's first landed hit. */
     private static alphaStrike(actor: Actor): number {
         if (actor.firstHitDone) {
             return 0;

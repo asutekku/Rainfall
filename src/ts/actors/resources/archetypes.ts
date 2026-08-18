@@ -12,13 +12,13 @@ export interface Archetype {
     faction: string;
     title: string;        // archetype role within the faction
     rank: number;         // 1 mook .. 5 boss
+    cls: string;          // combat class id — what they do on a street (see classes.ts)
     ref: number; dex: number; body: number; will: number;
     skill: number; luck: number;
     bodySP: number; headSP: number;
     weapons: string[];    // weaponClass pool to draw from
     minDice: number;      // floor on the weapon's d6 count (0 = any)
     temperament: string;  // "roll" = derive from the drawn weapon
-    portrait: string;     // role key used for the portrait
     reward: number;       // eddies / XP multiplier
     frags?: number;       // guaranteed grenades on deploy (grenadier kit)
     smokes?: number;      // smoke grenades on deploy
@@ -30,28 +30,28 @@ export interface Archetype {
 
 export const ARCHETYPES: Archetype[] = [
     // ---- Rank 1: street mooks (SP 0-7, HP ~30-35) ----
-    {faction: "Street", title: "Punk", rank: 1, ref: 4, dex: 4, body: 5, will: 4, skill: 2, luck: 2,
-        bodySP: 4, headSP: 0, weapons: ["pistol", "melee"], minDice: 0, temperament: "roll", portrait: "fixer", reward: 1},
-    {faction: "Scav", title: "Harvester", rank: 1, ref: 4, dex: 5, body: 4, will: 3, skill: 2, luck: 2,
-        bodySP: 0, headSP: 0, weapons: ["melee", "pistol"], minDice: 0, temperament: "aggressive", portrait: "nomad", reward: 1},
-    {faction: "Bozos", title: "Booster", rank: 1, ref: 5, dex: 5, body: 5, will: 4, skill: 3, luck: 3,
-        bodySP: 7, headSP: 0, weapons: ["pistol", "smg"], minDice: 0, temperament: "aggressive", portrait: "rockerboy", reward: 1},
+    {faction: "Street", title: "Punk", cls: "enforcer", rank: 1, ref: 4, dex: 4, body: 5, will: 4, skill: 2, luck: 2,
+        bodySP: 4, headSP: 0, weapons: ["pistol", "melee"], minDice: 0, temperament: "roll", reward: 1},
+    {faction: "Scav", title: "Harvester", cls: "enforcer", rank: 1, ref: 4, dex: 5, body: 4, will: 3, skill: 2, luck: 2,
+        bodySP: 0, headSP: 0, weapons: ["melee", "pistol"], minDice: 0, temperament: "aggressive", reward: 1},
+    {faction: "Bozos", title: "Booster", cls: "gunner", rank: 1, ref: 5, dex: 5, body: 5, will: 4, skill: 3, luck: 3,
+        bodySP: 7, headSP: 0, weapons: ["pistol", "smg"], minDice: 0, temperament: "aggressive", reward: 1},
 
     // ---- Rank 2: gangers (SP 0-10, HP ~35-45) ----
-    {faction: "Animals", title: "Bruiser", rank: 2, ref: 5, dex: 6, body: 8, will: 6, skill: 4, luck: 2,
-        bodySP: 0, headSP: 0, weapons: ["melee"], minDice: 3, temperament: "berserker", portrait: "nomad", reward: 2},
+    {faction: "Animals", title: "Bruiser", cls: "enforcer", rank: 2, ref: 5, dex: 6, body: 8, will: 6, skill: 4, luck: 2,
+        bodySP: 0, headSP: 0, weapons: ["melee"], minDice: 3, temperament: "berserker", reward: 2},
     // SP 9, not 11. Armour is a damage multiplier, not a subtraction, so a point
     // of it is worth far more than the ladder in the header suggests: SP 11
     // nearly triples a body's effective health where SP 4 adds two thirds. These
     // two wore rank 3's plate on rank 2's pay, and it showed — a themed Tyger
     // Claws or Maelstrom wave was a 56-64% fight for a crew of three where the
     // rest of the rank ran 86-100%.
-    {faction: "Tyger Claws", title: "Enforcer", rank: 2, ref: 7, dex: 7, body: 5, will: 5, skill: 5, luck: 3,
-        bodySP: 9, headSP: 0, weapons: ["melee"], minDice: 2, temperament: "flanker", portrait: "solo", reward: 2},
-    {faction: "Maelstrom", title: "Raider", rank: 2, ref: 5, dex: 5, body: 7, will: 6, skill: 4, luck: 3,
-        bodySP: 10, headSP: 0, weapons: ["smg", "pistol"], minDice: 0, temperament: "aggressive", portrait: "solo", reward: 2},
-    {faction: "Wraiths", title: "Raider", rank: 2, ref: 5, dex: 5, body: 6, will: 5, skill: 4, luck: 3,
-        bodySP: 7, headSP: 4, weapons: ["shotgun", "rifle"], minDice: 0, temperament: "aggressive", portrait: "nomad",
+    {faction: "Tyger Claws", title: "Enforcer", cls: "enforcer", rank: 2, ref: 7, dex: 7, body: 5, will: 5, skill: 5, luck: 3,
+        bodySP: 9, headSP: 0, weapons: ["melee"], minDice: 2, temperament: "flanker", reward: 2},
+    {faction: "Maelstrom", title: "Raider", cls: "gunner", rank: 2, ref: 5, dex: 5, body: 7, will: 6, skill: 4, luck: 3,
+        bodySP: 10, headSP: 0, weapons: ["smg", "pistol"], minDice: 0, temperament: "aggressive", reward: 2},
+    {faction: "Wraiths", title: "Raider", cls: "breacher", rank: 2, ref: 5, dex: 5, body: 6, will: 5, skill: 4, luck: 3,
+        bodySP: 7, headSP: 4, weapons: ["shotgun", "rifle"], minDice: 0, temperament: "aggressive",
         reward: 2, smokes: 1},
 
     // ---- Rank 3: elites (SP 11-13, HP ~40-45) ----
@@ -60,50 +60,50 @@ export const ARCHETYPES: Archetype[] = [
     // whose other members average 39 HP. A themed Chrome wave was a 5% fight for
     // an opening squad and a 38% one for a crew of three, against 71-95% for the
     // rest of rank 2. It is a rank-3 body; this is where it goes.
-    {faction: "Chrome", title: "Ghoul", rank: 3, ref: 6, dex: 7, body: 7, will: 6, skill: 4, luck: 1,
-        bodySP: 11, headSP: 0, weapons: ["melee"], minDice: 2, temperament: "berserker", portrait: "solo", reward: 3},
-    {faction: "6th Street", title: "Veteran", rank: 3, ref: 6, dex: 6, body: 6, will: 6, skill: 6, luck: 4,
-        bodySP: 11, headSP: 7, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker", portrait: "cop",
+    {faction: "Chrome", title: "Ghoul", cls: "enforcer", rank: 3, ref: 6, dex: 7, body: 7, will: 6, skill: 4, luck: 1,
+        bodySP: 11, headSP: 0, weapons: ["melee"], minDice: 2, temperament: "berserker", reward: 3},
+    {faction: "6th Street", title: "Veteran", cls: "gunner", rank: 3, ref: 6, dex: 6, body: 6, will: 6, skill: 6, luck: 4,
+        bodySP: 11, headSP: 7, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker",
         reward: 3, smokes: 1},
-    {faction: "Maelstrom", title: "Bombardier", rank: 3, ref: 6, dex: 6, body: 7, will: 6, skill: 5, luck: 3,
-        bodySP: 12, headSP: 0, weapons: ["smg", "shotgun"], minDice: 0, temperament: "aggressive", portrait: "solo",
+    {faction: "Maelstrom", title: "Bombardier", cls: "breacher", rank: 3, ref: 6, dex: 6, body: 7, will: 6, skill: 5, luck: 3,
+        bodySP: 12, headSP: 0, weapons: ["smg", "shotgun"], minDice: 0, temperament: "aggressive",
         reward: 4, frags: 2, parts: ["bandolier"]},
-    {faction: "Tyger Claws", title: "Blademaster", rank: 3, ref: 8, dex: 8, body: 6, will: 6, skill: 7, luck: 4,
-        bodySP: 11, headSP: 0, weapons: ["melee"], minDice: 3, temperament: "berserker", portrait: "solo", reward: 3},
-    {faction: "Maelstrom", title: "Reaver", rank: 3, ref: 6, dex: 6, body: 8, will: 7, skill: 6, luck: 3,
-        bodySP: 13, headSP: 0, weapons: ["smg", "rifle", "melee"], minDice: 0, temperament: "berserker", portrait: "solo", reward: 3},
-    {faction: "Arasaka", title: "Lanceman", rank: 3, ref: 7, dex: 6, body: 6, will: 7, skill: 7, luck: 4,
-        bodySP: 12, headSP: 11, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker", portrait: "corporate",
+    {faction: "Tyger Claws", title: "Blademaster", cls: "enforcer", rank: 3, ref: 8, dex: 8, body: 6, will: 6, skill: 7, luck: 4,
+        bodySP: 11, headSP: 0, weapons: ["melee"], minDice: 3, temperament: "berserker", reward: 3},
+    {faction: "Maelstrom", title: "Reaver", cls: "gunner", rank: 3, ref: 6, dex: 6, body: 8, will: 7, skill: 6, luck: 3,
+        bodySP: 13, headSP: 0, weapons: ["smg", "rifle", "melee"], minDice: 0, temperament: "berserker", reward: 3},
+    {faction: "Arasaka", title: "Lanceman", cls: "gunner", rank: 3, ref: 7, dex: 6, body: 6, will: 7, skill: 7, luck: 4,
+        bodySP: 12, headSP: 11, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker",
         reward: 4, flashes: 1},
-    {faction: "Wraiths", title: "Deadeye", rank: 3, ref: 8, dex: 6, body: 5, will: 6, skill: 6, luck: 3,
-        bodySP: 7, headSP: 4, weapons: ["sniper"], minDice: 4, temperament: "camper", portrait: "nomad",
+    {faction: "Wraiths", title: "Deadeye", cls: "marksman", rank: 3, ref: 8, dex: 6, body: 5, will: 6, skill: 6, luck: 3,
+        bodySP: 7, headSP: 4, weapons: ["sniper"], minDice: 4, temperament: "camper",
         reward: 4, smokes: 1},
 
     // ---- Rank 4: heavies (SP 13-15, HP ~45-55) ----
-    {faction: "Militech", title: "Trooper", rank: 4, ref: 7, dex: 7, body: 7, will: 7, skill: 8, luck: 5,
-        bodySP: 15, headSP: 11, weapons: ["rifle"], minDice: 4, temperament: "flanker", portrait: "corporate", reward: 6},
-    {faction: "Trauma Team", title: "Operator", rank: 4, ref: 7, dex: 7, body: 7, will: 7, skill: 7, luck: 5,
-        bodySP: 15, headSP: 11, weapons: ["smg", "rifle"], minDice: 0, temperament: "flanker", portrait: "cop",
+    {faction: "Militech", title: "Trooper", cls: "gunner", rank: 4, ref: 7, dex: 7, body: 7, will: 7, skill: 8, luck: 5,
+        bodySP: 15, headSP: 11, weapons: ["rifle"], minDice: 4, temperament: "flanker", reward: 6},
+    {faction: "Trauma Team", title: "Operator", cls: "medtech", rank: 4, ref: 7, dex: 7, body: 7, will: 7, skill: 7, luck: 5,
+        bodySP: 15, headSP: 11, weapons: ["smg", "rifle"], minDice: 0, temperament: "flanker",
         reward: 6, flashes: 1},
-    {faction: "Chrome", title: "Juggernaut", rank: 4, ref: 6, dex: 6, body: 9, will: 7, skill: 6, luck: 2,
-        bodySP: 15, headSP: 0, weapons: ["shotgun", "rifle"], minDice: 3, temperament: "aggressive", portrait: "solo", reward: 8},
-    {faction: "Cyberpsycho", title: "Rampage", rank: 4, ref: 7, dex: 7, body: 9, will: 8, skill: 6, luck: 3,
-        bodySP: 13, headSP: 0, weapons: ["melee", "rifle"], minDice: 3, temperament: "berserker", portrait: "solo", reward: 7},
-    {faction: "Arasaka", title: "Marksman", rank: 4, ref: 8, dex: 7, body: 6, will: 7, skill: 8, luck: 4,
-        bodySP: 12, headSP: 11, weapons: ["sniper"], minDice: 4, temperament: "camper", portrait: "corporate", reward: 7},
-    {faction: "Militech", title: "Grenadier", rank: 4, ref: 7, dex: 6, body: 8, will: 7, skill: 7, luck: 4,
-        bodySP: 15, headSP: 11, weapons: ["shotgun", "rifle"], minDice: 0, temperament: "aggressive", portrait: "corporate",
+    {faction: "Chrome", title: "Juggernaut", cls: "bulwark", rank: 4, ref: 6, dex: 6, body: 9, will: 7, skill: 6, luck: 2,
+        bodySP: 15, headSP: 0, weapons: ["shotgun", "rifle"], minDice: 3, temperament: "aggressive", reward: 8},
+    {faction: "Cyberpsycho", title: "Rampage", cls: "enforcer", rank: 4, ref: 7, dex: 7, body: 9, will: 8, skill: 6, luck: 3,
+        bodySP: 13, headSP: 0, weapons: ["melee", "rifle"], minDice: 3, temperament: "berserker", reward: 7},
+    {faction: "Arasaka", title: "Marksman", cls: "marksman", rank: 4, ref: 8, dex: 7, body: 6, will: 7, skill: 8, luck: 4,
+        bodySP: 12, headSP: 11, weapons: ["sniper"], minDice: 4, temperament: "camper", reward: 7},
+    {faction: "Militech", title: "Grenadier", cls: "breacher", rank: 4, ref: 7, dex: 6, body: 8, will: 7, skill: 7, luck: 4,
+        bodySP: 15, headSP: 11, weapons: ["shotgun", "rifle"], minDice: 0, temperament: "aggressive",
         reward: 7, frags: 2, parts: ["bandolier"]},
 
     // ---- Rank 5: bosses (SP 15-18, HP ~55-60) ----
-    {faction: "MaxTac", title: "Officer", rank: 5, ref: 8, dex: 8, body: 8, will: 8, skill: 9, luck: 6,
-        bodySP: 15, headSP: 13, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker", portrait: "cop",
+    {faction: "MaxTac", title: "Officer", cls: "gunner", rank: 5, ref: 8, dex: 8, body: 8, will: 8, skill: 9, luck: 6,
+        bodySP: 15, headSP: 13, weapons: ["rifle", "smg"], minDice: 0, temperament: "flanker",
         reward: 10, flashes: 1, emps: 1, ability: "volley"},
-    {faction: "Cyberpsycho", title: "Terror", rank: 5, ref: 8, dex: 8, body: 10, will: 9, skill: 8, luck: 4,
-        bodySP: 15, headSP: 0, weapons: ["melee", "rifle"], minDice: 4, temperament: "berserker", portrait: "solo",
+    {faction: "Cyberpsycho", title: "Terror", cls: "enforcer", rank: 5, ref: 8, dex: 8, body: 10, will: 9, skill: 8, luck: 4,
+        bodySP: 15, headSP: 0, weapons: ["melee", "rifle"], minDice: 4, temperament: "berserker",
         reward: 12, ability: "leap"},
-    {faction: "Chrome", title: "Dragoon", rank: 5, ref: 8, dex: 7, body: 10, will: 8, skill: 8, luck: 2,
-        bodySP: 18, headSP: 13, weapons: ["rifle"], minDice: 4, temperament: "flanker", portrait: "solo",
+    {faction: "Chrome", title: "Dragoon", cls: "bulwark", rank: 5, ref: 8, dex: 7, body: 10, will: 8, skill: 8, luck: 2,
+        bodySP: 18, headSP: 13, weapons: ["rifle"], minDice: 4, temperament: "flanker",
         reward: 14, ability: "volley"},
 ];
 

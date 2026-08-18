@@ -151,7 +151,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         };
     }
 
-    /** Sticker price after the Corporate "Teamwork" company-account discount. */
+    /** Sticker price after the best crew discount (militia account, Expense Chip). */
     private price(cost: number): number {
         return Economy.marketPrice(cost, this.props.party);
     }

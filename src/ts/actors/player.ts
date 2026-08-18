@@ -20,7 +20,6 @@ export class Player extends Actor {
         this.level = 1;
         this.name = s.name || `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
         this.role = s.role ? new Role(s.role) : new Role();
-        this.skill = this.role.skill;
         this.lifepath = s.lifepath || CharacterCreation.randomLifepath();
         this.item = GetItem.item();
 

@@ -21,7 +21,10 @@ export class Adversary extends Actor {
         this.faction = a.faction;
         this.rank = a.rank;
         this.archetype = a.title;
-        this.role = new Role(a.portrait);
+        // The class is declared on the archetype, not inferred from the portrait
+        // key: a Chrome Ghoul is a melee berserker who happens to reuse the Solo
+        // artwork, and reading the class off the picture made it a sniper.
+        this.role = new Role(a.cls);
 
         this.item = GetItem.item();
         this.items = [this.item];
