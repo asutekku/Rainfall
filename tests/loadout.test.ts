@@ -1,7 +1,7 @@
 // enter the Actor ⇄ GetItem ⇄ Player import cycle through getItem
 import "../src/ts/interact/getItem";
 import {describe, expect, test} from "bun:test";
-import {Deployment, KIT_ORDER, KIT_PICKS, STANCES, STANCE_ORDER, emptyKit, issue,
+import {Deployment, KIT_ORDER, KIT_PICKS, LINES, LINE_ORDER, STANCES, STANCE_ORDER, emptyKit, issue, lineOf, lineThreat,
     kitTotal, reviveKit, stanceIn, stanceOf, stanceOut, startingKit, stow} from "../src/ts/interact/loadout";
 import {Crew} from "../src/ts/interact/crew";
 import {Economy} from "../src/ts/interact/economy";
@@ -30,7 +30,7 @@ describe("stances are the AI dial, exposed", () => {
     test("issuing orders rewrites the profile the AI will plan on", () => {
         const a = fighter();
         a.temperament = "balanced";
-        issue({squad: [a], stances: [{actor: a, stance: "push"}], picks: []}, emptyKit());
+        issue({squad: [a], stances: [{actor: a, stance: "push"}], lines: [], picks: []}, emptyKit());
         expect(a.temperament).toBe("aggressive");
         expect(a.stance).toBe("push");
     });
@@ -66,7 +66,7 @@ describe("stances are the AI dial, exposed", () => {
         const push = fighter();
         const held = fighter();
         issue({squad: [push, held], stances: [{actor: push, stance: "push"},
-            {actor: held, stance: "hold"}], picks: []}, emptyKit());
+            {actor: held, stance: "hold"}], lines: [], picks: []}, emptyKit());
         expect(stanceOut(push)).toBeCloseTo(STANCES.push.out);
         expect(stanceIn(held)).toBeCloseTo(STANCES.hold.incoming);
         // a pushing shooter into a dug-in target is the two multiplied
@@ -83,7 +83,7 @@ describe("stances are the AI dial, exposed", () => {
 
 describe("ordnance is crew property, drawn per job", () => {
     const plan = (picks: Deployment["picks"]): Deployment =>
-        ({squad: picks.map((p) => p.carrier), stances: [], picks});
+        ({squad: picks.map((p) => p.carrier), stances: [], lines: [], picks});
 
     test("a crew opens with something in the crate", () => {
         expect(kitTotal(startingKit())).toBeGreaterThan(0);
@@ -169,8 +169,47 @@ describe("what the fight does to the crate", () => {
     test("the belt read-out lists what is actually on it", () => {
         const a = fighter();
         expect(onBelt(a)).toEqual([]);
-        issue({squad: [a], stances: [], picks: [{item: "frag", carrier: a}, {item: "emp", carrier: a}]},
+        issue({squad: [a], stances: [], lines: [], picks: [{item: "frag", carrier: a}, {item: "emp", carrier: a}]},
             {...emptyKit(), frag: 1, emp: 1});
         expect(onBelt(a)).toEqual([["frag", 1], ["emp", 1]]);
+    });
+});
+
+describe("the line is where you stand, and who they shoot", () => {
+    test("every line names a real gap and threat multiplier", () => {
+        LINE_ORDER.forEach((l) => {
+            expect(LINES[l].gap).toBeGreaterThan(0);
+            expect(LINES[l].threat).toBeGreaterThan(0);
+        });
+    });
+
+    test("point is closer and hotter, overwatch is further and quieter", () => {
+        expect(LINES.point.gap).toBeLessThan(LINES.mid.gap);
+        expect(LINES.overwatch.gap).toBeGreaterThan(LINES.mid.gap);
+        expect(LINES.point.threat).toBeGreaterThan(LINES.mid.threat);
+        expect(LINES.overwatch.threat).toBeLessThan(LINES.mid.threat);
+    });
+
+    test("the trade is a trade — neither end is simply better", () => {
+        // Point buys range at the cost of being shot; overwatch buys safety at
+        // the cost of range. If one end were free the dial would be a ratchet.
+        expect(LINES.point.gap < LINES.mid.gap && LINES.point.threat > LINES.mid.threat).toBe(true);
+        expect(LINES.overwatch.gap > LINES.mid.gap && LINES.overwatch.threat < LINES.mid.threat).toBe(true);
+    });
+
+    test("the screen opens on the line the class already fights on", () => {
+        const bul = fighter({cls: "bulwark"});
+        const mrk = fighter({cls: "marksman"});
+        expect(lineOf(bul)).toBe("point");
+        expect(lineOf(mrk)).toBe("overwatch");
+    });
+
+    test("orders override the class default, and only for who received them", () => {
+        const a = fighter({cls: "marksman"});
+        const b = fighter({cls: "marksman"});
+        issue({squad: [a, b], stances: [], lines: [{actor: a, line: "point"}], picks: []}, emptyKit());
+        expect(lineOf(a)).toBe("point");
+        expect(lineOf(b)).toBe("overwatch");
+        expect(lineThreat(a)).toBeGreaterThan(lineThreat(b));
     });
 });

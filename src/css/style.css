@@ -1383,6 +1383,15 @@ progress::-moz-progress-bar { background:var(--rust); }
 .stMember.benched { opacity:.62; border-style:dashed; }
 .stMember.benched .stWho img { filter:grayscale(1); }
 .stStances { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:7px; }
+/* Two dials, one above the other: where they stand, then how they fight. The
+   rows are otherwise identical three-chip grids, so the gutter label is what
+   says they are separate questions rather than six options for one. */
+.stStances[data-dial] { position:relative; }
+.stStances[data-dial]::before { content:attr(data-dial); position:absolute; left:0; top:-9px;
+    font-family:var(--mono); font-size:8px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--faint); }
+.stLines { margin-top:12px; }
+
 .stChip { display:flex; flex-direction:column; align-items:center; gap:2px;
     min-height:44px; padding:6px 4px; cursor:pointer; font-family:var(--mono); font-size:10.5px;
     letter-spacing:.08em; text-transform:uppercase; color:var(--dim);
@@ -1395,6 +1404,12 @@ progress::-moz-progress-bar { background:var(--rust); }
 .stChip.on { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; }
 .stChip.on i { color:#06373a; }
 .stCarry { margin:6px 0 0; color:var(--warn); font-size:10px; letter-spacing:.06em; }
+
+/* the hire board's who-column now carries three lines: name, class, faction */
+.hbWho em { display:block; font-style:normal; font-size:9.5px; letter-spacing:.08em;
+    text-transform:uppercase; font-family:var(--mono); }
+/* the perk is what you are buying; the flavour trait rides underneath it */
+.hbTrait i { display:block; font-style:italic; color:var(--faint); font-size:9.5px; }
 
 /* --- defensive profile badge ------------------------------------------
    One badge, four screens (hire board, staging, battle HUD, unit card).

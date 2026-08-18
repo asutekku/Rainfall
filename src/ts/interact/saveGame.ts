@@ -1,3 +1,4 @@
+import {classFromLegacyRole} from "../actors/resources/classes";
 import {Actor} from "../actors/Actor";
 import {Merc} from "../actors/Merc";
 import {Player} from "../actors/player";
@@ -165,7 +166,8 @@ export class SaveGame {
             const you = data.members[0]!;
             return {
                 name: data.spec.name || "Unnamed",
-                role: data.spec.role || "solo",
+                // An old save names a CP:RED role; the class table maps it forward.
+                role: classFromLegacyRole(data.spec.role),
                 level: you.level,
                 sector: data.run.sector,
                 depth: data.run.depth,

@@ -1,6 +1,8 @@
 import {Actor} from "../actors/Actor";
 import {Formation, formationFor} from "../actors/resources/factionStyles";
 import {Chrome} from "./chrome";
+import {applyStatus} from "./statuses";
+import {crewFaction} from "../actors/resources/factionStyles";
 import {Utils} from "../utils/utils";
 
 /**
@@ -57,6 +59,23 @@ export interface CoverSpot extends Point { kind: CoverKind; }
 
 const COVER_KINDS: CoverKind[] = ["car", "crate", "barrier", "dumpster", "pillar"];
 
+/**
+ * What a body brings to the first round before anyone shoots.
+ *
+ * Class and faction both get to open a fight, and both open it here rather than
+ * in Combat, so a hostile Bulwark works the day one exists without a second
+ * implementation. Deliberately small: an opener is a reason to have hired
+ * somebody, not a free round.
+ */
+function openWith(a: Actor): void {
+    if (!a.canFight()) { return; }
+    // Bulwark "Dug In": four points of plate, shed one hit at a time.
+    if (a.role && a.role.id === "bulwark") { applyStatus(a, "hardened", 4); }
+    const f = crewFaction(a.faction);
+    if (f && f.opener) { applyStatus(a, "adrenaline", f.opener); }
+    if (f && f.smoke) { a.smokes += f.smoke; }
+}
+
 export class Battlefield {
 
     /** Mid-field cover (wrecks, crates, barriers). Advancing to one both closes range and shields you. Re-rolled every deployment. */
@@ -81,6 +100,7 @@ export class Battlefield {
         this.WAVE = enemies.length;
         this.line(party, SQUAD_Y);
         this.deployEnemies(enemies);
+        [...party, ...enemies].forEach(openWith);
         // frags are carried, not conjured: the squad throws what it bought or
         // scavenged. Grenadier archetypes always pack theirs; heavier hostiles
         // sometimes bring one of their own.

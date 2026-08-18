@@ -3,6 +3,7 @@ import {Weapon} from "../items/Weapon";
 import {BLAST_RADIUS, Battlefield, GRENADE_RANGE, Point} from "./battlefield";
 import {QUALITY_MULT, applySoak, AIMED_EDGE, AIMED_MULT, aimedSP, coverEdge, expectedMult, outOfRange, rangeEdge, rollQuality} from "./damageModel";
 import {SUPPRESS_CUT, hasStatus, incomingMult, outgoingMult, spDelta, statusEdge} from "./statuses";
+import {lineGap, lineThreat} from "./loadout";
 
 /**
  * Tactical combat AI.
@@ -169,9 +170,21 @@ function pointToward(from: Point, to: Point, maxDist: number): Point {
     return {x: from.x + (to.x - from.x) * t, y: from.y + (to.y - from.y) * t};
 }
 
-/** The range this weapon wants to fight at (its low-DV band, kept off point-blank). */
-function preferredGap(w: Weapon): number {
+/**
+ * The range this weapon wants to fight at (its low-DV band, kept off
+ * point-blank), scaled by the standing orders on distance.
+ *
+ * The line is a real commitment, not a hint: a Breacher ordered to Overwatch
+ * genuinely stands too far back for a shotgun and the range falloff bills them
+ * for it. That is the point — the mistake has to be visible in the numbers or
+ * the dial is decoration.
+ */
+function preferredGap(w: Weapon, scale: number = 1): number {
     if (w.weaponClass === "melee") { return 2.5; }   // adjacent cell, not on top of the target
+    return baseGap(w) * scale;
+}
+
+function baseGap(w: Weapon): number {
     switch (w.weaponClass) {
         case "shotgun": return 10;
         case "pistol": return 14;
@@ -407,7 +420,7 @@ export class TacticalAI {
 
     /** Candidate destinations reachable this turn. */
     private static candidates(self: Actor, here: Point, primary: Point, foes: Actor[], run: number): Point[] {
-        const want = preferredGap(self.weapon);
+        const want = preferredGap(self.weapon, lineGap(self));
         const gapToPrimary = Battlefield.gap(here, primary);
 
         // advance/retreat to the weapon's preferred range along the current bearing
@@ -451,11 +464,18 @@ export class TacticalAI {
         let target: Actor | undefined;
         let aimed = false;
         let killBonus = 0;
+        // Target choice is weighted by how much each foe is *asking* to be shot:
+        // whoever is holding the front line draws fire off the people behind
+        // them. The score still uses the true expected damage — only the pick
+        // between equally juicy targets is biased.
+        let bestPick = 0;
         for (const foe of foes) {
             const dist = Battlefield.gap(spot, pos(foe));
             const cover = Battlefield.coverPenaltyAt(pos(foe), spot);
             const shot = bestNet(self, foe, dist, cover);
-            if (shot.value > offense) {
+            const pick = shot.value * lineThreat(foe);
+            if (pick > bestPick) {
+                bestPick = pick;
                 offense = shot.value;
                 target = foe;
                 aimed = shot.aimed;

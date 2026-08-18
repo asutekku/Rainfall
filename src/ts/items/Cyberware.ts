@@ -106,4 +106,22 @@ export class Cyberware extends Item {
         this.humanityLoss = INSTALL_HL[line.tier] + (this.mk - 1) * upgradeHL(line.tier);
         this.effects = {...mark.effects};
     }
+
+    /**
+     * Factory subdermal plating — the chrome a Chrome-faction merc turns up
+     * already wearing.
+     *
+     * Not on any upgrade line and not on the player's Humanity ledger: it isn't
+     * something they chose to have installed, it's what the gang does to you
+     * before it hands you a gun. It exists so `cyberSP()` reads a real number
+     * and the profile badge says Chrome, which is what makes an EMP the answer.
+     */
+    public static plating(name: string, sp: number): Cyberware {
+        const mark: AugMark = {name, cost: 0, effects: {sp},
+            description: "Gang-fitted subdermal weave. Stops bullets until somebody cuts the power."};
+        const piece = new Cyberware(
+            {id: "factionWeave", tier: "street", slot: "body", marks: [mark, mark, mark]}, 1);
+        piece.humanityLoss = 0;
+        return piece;
+    }
 }

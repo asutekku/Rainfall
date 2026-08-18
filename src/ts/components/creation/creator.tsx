@@ -1,13 +1,15 @@
 import * as React from "react";
-import {default as roles} from "../../actors/resources/roles";
+import {CLASSES, CLASS_IDS, classFromLegacyRole} from "../../actors/resources/classes";
 import {
     CharacterCreation, CharacterSpec, Lifepath,
     STAT_KEYS, STAT_BUDGET, STAT_MIN, STAT_MAX,
 } from "../../actors/resources/CharacterCreation";
 import type {Career} from "../../interact/career";
 
-const ROLE_MAP: any = roles;
-const ROLE_KEYS: string[] = ["rockerboy", "solo", "netrunner", "techie", "media", "cop", "corporate", "fixer", "nomad"];
+const ROLE_MAP: any = CLASSES;
+// The class list comes from the registry now, so adding a tenth class is a
+// row in classes.ts rather than a second list to keep in sync.
+const ROLE_KEYS: string[] = CLASS_IDS;
 
 // stat key -> [short label, full name]
 const STAT_LABEL: { [k: string]: [string, string] } = {
@@ -167,10 +169,10 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
     }
 
     private rolePicker(s: CharacterSpec) {
-        const r = ROLE_MAP[s.role || "solo"];
+        const r = ROLE_MAP[classFromLegacyRole(s.role)];
         return (
             <div className={"crSect"}>
-                <h4>Role</h4>
+                <h4>Class</h4>
                 <div className={"crRoles"}>
                     {ROLE_KEYS.map((k) => {
                         const role = ROLE_MAP[k];
@@ -179,16 +181,16 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                             <button key={k} className={"crRole" + (on ? " on" : "")}
                                     style={on ? {borderColor: role.color, color: role.color} : {}}
                                     onClick={() => this.pickRole(k)}>
-                                <img src={`src/media/portraits/${k}.png`} alt={role.name}/>
+                                <img src={`src/media/portraits/${role.portrait}.png`} alt={role.name}/>
                                 {role.name}
                             </button>);
                     })}
                 </div>
                 <div className={"crRoleInfo"}>
-                    <div className={"crRoleAbil"}><b style={{color: r.color}}>{r.skill}</b>
+                    <div className={"crRoleAbil"}><b style={{color: r.color}}>{r.role}</b>
                         <span className={"crRank"}>Rank <em>{s.roleRank}</em></span>
                     </div>
-                    <p>{r.skillDescription}</p>
+                    <p>{r.edge}</p>
                 </div>
             </div>);
     }
@@ -255,13 +257,13 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
      * "start over at level 1". Retiring is the honest way to that, and it says so.
      */
     private veteranCard(career: Career) {
-        const role = ROLE_MAP[career.spec.role || "solo"];
+        const role = ROLE_MAP[classFromLegacyRole(career.spec.role)];
         const m = career.merc;
         const first = career.name.split(" ")[0];
         return (
             <div className={"crVet"}>
                 <div className={"crVetHead"}>
-                    <img src={`src/media/portraits/${career.spec.role || "solo"}.png`} alt={role.name}/>
+                    <img src={`src/media/portraits/${role.portrait}.png`} alt={role.name}/>
                     <div>
                         <b>{career.name}</b>
                         <span style={{color: role.color}}>{role.name} · {role.skill}</span>
@@ -287,7 +289,7 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
 
     public override render() {
         const s = this.state.spec;
-        const r = ROLE_MAP[s.role || "solo"];
+        const r = ROLE_MAP[classFromLegacyRole(s.role)];
         // The veteran holds the screen until they're retired, at which point
         // this is an ordinary build-a-merc form again.
         const career = this.state.retired ? null : this.props.career;
@@ -310,7 +312,7 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                     <main className={"crEdit"}>
                         {career ? this.veteranCard(career) : <>
                             <div className={"crEditHead"}>
-                                <img className={"crPortrait"} src={`src/media/portraits/${s.role}.png`} alt={r.name}/>
+                                <img className={"crPortrait"} src={`src/media/portraits/${r.portrait}.png`} alt={r.name}/>
                                 {this.identity(s)}
                             </div>
                             {this.rolePicker(s)}
