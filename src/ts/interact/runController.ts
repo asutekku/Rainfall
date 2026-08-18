@@ -177,7 +177,21 @@ export class RunController {
             // Every node survived steadies the nerves: +1 Luck across the squad.
             state.party.forEach((p) => { p.luck = Math.min(p.maxLuck, p.luck + 1); });
             // Word travels. Boss and elite scalps build the character's name.
-            if (node.type === "boss") { you.gainReputation(2); }
+            if (node.type === "boss") {
+                you.gainReputation(2);
+                // Sector cleared: the crew stands down and puts itself back
+                // together, here, the moment the boss goes cold.
+                //
+                // This used to happen one screen later, on the way *into* the
+                // next sector. So the sector-clear screen drew the squad's HP
+                // bars at whatever the boss had left them, told the player "the
+                // crew is patched up" in the copy underneath, and then healed
+                // them silently once they pressed on. The cheapest hiring board
+                // in the game is on that screen: reading a half-dead roster
+                // there is how you pay for a replacement you never needed.
+                RunController.patchUp(state.party);
+                extra = [...extra, {msg: "— sector clear: the crew stands down, patched up and re-plated —"}];
+            }
             if (node.type === "elite") { you.gainReputation(1); }
             // Techie "Maker": between stops they service the crew's armour.
             const patched = RunController.makerPass(state.party);
@@ -447,15 +461,24 @@ export class RunController {
         };
     }
 
+    /**
+     * The whole squad recovers: back on their feet, back to full, luck pool
+     * reset and the plate hammered back out. What clearing a sector buys.
+     */
+    private static patchUp(party: Actor[]): void {
+        party.forEach((p) => {
+            if (!p.canFight()) { p.revive(); }
+            p.health = p.maxHealth;
+            p.refreshLuck();
+            Economy.repairArmor(p);
+        });
+    }
+
     /** Next sector: a new city, a harder one, with the crew you walked out with. */
     public static nextSector(state: InterfaceAppState, log: number): Patch {
         const sector = (state.run ? state.run.sector : 0) + 1;
-        state.party.forEach((p) => {
-            if (!p.canFight()) { p.revive(); }
-            p.health = p.maxHealth;
-            p.refreshLuck();               // a cleared sector resets the luck pool
-            Economy.repairArmor(p);
-        });
+        // No patch-up here — clearing the sector already did it, and anyone
+        // signed on the board since arrived fresh.
         Chrome.armRun(state.party);        // fresh sector, fresh Self-ICE / biomonitor charges
         return {
             run: RunController.scout(RunController.freshRun(sector), state.party),
