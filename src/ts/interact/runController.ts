@@ -6,10 +6,11 @@ import {Weapon} from "../items/Weapon";
 import {Merc} from "../actors/Merc";
 import {BattleRecorder, BattleReport, GearChange, LootItem} from "./battleReport";
 import {Battlefield} from "./battlefield";
+import {FeedLog} from "./feedLog";
 import {Crew, Purse} from "./crew";
 import {MercMarket} from "./mercMarket";
 import {Economy} from "./economy";
-import {RunMap, RunNode, RunState, encounterSpec, spawnEncounter} from "./runMap";
+import {RunMap, RunNode, RunState, encounterSpec, fightsCleared, spawnEncounter} from "./runMap";
 import {Chrome} from "./chrome";
 import {Deployment, Kit, ROSTER_CAP, SQUAD_CAP, issue, startingKit, stow} from "./loadout";
 
@@ -121,7 +122,7 @@ export class RunController {
         // can show the player the actual bodies they are about to meet rather
         // than a plausible sample of them. Nothing is committed until they
         // deploy — see `deploy` below and staging.tsx.
-        const spec = encounterSpec(node, run.sector, RunController.levelOf(state.party));
+        const spec = encounterSpec(node, run.sector, RunController.levelOf(state.party), fightsCleared(run));
         const enemies = spawnEncounter(spec);
         // holdout fights carry their clock on the node so the sequencer sees it
         if (spec.holdout) { node.holdout = spec.holdout; } else { delete node.holdout; }
@@ -165,8 +166,8 @@ export class RunController {
             activeEnemy: enemies[0], activeChar: squad[0],
             activeMainPanel: "Combat", mobileTab: "arena",
             messages: [
-                {msg: `— ${fight.label} —`} as any,
-                ...(benched > 0 ? [{msg: `— ${benched} left holding the van —`} as any] : []),
+                FeedLog.sys(`— ${fight.label} —`) as any,
+                ...(benched > 0 ? [FeedLog.sys(`— ${benched} left holding the van —`) as any] : []),
                 ...state.messages].slice(0, log),
         };
     }
@@ -298,7 +299,10 @@ export class RunController {
         if (!run) { return {}; }
         // Squad Biomonitor: a dropping merc gets pulled back before the ledger closes.
         Chrome.biomonitorPass(party).forEach((name) => {
-            msgs = [{msg: `— biomonitor override: ${name} is stabilised on their feet —`}, ...msgs];
+            // a feed line, not a legacy message: this one lands mid-fight, where
+            // the "> ..." grammar sits among surveillance lines and reads as a
+            // different log spliced into this one
+            msgs = [FeedLog.sys(`— biomonitor override: ${name} is stabilised on their feet —`), ...msgs];
         });
         // routed enemies ran off the field — the fight is over without their bodies
         const alive = state.currentEnemies.filter((e) => e.health > 0 && !e.routed);
@@ -563,7 +567,7 @@ export class RunController {
         return {
             run: {...run, revivesUsed: used, reviveUsed: used >= allowance, outcome: "active"},
             screen: "combat", report: null,
-            messages: [{msg: `— Trauma Team revive (${allowance - used} left this run) —`} as any,
+            messages: [FeedLog.sys(`— Trauma Team revive (${allowance - used} left this run) —`) as any,
                 ...state.messages].slice(0, log),
         };
     }

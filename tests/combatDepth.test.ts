@@ -8,7 +8,7 @@ import {AbilityEvent, BleedEvent, BlastEvent, CoverGoneEvent, HackEvent, RoutEve
     SkipEvent, StabilizeEvent, SuppressEvent} from "../src/ts/interact/battleEvents";
 import {Combat} from "../src/ts/interact/combat";
 import {TacticalAI} from "../src/ts/interact/tacticalAI";
-import {encounterSpec, spawnEncounter} from "../src/ts/interact/runMap";
+import {RunMap, encounterSpec, fightsCleared, spawnEncounter} from "../src/ts/interact/runMap";
 import {fighter, withRandom} from "./helpers";
 import {outgoingMult, stacksOf} from "../src/ts/interact/statuses";
 
@@ -412,12 +412,21 @@ describe("cyborgs and quickhacks", () => {
 });
 
 describe("holdout and reinforcements", () => {
-    test("a quarter of firefights carry a holdout clock", () => {
-        const node = {id: "n", type: "combat", junction: 0, pos: {x: 0, y: 0}} as any;
-        const clocked = withRandom(0.1, () => encounterSpec(node, 1, 1));
+    const combatNode = {id: "n", type: "combat", junction: 0, pos: {x: 0, y: 0}} as any;
+
+    test("a quarter of firefights carry a holdout clock, once the shakedown is over", () => {
+        const clocked = withRandom(0.1, () => encounterSpec(combatNode, 1, 1, 2));
         expect(clocked.holdout).toBe(4);
-        const plain = withRandom(0.5, () => encounterSpec(node, 1, 1));
+        const plain = withRandom(0.5, () => encounterSpec(combatNode, 1, 1, 2));
         expect(plain.holdout).toBeUndefined();
+    });
+
+    test("a sector's opening fights never carry one", () => {
+        // 0.1 would clock any later fight; the first two are never on a clock
+        [0, 1].forEach((fought) => {
+            expect(withRandom(0.1, () => encounterSpec(combatNode, 1, 1, fought)).holdout).toBeUndefined();
+            expect(withRandom(0.1, () => encounterSpec(combatNode, 2, 3, fought)).holdout).toBeUndefined();
+        });
     });
 
     test("routed hostiles end the fight without their bodies hitting the floor", () => {
@@ -457,5 +466,58 @@ describe("holdout and reinforcements", () => {
         expect(room(2, 2)).toBe(2);     // two down, two in — back to four
         expect(room(3, 2)).toBe(1);     // only one seat left
         expect(room(4, 2)).toBe(0);     // full street, nobody joins
+    });
+});
+
+/**
+ * The opening of a run is the one stretch where the player has no lever left to
+ * pull: two bodies, a sidearm, and whatever the map put next to the drop point.
+ * These are the guarantees that make that survivable.
+ */
+describe("the shakedown — a run's opening fights", () => {
+    const combat = {id: "n", type: "combat", junction: 0, pos: {x: 0, y: 0}} as any;
+
+    test("the first two firefights of a run field rank-1 street mooks", () => {
+        [0, 1].forEach((fought) => {
+            const spec = encounterSpec(combat, 1, 1, fought);
+            expect(spec.rank).toBe(1);
+            for (let i = 0; i < 20; i++) {
+                spawnEncounter(spec).forEach((e) => expect(e.rank).toBe(1));
+            }
+        });
+    });
+
+    test("and three of them — the shakedown is the tier, not a smaller fight", () => {
+        expect(encounterSpec(combat, 1, 1, 0).amount).toBe(3);
+        expect(withRandom(0.1, () => encounterSpec(combat, 1, 1, 0)).amount).toBe(3);
+    });
+
+    test("gangers arrive once the squad has two fights behind it", () => {
+        const spec = encounterSpec(combat, 1, 1, 2);
+        expect(spec.rank).toBe(0);                        // back to the level's rank band
+        const ranks = new Set<number>();
+        for (let i = 0; i < 60; i++) { spawnEncounter(spec).forEach((e) => ranks.add(e.rank)); }
+        expect(ranks.has(2)).toBe(true);
+    });
+
+    test("the fourth body waits for a crew that could have grown one", () => {
+        // 0.1 clears the 35% roll wherever it is allowed to happen at all
+        expect(withRandom(0.1, () => encounterSpec(combat, 1, 1, 2)).amount).toBe(3);
+        expect(withRandom(0.1, () => encounterSpec(combat, 1, 1, 4)).amount).toBe(4);
+    });
+
+    test("sector 2 opens on the band — the shakedown is for the first sector", () => {
+        expect(encounterSpec(combat, 2, 3, 0).rank).toBe(0);
+    });
+
+    test("the drop point is not a fight the squad has had", () => {
+        const run = RunMap.generate(1);
+        const entry = RunMap.find(run, run.position)!;
+        expect(entry.type).toBe("entry");
+        expect(run.clearedIds).toEqual([entry.id]);
+        expect(fightsCleared(run)).toBe(0);
+        // and clearing a real firefight does count
+        const fight = run.nodes.find((n) => n.type === "combat")!;
+        expect(fightsCleared({...run, clearedIds: [entry.id, fight.id]})).toBe(1);
     });
 });

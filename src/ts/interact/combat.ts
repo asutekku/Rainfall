@@ -641,7 +641,8 @@ export class Combat {
                 this.messages.push(new MessageStr(`${t.name} takes ${dealt} from the slam.`));
                 this.registerIfDefeated(self, t);
             }
-            this.events.push({kind: "blast", actor: self, at, radius: 3.5, gtype: "slam", victims});
+            this.events.push({kind: "blast", actor: self, at, radius: 3.5, gtype: "slam",
+                victims, left: -1});   // a Sandevistan slam costs no ordnance
             return true;
         }
         if (self.ability === "volley" && !this.needsReload(self, false)) {
@@ -786,6 +787,11 @@ export class Combat {
         else if (type === "smoke") { self.smokes -= 1; }
         else if (type === "flash") { self.flashes -= 1; }
         else { self.emps -= 1; }
+        // what is still on the belt, so the feed can say it — ordnance is drawn
+        // two per job at staging now, and a thrown piece with nothing on screen
+        // to mark it spent reads as the same one being thrown over and over
+        const left: number = type === "frag" ? self.grenades : type === "smoke" ? self.smokes
+            : type === "flash" ? self.flashes : self.emps;
 
         if (type === "smoke") {
             Battlefield.addSmoke(target);
@@ -796,7 +802,7 @@ export class Combat {
                 }
             });
             this.events.push({kind: "blast", actor: self, at: target,
-                radius: Battlefield.SMOKE[Battlefield.SMOKE.length - 1]!.r, gtype: "smoke", victims: []});
+                radius: Battlefield.SMOKE[Battlefield.SMOKE.length - 1]!.r, gtype: "smoke", victims: [], left});
             this.messages.push(new MessageStr(`${self.name} pops smoke.`));
             return;
         }
@@ -852,7 +858,7 @@ export class Combat {
             this.rollCrit(t, dealt);
             if (foes.indexOf(t) >= 0) { this.registerIfDefeated(self, t); }
         }
-        this.events.push({kind: "blast", actor: self, at: target, radius, gtype: type, victims});
+        this.events.push({kind: "blast", actor: self, at: target, radius, gtype: type, victims, left});
         this.messages.push(new MessageStr(`${self.name} lobs ${type === "frag" ? "a frag grenade"
             : type === "flash" ? "a flashbang" : "an EMP charge"}.`));
 
@@ -883,7 +889,8 @@ export class Combat {
             this.messages.push(new MessageStr(`${t.name} is caught in the fireball — ${dealt} damage.`));
             if (foes.indexOf(t) >= 0) { this.registerIfDefeated(self, t); }
         }
-        this.events.push({kind: "blast", actor: self, at: {x: at.x, y: at.y}, radius: 4.5, gtype: "car", victims});
+        this.events.push({kind: "blast", actor: self, at: {x: at.x, y: at.y}, radius: 4.5, gtype: "car",
+            victims, left: -1});   // nobody threw the car
     }
 
     private static nearestFoeGap(self: Actor, foes: Actor[]): number {

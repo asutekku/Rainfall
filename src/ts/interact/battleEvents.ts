@@ -75,6 +75,8 @@ export interface BlastEvent {
     radius: number;
     gtype: BlastType;
     victims: BlastVictim[];
+    /** Pieces of this kind still on the thrower's belt afterwards (-1: not theirs to spend). */
+    left: number;
 }
 
 /** A big hit left a lasting mark — battle-scoped critical injury. */

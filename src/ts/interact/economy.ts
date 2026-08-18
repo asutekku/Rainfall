@@ -3,7 +3,7 @@ import {Armor} from "../items/Armor";
 import Equipment from "../items/Equipment";
 import {Weapon} from "../items/Weapon";
 import {BattleRecorder, GearChange} from "./battleReport";
-import {Purse} from "./crew";
+import {Crew, Purse} from "./crew";
 import {GetItem} from "./getItem";
 import {randomJunk, randomMed} from "../items/consumables";
 
@@ -73,9 +73,15 @@ export class Economy {
                 ? `★ ${killer.name} scavenges rare ${worn.name} (SP ${worn.stoppingPower})!`
                 : `${killer.name} scavenges ${worn.name} (SP ${worn.stoppingPower}).`);
         }
+        // A find goes in the crate, not onto the belt. Ordnance is drawn at
+        // staging — two pieces per job, spent when thrown — and a mid-fight
+        // top-up quietly broke that contract: you packed one frag, threw it,
+        // and the crew had another one a body later. It is still a find, it
+        // just gets packed for the *next* job like everything else.
         if (Math.random() < 0.08) {
-            killer.grenades += 1;
-            msgs.push(`${killer.name} pockets a frag grenade.`);
+            const crate = Crew.active;
+            if (crate) { crate.kit.frag += 1; }
+            msgs.push(`${killer.name} scavenges a frag grenade — into the crate.`);
         }
         // pocket loot: meds the crew can actually use, junk the fence will take
         if (Math.random() < 0.16) {

@@ -114,12 +114,13 @@ export function forecastWave(party: Actor[], foes: Actor[]): Forecast {
     return {foes: foes.filter((f) => f.canFight()).length, ratio, odds: verdict(ratio)};
 }
 
-export function forecast(party: Actor[], node: RunNode, sector: number, partyLevel: number): Forecast | null {
+export function forecast(party: Actor[], node: RunNode, sector: number, partyLevel: number,
+                         fought: number = 0): Forecast | null {
     if (node.type !== "combat" && node.type !== "elite" && node.type !== "boss") { return null; }
     let theirs = 0;
     let foes = 0;
     for (let i = 0; i < SAMPLES; i++) {
-        const sample = spawnEncounter(encounterSpec(node, sector, partyLevel));
+        const sample = spawnEncounter(encounterSpec(node, sector, partyLevel, fought));
         theirs += sideStrength(sample);
         foes += sample.length;
     }
