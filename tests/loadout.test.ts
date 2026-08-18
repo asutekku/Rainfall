@@ -1,7 +1,12 @@
+// enter the Actor ⇄ GetItem ⇄ Player import cycle through getItem
+import "../src/ts/interact/getItem";
 import {describe, expect, test} from "bun:test";
 import {Deployment, KIT_ORDER, KIT_PICKS, STANCES, STANCE_ORDER, emptyKit, issue,
     kitTotal, reviveKit, stanceIn, stanceOf, stanceOut, startingKit, stow} from "../src/ts/interact/loadout";
-import {fighter} from "./helpers";
+import {Crew} from "../src/ts/interact/crew";
+import {Economy} from "../src/ts/interact/economy";
+import {onBelt} from "../src/ts/components/combat/hudInfo";
+import {fighter, withRandom} from "./helpers";
 
 describe("stances are the AI dial, exposed", () => {
     test("every stance names a profile the tactical AI actually has", () => {
@@ -139,5 +144,31 @@ describe("ordnance is crew property, drawn per job", () => {
     test("a checkpoint written before the crate existed still loads", () => {
         expect(reviveKit(undefined)).toEqual(emptyKit());
         expect(reviveKit({frag: 3})).toEqual({...emptyKit(), frag: 3});
+    });
+});
+
+describe("what the fight does to the crate", () => {
+    /**
+     * A frag found on a body used to land on the finder's belt mid-fight, which
+     * quietly broke the whole point of packing at staging: you took one out,
+     * threw it, and the crew had another one a corpse later.
+     */
+    test("a scavenged frag goes in the crate, not onto the belt", () => {
+        const crew = new Crew(0, emptyKit()).activate();
+        const me = fighter();
+        const body = fighter();
+        body.faction = "";
+        // 0.01 clears every loot roll in scavenge, the frag find among them
+        withRandom(0.01, () => Economy.scavenge(me, body));
+        expect(me.grenades).toBe(0);
+        expect(crew.kit.frag).toBe(1);
+    });
+
+    test("the belt read-out lists what is actually on it", () => {
+        const a = fighter();
+        expect(onBelt(a)).toEqual([]);
+        issue({stances: [], picks: [{item: "frag", carrier: a}, {item: "emp", carrier: a}]},
+            {...emptyKit(), frag: 1, emp: 1});
+        expect(onBelt(a)).toEqual([["frag", 1], ["emp", 1]]);
     });
 });

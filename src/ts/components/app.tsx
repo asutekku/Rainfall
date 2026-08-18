@@ -146,6 +146,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private markRound = 0;                   // round separator waiting to land in the feed
     private markHoldLeft = -1;               // holdout rounds left, shown on the separator
     private reinforced = false;              // the once-per-battle reinforcement wave arrived
+    private sealTimer: number | null = null;     // the beat between the last shot and the report
     /** Health as the board is drawing it — walked forward by the playback, not by the engine. */
     private shown = new ShownState();
 
@@ -195,6 +196,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
 
     public override componentWillUnmount() {
         this.clearTurnTimer();
+        if (this.sealTimer !== null) { window.clearTimeout(this.sealTimer); }
         if (this.saveTimer !== null) { window.clearTimeout(this.saveTimer); }
     }
 
@@ -629,6 +631,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
      */
     private resumeSequencer() {
         this.clearTurnTimer();
+        // a resumed or restarted fight cancels any pending hand-off to the report
+        if (this.sealTimer !== null) { window.clearTimeout(this.sealTimer); this.sealTimer = null; }
         this.queue = [];
         this.pendingMsgs = [];
         this.pendingEvents = [];
@@ -654,6 +658,57 @@ export class App extends React.Component<{}, InterfaceAppState> {
             // a boss entrance holds the camera on the heavy before the fight starts
         }, () => { this.syncShown(); this.scheduleAdvance(boss ? 2100 : 500); });
     };
+
+    /**
+     * How long the street stays on screen after the fight is decided.
+     *
+     * Long enough to read the banner and see where everyone ended up, short
+     * enough that it never feels like waiting for permission to continue.
+     */
+    private static readonly SEAL_HOLD = 1800;
+
+    /**
+     * The fight is over — hold the street for a beat before the report opens.
+     *
+     * Both endings used to cut mid-frame: the last hostile dropped, or the
+     * holdout clock ran out, and the after-action screen was simply *there*.
+     * The clock ending was the worse of the two, because it fires at the top of
+     * a round before any turn resolves — nothing animated at all, and the line
+     * that said you had won scrolled past in a feed already replaced by the
+     * debrief. So the arena keeps the camera, puts the result over the street,
+     * and hands over when the banner has been read.
+     *
+     * The engine work in the patch (the sealed report, the stowed ordnance) has
+     * already happened by the time this runs; all that is deferred is the
+     * screen change, so nothing can resolve during the hold.
+     */
+    private seal(patch: any, extra: any = {}, byClock: boolean = false): boolean {
+        if (patch.screen !== "debrief" || this.sealTimer !== null) { return false; }
+        const {screen, ...rest} = patch;
+        const lost = patch.run && patch.run.outcome === "lost";
+        // A holdout node can still end with everyone on the floor — the clock is
+        // only the reason when it actually ran out, which is something only the
+        // caller that beat it knows.
+        const held = !lost && byClock;
+        const standing = this.state.party.filter((p) => p.canFight()).length;
+        this.clearTurnTimer();
+        this.setState({...rest, ...extra, playback: null, turnOrder: [], inspecting: null,
+            notice: {
+                id: Date.now(),
+                tone: lost ? "warn" : "good",
+                title: lost ? "✖ SQUAD DOWN" : held ? "◉ STREET HELD" : "✔ STREET CLEAR",
+                sub: lost ? "NOBODY LEFT STANDING"
+                    : held ? "THEY BROKE OFF — THE CLOCK WAS BEATEN"
+                    : `${standing} STILL STANDING`,
+            },
+        }, () => {
+            this.sealTimer = window.setTimeout(() => {
+                this.sealTimer = null;
+                this.setState({screen} as any);
+            }, App.SEAL_HOLD) as any;
+        });
+        return true;
+    }
 
     private scheduleAdvance(ms: number) {
         this.clearTurnTimer();
@@ -716,8 +771,13 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (!this.state.party.some((p) => p.canFight())) { return false; }
         this.state.currentEnemies.forEach((e) => { if (e.canFight()) { e.routed = true; } });
         const lines = [FeedLog.sys("— clock beaten: hostiles disengage — street held —")];
+        // the round that was about to start never happens — drop its separator
+        this.markRound = 0;
+        this.markHoldLeft = -1;
         const patch = RunController.step(this.state, lines, this.logLength);
-        this.setState({...patch, playback: null, turnOrder: [], inspecting: null} as any);
+        if (!this.seal(patch, {}, true)) {
+            this.setState({...patch, playback: null, turnOrder: [], inspecting: null} as any);
+        }
         return true;
     }
 
@@ -811,9 +871,12 @@ export class App extends React.Component<{}, InterfaceAppState> {
         this.syncShown();
         // one overwatch line per turn (plus loot/level lines the summary can't carry)
         const time = missionClock(this.battleStart);
+        // Everyone on the street, so two people who share a surname get told
+        // apart the same way on every line they appear on.
+        const cast = [...this.state.party, ...this.state.currentEnemies];
         const lines: any[] = [
-            ...FeedLog.keepLegacy(this.pendingMsgs, time),
-            ...FeedLog.fromTurn(this.pendingEvents, time),
+            ...FeedLog.keepLegacy(this.pendingMsgs, time, cast),
+            ...FeedLog.fromTurn(this.pendingEvents, time, cast),
         ];
         if (this.markRound) {
             lines.push(FeedLog.round(this.markRound, this.markHoldLeft));
@@ -829,6 +892,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
         };
         if (this.state.run && this.state.screen === "combat") {
             const patch = RunController.step(this.state, lines, this.logLength);
+            if (this.seal(patch)) { return; }
             this.setState({...patch, playback: null} as any, done);
         } else {
             this.setState({

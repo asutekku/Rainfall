@@ -1,4 +1,5 @@
 import type {Actor} from "../../actors/Actor";
+import type {KitId} from "../../interact/loadout";
 import {STATUS, activeStatuses} from "../../interact/statuses";
 
 /**
@@ -30,6 +31,19 @@ export function hudTags(a: Actor): Array<[string, string]> {
         t.push([def.chip, "s-" + def.tone]);
     }
     return t.slice(0, 2);
+}
+
+/**
+ * Ordnance still on this unit's belt, in the order the staging screen lists it.
+ *
+ * Type-only import of `KitId` on purpose: this module is loaded by tests that
+ * must not drag the component graph in behind it (see the note at the top).
+ */
+export function onBelt(a: Actor): Array<[KitId, number]> {
+    const held: Array<[KitId, number]> = [
+        ["frag", a.grenades], ["flash", a.flashes], ["emp", a.emps], ["smoke", a.smokes],
+    ];
+    return held.filter(([, n]) => n > 0);
 }
 
 /** Worn or subdermal — whichever plate is actually stopping bullets. */
