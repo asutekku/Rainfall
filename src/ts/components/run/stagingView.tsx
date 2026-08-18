@@ -1,6 +1,8 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {accentCss} from "../../actors/resources/factionStyles";
+import {ProfileBadge, ProfileChip} from "../general/profileBadge";
+import {PROFILE, profileOf, profileTally} from "../../interact/profile";
 import {ODDS_LABEL, forecastWave, sideStrength} from "../../interact/forecast";
 import {Deployment, KIT, KIT_ORDER, KIT_PICKS, Kit, KitId, KitPick, SQUAD_CAP, STANCES,
     STANCE_ORDER, Stance, stanceOf} from "../../interact/loadout";
@@ -244,6 +246,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                 style={{borderLeft: "3px solid " + accentCss(e.faction)}}>
                 <button className={"stFoeHead"} onClick={() => this.setState({open: open ? -1 : i})}>
                     <span className={"stRank rank-" + rank} title={THREAT[rank] + " — rank " + rank + " of 5"}>✦</span>
+                    <ProfileBadge unit={e}/>
                     <span className={"stFoeWho"}><b>{e.name}</b><i>{sub} · L{e.level}</i></span>
                     <span className={"stFoeNums"}>
                         <b>{Math.ceil(e.health)}</b> HP<span className={"sep"}>·</span>SP {sp}
@@ -253,6 +256,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                     <div><dt>Threat</dt><dd>{THREAT[rank]}</dd></div>
                     <div><dt>Carrying</dt><dd>{e.weapon.name} <i>({e.weapon.weaponClass})</i></dd></div>
                     <div><dt>Fights</dt><dd>{HABIT[e.temperament] || HABIT["balanced"]}</dd></div>
+                    <div><dt>Bring</dt><dd>{PROFILE[profileOf(e)].counter}</dd></div>
                 </dl>
             </li>);
     };
@@ -270,6 +274,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
             <li key={i} className={"stMember" + (down ? " down" : going ? "" : " benched")}>
                 <div className={"stWho"}>
                     <img src={a.role.portrait} alt={""}/>
+                    <ProfileBadge unit={a}/>
                     <span className={"stName"}>
                         <b>{a.name}</b>
                         <i>{a.role.name} · L{a.level} · {a.weapon.name}</i>
@@ -369,6 +374,14 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                     <div className={"stCols"}>
                         <section className={"stBlock"}>
                             <h2>On the street <b>{enemies.length}</b></h2>
+                            <ul className={"stTally"}>
+                                {profileTally(enemies).map(([prof, n]) => (
+                                    <li key={prof}>
+                                        <ProfileChip profile={prof} withLabel={true}/>
+                                        <b>×{n}</b>
+                                        <i>{PROFILE[prof].counter}</i>
+                                    </li>))}
+                            </ul>
                             <ul className={"stFoes"}>{enemies.map(this.hostile)}</ul>
                         </section>
 

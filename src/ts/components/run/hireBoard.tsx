@@ -3,6 +3,8 @@ import {Actor} from "../../actors/Actor";
 import {Merc} from "../../actors/Merc";
 import {default as roles} from "../../actors/resources/roles";
 import {MercOffer} from "../../interact/mercMarket";
+import {ProfileChip} from "../general/profileBadge";
+import {profileFrom} from "../../interact/profile";
 
 const ROLE_MAP: any = roles;
 
@@ -37,6 +39,7 @@ export class HireBoard extends React.Component<HireBoardProps, {}> {
                     <b>{o.name}</b>
                     <i style={{color: role.color}}>{role.name} · L{o.level}</i>
                 </span>
+                <ProfileChip profile={profileFrom(o.armorSP, 0)} withLabel={true}/>
                 <span className={"hbTier"}>{o.tier}</span>
                 <span className={"hbTrait"}>{o.trait}</span>
                 <span className={"hbKit"}>SP {o.armorSP} · skill {o.skill}</span>

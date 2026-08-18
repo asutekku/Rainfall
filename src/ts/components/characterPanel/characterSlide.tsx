@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {ProfileBadge} from "../general/profileBadge";
 import {Bar} from "../general/bar";
 
 export interface CharCompProps {
@@ -69,6 +70,7 @@ export class CharacterComponent extends React.Component<CharCompProps, {}> {
                     <div className={"pcGear"}>
                         <span>{a.weapon.name} · {a.weapon.diceThrows}d6{a.weapon.damage ? "+" + a.weapon.damage : ""}{a.weapon.ap ? " AP" : ""}</span>
                         <span className={"gearSp"}>SP {a.equipment.upper ? a.equipment.upper.stoppingPower : 0}</span>
+                        <ProfileBadge unit={a}/>
                     </div>
                 </div>
                 {this.props.friendly && this.props.onOpenSheet && (

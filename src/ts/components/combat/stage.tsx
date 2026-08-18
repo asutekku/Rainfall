@@ -10,6 +10,7 @@ import {BattleHud} from "./battleHud";
 import {UnitCard} from "./unitCard";
 import {ShownState} from "../../interact/shownState";
 import {CityMap} from "../run/cityMap";
+import {ProfileBadge} from "../general/profileBadge";
 
 export interface StageProps {
     actor: Actor;
@@ -81,6 +82,7 @@ export class Stage extends React.Component<StageProps, {}> {
                     style={{borderLeft: "3px solid " + accentCss(e.faction)}}
                     onClick={() => this.props.onInspect(e)}>
                 <span className={"d rank-" + (e.rank || 1)} title={"threat rank " + (e.rank || 1)}>✦</span>
+                <ProfileBadge unit={e}/>
                 <span className={"nm"}>{e.name} <span className={"lv"}>{sub} · L{e.level}</span></span>
                 <span className={"temp " + temper[1]} title={"AI temperament"}>{temper[0]}</span>
                 <span className={"bar hp"}><i className={hpCls} style={{width: hpPct + "%"}}/></span>

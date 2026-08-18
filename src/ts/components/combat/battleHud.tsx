@@ -1,5 +1,6 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
+import {ProfileBadge} from "../general/profileBadge";
 import {hudTags} from "./hudInfo";
 import {ShownState} from "../../interact/shownState";
 
@@ -53,6 +54,7 @@ export class BattleHud extends React.Component<BattleHudProps, {}> {
             <button key={(foe ? "e" : "p") + i} className={cls}
                     onClick={() => this.props.onSelect(a)}>
                 <span className={"bhTop"}>
+                    <ProfileBadge unit={a}/>
                     <b className={"bhName"}>{a.name}</b>
                     <span className={"bhTags"}>
                         {hudTags(a).map(([label, c], k) => <i key={k} className={c}>{label}</i>)}
