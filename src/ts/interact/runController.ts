@@ -6,6 +6,7 @@ import {Weapon} from "../items/Weapon";
 import {Merc} from "../actors/Merc";
 import {BattleRecorder, BattleReport, GearChange, LootItem} from "./battleReport";
 import {Battlefield} from "./battlefield";
+import {FeedLog} from "./feedLog";
 import {Crew, Purse} from "./crew";
 import {MercMarket} from "./mercMarket";
 import {Economy} from "./economy";
@@ -154,7 +155,7 @@ export class RunController {
             screen: "combat", pending: null, currentEnemies: enemies,
             activeEnemy: enemies[0], activeChar: state.party[0],
             activeMainPanel: "Combat", mobileTab: "arena",
-            messages: [{msg: `— ${fight.label} —`} as any, ...state.messages].slice(0, log),
+            messages: [FeedLog.sys(`— ${fight.label} —`) as any, ...state.messages].slice(0, log),
         };
     }
 
@@ -267,7 +268,10 @@ export class RunController {
         if (!run) { return {}; }
         // Squad Biomonitor: a dropping merc gets pulled back before the ledger closes.
         Chrome.biomonitorPass(party).forEach((name) => {
-            msgs = [{msg: `— biomonitor override: ${name} is stabilised on their feet —`}, ...msgs];
+            // a feed line, not a legacy message: this one lands mid-fight, where
+            // the "> ..." grammar sits among surveillance lines and reads as a
+            // different log spliced into this one
+            msgs = [FeedLog.sys(`— biomonitor override: ${name} is stabilised on their feet —`), ...msgs];
         });
         // routed enemies ran off the field — the fight is over without their bodies
         const alive = state.currentEnemies.filter((e) => e.health > 0 && !e.routed);
@@ -530,7 +534,7 @@ export class RunController {
         return {
             run: {...run, revivesUsed: used, reviveUsed: used >= allowance, outcome: "active"},
             screen: "combat", report: null,
-            messages: [{msg: `— Trauma Team revive (${allowance - used} left this run) —`} as any,
+            messages: [FeedLog.sys(`— Trauma Team revive (${allowance - used} left this run) —`) as any,
                 ...state.messages].slice(0, log),
         };
     }

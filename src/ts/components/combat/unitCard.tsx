@@ -4,7 +4,8 @@ import {soak} from "../../interact/damageModel";
 import {shotPreview} from "../../interact/shotPreview";
 import {Battlefield} from "../../interact/battlefield";
 import {ShownState} from "../../interact/shownState";
-import {hudArmor, unitConditions} from "./hudInfo";
+import {KIT} from "../../interact/loadout";
+import {hudArmor, onBelt, unitConditions} from "./hudInfo";
 
 export interface UnitCardProps {
     unit: Actor;
@@ -69,6 +70,7 @@ export class UnitCard extends React.Component<UnitCardProps, UnitCardState> {
         const pct = Math.max(0, Math.min(100, (hp / Math.max(1, a.maxHealth)) * 100));
         const hpCls = pct > 60 ? "h-good" : pct > 30 ? "h-warn" : "h-crit";
         const rank = foe ? Math.max(1, Math.min(5, a.rank || 1)) : 0;
+        const belt = onBelt(a);
         const sub = foe && a.faction
             ? `${a.faction}${a.archetype ? " " + a.archetype : ""}`
             : a.role.name;
@@ -94,6 +96,24 @@ export class UnitCard extends React.Component<UnitCardProps, UnitCardState> {
                         </ul>
                     ) : (
                         <p className={"ucClear"}>Nothing on them.</p>
+                    )}
+
+                    {/*
+                      * What is still on the belt.
+                      *
+                      * Ordnance is packed at staging and never mentioned again
+                      * once the shooting starts, so a thrown frag and a frag
+                      * thrown twice looked identical — there was nowhere to
+                      * check. This is the place you can check.
+                      */}
+                    {belt.length > 0 ? (
+                        <p className={"ucKit"}>
+                            {belt.map(([id, n]) => (
+                                <span key={id}>{KIT[id].glyph} {KIT[id].label}{n > 1 ? ` ×${n}` : ""}</span>
+                            ))}
+                        </p>
+                    ) : !foe && (
+                        <p className={"ucKit none"}><span>No ordnance</span></p>
                     )}
 
                     {shot && shot.ok && !shot.unreachable && (
