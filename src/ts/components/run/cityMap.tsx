@@ -4,13 +4,14 @@ import {Line2} from "three/examples/jsm/lines/Line2.js";
 import {LineGeometry} from "three/examples/jsm/lines/LineGeometry.js";
 import {LineMaterial} from "three/examples/jsm/lines/LineMaterial.js";
 import {Actor} from "../../actors/Actor";
-import {NodeType, RunNode, RunState, edgeKey} from "../../interact/runMap";
+import {NodeType, RunNode, RunState, edgeKey, fightsCleared} from "../../interact/runMap";
 import {Forecast, ODDS_LABEL, forecast} from "../../interact/forecast";
 import {RunController} from "../../interact/runController";
 import {Pt} from "../../interact/cityGen";
 
 // node type -> [colour, label, glyph]
 const TYPE: { [k in NodeType]: [number, string, string] } = {
+    entry: [0x9aa6b2, "Drop Point", "⌂"],
     combat: [0x37e1e7, "Firefight", "✦"],
     elite: [0xf0a830, "Elite", "☠"],
     merchant: [0x7fd67f, "Black Market", "▤"],
@@ -447,10 +448,13 @@ export class CityMap extends React.Component<CityMapProps, {}> {
         this.oddsKey = key;
         this.odds = {};
         const level = RunController.levelOf(this.props.party);
+        const fought = fightsCleared(run);
         const byType: { [t: string]: Forecast | null } = {};
         run.nodes.forEach((n) => {
             if (run.reachableIds.indexOf(n.id) < 0 || run.clearedIds.indexOf(n.id) >= 0) { return; }
-            if (!(n.type in byType)) { byType[n.type] = forecast(this.props.party, n, run.sector, level); }
+            if (!(n.type in byType)) {
+                byType[n.type] = forecast(this.props.party, n, run.sector, level, fought);
+            }
             this.odds[n.id] = byType[n.type]!;
         });
         return this.odds;
