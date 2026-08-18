@@ -1,5 +1,6 @@
 import {CharacterCreation, CharacterSpec} from "../actors/resources/CharacterCreation";
 import {CLASSES} from "../actors/resources/classes";
+import {TRAITS, rollGrudge, rollTraits, traitPrice} from "../actors/resources/traits";
 import {CREW_FACTIONS, HIREABLE_FACTIONS} from "../actors/resources/factionStyles";
 import {PLATE_SP} from "./profile";
 import {Utils} from "../utils/utils";
@@ -24,7 +25,10 @@ export interface MercOffer {
     /** Hireable faction — what they are made of, and therefore their profile. */
     faction: string;
     tier: string;
-    trait: string;
+    /** Trait ids — who they are. See traits.ts. */
+    traits: string[];
+    /** The faction a Bad Blood grudge is against, if they have one. */
+    grudge: string | null;
     level: number;
     price: number;
     skill: number;        // weapon skill level
@@ -62,14 +66,6 @@ const TIERS: Tier[] = [
         armorName: "Medium Armorjack", armorSP: 12, price: 1600, bump: 2},
     {name: "Legend", weight: 5, levelOver: 3, skill: 9, roleRank: 8, minDice: 4, maxDice: 6,
         armorName: "Heavy Armorjack", armorSP: 13, price: 3200, bump: 3},
-];
-
-const TRAITS: string[] = [
-    "Owes money to the wrong people", "Says nothing, hits everything", "Ex-corp, no references",
-    "Drinks through the after-action", "Wanted in three districts", "Talks to their gun",
-    "Clean record, suspiciously so", "Came back from a job nobody else did",
-    "Cheap because they're impatient", "Won't work weekends, negotiable",
-    "Still wearing the last crew's colours", "Has a plan for everything, mostly bad",
 ];
 
 /** Stat keys ordered by how much they matter to a shooter, for tier bumps. */
@@ -129,7 +125,7 @@ export class MercMarket {
      * wipe — because three near-identical copies of this had already started to
      * drift apart, and only one of them knew about factions.
      */
-    private static build(tier: Tier, sector: number, price: number, trait: string): MercOffer {
+    private static build(tier: Tier, sector: number, price: number, traits: string[]): MercOffer {
         const role = Utils.pickRandom(CharacterCreation.roles());
         const faction = Utils.pickRandom(HIREABLE_FACTIONS);
         const kit = kitFor(faction, tier.armorSP);
@@ -139,7 +135,8 @@ export class MercMarket {
             role,
             faction,
             tier: tier.name,
-            trait,
+            traits,
+            grudge: traits.some((t) => TRAITS[t] && TRAITS[t]!.hates) ? rollGrudge() : null,
             level: Math.max(1, sector + tier.levelOver),
             price,
             skill: tier.skill,
@@ -157,10 +154,11 @@ export class MercMarket {
     /** One candidate for hire at this sector's going rate. */
     public static offer(sector: number, markup: number = 1): MercOffer {
         const tier = this.rollTier(sector);
-        const trait = Utils.pickRandom(TRAITS);
-        const offer = this.build(tier, sector, 0, trait);
+        const offer = this.build(tier, sector, 0, rollTraits());
+        // Traits are priced in, which is the whole reason a flaw is worth
+        // considering: Glass Jaw is not a worse candidate, it is a cheaper one.
         const rate = tier.price * (1 + 0.35 * (sector - 1)) * markup
-            * CREW_FACTIONS[offer.faction]!.fee;
+            * CREW_FACTIONS[offer.faction]!.fee * traitPrice(offer.traits);
         offer.price = Math.round(rate / 10) * 10;
         return offer;
     }
@@ -172,7 +170,7 @@ export class MercMarket {
      * which is its own argument for spending the payday on someone better.
      */
     public static starter(sector: number): MercOffer {
-        const offer = this.build(TIERS[0]!, sector, 0, "Owed the fixer a favour, and now you're it");
+        const offer = this.build(TIERS[0]!, sector, 0, rollTraits());
         offer.level = Math.max(1, sector);   // the freebie never outranks the sector
         return offer;
     }
@@ -182,7 +180,7 @@ export class MercMarket {
      * Same body, drawn from the third tier instead of the floor.
      */
     public static starterVeteran(sector: number): MercOffer {
-        return this.build(TIERS[2]!, sector, 0, "Your requisition codes still open doors");
+        return this.build(TIERS[2]!, sector, 0, rollTraits());
     }
 
     /**

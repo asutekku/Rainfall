@@ -5,6 +5,7 @@ import {CLASSES} from "../../actors/resources/classes";
 import {MercOffer} from "../../interact/mercMarket";
 import {ProfileChip} from "../general/profileBadge";
 import {profileFrom} from "../../interact/profile";
+import {TRAITS} from "../../actors/resources/traits";
 import {accentCss, crewFaction} from "../../actors/resources/factionStyles";
 
 const ROLE_MAP: any = CLASSES;
@@ -46,8 +47,18 @@ export class HireBoard extends React.Component<HireBoardProps, {}> {
                 <ProfileChip profile={profileFrom(o.armorSP, o.cyberSP, o.faction)} withLabel={true}/>
                 <span className={"hbTier"}>{o.tier}</span>
                 <span className={"hbTrait"}>
-                    {fac ? fac.perk : o.trait}
-                    <i>{o.trait}</i>
+                    {fac && <b className={"hbPerk"} title={fac.reads}>{fac.perk}</b>}
+                    {/* Names on the board, detail on hover: three full sentences in a
+                        narrow column wraps to one word a line, and a name is the thing
+                        the player actually learns to recognise. */}
+                    <span className={"hbTraits"}>
+                        {o.traits.map((t) => TRAITS[t] && (
+                            <i key={t} className={TRAITS[t]!.price < 1 ? "flaw" : "boon"}
+                               title={TRAITS[t]!.blurb}>
+                                {TRAITS[t]!.name}
+                                {t === "badBlood" && o.grudge ? `: ${o.grudge}` : ""}
+                            </i>))}
+                    </span>
                 </span>
                 <span className={"hbKit"}>
                     {o.cyberSP > 0 ? `chrome SP ${o.cyberSP}` : `SP ${o.armorSP}`} · skill {o.skill}

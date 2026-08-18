@@ -9,6 +9,7 @@ import {Item} from "../items/Item";
 import {Weapon} from "../items/Weapon";
 import {Name} from "./resources/Name";
 import {factionPerk} from "./resources/factionStyles";
+import {traitMult, traitSum} from "./resources/traits";
 import {Role} from "./resources/Role";
 import {CharacterCreation, Lifepath} from "./resources/CharacterCreation";
 import {Statistics} from "./resources/Statistics";
@@ -36,6 +37,12 @@ export class Actor extends GameObject {
     public stance: string | null;
     /** Standing orders on distance: point / mid / overwatch (null = the class's own). */
     public line: string | null;
+    /** Trait ids — who this one is, as opposed to what they do. See traits.ts. */
+    public traits: string[];
+    /** The faction a Bad Blood grudge is against, rolled once at hire. */
+    public grudge: string | null;
+    /** Whether anything has landed on them yet this fight (Glass Jaw). */
+    public tookHit: boolean;
     public auto: boolean;         // squad member played by the tactical AI instead of the player
     public grenades: number;      // frag grenades on the belt (throwing one is the turn's attack)
     public smokes: number;        // smoke grenades: pop a cloud that spoils shots and laser locks
@@ -284,6 +291,9 @@ export class Actor extends GameObject {
         this.temperament = "balanced";
         this.stance = null;
         this.line = null;
+        this.traits = [];
+        this.grudge = null;
+        this.tookHit = false;
         this.auto = false;
         this.grenades = 0;
         this.smokes = 0;
@@ -526,6 +536,7 @@ export class Actor extends GameObject {
     public resetBattleState(): void {
         this.statuses = {};
         this.routed = false;
+        this.tookHit = false;
         this.hackCooldown = 0;
         this.abilityUsed = false;
         this.adrenalineSpent = false;
@@ -987,7 +998,57 @@ export class Actor extends GameObject {
     public motoBonus(): number { return factionPerk(this.faction, "moto"); }
 
     /** Scav "Harvester": better odds of stripping something off a body. */
-    public scavengeBonus(): number { return factionPerk(this.faction, "scav"); }
+    public scavengeBonus(): number {
+        return factionPerk(this.faction, "scav") + traitSum(this.traits, "salvage");
+    }
+
+    /**
+     * The trait hooks.
+     *
+     * Each one lands on a seam that already stacked multipliers — the statuses
+     * and the stance were already multiplying through the same two lines in
+     * `Combat.damage`, so a trait is one more factor rather than a new pathway.
+     */
+
+    /** Damage this body deals, scaled by traits (including the cornered bonus). */
+    public traitOut(): number {
+        const low = this.health <= this.maxHealth * 0.25 ? traitMult(this.traits, "lowHpOut") : 1;
+        return traitMult(this.traits, "out") * low;
+    }
+
+    /** Damage this body takes, scaled by traits (Glass Jaw bills the first one). */
+    public traitIn(): number {
+        const first = this.tookHit ? 1 : traitMult(this.traits, "firstHitIn");
+        return traitMult(this.traits, "incoming") * first;
+    }
+
+    /** Flat accuracy from traits. */
+    public traitEdge(): number { return traitSum(this.traits, "edge"); }
+
+    /** How much the tactical AI weights its own safety. */
+    public caution(): number { return traitMult(this.traits, "caution"); }
+
+    /** Bad Blood: they hit the crew they have history with harder. */
+    public grudgeAgainst(faction: string | undefined): number {
+        return faction && this.grudge === faction ? 1.4 : 1;
+    }
+
+    /**
+     * Medtech "Field Surgery": HP a patch-up puts back.
+     *
+     * The class edge claimed they "patch harder than anyone" while
+     * `stabilizeAlly` only ever cleared bleeding — the healing did not exist.
+     * It does now, and only for the class whose job it is.
+     */
+    public healPower(): number {
+        if (!this.isClass("medtech")) { return 0; }
+        return Math.max(4, this.roleRank * 2 + this.skills.tech.firstAid);
+    }
+
+    /** Riggers and medics carry plate to hand out; nobody else does. */
+    public canBolster(): boolean {
+        return this.isClass("rigger") || this.isClass("medtech");
+    }
 
     /** Netrunner "Interface": quickhacks, and NET dives run on this rank. */
     public isNetrunner(): boolean { return this.isClass("netrunner"); }
