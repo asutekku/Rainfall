@@ -5,6 +5,7 @@ import {RunController} from "../src/ts/interact/runController";
 import {Crew} from "../src/ts/interact/crew";
 import {emptyKit} from "../src/ts/interact/loadout";
 import {TacticalAI} from "../src/ts/interact/tacticalAI";
+import {GetItem} from "../src/ts/interact/getItem";
 import {fighter} from "./helpers";
 
 describe("RunController.step — the per-turn fight arbiter", () => {
@@ -95,5 +96,68 @@ describe("TacticalAI — using the street", () => {
         const plan = TacticalAI.plan(me, [me], [foe]);
         expect(plan.moveTo).toBeTruthy();
         expect(plan.moveTo!.y).toBeGreaterThan(me.position.y + 5);
+    });
+});
+
+/**
+ * What clearing a sector is worth. The recovery used to land on the way *into*
+ * the next sector, one screen after the one that shows the roster and sells
+ * the cheapest hires in the game — so the player made that call looking at a
+ * squad that was already about to be fine.
+ */
+describe("RunController.advance — clearing a sector puts the crew back together", () => {
+    const bossRun = (bossId: string): any => ({
+        sector: 1, city: {}, nodes: [{id: bossId, type: "boss", junction: 0, pos: {x: 0, z: 0}}],
+        adj: {[bossId]: []}, paths: {}, position: "n0", node: null,
+        clearedIds: [], reachableIds: [], revealedIds: [],
+        reviveUsed: false, revivesUsed: 0, depth: 0, outcome: "active",
+    });
+
+    const hurt = (a: any, hp: number) => {
+        a.health = hp;
+        a.luck = 0;
+        if (a.equipment.upper) { a.equipment.upper.stoppingPower = 1; }
+        return a;
+    };
+
+    test("the boss goes cold and the whole squad is whole again", () => {
+        const you = hurt(fighter({luck: 4}), 3);
+        you.equipment.upper = GetItem.armor("Light Armor Jacket");
+        you.equipment.upper.stoppingPower = 1;
+        const merc = hurt(fighter({luck: 4}), 1);
+        merc.hireable = true;
+        const down = hurt(fighter({luck: 4}), 0);
+        down.mortallyWounded = true;
+        const node = {id: "b", type: "boss", junction: 0, pos: {x: 0, z: 0}} as any;
+        const state: any = {
+            character: you, party: [you, merc, down], crew: new Crew(0, emptyKit()),
+            run: bossRun("b"), messages: [], offers: [], augOffers: [],
+        };
+
+        const patch: any = RunController.advance(state, node, [], 20);
+
+        [you, merc, down].forEach((p: any) => {
+            expect(p.health).toBe(p.maxHealth);
+            expect(p.luck).toBe(p.maxLuck);
+            expect(p.canFight()).toBe(true);
+        });
+        expect(you.equipment.upper.stoppingPower).toBe(you.equipment.upper.maxStoppingPower);
+        expect(patch.run.outcome).toBe("won");
+        expect(patch.messages.some((m: any) => /sector clear/.test(m.msg))).toBe(true);
+    });
+
+    test("an ordinary waypoint does not — attrition is the sector's whole shape", () => {
+        const you = hurt(fighter({luck: 4}), 7);
+        const node = {id: "c", type: "combat", junction: 0, pos: {x: 0, z: 0}} as any;
+        const run = bossRun("b");
+        run.nodes.push(node);
+        run.adj["c"] = [];
+        const state: any = {
+            character: you, party: [you], crew: new Crew(0, emptyKit()),
+            run, messages: [], offers: [], augOffers: [],
+        };
+
+        RunController.advance(state, node, [], 20);
+        expect(you.health).toBe(7);
     });
 });
