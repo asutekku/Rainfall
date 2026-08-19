@@ -10,6 +10,7 @@ import {Weapon} from "../../items/Weapon";
 import armors from "../../items/armors";
 import {randomMed} from "../../items/consumables";
 import {Medical} from "../../items/Scrap";
+import {EventCheck, makeCtx, odds, rollCheck} from "../../interact/events";
 import {NodeShell} from "./metaOverlay";
 
 export interface MarketViewProps {
@@ -28,7 +29,46 @@ interface Stock {
 }
 interface Fence { owner: Actor; kind: "weapon" | "armor" | "medical" | "misc"; idx: number; name: string; detail: string; price: number; }
 
-interface MarketViewState { notice: string; bought: string[]; version: number; open: string | null; rerolled: boolean; }
+interface MarketViewState {
+    notice: string; bought: string[]; version: number; open: string | null; rerolled: boolean;
+    /** One haggle per visit: untried, won (prices drop), or blown (they stand). */
+    haggle: "open" | "won" | "lost";
+}
+
+/**
+ * Who's behind the counter tonight. The archetype bends the whole stall —
+ * what's in the crate, what the fence pays, how deep the ripperdoc's shelf
+ * goes — so "a market" stops being one list and starts being a person.
+ */
+interface Vendor {
+    kind: string;
+    name: string;
+    patter: string;
+    extraGuns: number;
+    rarityBump: number;
+    extraMeds: number;
+    fenceBonus: number;
+    chromeCount: number;
+    priceMod: number;
+}
+
+const VENDOR_NAMES = ["Mama Chen", "Rossi", "Deacon", "Old Wire", "Kansas", "Suki", "Vartan", "The Twins"];
+
+const VENDORS: Array<Omit<Vendor, "name">> = [
+    {kind: "Gun Runner", patter: "\"Everything on this table has a history. None of it has a serial.\"",
+        extraGuns: 2, rarityBump: 1, extraMeds: 0, fenceBonus: 0, chromeCount: 2, priceMod: 1},
+    {kind: "Surplus Medic", patter: "\"Field-expired is a paperwork term. Bodies don't read paperwork.\"",
+        extraGuns: 0, rarityBump: 0, extraMeds: 2, fenceBonus: 0, chromeCount: 2, priceMod: 0.95},
+    {kind: "Scav Fence", patter: "\"You sell, I don't ask. You buy, you don't ask. Beautiful system.\"",
+        extraGuns: 0, rarityBump: 0, extraMeds: 0, fenceBonus: 0.1, chromeCount: 2, priceMod: 0.9},
+    {kind: "Chrome Den", patter: "\"The chair's clean. The chrome's cleaner. Your Humanity's your own problem.\"",
+        extraGuns: 0, rarityBump: 0, extraMeds: 0, fenceBonus: 0, chromeCount: 4, priceMod: 1},
+];
+
+const rollVendor = (): Vendor => ({
+    ...VENDORS[(Math.random() * VENDORS.length) << 0]!,
+    name: VENDOR_NAMES[(Math.random() * VENDOR_NAMES.length) << 0]!,
+});
 
 const weaponInfo = (w: Weapon): Array<[string, string]> => {
     const rows: Array<[string, string]> = [
@@ -50,24 +90,50 @@ const weaponInfo = (w: Weapon): Array<[string, string]> => {
  */
 export class MarketView extends React.Component<MarketViewProps, MarketViewState> {
 
+    private vendor: Vendor;
     private stock: Stock[];
     private service: Stock;
     private chromeStock: AugOffer[];
+    private backroom: Stock | null;
+
+    /** REP that opens the back room — the street vouching for you. */
+    private static readonly BACKROOM_REP = 4;
 
     constructor(props: MarketViewProps) {
         super(props);
-        this.state = {notice: "", bought: [], version: 0, open: null, rerolled: false};
-        this.stock = MarketView.rollStock(props.party);
+        this.state = {notice: "", bought: [], version: 0, open: null, rerolled: false, haggle: "open"};
+        this.vendor = rollVendor();
+        this.stock = MarketView.rollStock(props.party, this.vendor);
         this.service = MarketView.rollService();
-        this.chromeStock = Chrome.shopOffers(props.party[0]!, 2);
+        this.chromeStock = Chrome.shopOffers(props.party[0]!, this.vendor.chromeCount);
+        this.backroom = MarketView.rollBackroom();
     }
 
-    private static rollStock(party: Actor[]): Stock[] {
+    /**
+     * The case under the counter: one genuinely rare piece, shown to everyone
+     * and sold only to a name the street vouches for. Reputation finally buys
+     * something you can hold.
+     */
+    private static rollBackroom(): Stock | null {
+        const rare = Equipment.weapons.filter((w) =>
+            w.damageType === "kinetic" && w.cost > 0 && w.rarity >= 4);
+        if (!rare.length) { return null; }
+        const w = rare[(Math.random() * rare.length) << 0]!;
+        return {
+            name: w.name, cost: Math.round(w.cost * 1.15),
+            detail: `back room · ${w.weaponType} · ${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}`,
+            info: weaponInfo(w),
+            blurb: "It comes out of the case wrapped in cloth, like it's owed that.",
+            buy: (a) => { Stash.of(a).weapons.push(GetItem.weapon(w.name)); return `The ${w.name}, wrapped and handed over like a ceremony.`; },
+        };
+    }
+
+    private static rollStock(party: Actor[], vendor: Vendor): Stock[] {
         const level = party.reduce((m, p) => Math.max(m, p.level), 1);
-        const cap = Math.min(5, 2 + Math.floor(level / 2));
+        const cap = Math.min(5, 2 + Math.floor(level / 2) + vendor.rarityBump);
         const out: Stock[] = [];
         // Vendor-Handshake chrome: the back room opens — more guns on the table.
-        const extra = party[0] ? party[0].chromeNum("stockBonus") : 0;
+        const extra = (party[0] ? party[0].chromeNum("stockBonus") : 0) + vendor.extraGuns;
         const guns = Equipment.weapons.filter((w) => w.damageType === "kinetic" && w.cost > 0 && w.rarity <= cap);
         for (let i = 0; i < 3 + extra && guns.length; i++) {
             const w = guns[(Math.random() * guns.length) << 0]!;
@@ -92,19 +158,21 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 buy: (a) => { Stash.of(a).armor.push(GetItem.armor(r.name)); return `${r.name} bagged.`; },
             });
         }
-        const med = randomMed();
-        out.push({
-            name: med.name, cost: med.cost, detail: `consumable · ${med.restorePoints >= 999 ? "full heal" : "heals " + med.restorePoints + " HP"}`,
-            info: [
-                ["Effect", med.restorePoints >= 999 ? "restores a member to full HP" : `restores ${med.restorePoints} HP`],
-                ["Use", "from the Gear tab, between fights"],
-            ],
-            blurb: med.description,
-            buy: (a) => {
-                Stash.of(a).medical.push(new Medical(med.name, med.cost, med.restorePoints, med.description));
-                return `${med.name} into the med pouch.`;
-            },
-        });
+        for (let i = 0; i < 1 + vendor.extraMeds; i++) {
+            const med = randomMed();
+            out.push({
+                name: med.name, cost: med.cost, detail: `consumable · ${med.restorePoints >= 999 ? "full heal" : "heals " + med.restorePoints + " HP"}`,
+                info: [
+                    ["Effect", med.restorePoints >= 999 ? "restores a member to full HP" : `restores ${med.restorePoints} HP`],
+                    ["Use", "from the Gear tab, between fights"],
+                ],
+                blurb: med.description,
+                buy: (a) => {
+                    Stash.of(a).medical.push(new Medical(med.name, med.cost, med.restorePoints, med.description));
+                    return `${med.name} into the med pouch.`;
+                },
+            });
+        }
         // Ordnance goes into the crew's crate, not onto a belt: what leaves the
         // crate is decided at staging, two pieces a job. Two kinds on offer per
         // market, so the flashbang you wanted is not always the one for sale.
@@ -151,10 +219,30 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         };
     }
 
-    /** Sticker price after the best crew discount (militia account, Expense Chip). */
+    /** Sticker price: vendor's mood, the crew's discounts, and a won haggle. */
     private price(cost: number): number {
-        return Economy.marketPrice(cost, this.props.party);
+        const base = Economy.marketPrice(cost * this.vendor.priceMod, this.props.party);
+        return Math.max(1, Math.round(this.state.haggle === "won" ? base * 0.85 : base));
     }
+
+    // -------------------------------------------------------------- haggle --
+
+    private static HAGGLE: EventCheck = {stat: "cool", dv: 13, label: "haggle"};
+
+    /** One shot per visit: talk the whole stall down, or get laughed at. */
+    private haggle = () => {
+        if (this.state.haggle !== "open") { return; }
+        const ctx = makeCtx(this.props.party);
+        const who = ctx.best("cool");
+        const r = rollCheck(who, MarketView.HAGGLE);
+        if (r.success) {
+            this.setState({haggle: "won",
+                notice: `${who.name.split(" ")[0]} talks numbers until ${this.vendor.name} stops enjoying it. 15% off the stall.`});
+        } else {
+            this.setState({haggle: "lost",
+                notice: `${this.vendor.name} hears the pitch out, smiling. "Prices are on the tags, sweetheart."`});
+        }
+    };
 
     private buy(item: Stock) {
         const leader = this.props.party[0]!;
@@ -175,18 +263,18 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         this.setState({notice: line, bought: this.state.bought.concat(item.name)});
     }
 
-    /** Street rate: 40%, or 48% when a standing Fixer works the fence ("Operator"). */
+    /** Street rate: 40%, plus a Fixer's cut ("Operator") — and a Scav Fence pays over the odds. */
     private fenceRate(): number {
-        return Economy.fenceRate(this.props.party);
+        return Economy.fenceRate(this.props.party) + this.vendor.fenceBonus;
     }
 
     // ------------------------------------------------------------ ripperdoc --
 
     /** Vendor-Handshake Mk.III: once per visit, the other crate comes out. */
     private rerollStock = () => {
-        this.stock = MarketView.rollStock(this.props.party);
+        this.stock = MarketView.rollStock(this.props.party, this.vendor);
         this.service = MarketView.rollService();
-        this.chromeStock = Chrome.shopOffers(this.props.party[0]!, 2);
+        this.chromeStock = Chrome.shopOffers(this.props.party[0]!, this.vendor.chromeCount);
         this.setState({rerolled: true, open: null, notice: "The shutter rolls up on the other crate."});
     };
 
@@ -310,12 +398,13 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         this.setState({open: this.state.open === key ? null : key});
     }
 
-    private item(item: Stock, key: string) {
+    private item(item: Stock, key: string, at: number = 0) {
         const leader = this.props.party[0]!;
         const sold = this.state.bought.indexOf(item.name) >= 0;
         const open = this.state.open === key;
         return (
-            <div key={key} className={"mkItem" + (sold ? " sold" : "") + (open ? " open" : "")}>
+            <div key={key} className={"mkItem" + (sold ? " sold" : "") + (open ? " open" : "")}
+                 style={{animationDelay: `${at * 0.07}s`}}>
                 <button className={"mkRow"} onClick={() => this.toggleInfo(key)}
                         aria-expanded={open}>
                     <span className={"mkChevron"}>›</span>
@@ -341,26 +430,68 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
             </div>);
     }
 
+    /** The case under the counter — visible to everyone, sold to a name. */
+    private backroomRow(at: number) {
+        const item = this.backroom;
+        if (!item) { return null; }
+        const rep = this.props.party[0]!.reputation;
+        const locked = rep < MarketView.BACKROOM_REP;
+        if (locked) {
+            return (
+                <div className={"mkItem mkLocked"} style={{animationDelay: `${at * 0.07}s`}}>
+                    <div className={"mkRow static"}>
+                        <span className={"mkChevron"}>▣</span>
+                        <span className={"mkNameWrap"}>
+                            <span className={"mkName"}>The case under the counter</span>
+                            <span className={"mkDetail"}>
+                                {this.vendor.name} taps it once. "Not for strangers." — REP {MarketView.BACKROOM_REP} opens it (yours: {rep})
+                            </span>
+                        </span>
+                    </div>
+                    <button className={"mkBuy"} disabled>LOCKED</button>
+                </div>);
+        }
+        return this.item(item, "backroom", at);
+    }
+
+    /** The one-shot haggle strip under the vendor's name. */
+    private haggleRow() {
+        const h = this.state.haggle;
+        if (h !== "open") {
+            return <p className={"mkHaggled" + (h === "won" ? " won" : "")}>
+                {h === "won" ? "— haggled: 15% off everything on the stall —" : "— the tags stand —"}
+            </p>;
+        }
+        const ctx = makeCtx(this.props.party);
+        const who = ctx.best("cool");
+        return (
+            <button className={"mkHaggle"} onClick={this.haggle}>
+                Talk the prices down <em>COOL check · {who.name.split(" ")[0]} · ~{odds(who, MarketView.HAGGLE)}% · one try</em>
+            </button>);
+    }
+
     public override render() {
         const leader = this.props.party[0]!;
         const fence = this.fenceList();
         return (
             <NodeShell accent={"mk"} icon={"▤"} label={"Black Market"}
-                       kicker={"Night market"} title={"Tonight's Stock"}
-                       sub={"What fell off a truck this week — guns, armour, meds, and a ripperdoc " +
-                            "running a counter at the back. One visit: the stall is gone when you leave." +
-                            (this.price(100) < 100
-                                ? ` Someone else's account covers ${100 - this.price(100)}% — prices shown are yours.`
+                       kicker={"Night market · " + this.vendor.kind}
+                       title={this.vendor.name}
+                       sub={this.vendor.patter + " One visit: the stall is gone when you leave." +
+                            (this.price(100) < Math.round(100 * this.vendor.priceMod)
+                                ? " Someone else's account covers part of the bill — prices shown are yours."
                                 : "")}
                        eddies={Purse.balance(leader)}
                        onLeave={this.props.onLeave} leaveLabel={"Leave the market ▸"}
                        guide={<React.Fragment>
                            Tap a row to unfold the full spec, tap the <b>price</b> to buy.
-                           Bought gear lands in your stash — equip it from the Gear tab.
+                           Bought gear lands in the crew stash — hand it out from the Gear tab.
                        </React.Fragment>}>
+                {this.haggleRow()}
                 {this.state.notice && <div className={"mkNotice"}>{this.state.notice}</div>}
-                <div className={"mkStock"}>
-                    {[...this.stock, this.service].map((item, i) => this.item(item, "s" + i))}
+                <div className={"mkStock mkDeal"}>
+                    {[...this.stock, this.service].map((item, i) => this.item(item, "s" + i, i))}
+                    {this.backroomRow(this.stock.length + 1)}
                 </div>
                 {this.ripperdoc()}
                 <h4 className={"mkHead"}>The fence buys · {Math.round(this.fenceRate() * 100)}% street rate{this.fenceRate() > 0.4 ? " (Operator\u2019s cut)" : ""}</h4>

@@ -41,6 +41,13 @@ export interface RunState {
     revivesUsed: number;
     depth: number;
     outcome: "active" | "won" | "lost";
+    /**
+     * Grudges the street holds against the crew this sector, by faction. Each
+     * point puts one extra body in that faction's next fight (and burns off
+     * doing it). Encounters write it; enterNode reads it. Cleared with the
+     * sector — new streets, clean slate.
+     */
+    heat?: {[faction: string]: number};
 }
 
 export const edgeKey = (a: string, b: string): string => (a < b ? a + "~" + b : b + "~" + a);
