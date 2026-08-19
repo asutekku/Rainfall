@@ -23,9 +23,9 @@ export class Player extends Actor {
         this.lifepath = s.lifepath || CharacterCreation.randomLifepath();
         this.item = GetItem.item();
 
-        // A RED merc starts armed with a sidearm; Fists stay as a fallback.
+        // A RED merc starts armed with a sidearm; Fists are a state, not an
+        // item — the equip screens conjure them on demand (see Gear).
         this.weapon = GetItem.weapon("WSA Autopistol");
-        this.inventory.weapons.push(GetItem.weapon("Fists"));
 
         // Stats come from the spec where given, otherwise a capable-solo default.
         this.setCombatProfile({

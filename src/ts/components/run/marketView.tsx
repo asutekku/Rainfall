@@ -142,7 +142,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 detail: `${w.weaponType} · ${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}`,
                 info: weaponInfo(w),
                 blurb: w.manufacturer ? `${w.manufacturer} — serial filed off.` : undefined,
-                buy: (a) => { Stash.of(a).weapons.push(GetItem.weapon(w.name)); return `${w.name} into the duffel.`; },
+                buy: (a) => { Stash.of(a).weapons.push(GetItem.weapon(w.name)); return `${w.name} into The Stash.`; },
             });
         }
         const wearable = armors.filter((r) => r.cost > 0);
@@ -155,7 +155,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                     ["Stopping power", `SP ${r.stoppingPower}`],
                     ["Build", `rarity ${r.rarity}`],
                 ],
-                buy: (a) => { Stash.of(a).armor.push(GetItem.armor(r.name)); return `${r.name} bagged.`; },
+                buy: (a) => { Stash.of(a).armor.push(GetItem.armor(r.name)); return `${r.name} into The Stash.`; },
             });
         }
         for (let i = 0; i < 1 + vendor.extraMeds; i++) {
@@ -169,7 +169,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 blurb: med.description,
                 buy: (a) => {
                     Stash.of(a).medical.push(new Medical(med.name, med.cost, med.restorePoints, med.description));
-                    return `${med.name} into the med pouch.`;
+                    return `${med.name} into The Stash.`;
                 },
             });
         }
@@ -359,26 +359,26 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         const out: Fence[] = [];
         const leader = this.props.party[0]!;
         const bag = Stash.of(leader);
-        // one duffel, one list — chrome lives in pockets, so it can't be fenced here
+        // one stash, one list — chrome is part of a body, so it can't be fenced
         bag.weapons.forEach((w, idx) => {
             if (w.name === "Fists") { return; }
             out.push({
                 owner: leader, kind: "weapon", idx, name: w.name,
-                detail: `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""} · crew stash`,
+                detail: `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}`,
                 price: Math.max(5, Math.floor(w.cost * rate)),
             });
         });
         bag.armor.forEach((a, idx) => {
             out.push({
                 owner: leader, kind: "armor", idx, name: a.name,
-                detail: `SP ${a.stoppingPower} · crew stash`,
+                detail: `SP ${a.stoppingPower}`,
                 price: Math.max(5, Math.floor(a.cost * rate)),
             });
         });
         bag.misc.forEach((m, idx) => {
             out.push({
                 owner: leader, kind: "misc", idx, name: m.name,
-                detail: `junk · crew stash`,
+                detail: `junk`,
                 price: Math.max(2, Math.floor((m.cost || 0) * rate)),
             });
         });
@@ -485,7 +485,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                        onLeave={this.props.onLeave} leaveLabel={"Leave the market ▸"}
                        guide={<React.Fragment>
                            Tap a row to unfold the full spec, tap the <b>price</b> to buy.
-                           Bought gear lands in the crew stash — hand it out from the Gear tab.
+                           Bought gear lands in <b>The Stash</b> — hand it out from the Gear tab.
                        </React.Fragment>}>
                 {this.haggleRow()}
                 {this.state.notice && <div className={"mkNotice"}>{this.state.notice}</div>}
@@ -495,8 +495,8 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 </div>
                 {this.ripperdoc()}
                 <h4 className={"mkHead"}>The fence buys · {Math.round(this.fenceRate() * 100)}% street rate{this.fenceRate() > 0.4 ? " (Operator\u2019s cut)" : ""}</h4>
-                <p className={"mkHint"}>Sell anything the crew carries but doesn't use — scavenged guns, spare armour, junk. Eddies land in the purse.</p>
-                {fence.length === 0 && <div className={"mkEmpty"}>Nothing in the duffel worth fencing.</div>}
+                <p className={"mkHint"}>Sell anything in The Stash the crew doesn't use — scavenged guns, spare armour, junk. Eddies land in the purse.</p>
+                {fence.length === 0 && <div className={"mkEmpty"}>Nothing in The Stash worth fencing.</div>}
                 <div className={"mkStock"}>
                     {fence.map((f, i) => (
                         <div key={"f" + i} className={"mkItem"}>

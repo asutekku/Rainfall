@@ -387,7 +387,7 @@ export class RunController {
     // Salvage is claimed here; whatever the player skips the fixer auto-kits.
     // =====================================================================
 
-    /** Pull a salvaged piece out of its finder's pack (it may have been pruned). */
+    /** Pull a salvaged piece out of The Stash (it may have been pruned away). */
     private static takeFromPack(loot: LootItem): void {
         const bag: Array<Weapon | Armor> = loot.kind === "weapon"
             ? Stash.of(loot.owner).weapons : Stash.of(loot.owner).armor;

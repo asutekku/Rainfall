@@ -136,7 +136,7 @@ const needEddies = (n: number) => (ctx: EventCtx): string | null =>
 /** Scav-clinic pricing: the back alley runs at 60% of the ripperdoc counter. */
 const clinicPrice = (cost: number): number => Math.max(10, Math.ceil(cost * 0.6));
 
-/** A random kinetic weapon in a rarity band, into the actor's stash. */
+/** A random kinetic weapon in a rarity band, into The Stash. */
 const grantWeapon = (a: Actor, rMin: number, rMax: number): string => {
     const pool = Equipment.weapons.filter((w) =>
         w.damageType === "kinetic" && w.cost > 0 && w.rarity >= rMin && w.rarity <= rMax);

@@ -41,10 +41,16 @@ export interface MemberSnap {
     stats: any; skills: any;
     weapon: string;
     upper: ArmorSnap | null; headgear: ArmorSnap | null;
-    invWeapons: string[];
-    invArmor: ArmorSnap[];
-    invMeds: Array<{name: string; cost: number; restore: number; desc: string}>;
-    invMisc: Array<{name: string; cost: number; desc: string}>;
+    /**
+     * Per-member packs, written by checkpoints from before The Stash. Current
+     * saves don't write them — all spare gear lives in the one shared stash —
+     * but old ones are still read, and whatever they carried is swept into The
+     * Stash on load (see `sweepPacksIntoStash`).
+     */
+    invWeapons?: string[];
+    invArmor?: ArmorSnap[];
+    invMeds?: Array<{name: string; cost: number; restore: number; desc: string}>;
+    invMisc?: Array<{name: string; cost: number; desc: string}>;
     chrome: ChromeSnap[];
 }
 
@@ -121,21 +127,21 @@ const rebuildStash = (snap: StashSnap): StashBag => ({
 });
 
 /**
- * Old checkpoints predate the crew duffel: every member carried a personal
- * pack. Fold those packs into the stash — everything except Fists (a state,
- * not an item) and chrome-granted cyberweapons, which stay in the body that
- * they're bolted into.
+ * There is one storage: The Stash. Older checkpoints wrote per-member packs
+ * (and, for a while, kept Fists copies and cyberweapon copies in them), so
+ * every load ends with a sweep: anything real a pocket still holds moves into
+ * The Stash, and the two non-items are simply dropped — Fists are a state and
+ * cyberweapons are derived from the chrome list, so a stored copy of either
+ * is a duplicate. Pockets always come out of this empty.
  */
-const migratePacksToStash = (party: Actor[], stash: StashBag): void => {
+const sweepPacksIntoStash = (party: Actor[], stash: StashBag): void => {
     party.forEach((a) => {
-        const keep = a.inventory.weapons.filter((w) =>
-            w.name === "Fists" || a.cybernetics.some((c) => c.effects.grantsWeapon === w.name));
-        const move = a.inventory.weapons.filter((w) => keep.indexOf(w) < 0);
-        a.inventory.weapons = keep;
-        stash.weapons.push(...move);
+        stash.weapons.push(...a.inventory.weapons.filter((w) =>
+            w.name !== "Fists" && !a.cybernetics.some((c) => c.effects.grantsWeapon === w.name)));
         stash.armor.push(...(a.inventory.armor as any));
         stash.medical.push(...a.inventory.medical);
         stash.misc.push(...a.inventory.misc);
+        a.inventory.weapons = [];
         a.inventory.armor = [];
         a.inventory.medical = [];
         a.inventory.misc = [];
@@ -157,10 +163,7 @@ export const memberSnap = (m: Actor): MemberSnap => ({
     weapon: m.weapon.name,
     upper: armorSnap(m.equipment.upper as Armor | null),
     headgear: armorSnap(m.equipment.headgear as Armor | null),
-    invWeapons: m.inventory.weapons.map((w) => w.name),
-    invArmor: m.inventory.armor.map((a) => armorSnap(a)!),
-    invMeds: m.inventory.medical.map((x: any) => ({name: x.name, cost: x.cost || 0, restore: x.restorePoints || 0, desc: x.description || ""})),
-    invMisc: m.inventory.misc.map((x: any) => ({name: x.name, cost: x.cost || 0, desc: x.description || ""})),
+    // no inv* fields: spare gear lives in The Stash, snapped once per save
     chrome: m.cybernetics.map((c) => ({line: c.lineId, mk: c.mk})),
 });
 
@@ -182,10 +185,12 @@ export const stamp = (a: Actor, s: MemberSnap): Actor => {
     a.weapon.equipped = true;
     a.equipment.upper = s.upper ? rebuildArmor(s.upper) : null;
     a.equipment.headgear = s.headgear ? rebuildArmor(s.headgear) : null;
-    a.inventory.weapons = s.invWeapons.map((n) => { const w = GetItem.weapon(n); w.equipped = false; return w; });
-    a.inventory.armor = s.invArmor.map(rebuildArmor);
-    a.inventory.medical = s.invMeds.map((x) => new Medical(x.name, x.cost, x.restore, x.desc));
-    a.inventory.misc = s.invMisc.map((x) => new Scrap(x.name, x.cost, x.desc));
+    // legacy per-member packs land in the pockets here, and the load sweeps
+    // them into The Stash right after — pockets never survive a load
+    a.inventory.weapons = (s.invWeapons || []).map((n) => { const w = GetItem.weapon(n); w.equipped = false; return w; });
+    a.inventory.armor = (s.invArmor || []).map(rebuildArmor);
+    a.inventory.medical = (s.invMeds || []).map((x) => new Medical(x.name, x.cost, x.restore, x.desc));
+    a.inventory.misc = (s.invMisc || []).map((x) => new Scrap(x.name, x.cost, x.desc));
     return a;
 };
 
@@ -250,7 +255,7 @@ export class SaveGame {
                 stamp(s.kind === "merc" && s.offer ? new Merc(s.offer) : new Player(data.spec), s));
             const stash = data.stash ? rebuildStash(data.stash) : emptyStash();
             const crew = new Crew(data.funds, reviveKit(data.kit), stash).activate();
-            if (!data.stash) { migratePacksToStash(party, stash); }
+            sweepPacksIntoStash(party, stash);
             const run: RunState = {...data.run, node: null, outcome: "active"};
             return {character: party[0]!, party, crew, run, usedEvents: data.usedEvents || [], spec: data.spec};
         } catch {

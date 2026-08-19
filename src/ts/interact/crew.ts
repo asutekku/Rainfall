@@ -5,7 +5,7 @@ import type {Item} from "../items/Item";
 import type {Weapon} from "../items/Weapon";
 import {Kit, startingKit} from "./loadout";
 
-/** The crew duffel: same shape as an actor's pockets, owned by nobody in particular. */
+/** The Stash: the crew's one shared inventory, owned by nobody in particular. */
 export interface StashBag {
     weapons: Weapon[];
     armor: Armor[];
@@ -54,13 +54,14 @@ export class Crew {
     public kit: Kit;
 
     /**
-     * The gear duffel. Same story as the purse and the crate: packs used to be
+     * The Stash. Same story as the purse and the crate: packs used to be
      * personal, so every gun the run scavenged piled up on whoever pulled the
      * trigger — in practice the player — and a hired merc could stand next to
-     * a spare rifle forever without being allowed to pick it up. One duffel
-     * instead: what's not on a body belongs to the crew, and anyone can kit
-     * up out of it. (Chrome-granted cyberweapons are the exception — those are
-     * bolted into a body and stay in that actor's own pocket.)
+     * a spare rifle forever without being allowed to pick it up. One shared
+     * inventory instead: what's not on a body is in The Stash, and anyone can
+     * kit up out of it. Nothing else stores gear — Fists are a state and
+     * cyberweapons are derived from the wearer's chrome list, so neither ever
+     * needs a bag (see `Gear`).
      */
     public stash: StashBag;
 
@@ -160,7 +161,7 @@ export class Purse {
 }
 
 /**
- * Where an actor's spare gear lives: the crew duffel for the player side, the
+ * Where an actor's spare gear lives: The Stash for the player side, the
  * actor's own pockets for hostiles (and for the player side too if no crew is
  * active, which keeps the headless sim and any legacy path working). The same
  * seam as `Purse`, for the same reason — callers shouldn't have to know which

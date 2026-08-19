@@ -41,8 +41,8 @@ export class Economy {
 
     /**
      * Strip the fallen foe's gear. Higher-rank foes carry better kit and drop it
-     * more often; loot lands in the crew stash (auto-equip grabs the good stuff
-     * between waves, or the player hands it out from the Inventory panel).
+     * more often; loot lands in The Stash (auto-equip grabs the good stuff
+     * between waves, or the player hands it out from the Gear tab).
      * Only the crew side scavenges — a dying enemy's take despawns with it.
      */
     public static scavenge(killer: Actor, victim: Actor): string[] {
@@ -126,9 +126,9 @@ export class Economy {
         return best ? {a: best, idx} : null;
     }
 
-    /** Keep the stash from ballooning over a long career — hold the best few.
-     *  The caps are crew-wide now that the duffel is shared, so they sit higher
-     *  than the old per-pocket six. */
+    /** Keep The Stash from ballooning over a long career — hold the best few.
+     *  The caps are crew-wide (one shared stash), so they sit higher than the
+     *  old per-pocket six. */
     private static prune(actor: Actor): void {
         const bag = Stash.of(actor);
         const w = bag.weapons;
@@ -221,13 +221,13 @@ export class Economy {
     /** Put a weapon in an actor's hands, reporting what it replaced. */
     public static equipWeapon(actor: Actor, weapon: Weapon, source: "salvage" | "bought", cost: number): GearChange {
         const old = actor.weapon;
-        // the replaced piece is crew property now — back in the duffel, not the
-        // gutter. Except chrome: a cyberweapon is part of the body it's bolted
-        // into, so it goes back in that actor's own pocket.
+        // the replaced piece is crew property — back in The Stash, not the
+        // gutter. Except chrome: a cyberweapon retracts into the body it's
+        // bolted into (it is derived from the chrome list, never stored).
         if (old && old.name !== "Fists") {
             old.equipped = false;
             const chrome = actor.cybernetics.some((c) => c.effects.grantsWeapon === old.name);
-            (chrome ? actor.inventory.weapons : Stash.of(actor).weapons).push(old);
+            if (!chrome) { Stash.of(actor).weapons.push(old); }
         }
         actor.weapon = weapon;
         actor.weapon.equipped = true;
@@ -306,15 +306,13 @@ export class Economy {
         actor.weapon.equipped = true;
         actor.equipment.upper = GetItem.armor("Light Armor Jacket");
         actor.equipment.headgear = GetItem.armor("Kevlar Helmet");
-        actor.inventory.weapons = [GetItem.weapon("Fists")];
+        // Pockets are not storage: Fists are a state and cyberweapons are
+        // derived from the chrome list, so there is nothing to repossess and
+        // nothing to regrow — the pockets just end empty.
+        actor.inventory.weapons = [];
         actor.inventory.armor = [];
-        // Chrome is bolted in — cyberweapons (Wolvers, popup guns) can't be
-        // repossessed with the duffel. Regrow them into the stripped kit.
-        actor.cybernetics.forEach((c) => {
-            if (c.effects.grantsWeapon) {
-                actor.inventory.weapons.push(GetItem.weapon(c.effects.grantsWeapon));
-            }
-        });
+        actor.inventory.medical = [];
+        actor.inventory.misc = [];
         // Trauma Team put them back on the street with a roof and a subscription;
         // without this an eviction earlier in a run followed the character forever.
         actor.housing = "NiceConapt";

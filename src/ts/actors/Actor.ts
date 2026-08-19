@@ -933,10 +933,8 @@ export class Actor extends GameObject {
             this.maxLuck += cw.effects.luckMax;
             this.luck += cw.effects.luckMax;
         }
-        if (cw.effects.grantsWeapon) {
-            // Cyberweapons (Wolvers, popup guns, ...) are real weapons the wielder can equip.
-            this.inventory.weapons.push(GetItem.weapon(cw.effects.grantsWeapon));
-        }
+        // Cyberweapons (Wolvers, popup guns, ...) are not stored anywhere: the
+        // equip screens derive them from the cybernetics list (see Gear).
     }
 
     public isCyberpsycho(): boolean {

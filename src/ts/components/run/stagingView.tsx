@@ -487,8 +487,8 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
 
     /**
      * The gear editor: everything a merc holds, changeable in one sheet.
-     * Weapons and armour swap with their own pack (the old piece goes back
-     * in it — see Gear); throwables draw from the shared crate, capped
+     * Weapons and armour swap with The Stash (the old piece goes back in
+     * it — see Gear); throwables draw from the shared crate, capped
      * crew-wide, and moving one between mercs is stow here, take there.
      */
     private gearSheet() {

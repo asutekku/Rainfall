@@ -84,19 +84,12 @@ export class Chrome {
         if (dBody) { actor.stats.bt += dBody; actor.recalculateHealth(); }
         const dLuck = (next.effects.luckMax || 0) - (cur.effects.luckMax || 0);
         if (dLuck) { actor.maxLuck += dLuck; actor.luck = Math.min(actor.maxLuck, actor.luck + Math.max(0, dLuck)); }
-        // cyberweapons: the old blade comes out with the old mark
-        if (cur.effects.grantsWeapon && cur.effects.grantsWeapon !== next.effects.grantsWeapon) {
-            const bag = actor.inventory.weapons;
-            const old = bag.find((w) => w.name === cur.effects.grantsWeapon);
-            if (old) { bag.splice(bag.indexOf(old), 1); }
-            if (actor.weapon.name === cur.effects.grantsWeapon && next.effects.grantsWeapon) {
-                actor.weapon = GetItem.weapon(next.effects.grantsWeapon);
-                actor.weapon.equipped = true;
-            } else if (next.effects.grantsWeapon) {
-                bag.push(GetItem.weapon(next.effects.grantsWeapon));
-            }
-        } else if (next.effects.grantsWeapon && !cur.effects.grantsWeapon) {
-            actor.inventory.weapons.push(GetItem.weapon(next.effects.grantsWeapon));
+        // cyberweapons live on the chrome list, not in a bag — the only thing
+        // to fix up is a blade that is in the wielder's hand right now
+        if (cur.effects.grantsWeapon && cur.effects.grantsWeapon !== next.effects.grantsWeapon
+            && actor.weapon.name === cur.effects.grantsWeapon) {
+            actor.weapon = GetItem.weapon(next.effects.grantsWeapon || "Fists");
+            actor.weapon.equipped = true;
         }
         return next;
     }
@@ -115,14 +108,10 @@ export class Chrome {
             actor.maxLuck = Math.max(1, actor.maxLuck - cw.effects.luckMax);
             actor.luck = Math.min(actor.luck, actor.maxLuck);
         }
-        if (cw.effects.grantsWeapon) {
-            const bag = actor.inventory.weapons;
-            const w = bag.find((x) => x.name === cw.effects.grantsWeapon);
-            if (w) { bag.splice(bag.indexOf(w), 1); }
-            if (actor.weapon.name === cw.effects.grantsWeapon) {
-                actor.weapon = GetItem.weapon("Fists");
-                actor.weapon.equipped = true;
-            }
+        if (cw.effects.grantsWeapon && actor.weapon.name === cw.effects.grantsWeapon) {
+            // the blade left with the chrome — nothing to take out of a bag
+            actor.weapon = GetItem.weapon("Fists");
+            actor.weapon.equipped = true;
         }
         actor.shiftHumanity(cw.humanityLoss + bonusHumanity);
         return cw;
@@ -221,13 +210,9 @@ export class Chrome {
             const spikes = p.chromeNum("thorns");
             if (spikes > 0) { applyStatus(p, "thorns", spikes); }
             p.grazeUsed = false;
-            // self-healing: a granted cyberweapon that was pruned or stripped regrows
-            p.cybernetics.forEach((c) => {
-                const w = c.effects.grantsWeapon;
-                if (w && p.weapon.name !== w && !p.inventory.weapons.some((x) => x.name === w)) {
-                    p.inventory.weapons.push(GetItem.weapon(w));
-                }
-            });
+            // cyberweapons need no upkeep here: they are derived from the
+            // chrome list on demand (see Gear.chromeWeapons), so they can't be
+            // pruned, stripped, fenced or lost in the first place
         });
     }
 

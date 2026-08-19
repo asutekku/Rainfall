@@ -48,7 +48,6 @@ export class Merc extends Actor {
 
         this.item = GetItem.item();
         this.weapon = GetItem.weaponOfClass(offer.weapons, 4, offer.minDice, offer.maxDice);
-        this.inventory.weapons.push(GetItem.weapon("Fists"));
         this.temperament = TacticalAI.rollTemperament(this.weapon.weaponClass);
 
         const st = offer.stats;
