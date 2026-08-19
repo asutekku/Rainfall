@@ -5,6 +5,7 @@ import {
     STAT_KEYS, STAT_BUDGET, STAT_MIN, STAT_MAX,
 } from "../../actors/resources/CharacterCreation";
 import type {Career} from "../../interact/career";
+import {KgBack, KgBar, KgRow} from "../general/kgKit";
 
 const ROLE_MAP: any = CLASSES;
 // The class list comes from the registry now, so adding a tenth class is a
@@ -221,11 +222,9 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                     const role = ROLE_MAP[k];
                     const on = k === picked || k === s.role;
                     return (
-                        <button key={k} className={"kgRow" + (on ? " on" : "")} onClick={() => this.pickRole(k)}>
-                            <span className={"kgKey"}>{CLASS_HOTKEYS[i]}</span>
-                            <b style={on ? {color: role.color} : {}}>{role.name}</b>
-                            <i>{edgeName(role.edge)}</i>
-                        </button>);
+                        <KgRow key={k} hotkey={CLASS_HOTKEYS[i]} label={role.name} on={on}
+                               labelStyle={on ? {color: role.color} : undefined}
+                               value={edgeName(role.edge)} onClick={() => this.pickRole(k)}/>);
                 })}
                 <div className={"kgHr"}/>
                 <p className={"kgP"}><b>{r.role}.</b> {r.edge}</p>
@@ -293,12 +292,8 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                     <dt>Crew</dt><dd>1 rookie</dd>
                 </dl>
                 <div className={"kgHr"}/>
-                <button className={"kgRow"} onClick={this.randomize}>
-                    <span className={"kgKey"}>R</span><b>Randomize</b><i>roll everything</i>
-                </button>
-                <button className={"kgRow"} onClick={this.reset}>
-                    <span className={"kgKey"}>⟲</span><b>Reset</b><i>back to opening</i>
-                </button>
+                <KgRow hotkey={"R"} label={"Randomize"} value={"roll everything"} onClick={this.randomize}/>
+                <KgRow hotkey={"⟲"} label={"Reset"} value={"back to opening"} onClick={this.reset}/>
                 <button className={"kgPrim wide"} style={{marginTop: "auto"}}
                         onClick={() => this.props.onDeploy(this.state.spec, false)}>
                     Hit the street ▸
@@ -336,12 +331,10 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                 </div>
                 <div className={"kgCol n"} style={{width: "min(360px, 34vw)"}}>
                     <h3 className={"kgH"}>Actions</h3>
-                    <button className={"kgRow on"} onClick={() => this.props.onDeploy(this.state.spec, true)}>
-                        <span className={"kgKey"}>↵</span><b>Send {first} back out</b><i>run {career.runs + 1}</i>
-                    </button>
-                    <button className={"kgRow dgr"} onClick={this.retire}>
-                        <span className={"kgKey"}>B</span><b>Retire {first}</b><i>build someone new</i>
-                    </button>
+                    <KgRow hotkey={"↵"} label={`Send ${first} back out`} on value={`run ${career.runs + 1}`}
+                           onClick={() => this.props.onDeploy(this.state.spec, true)}/>
+                    <KgRow hotkey={"B"} label={`Retire ${first}`} danger value={"build someone new"}
+                           onClick={this.retire}/>
                 </div>
             </div>);
     }
@@ -367,7 +360,7 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                         {this.statColumn(s)}
                         {this.nameColumn(s)}
                     </div>}
-                <div className={"kgBar"}>
+                <KgBar>
                     {career
                         ? <React.Fragment>
                             <span className={"keysOnly"}><b>B</b> retire</span>
@@ -378,8 +371,8 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                             <span className={"keysOnly"}><b>n</b> name · <b>l</b> lifepath · <b>r</b> randomize</span>
                             <span className={"r keysOnly"}><b>enter</b> hit the street · <b>esc</b> back</span>
                         </React.Fragment>}
-                    <button className={"kgBack r"} onClick={this.props.onCancel}>← Back</button>
-                </div>
+                    <KgBack onClick={this.props.onCancel}/>
+                </KgBar>
             </div>);
     }
 }

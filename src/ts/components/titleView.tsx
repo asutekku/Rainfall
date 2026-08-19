@@ -3,6 +3,7 @@ import {CLASSES, classFromLegacyRole} from "../actors/resources/classes";
 import type {Career} from "../interact/career";
 import {Chrome} from "../interact/chrome";
 import type {SaveHeader} from "../interact/saveGame";
+import {KgBar, KgRow} from "./general/kgKit";
 import {OptionsView} from "./optionsView";
 
 const ROLE_MAP: any = CLASSES;
@@ -147,8 +148,10 @@ export class TitleView extends React.Component<TitleViewProps, TitleViewState> {
                     <dt>Kills</dt><dd>{career.kills}</dd>
                     <dt>Best</dt>
                     <dd>Sector {career.bestSector}{career.bestDepth ? ` · ${career.bestDepth} waypoints` : ""}</dd>
-                    {last ? <React.Fragment><dt>Last run</dt><dd>Died in Sector {last.sector}</dd></React.Fragment> : null}
-                    {career.bank ? <React.Fragment><dt>Bank</dt><dd>{career.bank}¥ frozen</dd></React.Fragment> : null}
+                    <dt>Last run</dt>
+                    <dd>{last ? `Died in Sector ${last.sector}` : "still on it"}</dd>
+                    {career.bank !== undefined
+                        ? <React.Fragment><dt>Bank</dt><dd>{career.bank}¥ frozen</dd></React.Fragment> : null}
                 </dl>
             </React.Fragment>);
     }
@@ -236,30 +239,22 @@ export class TitleView extends React.Component<TitleViewProps, TitleViewState> {
             <React.Fragment>
                 <h3 className={"kgH"}>Actions</h3>
                 {save &&
-                    <button className={"kgRow on"} onClick={this.props.onContinue}>
-                        <span className={"kgKey"}>C</span><b>Continue run</b>
-                        <i>sector {save.sector} · {save.depth} deep</i>
-                    </button>}
+                    <KgRow hotkey={"C"} label={"Continue run"} on
+                           value={`sector ${save.sector} · ${save.depth} deep`}
+                           onClick={this.props.onContinue}/>}
                 {career &&
-                    <button className={"kgRow" + (!save ? " on" : "")} onClick={this.newRun}>
-                        <span className={"kgKey"}>N</span><b>New run</b>
-                        <i>keep {first} · sector 1</i>
-                    </button>}
-                <button className={"kgRow" + (!save && !career ? " on" : "")} onClick={this.newCharacter}>
-                    <span className={"kgKey"}>B</span><b>New character</b>
-                    <i>{career ? `retires ${first}` : "build a merc"}</i>
-                </button>
-                <button className={"kgRow" + (this.state.help ? " on" : "")}
-                        onClick={() => this.setState({help: !this.state.help})}>
-                    <span className={"kgKey"}>K</span><b>Codex</b><i>how runs work</i>
-                </button>
-                <button className={"kgRow"} onClick={() => this.setState({options: true})}>
-                    <span className={"kgKey"}>O</span><b>Options</b><i>speed · CRT · data</i>
-                </button>
+                    <KgRow hotkey={"N"} label={"New run"} on={!save}
+                           value={`keep ${first} · sector 1`} onClick={this.newRun}/>}
+                <KgRow hotkey={"B"} label={"New character"} on={!save && !career}
+                       value={career ? `retires ${first}` : "build a merc"}
+                       onClick={this.newCharacter}/>
+                <KgRow hotkey={"K"} label={"Codex"} on={this.state.help} value={"how runs work"}
+                       onClick={() => this.setState({help: !this.state.help})}/>
+                <KgRow hotkey={"O"} label={"Options"} value={"speed · CRT · fx · data"}
+                       onClick={() => this.setState({options: true})}/>
                 {save &&
-                    <button className={"kgRow dgr"} onClick={() => this.setState({confirming: "abandon"})}>
-                        <span className={"kgKey"}>X</span><b>Abandon run</b><i>permanent</i>
-                    </button>}
+                    <KgRow hotkey={"X"} label={"Abandon run"} danger value={"permanent"}
+                           onClick={() => this.setState({confirming: "abandon"})}/>}
             </React.Fragment>);
     }
 
@@ -268,11 +263,11 @@ export class TitleView extends React.Component<TitleViewProps, TitleViewState> {
         const keys = [save ? "C" : "", career ? "N" : "", "B"].filter(Boolean).join("/");
         const primary = save ? "continue run" : career ? "new run" : "new character";
         return (
-            <div className={"kgBar"}>
+            <KgBar>
                 <span className={"keysOnly"}><b>{keys}</b> run</span>
                 <span className={"keysOnly"}><b>K</b> codex · <b>O</b> options{save ? " · " : ""}{save && <b>X</b>}{save ? " abandon" : ""}</span>
-                <span className={"r"}><b>enter</b> {primary}</span>
-            </div>);
+                <span className={"r keysOnly"}><b>enter</b> {primary}</span>
+            </KgBar>);
     }
 
     public override render() {

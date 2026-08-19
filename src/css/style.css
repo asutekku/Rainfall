@@ -1647,21 +1647,25 @@ progress::-moz-progress-bar { background:var(--rust); }
 .kgDfn dd { margin:0; color:var(--ink); text-align:right; min-width:0; }
 .kgDfn dd.l { text-align:left; color:var(--mid); }
 
-/* keyed action / list rows */
-.kgRow { display:flex; align-items:baseline; gap:10px; width:100%; text-align:left; cursor:pointer;
-    background:transparent; border:0; color:var(--mid); font-family:var(--mono); font-size:12px;
-    padding:6px 8px; letter-spacing:.04em; min-height:32px; }
-.kgRow:hover { background:var(--hover); }
+/* keyed action / list rows — the game's original button chrome, new format */
+.kgRow { display:flex; align-items:center; gap:10px; width:100%; text-align:left; cursor:pointer;
+    background:#0c0c13; border:1px solid var(--line); border-left:3px solid var(--rust);
+    clip-path:var(--bevel); color:var(--mid); font-family:var(--mono); font-size:12px;
+    padding:8px 10px; letter-spacing:.04em; min-height:38px;
+    transition:background .12s, color .12s; }
+.kgRow:hover { background:var(--sel); color:var(--ink); }
 .kgRow b { color:var(--ink); font-weight:500; text-transform:uppercase; letter-spacing:.1em; }
 .kgRow i { font-style:normal; color:var(--faint); margin-left:auto; white-space:nowrap;
     overflow:hidden; text-overflow:ellipsis; font-size:11px; }
-.kgRow.on { background:var(--sel); }
+.kgRow.on { color:var(--cyan); border-left-color:var(--rustHot); background:var(--sel);
+    box-shadow:inset 0 0 8px rgba(184,92,73,.3); }
+.kgRow.on b { color:var(--cyan); }
 .kgRow.on .kgKey { border-color:var(--cyan); color:var(--cyan); background:#0c1417; }
+.kgRow.dgr { border-left-color:var(--crit); }
 .kgRow.dgr b { color:var(--crit); }
 .kgRow.dgr .kgKey { color:var(--crit); border-color:#3a1f1c; }
-.kgRow:disabled { cursor:default; color:var(--faint); }
-.kgRow:disabled b { color:var(--faint); }
-.kgRow:disabled:hover { background:transparent; }
+.kgRow:disabled { cursor:default; opacity:.4; }
+.kgRow:disabled:hover { background:#0c0c13; color:var(--mid); }
 
 .kgKey { display:inline-grid; place-items:center; width:20px; height:20px; flex:none;
     align-self:center; border:1px solid var(--line2); color:var(--cyanDim); font-size:11px; }
@@ -1681,8 +1685,8 @@ progress::-moz-progress-bar { background:var(--rust); }
 .kgTable tr.sel td { background:var(--sel); border-bottom-color:var(--line2); }
 .kgTable tr.sel td:first-child { box-shadow:inset 2px 0 0 var(--cyan); }
 .kgTable tr.out td, .kgTable tr.out td b { color:var(--faint); }
-.kgTable tbody tr { cursor:pointer; }
-.kgTable tbody tr:hover td { background:var(--hover); }
+.kgTable.tap tbody tr { cursor:pointer; }
+.kgTable.tap tbody tr:hover td { background:var(--hover); }
 
 /* letter dials — Point/Mid/Overwatch and Push/Steady/Hold in one cell */
 .kgDial { display:inline-flex; gap:2px; }
@@ -1773,9 +1777,65 @@ progress::-moz-progress-bar { background:var(--rust); }
 .kgBar .kgPrim { min-height:34px; padding:6px 16px; font-size:11px; }
 /* the way out, as a button — esc has no key on a phone */
 .kgBack { flex:none; cursor:pointer; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em;
-    text-transform:uppercase; color:var(--mid); background:transparent; border:1px solid var(--line2);
-    padding:6px 14px; min-height:34px; }
-.kgBack:hover { color:var(--ink); border-color:var(--cyanDim); }
+    text-transform:uppercase; color:var(--mid); background:#0c0c13;
+    border:1px solid var(--line); border-left:3px solid var(--rust); clip-path:var(--bevel);
+    padding:6px 14px; min-height:34px; transition:background .12s, color .12s; }
+.kgBack:hover { color:var(--ink); background:var(--sel); }
+
+/* modal — bottom sheet on a phone, centred card above the breakpoint */
+.kgScrim { position:fixed; inset:0; z-index:60; display:grid; place-items:center;
+    background:rgba(4,4,7,.72); }
+.kgSheet { width:min(440px, calc(100vw - 32px)); max-height:min(80vh, 640px); overflow-y:auto;
+    display:flex; flex-direction:column; gap:12px; padding:14px 16px 16px;
+    background:var(--panel); border:1px solid var(--line2); border-top:2px solid var(--rust);
+    animation:ucIn .18s ease both; }
+.kgSheetHead { display:flex; align-items:center; gap:10px; }
+.kgSheetHead .kgH { flex:1; min-width:0; }
+.kgSheetX { flex:none; width:34px; height:34px; cursor:pointer; font-family:var(--mono);
+    color:var(--mid); background:#0c0c13; border:1px solid var(--line); }
+.kgSheetX:hover { color:var(--ink); background:var(--sel); }
+.kgChoice { display:flex; flex-direction:column; gap:6px; }
+/* inside the sheet there's room — blurbs wrap instead of truncating */
+.kgSheet .kgRow i { white-space:normal; text-align:right; line-height:1.5; }
+@media (max-width: 860px) {
+    .kgScrim { place-items:end center; }
+    .kgSheet { width:100vw; max-height:82vh; border-left:0; border-right:0; border-bottom:0;
+        padding-bottom:calc(16px + env(safe-area-inset-bottom)); }
+}
+
+/* menu fx — the console waking up. body.no-fx (options) turns it off, and the
+   global reduced-motion kill already covers the rest. Same grammar as the
+   event hero (heroInFlat) so the menus and the run speak one language. */
+body:not(.no-fx) .kg .kgCol > * { animation:heroInFlat .3s ease both; }
+body:not(.no-fx) .kg .kgCol > *:nth-child(2) { animation-delay:.04s; }
+body:not(.no-fx) .kg .kgCol > *:nth-child(3) { animation-delay:.08s; }
+body:not(.no-fx) .kg .kgCol > *:nth-child(4) { animation-delay:.12s; }
+body:not(.no-fx) .kg .kgCol > *:nth-child(5) { animation-delay:.16s; }
+body:not(.no-fx) .kg .kgCol > *:nth-child(6) { animation-delay:.2s; }
+body:not(.no-fx) .kg .kgCol > *:nth-child(n+7) { animation-delay:.24s; }
+body:not(.no-fx) .kg::before { content:""; position:absolute; inset:0; z-index:30; pointer-events:none;
+    background:linear-gradient(to bottom, transparent 0%, rgba(55,225,231,.05) 48%,
+        rgba(55,225,231,.12) 50%, rgba(55,225,231,.05) 52%, transparent 100%);
+    background-size:100% 220%; animation:kgSweep .55s ease-out both; opacity:0; }
+@keyframes kgSweep { 0% { opacity:1; background-position:0 -120%; }
+    85% { opacity:1; } 100% { opacity:0; background-position:0 120%; } }
+
+/* Apple HIG: 44pt is the touch floor — everything tappable grows to it on
+   coarse pointers and small panels alike. */
+@media (max-width: 860px), (pointer: coarse) {
+    .kgRow { min-height:48px; padding:10px 12px; }
+    .kgKey { width:26px; height:26px; }
+    .kgBack, .kgPrim, .kgSheetX { min-height:44px; }
+    .kgSheetX { width:44px; }
+    .kgGo { min-height:36px; min-width:44px; }
+    .kgConfirm .kgRowPair button { min-height:44px; }
+    .kgStat button { width:40px; height:44px; }
+    .kgLife select { min-height:44px; }
+    .kgName input, .kgName button { min-height:44px; }
+    .kgName button { width:44px; }
+    .kgTable.tap td { padding-top:11px; padding-bottom:11px; }
+    .kgDial u { width:26px; height:34px; }
+}
 
 @media (max-width: 860px) {
     .kgBody { flex-direction:column; overflow-y:auto; overflow-x:hidden; }
@@ -1785,7 +1845,6 @@ progress::-moz-progress-bar { background:var(--rust); }
     .kgHideM { display:none !important; }
     .kgTable th { padding-right:5px; }
     .kgTable td { padding-right:5px; }
-    .kgDial u { width:17px; height:18px; }
     .kgStat .k { width:34px; }
     .kgBar span.keysOnly { display:none; }
     .kgTop { gap:10px; padding:0 10px; font-size:10px; }
