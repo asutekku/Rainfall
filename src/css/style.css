@@ -1703,21 +1703,25 @@ progress::-moz-progress-bar { background:var(--rust); }
     border:1px solid var(--cyanDim); color:var(--cyan); background:#0c1417; font-size:12px; }
 .kgState.w { color:var(--warn); border-color:#4a3a18; background:#171208; }
 
-/* the crate as a strip of chips — the belt editing lives on the orders sheet */
-.kgCrate { display:flex; flex-wrap:wrap; gap:8px; }
-.kgCrateChip { display:flex; align-items:center; gap:8px; cursor:pointer; min-height:44px;
-    padding:8px 12px; font-family:var(--mono); color:var(--mid); background:#0c0c13;
-    border:1px solid var(--line); border-left:3px solid var(--rust); clip-path:var(--bevel);
-    transition:background .12s, color .12s; }
-.kgCrateChip i { font-style:normal; font-size:14px; color:var(--dim); }
-.kgCrateChip b { font-size:11px; letter-spacing:.08em; text-transform:uppercase;
-    color:var(--ink); font-weight:500; }
-.kgCrateChip span { font-size:10px; color:var(--faint); }
-.kgCrateChip:hover:enabled { background:var(--sel); }
-.kgCrateChip.on { color:var(--cyan); border-left-color:var(--rustHot); background:var(--sel);
-    box-shadow:inset 0 0 8px rgba(184,92,73,.3); }
-.kgCrateChip.on b, .kgCrateChip.on i { color:var(--cyan); }
-.kgCrateChip.out { opacity:.4; cursor:default; }
+/* the chevron at the row's end: unfolds the merc's equipment */
+.kgChev { width:30px; height:30px; display:inline-grid; place-items:center; flex:none;
+    cursor:pointer; color:var(--dim); background:transparent; border:1px solid var(--line2);
+    font-size:11px; font-family:var(--mono); }
+.kgChev:hover { color:var(--cyan); border-color:var(--cyanDim); }
+.kgChev.on { color:var(--cyan); border-color:var(--cyanDim); background:#0c1417; }
+
+/* the rollout under a crew row: what they hold, and the door to change it */
+.kgTable tr.kgRoll td { background:var(--panel); border-bottom:1px solid var(--line2);
+    padding:0 8px; white-space:normal; cursor:default; }
+.kgTable.tap tbody tr.kgRoll:hover td { background:var(--panel); }
+.kgRollBody { display:flex; flex-wrap:wrap; align-items:center; gap:10px 26px; padding:10px 4px; }
+body:not(.no-fx) .kgRollBody { animation:heroInFlat .2s ease both; }
+.kgGearItem { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.kgGearItem i { font-style:normal; font-size:9px; letter-spacing:.16em; text-transform:uppercase;
+    color:var(--faint); }
+.kgGearItem b { font-size:12px; color:var(--ink); font-weight:500; }
+.kgGearItem b.dim { color:var(--dim); font-weight:400; }
+.kgGearItem em { font-style:normal; font-size:10px; color:var(--dim); font-variant-numeric:tabular-nums; }
 
 /* small hp bar in a table cell */
 .kgHp { display:inline-block; width:44px; height:6px; background:#0b0b10; border:1px solid var(--line);
@@ -1851,6 +1855,9 @@ body:not(.no-fx) .kg::before { content:""; position:absolute; inset:0; z-index:3
     .kgName input, .kgName button { min-height:44px; }
     .kgName button { width:44px; }
     .kgTable.tap td { padding-top:11px; padding-bottom:11px; }
+    .kgTable.tap tr.kgRoll td { padding-top:0; padding-bottom:0; }
+    .kgChev { width:38px; height:38px; }
+    .kgRollBody .kgBack { flex:1 1 100%; margin-left:0 !important; }
     .kgDial u { width:26px; height:34px; }
 }
 

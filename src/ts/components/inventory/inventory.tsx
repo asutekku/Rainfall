@@ -1,4 +1,5 @@
 import * as React from "react";
+import {Gear} from "../../interact/gear";
 import {Actor} from "../../actors/Actor";
 import {Armor} from "../../items/Armor";
 import {Weapon} from "../../items/Weapon";
@@ -52,15 +53,8 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
 
     private equipWeapon(a: Actor, idx: number) {
         if (!this.canEquip()) { return; }
-        const w = a.inventory.weapons.splice(idx, 1)[0]!;
-        const old = a.weapon;
-        if (old && old.name !== "Fists") {
-            old.equipped = false;
-            a.inventory.weapons.push(old);
-        }
-        a.weapon = w;
-        w.equipped = true;
-        this.notice(`${a.name.split(" ")[0]} swaps to the ${w.name}.`);
+        const msg = Gear.equipWeapon(a, idx);
+        if (msg) { this.notice(msg); }
     }
 
     private useMed(a: Actor, idx: number) {
@@ -80,21 +74,12 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
 
     private equipArmor(a: Actor, idx: number) {
         if (!this.canEquip()) { return; }
-        const piece = a.inventory.armor.splice(idx, 1)[0]!;
-        const slot = piece.bodyPart === "headgear" ? "headgear" : "upper";
-        const old = a.equipment[slot] as Armor | null;
-        if (old) {
-            old.equipped = false;
-            a.inventory.armor.push(old);
-        }
-        a.equipment[slot] = piece;
-        piece.equipped = true;
-        this.notice(`${a.name.split(" ")[0]} straps on the ${piece.name} (SP ${piece.stoppingPower}).`);
+        const msg = Gear.equipArmor(a, idx);
+        if (msg) { this.notice(msg); }
     }
 
     private wStats(w: Weapon): string {
-        return `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}` +
-            ` · ROF ${w.rateOfFire} · ${w.range}m`;
+        return Gear.weaponLine(w);
     }
 
     private equipped(a: Actor) {
