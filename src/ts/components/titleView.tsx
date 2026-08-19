@@ -3,6 +3,7 @@ import {CLASSES, classFromLegacyRole} from "../actors/resources/classes";
 import type {Career} from "../interact/career";
 import {Chrome} from "../interact/chrome";
 import type {SaveHeader} from "../interact/saveGame";
+import {OptionsView} from "./optionsView";
 
 const ROLE_MAP: any = CLASSES;
 
@@ -18,6 +19,8 @@ export interface TitleViewProps {
     onNewCharacter: () => void;
     /** Delete the checkpoint. The career survives; the run does not. */
     onAbandon: () => void;
+    /** Wipe everything — save, career, options. Confirmed on the options screen. */
+    onWipe: () => void;
 }
 
 /** Which destructive question is being asked in place of the action list. */
@@ -27,6 +30,8 @@ interface TitleViewState {
     confirming: Confirming;
     /** The rules column. Open by default for a machine that has never run. */
     help: boolean;
+    /** The options screen holds the whole view (and the keyboard) while open. */
+    options: boolean;
 }
 
 /** "12 min ago" / "2 days ago" — vague on purpose, exact enough to recognise. */
@@ -56,7 +61,7 @@ export class TitleView extends React.Component<TitleViewProps, TitleViewState> {
     constructor(props: TitleViewProps) {
         super(props);
         // With no career on file the rules aren't optional reading — they open.
-        this.state = {confirming: "none", help: !props.career};
+        this.state = {confirming: "none", help: !props.career, options: false};
     }
 
     public override componentDidMount() { window.addEventListener("keydown", this.onKey); }
@@ -68,6 +73,7 @@ export class TitleView extends React.Component<TitleViewProps, TitleViewState> {
         const t = e.target as HTMLElement | null;
         if (t && ["INPUT", "SELECT", "TEXTAREA"].indexOf(t.tagName) >= 0) { return; }
         if (e.metaKey || e.ctrlKey || e.altKey) { return; }
+        if (this.state.options) { return; }   // the options screen has its own listener
         const k = e.key.toLowerCase();
         // A destructive question on screen owns the keyboard until it's answered.
         if (this.state.confirming !== "none") {
@@ -80,6 +86,7 @@ export class TitleView extends React.Component<TitleViewProps, TitleViewState> {
         else if (k === "n" && career) { this.newRun(); }
         else if (k === "b") { this.newCharacter(); }
         else if (k === "k") { this.setState({help: !this.state.help}); }
+        else if (k === "o") { this.setState({options: true}); }
         else if (k === "x" && save) { this.setState({confirming: "abandon"}); }
         else if (k === "enter") {
             if (save) { this.props.onContinue(); }
@@ -246,6 +253,9 @@ export class TitleView extends React.Component<TitleViewProps, TitleViewState> {
                         onClick={() => this.setState({help: !this.state.help})}>
                     <span className={"kgKey"}>K</span><b>Codex</b><i>how runs work</i>
                 </button>
+                <button className={"kgRow"} onClick={() => this.setState({options: true})}>
+                    <span className={"kgKey"}>O</span><b>Options</b><i>speed · CRT · data</i>
+                </button>
                 {save &&
                     <button className={"kgRow dgr"} onClick={() => this.setState({confirming: "abandon"})}>
                         <span className={"kgKey"}>X</span><b>Abandon run</b><i>permanent</i>
@@ -260,13 +270,16 @@ export class TitleView extends React.Component<TitleViewProps, TitleViewState> {
         return (
             <div className={"kgBar"}>
                 <span className={"keysOnly"}><b>{keys}</b> run</span>
-                <span className={"keysOnly"}><b>K</b> codex{save ? " · " : ""}{save && <b>X</b>}{save ? " abandon" : ""}</span>
+                <span className={"keysOnly"}><b>K</b> codex · <b>O</b> options{save ? " · " : ""}{save && <b>X</b>}{save ? " abandon" : ""}</span>
                 <span className={"r"}><b>enter</b> {primary}</span>
             </div>);
     }
 
     public override render() {
         const {save, career} = this.props;
+        if (this.state.options) {
+            return <OptionsView onClose={() => this.setState({options: false})} onWipe={this.props.onWipe}/>;
+        }
         const role = career ? ROLE_MAP[classFromLegacyRole(career.spec.role)] : null;
         return (
             <div className={"kg"}>

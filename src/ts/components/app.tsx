@@ -33,6 +33,7 @@ import {BattleNotice, PlaybackBundle} from "./combat/battleScene";
 import {BattleEvent} from "../interact/battleEvents";
 import {FeedLog, missionClock} from "../interact/feedLog";
 import {ShownState} from "../interact/shownState";
+import {OptionsStore} from "../interact/options";
 import {SaveGame, SaveHeader} from "../interact/saveGame";
 import {Career, CareerStore} from "../interact/career";
 import {TitleView} from "./titleView";
@@ -206,6 +207,10 @@ export class App extends React.Component<{}, InterfaceAppState> {
         };
     }
 
+    public override componentDidMount() {
+        OptionsStore.apply();   // the CRT switch is a class on <body>
+    }
+
     public override componentWillUnmount() {
         this.clearTurnTimer();
         if (this.sealTimer !== null) { window.clearTimeout(this.sealTimer); }
@@ -264,7 +269,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
         if (this.state.phase === "title") {
             return <TitleView save={this.state.saveHeader} career={this.state.career}
                               onContinue={this.continueRun} onNewRun={this.openCreator}
-                              onNewCharacter={this.openCreatorFresh} onAbandon={this.abandonRun}/>;
+                              onNewCharacter={this.openCreatorFresh} onAbandon={this.abandonRun}
+                              onWipe={this.wipeData}/>;
         }
         // Character creation is a full-screen takeover reached from the title.
         if (this.state.phase === "creator") {
@@ -614,6 +620,18 @@ export class App extends React.Component<{}, InterfaceAppState> {
     private abandonRun = () => {
         SaveGame.clear();
         this.setState({saveHeader: SaveGame.peek()});
+    };
+
+    /**
+     * "Clear all data" on the options screen: run, career, settings — then a
+     * clean reload, so the app boots exactly the way a first visit does rather
+     * than trusting this session to hand-reset every piece of state.
+     */
+    private wipeData = () => {
+        SaveGame.clear();
+        CareerStore.clear();
+        OptionsStore.clear();
+        window.location.reload();
     };
 
     /** Cycle a squad member's AI playstyle — the one tactical lever left. */

@@ -1,4 +1,5 @@
 import * as React from "react";
+import {OptionsStore} from "../../interact/options";
 import {Actor} from "../../actors/Actor";
 import {accentCss} from "../../actors/resources/factionStyles";
 import {Battlefield} from "../../interact/battlefield";
@@ -133,7 +134,7 @@ export class Stage extends React.Component<StageProps, {}> {
                                      battleId={this.props.battleId}
                                      playback={this.props.playback}
                                      onPlaybackDone={this.props.onPlaybackDone}
-                                     speed={1.6}
+                                     speed={OptionsStore.speedMult()}
                                      shown={this.props.shown}
                                      notice={this.props.notice}
                                      onImpact={this.props.onImpact}
