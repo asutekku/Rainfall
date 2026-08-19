@@ -1260,6 +1260,7 @@ progress::-moz-progress-bar { background:var(--rust); }
 .gearTab.on { color:var(--cyan); border-color:var(--cyanDim); background:var(--sel); }
 .gearSect { margin-bottom:6px; }
 .gearLock { color:var(--warn); font-style:normal; text-transform:none; letter-spacing:0; }
+.gearShared { color:var(--mid); font-style:normal; text-transform:none; letter-spacing:0; font-weight:400; }
 .gearRow { display:flex; align-items:center; gap:10px; padding:8px 10px; margin-bottom:5px;
     background:var(--panel); border:1px solid var(--line); }
 .gearRow.eq { border-left:2px solid var(--cyanDim); }

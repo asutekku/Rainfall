@@ -21,11 +21,10 @@ export class Player extends Actor {
         this.name = s.name || `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
         this.role = s.role ? new Role(s.role) : new Role();
         this.lifepath = s.lifepath || CharacterCreation.randomLifepath();
-        this.item = GetItem.item();
 
-        // A RED merc starts armed with a sidearm; Fists stay as a fallback.
+        // A RED merc starts armed with a sidearm; Fists are a state, not an
+        // item — the equip screens conjure them on demand (see Gear).
         this.weapon = GetItem.weapon("WSA Autopistol");
-        this.inventory.weapons.push(GetItem.weapon("Fists"));
 
         // Stats come from the spec where given, otherwise a capable-solo default.
         this.setCombatProfile({
@@ -40,7 +39,6 @@ export class Player extends Actor {
         this.stats.ma.run = this.stats.ma.ma * 3;
         this.stats.ma.leap = this.stats.ma.ma / 4;
 
-        this.traumaTeam = true; // carries a Trauma Team subscription
         // RED: everyone runs armour. Start in a Light Armor Jacket (SP ~ RED Light Armorjack).
         this.equipment.upper = GetItem.armor("Light Armor Jacket");
         this.equipment.headgear = GetItem.armor("Kevlar Helmet");
@@ -52,8 +50,6 @@ export class Player extends Actor {
         this.cyberdeck.push(GetItem.program("Armor"));
         // A working merc: some street cred, a Nice Conapt, and a ride.
         this.reputation = 2;
-        this.housing = "NiceConapt";
-        this.vehicle = GetItem.vehicle("CityCar");
         this.currency = 0;    // player-side eddies live in the crew purse (see interact/crew.ts)
     }
 

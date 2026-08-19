@@ -8,7 +8,6 @@ export class Armor extends Item {
     public stoppingPower: number;
     public maxStoppingPower: number;
     public rarity: number;
-    public equipped: boolean;
     public override position: ObjectPosition;
 
     constructor(
@@ -28,6 +27,5 @@ export class Armor extends Item {
         this.stoppingPower = stoppingPower;
         this.maxStoppingPower = stoppingPower;
         this.rarity = 0;
-        this.equipped = false;
     }
 }

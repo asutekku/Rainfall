@@ -8,12 +8,12 @@ import {GetItem} from "./getItem";
  * Equipping, in one place.
  *
  * The inventory panel and the staging screen both let a merc change what they
- * hold; the swap rules belong to neither screen. Spare gear lives in the crew
- * stash (see `Stash`), so any merc can kit up out of it: equipping pulls the
- * piece from wherever it sits and the old piece goes back to the stash. The
- * two exceptions are Fists (a state, not an item) and cyberweapons (bolted
- * into a body — they travel in that actor's own pocket and never enter the
- * shared duffel). Each call mutates the actors and returns a feed line for
+ * hold; the swap rules belong to neither screen. Spare gear lives in exactly
+ * one place — The Stash (see `Stash`) — so any merc can kit up out of it:
+ * equipping pulls the piece from it and the old piece goes back in. The two
+ * things that are not items in a bag: Fists (a state — conjured on demand)
+ * and cyberweapons (part of the body — derived from the chrome list, never
+ * stored anywhere). Each call mutates the actors and returns a feed line for
  * whoever wants to print one.
  */
 export class Gear {
@@ -23,61 +23,89 @@ export class Gear {
         return a.cybernetics.some((c) => c.effects.grantsWeapon === w.name);
     }
 
-    /** Everything `a` could swap to: their own pocket (cyberweapons) plus the stash. */
+    /**
+     * The weapons this actor's chrome grants, minus the one already in hand.
+     * Built fresh from the cybernetics list — a cyberweapon is a property of
+     * the body, so it never sits in a bag and can never be lost, fenced or
+     * picked up by anyone else.
+     */
+    public static chromeWeapons(a: Actor): Weapon[] {
+        return a.cybernetics
+            .map((c) => c.effects.grantsWeapon)
+            .filter((n): n is string => !!n && a.weapon.name !== n)
+            .map((n) => GetItem.weapon(n));
+    }
+
+    /**
+     * Everything `a` could swap to: their own chrome plus The Stash, sorted by
+     * the same valuation auto-equip decides with (Gear.weaponValue) — so
+     * the top of the list is what the fixer would actually pick, not merely
+     * the rarest paint job. Rarity and price only break ties.
+     */
     public static weaponChoices(a: Actor): Weapon[] {
-        const stash = Stash.of(a);
-        const own = stash === a.inventory ? [] : a.inventory.weapons;
-        return [...own, ...stash.weapons].filter((w) => w.name !== "Fists");
+        return [...Gear.chromeWeapons(a), ...Stash.of(a).weapons]
+            .filter((w) => w.name !== "Fists")
+            .sort((x, y) => Gear.weaponValue(y) - Gear.weaponValue(x)
+                || (y.rarity || 0) - (x.rarity || 0)
+                || (y.cost || 0) - (x.cost || 0));
     }
 
     /** Every piece of armour `a` could strap on. */
     public static armorChoices(a: Actor): Armor[] {
-        const stash = Stash.of(a);
-        const own = stash === a.inventory ? [] : (a.inventory.armor as Armor[]);
-        return [...own, ...stash.armor];
+        return Stash.of(a).armor.slice();
     }
 
-    /** Pull `w` out of whichever bag holds it (the actor's pocket wins over the stash). */
+    /** Pull `w` out of The Stash — chrome needs no pulling, the body brings it. */
     private static takeWeapon(a: Actor, w: Weapon): boolean {
-        for (const bag of [a.inventory.weapons, Stash.of(a).weapons]) {
-            const at = bag.indexOf(w);
-            if (at >= 0) { bag.splice(at, 1); return true; }
-        }
+        if (Gear.isCyberweapon(a, w)) { return true; }
+        const bag = Stash.of(a).weapons;
+        const at = bag.indexOf(w);
+        if (at >= 0) { bag.splice(at, 1); return true; }
         return false;
     }
 
-    /** The old weapon goes back where it belongs: pocket for chrome, stash for steel. */
+    /** The old weapon goes back in The Stash; chrome retracts into the body. */
     private static shelveWeapon(a: Actor, old: Weapon): void {
-        old.equipped = false;
-        (Gear.isCyberweapon(a, old) ? a.inventory.weapons : Stash.of(a).weapons).push(old);
+        if (Gear.isCyberweapon(a, old)) { return; }
+        Stash.of(a).weapons.push(old);
     }
 
-    /** Swap to `w`; the old weapon goes back to the stash (or the pocket, for chrome). */
-    public static equipWeapon(a: Actor, w: Weapon): string | null {
-        if (!Gear.takeWeapon(a, w)) { return null; }
+    /**
+     * THE weapon swap: shelve what's held (into The Stash — chrome retracts,
+     * Fists evaporate), take up `w`. Returns what was replaced. Every path
+     * that changes hands — the Gear tab, staging, the debrief claim, the
+     * fixer's auto-kit — comes through here, so the shelve rule exists once.
+     */
+    public static swapWeapon(a: Actor, w: Weapon): Weapon | null {
         const old = a.weapon;
         if (old && old.name !== "Fists") { Gear.shelveWeapon(a, old); }
         a.weapon = w;
-        w.equipped = true;
+        return old && old.name !== "Fists" ? old : null;
+    }
+
+    /** THE armour swap: the slot's old piece goes back in The Stash. */
+    public static swapArmor(a: Actor, piece: Armor): Armor | null {
+        const slot = piece.bodyPart === "headgear" ? "headgear" : "upper";
+        const old = a.equipment[slot] as Armor | null;
+        if (old) { Stash.of(a).armor.push(old); }
+        a.equipment[slot] = piece;
+        return old;
+    }
+
+    /** Swap to `w` out of The Stash (or the body, for chrome); feed line back. */
+    public static equipWeapon(a: Actor, w: Weapon): string | null {
+        if (!Gear.takeWeapon(a, w)) { return null; }
+        Gear.swapWeapon(a, w);
         return `${a.name.split(" ")[0]} swaps to the ${w.name}.`;
     }
 
-    /** Strap on `piece`; the old piece in that slot goes back to the stash. */
+    /** Strap on `piece` out of The Stash; feed line back. */
     public static equipArmor(a: Actor, piece: Armor): string | null {
-        let found = false;
-        for (const bag of [a.inventory.armor, Stash.of(a).armor]) {
-            const at = bag.indexOf(piece);
-            if (at >= 0) { bag.splice(at, 1); found = true; break; }
-        }
-        if (!found) { return null; }
-        const slot = piece.bodyPart === "headgear" ? "headgear" : "upper";
-        const old = a.equipment[slot] as Armor | null;
-        if (old) {
-            old.equipped = false;
-            Stash.of(a).armor.push(old);
-        }
-        a.equipment[slot] = piece;
-        piece.equipped = true;
+        const bag = Stash.of(a).armor;
+        const at = bag.indexOf(piece);
+        if (at < 0) { return null; }
+        bag.splice(at, 1);
+        Gear.swapArmor(a, piece);
         return `${a.name.split(" ")[0]} straps on the ${piece.name} (SP ${piece.stoppingPower}).`;
     }
 
@@ -88,20 +116,25 @@ export class Gear {
      */
     public static equipFists(a: Actor): string | null {
         if (a.weapon && a.weapon.name === "Fists") { return null; }
-        const old = a.weapon;
-        if (old && old.name !== "Fists") { Gear.shelveWeapon(a, old); }
-        a.inventory.weapons = a.inventory.weapons.filter((w: Weapon) => w.name !== "Fists");
+        Gear.swapWeapon(a, GetItem.weapon("Fists"));
         const stash = Stash.of(a);
-        if (stash !== a.inventory) { stash.weapons = stash.weapons.filter((w) => w.name !== "Fists"); }
-        a.weapon = GetItem.weapon("Fists");
-        a.weapon.equipped = true;
+        stash.weapons = stash.weapons.filter((w) => w.name !== "Fists");
         return `${a.name.split(" ")[0]} goes in bare-knuckle.`;
+    }
+
+    /** Shopping value of a weapon: mean damage, with a bonus for armour-piercing. */
+    public static weaponValue(w: Weapon): number {
+        return w.averageDamage() + (w.ap ? 4 : 0);
+    }
+
+    /** THE damage string — "3d6+2 AP" — printed the same on every screen. */
+    public static dmg(w: Weapon): string {
+        return `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}`;
     }
 
     /** The one-line spec sheet a weapon prints wherever it's listed. */
     public static weaponLine(w: Weapon): string {
-        return `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}` +
-            ` · ROF ${w.rateOfFire} · ${w.range}m`;
+        return `${Gear.dmg(w)} · ROF ${w.rateOfFire} · ${w.range}m`;
     }
 
     /**
@@ -118,8 +151,4 @@ export class Gear {
         return undefined;
     }
 
-    /** Sort key for a weapon list: rarest first, hardest-hitting inside a tier. */
-    public static power(w: Weapon): number {
-        return (w.rarity || 0) * 100000 + w.diceThrows * 600 + (w.damage || 0) * 100 + (w.cost || 0) / 100;
-    }
 }

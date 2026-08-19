@@ -49,7 +49,6 @@ export class Weapon extends Item {
     public quality: string;
     public range: number;
     public level: number;
-    public equipped: boolean;
 
     constructor(cfg: WeaponConfig) {
         super("weapon", cfg.name, cfg.cost, cfg.description, new ObjectPosition(0, 0, 0));
@@ -72,7 +71,6 @@ export class Weapon extends Item {
         this.quality = cfg.quality;
         this.range = cfg.range;
         this.level = 0;
-        this.equipped = false;
     }
 
     /**

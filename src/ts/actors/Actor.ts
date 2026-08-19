@@ -4,7 +4,6 @@ import {GetItem} from "../interact/getItem";
 import {Armor} from "../items/Armor";
 import {Cyberware, CyberwareEffects} from "../items/Cyberware";
 import {Program} from "../items/Program";
-import {Vehicle} from "../items/Vehicle";
 import {Item} from "../items/Item";
 import {Weapon} from "../items/Weapon";
 import {Name} from "./resources/Name";
@@ -12,12 +11,10 @@ import {factionPerk} from "./resources/factionStyles";
 import {traitMult, traitSum} from "./resources/traits";
 import {Role} from "./resources/Role";
 import {CharacterCreation, Lifepath} from "./resources/CharacterCreation";
-import {Statistics} from "./resources/Statistics";
 import {ObjectPosition} from "../utils/ObjectPosition";
 import {GameObject} from "../items/GameObject";
 
 export class Actor extends GameObject {
-    public item: any;
     public name: string;
     public role: Role;
     public level: number;
@@ -82,9 +79,7 @@ export class Actor extends GameObject {
         accessories: Armor | null;
         [key: string]: Item | null;
     };
-    public weapons: any[];
     public gender: string;
-    public items: Item[];
     public currency: number;
     public kills: number;
     /** Hired help — expendable. Your character is never this, so it never dies for good. */
@@ -239,11 +234,8 @@ export class Actor extends GameObject {
     public humanity: number;
     public maxHumanity: number;
     public cyberpsychosis: boolean;
-    public traumaTeam: boolean;
     public reputation: number;
     public fearPenalty: number;
-    public housing: string;
-    public vehicle: Vehicle | null;
     public firstHitDone: boolean;
     // --- chrome runtime state (never saved; re-armed by Chrome.primeSquad/armRun) ---
     public squadInitRt: number;      // Tactical Co-Processor aura on this body
@@ -276,8 +268,6 @@ export class Actor extends GameObject {
             feet: null,
             accessories: null,
         };
-        this.weapons = [];
-        this.items = [];
         this.inventory = {
             weapons: [],
             armor: [],
@@ -459,11 +449,8 @@ export class Actor extends GameObject {
         this.humanity = this.stats.emp * 10;
         this.maxHumanity = this.stats.emp * 10;
         this.cyberpsychosis = false;
-        this.traumaTeam = false;
         this.reputation = 0;
         this.fearPenalty = 0;
-        this.housing = "Streets";
-        this.vehicle = null;
         this.firstHitDone = false;
         this.squadInitRt = 0;
         this.squadHitRt = 0;
@@ -485,7 +472,6 @@ export class Actor extends GameObject {
 
     public gainLevel() {
         this.level += 1;
-        Statistics.level += 1;
         this.experience = 0;
         // `level ^ 1.5` was a bitwise XOR (1.5 truncates to 1), so growth was a
         // meaningless sawtooth. Use a real power for smooth, monotonic scaling.
@@ -824,11 +810,6 @@ export class Actor extends GameObject {
         this.reputation = Math.min(10, this.reputation + amount + this.repGainBonus());
     }
 
-    /** RED Drive skill (Land Vehicle) for vehicle checks. */
-    public driveSkill(): number {
-        return this.skills.ref.driving;
-    }
-
     /** RED melee/ranged defence: DEX + Evasion (Dodge), minus the wound penalty. */
     public evasion(): number {
         return this.stats.dex + this.skills.ref.dodge + this.woundPenalty();
@@ -933,10 +914,8 @@ export class Actor extends GameObject {
             this.maxLuck += cw.effects.luckMax;
             this.luck += cw.effects.luckMax;
         }
-        if (cw.effects.grantsWeapon) {
-            // Cyberweapons (Wolvers, popup guns, ...) are real weapons the wielder can equip.
-            this.inventory.weapons.push(GetItem.weapon(cw.effects.grantsWeapon));
-        }
+        // Cyberweapons (Wolvers, popup guns, ...) are not stored anywhere: the
+        // equip screens derive them from the cybernetics list (see Gear).
     }
 
     public isCyberpsycho(): boolean {
@@ -995,7 +974,6 @@ export class Actor extends GameObject {
     public corpDiscount(): number { return factionPerk(this.faction, "discount"); }
 
     /** Wraiths "Badlands": bonus behind the wheel. */
-    public motoBonus(): number { return factionPerk(this.faction, "moto"); }
 
     /** Scav "Harvester": better odds of stripping something off a body. */
     public scavengeBonus(): number {

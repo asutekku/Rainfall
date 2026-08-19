@@ -1,32 +1,19 @@
-import {Actor} from "../actors/Actor";
-import {Purse} from "./crew";
-import {Player} from "../actors/player";
 import {Armor} from "../items/Armor";
 import armors from "../items/armors";
 import Equipment from "../items/Equipment";
-import {Item} from "../items/Item";
-import items from "../items/items";
-import {Medical} from "../items/Scrap";
 import {Weapon} from "../items/Weapon";
 import {Cyberware} from "../items/Cyberware";
 import {default as cyberwareData} from "../../objects/cyberware";
 import {Program} from "../items/Program";
 import {default as programData} from "../../objects/programs";
-import {Vehicle} from "../items/Vehicle";
-import {default as vehicleData} from "../items/vehicles";
-import {State} from "../utils/State";
 import {Utils} from "../utils/utils";
-import en_US from "./../../lang/en_US";
-import {Messages} from "./messages";
-
-const Log = en_US.Log;
 
 const weapons = Equipment.weapons;
 
 export class GetItem {
     public static weapon(name?: string): Weapon {
         const found: Weapon = name ? weapons.find((e) => e.name === name)! : Utils.pickRandom(weapons);
-        return found.clone(); // per-owner instance (independent equipped/level state)
+        return found.clone(); // per-owner instance (armour ablates, shots count)
     }
 
     /**
@@ -78,79 +65,4 @@ export class GetItem {
         return new Program(programData[name]!);
     }
 
-    public static vehicle(name: string): Vehicle {
-        return new Vehicle(vehicleData[name]!);
-    }
-
-    public static item() {
-        const randomItem = Math.floor(Math.random() * 3);
-        if (randomItem === 0) {
-            return GetItem.armor();
-        } else if (randomItem === 1) {
-            return Utils.pickRandom(weapons).clone();
-        } else if (randomItem === 2) {
-            return Utils.pickRandom(items);
-        }
-    }
-
-    public static updateCurrency(money: number, actor: Actor) {
-        if (money >= 0) {
-            Messages.logMessage(Log.findMoney, actor);
-            // Fixer "Operator" and any Fixer Shard chrome: every eddie is bigger.
-            Purse.earn(actor, Math.floor(money * (1 + actor.eddieBonus())));
-        } else {
-            Messages.logMessage(Log.insufficientFunds, actor);
-        }
-    }
-
-    public static addItemToInventory(item: Item | Armor | Weapon | Medical, actor: Actor) {
-        actor.inventory[GetItem.inventoryBucket(item)]!.push(item);
-    }
-
-    /**
-     * Maps an item's `type` to its inventory bucket. Item types are singular
-     * ("weapon", "drug", ...) while the inventory is keyed "weapons", "armor",
-     * "misc", "medical"; without this mapping, looting a weapon or drug indexes
-     * a non-existent bucket and throws.
-     */
-    private static inventoryBucket(item: Item): string {
-        switch (item.type) {
-            case "weapon":
-                return "weapons";
-            case "armor":
-                return "armor";
-            case "medical":
-                return "medical";
-            default:
-                return "misc";
-        }
-    }
-
-    /**
-     * Equips/uses an item by mutating the model only. Rendering the resulting
-     * equipped/health state is the view layer's job (it re-reads the model),
-     * which keeps this usable headless and in tests.
-     */
-    public static useItem(item: Item) {
-        const player: Player = State.player!;
-        if (item instanceof Weapon) {
-            const equipWeapon = !item.equipped;
-            player.inventory.weapons.forEach((w) => (w.equipped = false));
-            player.weapon = equipWeapon ? (item as Weapon) : GetItem.weapon("Fists");
-            item.equipped = equipWeapon;
-        }
-        if (item instanceof Armor) {
-            const equipArmor = !item.equipped;
-            player.inventory.armor
-                .filter((w) => w.bodyPart === item.bodyPart)
-                .forEach((e) => (e.equipped = false));
-            player.equipment[item.bodyPart!] = equipArmor ? item : null;
-            item.equipped = equipArmor;
-        }
-        if (item instanceof Medical) {
-            player.health = Math.min(player.maxHealth, player.health + item.restorePoints!);
-        } else {
-            // currentActor.inventory.misc.push(item);
-        }
-    }
 }

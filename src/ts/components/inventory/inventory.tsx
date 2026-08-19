@@ -17,11 +17,11 @@ export interface InventoryProps {
 interface InventoryState { memberIdx: number; version: number; }
 
 /**
- * The crew's actual gear, member by member: what's in their hands and on
- * their backs, and the crew stash underneath — everything scavenged in fights
- * or bought at a market lands in the shared duffel, and any member can kit up
- * out of it. Between fights, tap SWAP/WEAR to re-kit; mid-fight the loadout
- * is locked (holster discipline).
+ * The crew's actual gear: what each member holds, and The Stash underneath —
+ * the one shared inventory. Everything scavenged in fights or bought at a
+ * market lands in it, and any member can kit up out of it (the tabs pick who
+ * the SWAP/WEAR buttons dress). Between fights, tap SWAP/WEAR to re-kit;
+ * mid-fight the loadout is locked (holster discipline).
  */
 export class Inventory extends React.Component<InventoryProps, InventoryState> {
 
@@ -127,16 +127,17 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
     private stash(a: Actor) {
         const lock = !this.canEquip();
         const bag = Stash.of(a);
-        // the member's swap list: crew duffel plus their own bolted-in chrome
+        // the member's swap list: The Stash plus their own bolted-in chrome
         const weapons = Gear.weaponChoices(a);
         const armor = Gear.armorChoices(a);
         const meds = bag.medical as Medical[];
         const misc = bag.misc || [];
         return (
             <div className={"gearSect"}>
-                <h4 className={"mkHead"}>Crew stash{lock && <em className={"gearLock"}> · locked mid-fight</em>}</h4>
+                <h4 className={"mkHead"}>The Stash <em className={"gearShared"}>· shared — anyone kits up out of it</em>
+                    {lock && <em className={"gearLock"}> · locked mid-fight</em>}</h4>
                 {weapons.length === 0 && armor.length === 0 && meds.length === 0 && misc.length === 0 &&
-                    <div className={"mkEmpty"}>Empty duffel. Scavenge fights or hit a Black Market.</div>}
+                    <div className={"mkEmpty"}>The Stash is empty. Scavenge fights or hit a Black Market.</div>}
                 {weapons.map((w, i) => {
                     const chrome = Gear.isCyberweapon(a, w);
                     return (

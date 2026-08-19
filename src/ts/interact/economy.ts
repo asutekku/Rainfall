@@ -4,13 +4,23 @@ import Equipment from "../items/Equipment";
 import {Weapon} from "../items/Weapon";
 import {BattleRecorder, GearChange} from "./battleReport";
 import {Crew, Purse, Stash, crewSide} from "./crew";
+import {Gear} from "./gear";
 import {GetItem} from "./getItem";
 import {randomJunk, randomMed} from "../items/consumables";
 
 const WEAPONS: Weapon[] = Equipment.weapons;
 
-// Clean RED armour ladder for shopping (the catalog has gaps; this is the SP tree).
-const ARMOR_TIERS: Array<{ name: string; sp: number; cost: number }> = [
+/** One tier on the game's single armour ladder. */
+export interface ArmorTier { name: string; sp: number; cost: number; }
+
+/**
+ * THE armour ladder. Auto-shopping climbs it, hire tiers reference it, and
+ * upgrade offers quote it — one list, so a tier can't have two SPs or two
+ * prices depending on which screen is asking. (The Black Market's shelf still
+ * draws from the wearables catalog for variety; anything *synthesized* comes
+ * from here.)
+ */
+export const ARMOR_LADDER: ArmorTier[] = [
     {name: "Leather", sp: 4, cost: 20},
     {name: "Kevlar", sp: 7, cost: 50},
     {name: "Light Armorjack", sp: 11, cost: 100},
@@ -41,8 +51,8 @@ export class Economy {
 
     /**
      * Strip the fallen foe's gear. Higher-rank foes carry better kit and drop it
-     * more often; loot lands in the crew stash (auto-equip grabs the good stuff
-     * between waves, or the player hands it out from the Inventory panel).
+     * more often; loot lands in The Stash (auto-equip grabs the good stuff
+     * between waves, or the player hands it out from the Gear tab).
      * Only the crew side scavenges — a dying enemy's take despawns with it.
      */
     public static scavenge(killer: Actor, victim: Actor): string[] {
@@ -54,11 +64,10 @@ export class Economy {
         const chance = 0.2 + 0.06 * rank + killer.scavengeBonus() + killer.chromeNum("scavBonus");
         if (victim.weapon && victim.weapon.name !== "Fists" && Math.random() < chance) {
             const w = victim.weapon.clone();
-            w.equipped = false;
             Stash.of(killer).weapons.push(w);
             // Boss-tier hardware: armour-piercing, high availability, or off an elite foe.
             const rare = w.ap || w.rarity >= 4 || rank >= 4;
-            BattleRecorder.countSalvage(killer, w, "weapon", this.weaponDetail(w), this.weaponValue(w), rare);
+            BattleRecorder.countSalvage(killer, w, "weapon", this.weaponDetail(w), Gear.weaponValue(w), rare);
             msgs.push(rare
                 ? `★ ${killer.name} scavenges a rare ${w.name}!`
                 : `${killer.name} scavenges a ${w.name}.`);
@@ -97,19 +106,19 @@ export class Economy {
         return msgs;
     }
 
-    /** Human-readable damage line for a weapon: "3d6+2 AP". */
+    /** Human-readable damage line for a weapon: "3d6+2 AP AUTO". */
     public static weaponDetail(w: Weapon): string {
-        return `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}${w.autofire ? " AUTO" : ""}`;
+        return `${Gear.dmg(w)}${w.autofire ? " AUTO" : ""}`;
     }
 
     /** Best scavenged weapon worth equipping: same-class edge, or a big cross-class jump. */
     private static bestInventoryWeapon(actor: Actor): { w: Weapon; idx: number } | null {
-        const curV = this.weaponValue(actor.weapon);
+        const curV = Gear.weaponValue(actor.weapon);
         const cls = actor.weapon.weaponClass;
         let best: Weapon | null = null; let bestV = 0; let idx = -1;
         Stash.of(actor).weapons.forEach((w, i) => {
             if (w.damageType !== "kinetic") { return; }
-            const v = this.weaponValue(w);
+            const v = Gear.weaponValue(w);
             const threshold = w.weaponClass === cls ? curV * 1.05 : curV * 1.25;  // cross-class must be worth losing skill
             if (v > threshold && v > bestV) { bestV = v; best = w; idx = i; }
         });
@@ -126,24 +135,19 @@ export class Economy {
         return best ? {a: best, idx} : null;
     }
 
-    /** Keep the stash from ballooning over a long career — hold the best few.
-     *  The caps are crew-wide now that the duffel is shared, so they sit higher
-     *  than the old per-pocket six. */
+    /** Keep The Stash from ballooning over a long career — hold the best few.
+     *  The caps are crew-wide (one shared stash), so they sit higher than the
+     *  old per-pocket six. */
     private static prune(actor: Actor): void {
         const bag = Stash.of(actor);
         const w = bag.weapons;
-        if (w.length > 10) { w.sort((a, b) => this.weaponValue(b) - this.weaponValue(a)); w.length = 10; }
+        if (w.length > 10) { w.sort((a, b) => Gear.weaponValue(b) - Gear.weaponValue(a)); w.length = 10; }
         const a = bag.armor;
         if (a.length > 8) { a.sort((x, y) => y.stoppingPower - x.stoppingPower); a.length = 8; }
         const m = bag.medical;
         if (m.length > 8) { m.sort((x: any, y: any) => (y.cost || 0) - (x.cost || 0)); m.length = 8; }
         const j = bag.misc;
         if (j.length > 8) { j.sort((x: any, y: any) => (y.cost || 0) - (x.cost || 0)); j.length = 8; }
-    }
-
-    /** Shopping value of a weapon: mean damage, with a bonus for armour-piercing. */
-    public static weaponValue(w: Weapon): number {
-        return w.averageDamage() + (w.ap ? 4 : 0);
     }
 
     private static rarityCap(level: number): number { return Math.min(5, 2 + Math.floor(level / 2)); }
@@ -157,11 +161,11 @@ export class Economy {
         const cls = actor.weapon.weaponClass;
         const cap = this.rarityCap(actor.level);
         let best: Weapon | null = null;
-        let bestV = this.weaponValue(actor.weapon) * 1.15;   // require > 15% better
+        let bestV = Gear.weaponValue(actor.weapon) * 1.15;   // require > 15% better
         for (const w of WEAPONS) {
             if (w.weaponClass !== cls || w.damageType !== "kinetic") { continue; }
             if (w.rarity > cap || w.cost > budget || !Purse.canAfford(actor, w.cost)) { continue; }
-            const v = this.weaponValue(w);
+            const v = Gear.weaponValue(w);
             if (v > bestV) { bestV = v; best = w; }
         }
         return best;
@@ -173,12 +177,12 @@ export class Economy {
      * hits, and comparing against the ablated number made the crew re-buy the
      * same tier after every fight — a treadmill that swallowed each payday whole.
      */
-    public static bestArmorUpgrade(actor: Actor, budget: number = Infinity): { name: string; sp: number; cost: number } | null {
+    public static bestArmorUpgrade(actor: Actor, budget: number = Infinity): ArmorTier | null {
         const cap = this.spCap(actor.level);
         const worn = actor.equipment.upper;
         const curSP = worn ? Math.max(worn.stoppingPower, worn.maxStoppingPower) : 0;
-        let best: { name: string; sp: number; cost: number } | null = null;
-        for (const t of ARMOR_TIERS) {
+        let best: ArmorTier | null = null;
+        for (const t of ARMOR_LADDER) {
             if (t.sp <= curSP || t.sp > cap || t.cost > budget || !Purse.canAfford(actor, t.cost)) { continue; }
             if (!best || t.sp > best.sp) { best = t; }
         }
@@ -196,7 +200,7 @@ export class Economy {
         // Weapon: scavenged (free) beats a store buy of equal-or-lower value.
         const invW = this.bestInventoryWeapon(actor);
         const buyW = this.bestWeaponUpgrade(actor, budget);
-        if (invW && (!buyW || this.weaponValue(invW.w) >= this.weaponValue(buyW))) {
+        if (invW && (!buyW || Gear.weaponValue(invW.w) >= Gear.weaponValue(buyW))) {
             Stash.of(actor).weapons.splice(invW.idx, 1);
             changes.push(this.equipWeapon(actor, invW.w, "salvage", 0));
         } else if (buyW) {
@@ -212,39 +216,27 @@ export class Economy {
             changes.push(this.equipArmor(actor, invA.a, "salvage", 0));
         } else if (buyA) {
             Purse.spend(actor, buyA.cost);
-            changes.push(this.equipArmor(actor, new Armor("upper", buyA.name, "", 1, buyA.sp, buyA.cost, ""),
-                "bought", buyA.cost));
+            changes.push(this.equipArmor(actor, Economy.mintArmor(buyA), "bought", buyA.cost));
         }
         return changes;
     }
 
-    /** Put a weapon in an actor's hands, reporting what it replaced. */
+    /** Put a weapon in an actor's hands (via Gear's one swap rule), reporting the change. */
     public static equipWeapon(actor: Actor, weapon: Weapon, source: "salvage" | "bought", cost: number): GearChange {
-        const old = actor.weapon;
-        // the replaced piece is crew property now — back in the duffel, not the
-        // gutter. Except chrome: a cyberweapon is part of the body it's bolted
-        // into, so it goes back in that actor's own pocket.
-        if (old && old.name !== "Fists") {
-            old.equipped = false;
-            const chrome = actor.cybernetics.some((c) => c.effects.grantsWeapon === old.name);
-            (chrome ? actor.inventory.weapons : Stash.of(actor).weapons).push(old);
-        }
-        actor.weapon = weapon;
-        actor.weapon.equipped = true;
+        const before = actor.weapon;
+        const old = Gear.swapWeapon(actor, weapon);
         return {
             actorName: actor.name, slot: "weapon", source,
             from: old ? old.name : "—", to: weapon.name,
             detail: this.weaponDetail(weapon),
-            delta: Math.round(this.weaponValue(weapon) - (old ? this.weaponValue(old) : 0)),
+            delta: Math.round(Gear.weaponValue(weapon) - (before ? Gear.weaponValue(before) : 0)),
             cost,
         };
     }
 
-    /** Strap armour onto an actor's torso slot, reporting what it replaced. */
+    /** Strap armour on (via Gear's one swap rule), reporting the change. */
     public static equipArmor(actor: Actor, armor: Armor, source: "salvage" | "bought", cost: number): GearChange {
-        const old = actor.equipment.upper;
-        if (old) { old.equipped = false; Stash.of(actor).armor.push(old); }
-        actor.equipment.upper = armor;
+        const old = Gear.swapArmor(actor, armor);
         return {
             actorName: actor.name, slot: "armor", source,
             from: old ? old.name : "—", to: armor.name,
@@ -255,13 +247,34 @@ export class Economy {
     }
 
     /** The next rung up the armour ladder from a given SP (null at the top). */
-    public static nextArmorTier(sp: number): { name: string; sp: number; cost: number } | null {
-        return ARMOR_TIERS.find((t) => t.sp > sp) || null;
+    public static nextArmorTier(sp: number): ArmorTier | null {
+        return ARMOR_LADDER.find((t) => t.sp > sp) || null;
     }
 
-    /** What the fence pays for a piece the squad doesn't want: half sticker price. */
+    /** A wearable instance of a ladder tier — the one way synthesized armour is minted. */
+    public static mintArmor(tier: ArmorTier): Armor {
+        return new Armor("upper", tier.name, "", 1, tier.sp, tier.cost, "");
+    }
+
+    /** A ladder tier by name, for tables that reference the ladder (hire tiers). */
+    public static armorTier(name: string): ArmorTier {
+        return ARMOR_LADDER.find((t) => t.name === name)!;
+    }
+
+    /**
+     * The street rate: what a fence pays, as a fraction of sticker price.
+     * One number for the whole game — the market fence starts here too and
+     * only vendor archetypes / Operator contacts push it up.
+     */
+    public static readonly STREET_RATE = 0.4;
+
+    /**
+     * Field-fencing on the debrief: flat street rate, no questions. A market
+     * fence can beat it (Scav Fence, Operator's cut) — selling at a fence is
+     * meant to pay at least as well as selling on a curb, never worse.
+     */
     public static sellValue(cost: number): number {
-        return Math.max(5, Math.floor((cost || 0) / 2));
+        return Math.max(5, Math.floor((cost || 0) * Economy.STREET_RATE));
     }
 
     /**
@@ -280,7 +293,7 @@ export class Economy {
      */
     public static fenceRate(party: Actor[]): number {
         const cut = party.reduce((m, p) => Math.max(m, p.canFight() ? p.fixerCut() : 0), 0);
-        return 0.4 * (1 + cut);
+        return Economy.STREET_RATE * (1 + cut);
     }
 
     /** Patch worn armour back up to its rating — what a safehouse stop is for. */
@@ -303,22 +316,15 @@ export class Economy {
      */
     public static stripToBasics(actor: Actor): void {
         actor.weapon = GetItem.weapon("WSA Autopistol");
-        actor.weapon.equipped = true;
         actor.equipment.upper = GetItem.armor("Light Armor Jacket");
         actor.equipment.headgear = GetItem.armor("Kevlar Helmet");
-        actor.inventory.weapons = [GetItem.weapon("Fists")];
+        // Pockets are not storage: Fists are a state and cyberweapons are
+        // derived from the chrome list, so there is nothing to repossess and
+        // nothing to regrow — the pockets just end empty.
+        actor.inventory.weapons = [];
         actor.inventory.armor = [];
-        // Chrome is bolted in — cyberweapons (Wolvers, popup guns) can't be
-        // repossessed with the duffel. Regrow them into the stripped kit.
-        actor.cybernetics.forEach((c) => {
-            if (c.effects.grantsWeapon) {
-                actor.inventory.weapons.push(GetItem.weapon(c.effects.grantsWeapon));
-            }
-        });
-        // Trauma Team put them back on the street with a roof and a subscription;
-        // without this an eviction earlier in a run followed the character forever.
-        actor.housing = "NiceConapt";
-        actor.traumaTeam = true;
+        actor.inventory.medical = [];
+        actor.inventory.misc = [];
     }
 
     /** Feed line for a loadout change. */

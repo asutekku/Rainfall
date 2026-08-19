@@ -2,6 +2,7 @@ import {CharacterCreation, CharacterSpec} from "../actors/resources/CharacterCre
 import {CLASSES} from "../actors/resources/classes";
 import {TRAITS, rollGrudge, rollTraits, traitPrice} from "../actors/resources/traits";
 import {CREW_FACTIONS, HIREABLE_FACTIONS} from "../actors/resources/factionStyles";
+import {Economy} from "./economy";
 import {PLATE_SP} from "./profile";
 import {Utils} from "../utils/utils";
 
@@ -55,21 +56,21 @@ interface Tier {
     roleRank: number;
     minDice: number;
     maxDice: number;
-    armorName: string;
-    armorSP: number;
+    /** A rung on the game's one armour ladder (economy.ts) — SP comes from there. */
+    armor: string;
     price: number;        // sector-1 asking price
     bump: number;         // points added to their best stats
 }
 
 const TIERS: Tier[] = [
     {name: "Rookie", weight: 46, levelOver: 0, skill: 3, roleRank: 2, minDice: 0, maxDice: 4,
-        armorName: "Kevlar", armorSP: 7, price: 250, bump: 0},
+        armor: "Kevlar", price: 250, bump: 0},
     {name: "Pro", weight: 34, levelOver: 1, skill: 5, roleRank: 4, minDice: 2, maxDice: 5,
-        armorName: "Light Armorjack", armorSP: 11, price: 700, bump: 1},
+        armor: "Light Armorjack", price: 700, bump: 1},
     {name: "Veteran", weight: 15, levelOver: 2, skill: 7, roleRank: 6, minDice: 3, maxDice: 6,
-        armorName: "Medium Armorjack", armorSP: 12, price: 1600, bump: 2},
+        armor: "Medium Armorjack", price: 1600, bump: 2},
     {name: "Legend", weight: 5, levelOver: 3, skill: 9, roleRank: 8, minDice: 4, maxDice: 6,
-        armorName: "Heavy Armorjack", armorSP: 13, price: 3200, bump: 3},
+        armor: "Heavy Armorjack", price: 3200, bump: 3},
 ];
 
 /** Stat keys ordered by how much they matter to a shooter, for tier bumps. */
@@ -132,7 +133,7 @@ export class MercMarket {
     private static build(tier: Tier, sector: number, price: number, traits: string[]): MercOffer {
         const role = Utils.pickRandom(CharacterCreation.roles());
         const faction = Utils.pickRandom(HIREABLE_FACTIONS);
-        const kit = kitFor(faction, tier.armorSP);
+        const kit = kitFor(faction, Economy.armorTier(tier.armor).sp);
         return {
             id: "m" + (this.seq++),
             name: CharacterCreation.randomName(),

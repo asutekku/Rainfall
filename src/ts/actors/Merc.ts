@@ -46,9 +46,7 @@ export class Merc extends Actor {
         this.auto = true;                     // hired guns fight themselves
         this.hireable = true;                 // and can be lost for good
 
-        this.item = GetItem.item();
         this.weapon = GetItem.weaponOfClass(offer.weapons, 4, offer.minDice, offer.maxDice);
-        this.inventory.weapons.push(GetItem.weapon("Fists"));
         this.temperament = TacticalAI.rollTemperament(this.weapon.weaponClass);
 
         const st = offer.stats;
@@ -77,7 +75,6 @@ export class Merc extends Actor {
         this.experience = 0;
         this.maxExperience = 100 + Math.floor(Math.pow(offer.level, 1.5) * 5);
         this.currency = 0;                    // eddies live in the crew purse
-        this.traumaTeam = false;              // no subscription — that's what the buyout is for
         this.recalculateHealth();
         this.health = this.maxHealth;
     }

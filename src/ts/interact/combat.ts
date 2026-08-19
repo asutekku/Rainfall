@@ -1,7 +1,5 @@
 import {Actor} from "../actors/Actor";
 import {Utils} from "../utils/utils";
-import en_US from "./../../lang/en_US";
-import {GetItem} from "./getItem";
 import {Messages} from "./messages";
 import {DeathMessage, DodgeMessage, IDefaultMessage, MessageStr} from "./messageSchema";
 import {Skill} from "../items/Skill";
@@ -16,8 +14,6 @@ import {TacticalAI, Plan} from "./tacticalAI";
 import {Economy} from "./economy";
 import {BattleRecorder} from "./battleReport";
 import {BattleEvent, BlastType, BlastVictim, TurnResult} from "./battleEvents";
-
-const Log = en_US.Log;
 
 /** Baseline edge for a melee swing before the target's evasion is taken off. */
 const MELEE_BASE = 12;
@@ -408,13 +404,6 @@ export class Combat {
         // never sets, so calling it mid-round would throw.
         this.events.push({kind: "level", actor});
         this.messages.push(new MessageStr(`${actor.name} reaches level ${actor.level}.`));
-    }
-
-    public static lootEnemy(actor: Actor, target: Actor) {
-        Messages.logMessage(Log.loot.search1, actor);
-        Messages.logMessage(Log.loot.find, actor);
-        GetItem.addItemToInventory(target.item, actor);
-        GetItem.updateCurrency(target.currency, actor);
     }
 
     /** Award the kill/XP/loot when an attack takes the target out of the fight. */

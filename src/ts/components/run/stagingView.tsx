@@ -7,6 +7,7 @@ import {ODDS_LABEL, forecastWave, sideStrength} from "../../interact/forecast";
 import {Gear} from "../../interact/gear";
 import {Deployment, KIT, KIT_ORDER, KIT_PICKS, Kit, KitId, KitPick, LINES, LINE_ORDER, Line,
     SQUAD_CAP, STANCES, STANCE_ORDER, Stance, lineOf, stanceOf} from "../../interact/loadout";
+import {RunController} from "../../interact/runController";
 import type {PendingFight} from "../app";
 
 export interface StagingViewProps {
@@ -44,11 +45,13 @@ interface StagingState {
     moreWeapons: boolean;
 }
 
-/** The selection as the engine will read it: you first, then the chosen. */
+/**
+ * The selection as the engine will read it. One rule, owned by the run
+ * controller (fieldable): you first, the able, never more than the seats —
+ * this screen and the deploy path can't disagree about who walks in.
+ */
 function squadFrom(party: Actor[], going: boolean[]): Actor[] {
-    const you = party.find((p) => !p.hireable);
-    const hires = party.filter((p, i) => going[i] && p.canFight() && p !== you);
-    return you && you.canFight() ? [you, ...hires] : hires;
+    return RunController.fieldable(party.filter((_p, i) => going[i]), party);
 }
 
 /**
@@ -487,8 +490,8 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
 
     /**
      * The gear editor: everything a merc holds, changeable in one sheet.
-     * Weapons and armour swap with their own pack (the old piece goes back
-     * in it — see Gear); throwables draw from the shared crate, capped
+     * Weapons and armour swap with The Stash (the old piece goes back in
+     * it — see Gear); throwables draw from the shared crate, capped
      * crew-wide, and moving one between mercs is stow here, take there.
      */
     private gearSheet() {
@@ -512,9 +515,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                         <KgRow label={"Fists"} value={"unarmed — always an option"}
                                onClick={() => { Gear.equipFists(a); this.forceUpdate(); }}/>}
                     {(() => {
-                        const pack = Gear.weaponChoices(a)
-                            .slice()
-                            .sort((x, y) => Gear.power(y) - Gear.power(x));
+                        const pack = Gear.weaponChoices(a);
                         const shown = this.state.moreWeapons ? pack : pack.slice(0, 3);
                         const hidden = pack.length - 3;
                         return (

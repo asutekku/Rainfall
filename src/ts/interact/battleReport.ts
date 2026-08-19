@@ -15,7 +15,7 @@ import {Weapon} from "../items/Weapon";
 
 export type LootKind = "weapon" | "armor";
 
-/** One scavenged piece sitting in a survivor's pack, offered on the debrief. */
+/** One scavenged piece sitting in The Stash, offered on the debrief. */
 export interface LootItem {
     id: string;
     kind: LootKind;
@@ -23,7 +23,7 @@ export interface LootItem {
     detail: string;          // "3d6+2 AP" / "SP 11"
     value: number;           // avg damage (weapon) or stopping power (armour)
     rare: boolean;
-    owner: Actor;            // who scavenged it (and whose pack it lives in)
+    owner: Actor;            // who scavenged it — Equip on the debrief dresses them
     item: Weapon | Armor;    // the actual instance, for equipping from the screen
     /** Resolved on the debrief: equipped by the squad, fenced, or auto-kitted. */
     fate: "held" | "equipped" | "sold";

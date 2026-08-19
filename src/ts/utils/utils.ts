@@ -2,24 +2,10 @@ import {ObjectPosition} from "./ObjectPosition";
 
 /**
  * Pure, DOM-free helpers usable in any environment (browser, Node, tests).
- * DOM/localStorage helpers live in ./Dom, message logging in ./Logger.
  */
 export class Utils {
     public static pickRandom(arr: any[]): any {
         return arr[Math.floor(Math.random() * arr.length)];
-    }
-
-    public static colorize(what: string): string {
-        const randomColor =
-            "#" +
-            Math.random()
-                .toString(16)
-                .substr(-3);
-        return `<span style="color:${randomColor}">${what}</span>`;
-    }
-
-    public static span(line: string, spanClass?: string): string {
-        return `<span class="${spanClass}">${line}</span>`;
     }
 
     public static dice(times: number, sides: number): number {
