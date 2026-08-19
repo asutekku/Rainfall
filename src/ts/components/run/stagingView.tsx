@@ -4,6 +4,7 @@ import {ProfileBadge, ProfileChip} from "../general/profileBadge";
 import {KgBack, KgBar, KgModal, KgRow} from "../general/kgKit";
 import {PROFILE, profileTally} from "../../interact/profile";
 import {ODDS_LABEL, forecastWave, sideStrength} from "../../interact/forecast";
+import {Gear} from "../../interact/gear";
 import {Deployment, KIT, KIT_ORDER, KIT_PICKS, Kit, KitId, KitPick, LINES, LINE_ORDER, Line,
     SQUAD_CAP, STANCES, STANCE_ORDER, Stance, lineOf, stanceOf} from "../../interact/loadout";
 import type {PendingFight} from "../app";
@@ -35,6 +36,10 @@ interface StagingState {
     sel: number;
     /** which merc's orders sheet is open (-1: none) */
     sheet: number;
+    /** which merc's equipment rollout is unfolded under their row (-1: none) */
+    open: number;
+    /** which merc's gear editor is open (-1: none) */
+    gear: number;
 }
 
 /** The selection as the engine will read it: you first, then the chosen. */
@@ -79,9 +84,6 @@ const HABIT: { [k: string]: string } = {
 const LINE_GLYPH: { [k in Line]: string } = {point: "P", mid: "M", overwatch: "O"};
 const STANCE_GLYPH: { [k in Stance]: string } = {push: "▲", steady: "=", hold: "▼"};
 
-/** Crate rows answer to the home row, so they never collide with the crew digits. */
-const KIT_HOTKEYS = "asdf";
-
 /**
  * The minute before the shooting, as a keyed grid.
  *
@@ -114,6 +116,8 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
             picks: StagingView.defaultPicks(squadFrom(party, going), kit),
             sel: you >= 0 ? you : 0,
             sheet: -1,
+            open: -1,
+            gear: -1,
         };
     }
 
@@ -152,11 +156,13 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         if (e.metaKey || e.ctrlKey || e.altKey) { return; }
         const k = e.key.toLowerCase();
         const sheetOpen = this.state.sheet >= 0;
-        // orders apply to the open sheet, or to the keyboard cursor
-        const at = sheetOpen ? this.state.sheet : this.state.sel;
+        const gearOpen = this.state.gear >= 0;
+        // orders apply to the open editor, or to the keyboard cursor
+        const at = gearOpen ? this.state.gear : sheetOpen ? this.state.sheet : this.state.sel;
         const digit = parseInt(k, 10);
         if (k === "escape") {
-            if (sheetOpen) { this.setState({sheet: -1}); }
+            if (gearOpen) { this.setState({gear: -1}); }
+            else if (sheetOpen) { this.setState({sheet: -1}); }
             else if (this.props.onCancel) { this.props.onCancel(); }
             else { return; }
         }
@@ -170,11 +176,11 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         else if (k === "z") { this.setStance(at, "push"); }
         else if (k === "x") { this.setStance(at, "steady"); }
         else if (k === "c") { this.setStance(at, "hold"); }
-        else if (KIT_HOTKEYS.indexOf(k) >= 0 && KIT_HOTKEYS.indexOf(k) < KIT_ORDER.length) {
-            this.toggleKit(KIT_ORDER[KIT_HOTKEYS.indexOf(k)]!);
-        }
+        else if (k === "g") { this.setState({gear: at, sheet: -1}); }
         else if (k === "enter") {
-            if (sheetOpen) { this.setState({sheet: -1}); } else { this.deploy(); }
+            if (gearOpen) { this.setState({gear: -1}); }
+            else if (sheetOpen) { this.setState({sheet: -1}); }
+            else { this.deploy(); }
         }
         else { return; }
         e.preventDefault();
@@ -254,32 +260,6 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
     /** How many of `item` are still in the crate after what's already picked. */
     private left(item: KitId): number {
         return this.props.kit[item] - this.state.picks.filter((p) => p.item === item).length;
-    }
-
-    /**
-     * Tapping a piece of ordnance takes one; tapping it again puts it back.
-     * With nobody chosen to carry it, it goes to whoever is standing.
-     */
-    private toggleKit = (item: KitId) => {
-        const picks = this.state.picks;
-        const mine = picks.map((p, i) => [p, i] as [KitPick, number]).filter(([p]) => p.item === item);
-        if (mine.length > 0) {
-            const last = mine[mine.length - 1]![1];
-            this.setState({picks: picks.filter((_p, i) => i !== last)});
-            return;
-        }
-        if (picks.length >= KIT_PICKS || this.left(item) <= 0) { return; }
-        const carrier = this.nextCarrier();
-        if (!carrier) { return; }
-        this.setState({picks: [...picks, {item, carrier}]});
-    };
-
-    /** Spread ordnance across the crew before doubling anyone up. */
-    private nextCarrier(): Actor | null {
-        const able = this.squad();
-        if (!able.length) { return null; }
-        const load = (a: Actor) => this.state.picks.filter((p) => p.carrier === a).length;
-        return able.slice().sort((a, b) => load(a) - load(b))[0]!;
     }
 
     /** Hand this merc one of `item` from the crate. */
@@ -367,41 +347,83 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         const down = !a.canFight();
         const you = !a.hireable;
         const going = !down && this.state.going[i] === true;
-        const carrying = going ? this.state.picks.filter((p) => p.carrier === a) : [];
         const sel = this.state.sel === i;
+        const open = this.state.open === i;
         return (
-            <tr key={i} className={(sel ? "sel " : "") + (down || !going ? "out" : "")}
-                onClick={() => { if (!down) { this.setState({sel: i, sheet: i}); } }}>
-                <td className={"kgHideM"}><span className={"kgKey kb" + (sel ? " on" : "")}>{i + 1}</span></td>
-                <td><b>{a.name}</b>{you ? <span className={"sub"}> you</span> : null}</td>
-                <td><ProfileBadge unit={a}/></td>
-                <td className={"sub kgHideM"}>{a.role.name} L{a.level}</td>
-                <td className={"num"}>
-                    <span className={"kgHp kgHideM"}>
-                        <i className={hpPct <= 25 ? "cr" : hpPct <= 60 ? "lo" : ""} style={{width: hpPct + "%"}}/>
-                    </span>
-                    {Math.max(0, Math.ceil(a.health))}
-                </td>
-                <td className={"sub clip kgHideM"} title={a.weapon.name}>{a.weapon.name}</td>
-                {down
-                    ? <td colSpan={3} className={"sub"}>down</td>
-                    : !going
-                        ? <td colSpan={3} className={"sub"}>benched</td>
-                        : <React.Fragment>
-                            <td><span className={"kgState"}
-                                      title={`${LINES[this.state.lines[i]!].label} — ${LINES[this.state.lines[i]!].blurb}`}>
-                                {LINE_GLYPH[this.state.lines[i]!]}
-                            </span></td>
-                            <td><span className={"kgState w"}
-                                      title={`${STANCES[this.state.stances[i]!].label} — ${STANCES[this.state.stances[i]!].blurb}`}>
-                                {STANCE_GLYPH[this.state.stances[i]!]}
-                            </span></td>
-                            <td>{carrying.length
-                                ? carrying.map((p) => KIT[p.item].glyph).join(" ")
-                                : <span className={"sub"}>—</span>}</td>
-                        </React.Fragment>}
-            </tr>);
+            <React.Fragment key={i}>
+                <tr className={(sel ? "sel " : "") + (down || !going ? "out" : "")}
+                    onClick={() => { if (!down) { this.setState({sel: i, sheet: i}); } }}>
+                    <td className={"kgHideM"}><span className={"kgKey kb" + (sel ? " on" : "")}>{i + 1}</span></td>
+                    <td><b>{a.name}</b>{you ? <span className={"sub"}> you</span> : null}</td>
+                    <td><ProfileBadge unit={a}/></td>
+                    <td className={"sub kgHideM"}>{a.role.name} L{a.level}</td>
+                    <td className={"num"}>
+                        <span className={"kgHp kgHideM"}>
+                            <i className={hpPct <= 25 ? "cr" : hpPct <= 60 ? "lo" : ""} style={{width: hpPct + "%"}}/>
+                        </span>
+                        {Math.max(0, Math.ceil(a.health))}
+                    </td>
+                    {down
+                        ? <td colSpan={2} className={"sub"}>down</td>
+                        : !going
+                            ? <td colSpan={2} className={"sub"}>benched</td>
+                            : <React.Fragment>
+                                <td><span className={"kgState"}
+                                          title={`${LINES[this.state.lines[i]!].label} — ${LINES[this.state.lines[i]!].blurb}`}>
+                                    {LINE_GLYPH[this.state.lines[i]!]}
+                                </span></td>
+                                <td><span className={"kgState w"}
+                                          title={`${STANCES[this.state.stances[i]!].label} — ${STANCES[this.state.stances[i]!].blurb}`}>
+                                    {STANCE_GLYPH[this.state.stances[i]!]}
+                                </span></td>
+                            </React.Fragment>}
+                    <td className={"num"}>
+                        <button className={"kgChev" + (open ? " on" : "")}
+                                title={open ? "Fold the equipment away" : "Show equipment"}
+                                onClick={(e) => { e.stopPropagation(); this.setState({open: open ? -1 : i}); }}>
+                            {open ? "▴" : "▾"}
+                        </button>
+                    </td>
+                </tr>
+                {open && this.rollout(a, i)}
+            </React.Fragment>);
     };
+
+    /** The equipment rollout under a merc's row: what they hold, and the door to change it. */
+    private rollout(a: Actor, i: number) {
+        const upper = a.equipment.upper;
+        const head = a.equipment.headgear;
+        const carrying = this.state.picks.filter((p) => p.carrier === a);
+        return (
+            <tr className={"kgRoll"}>
+                <td colSpan={8}>
+                    <div className={"kgRollBody"}>
+                        <span className={"kgGearItem"}>
+                            <i>Weapon</i><b>{a.weapon.name}</b><em>{Gear.weaponLine(a.weapon)}</em>
+                        </span>
+                        <span className={"kgGearItem"}>
+                            <i>Armour</i>
+                            {upper ? <b>{upper.name}</b> : <b className={"dim"}>none</b>}
+                            {upper ? <em>SP {upper.stoppingPower}</em> : null}
+                        </span>
+                        {head &&
+                            <span className={"kgGearItem"}>
+                                <i>Head</i><b>{head.name}</b><em>SP {head.stoppingPower}</em>
+                            </span>}
+                        <span className={"kgGearItem"}>
+                            <i>Throwables</i>
+                            <b>{carrying.length
+                                ? carrying.map((p) => `${KIT[p.item].glyph} ${KIT[p.item].label}`).join(" · ")
+                                : "—"}</b>
+                        </span>
+                        <button className={"kgBack"} style={{marginLeft: "auto"}}
+                                onClick={() => this.setState({gear: i})}>
+                            ⚙ Edit gear
+                        </button>
+                    </div>
+                </td>
+            </tr>);
+    }
 
     /** The orders sheet — where, how, and the bench, at thumb size. */
     private ordersSheet() {
@@ -436,61 +458,70 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                                    on={this.state.stances[i] === st} value={STANCES[st].blurb}
                                    onClick={() => this.setStance(i, st)}/>))}
                     </div>
-                    {this.gearSection(a)}
                 </React.Fragment>}
             </KgModal>);
     }
 
     /**
-     * The merc's belt, editable in place: each piece in the game is a row —
-     * tap to take one from the crate, tap again to stow it. Moving a piece
-     * between mercs is stow on one sheet, take on the other.
+     * The gear editor: everything a merc holds, changeable in one sheet.
+     * Weapons and armour swap with their own pack (the old piece goes back
+     * in it — see Gear); throwables draw from the shared crate, capped
+     * crew-wide, and moving one between mercs is stow here, take there.
      */
-    private gearSection(a: Actor) {
+    private gearSheet() {
+        const i = this.state.gear;
+        const a = this.props.party[i];
+        if (!a) { return null; }
+        const going = this.state.going[i] === true && a.canFight();
         const picks = this.state.picks;
         const mine = (item: KitId) => picks.filter((p) => p.item === item && p.carrier === a).length;
-        const held = picks.filter((p) => p.carrier === a).length;
         const full = picks.length >= KIT_PICKS;
+        const upper = a.equipment.upper;
+        const head = a.equipment.headgear;
         return (
-            <React.Fragment>
-                <h3 className={"kgH"}>Gear <b>{held}</b><em>{KIT_PICKS} out per job, crew-wide</em></h3>
+            <KgModal title={<React.Fragment>{a.name} <b>Gear</b></React.Fragment>}
+                     onClose={() => this.setState({gear: -1})}>
+                <h3 className={"kgH"}>Weapon</h3>
                 <div className={"kgChoice"}>
-                    {KIT_ORDER.filter((item) => this.props.kit[item] > 0 || mine(item) > 0).map((item) => {
-                        const spec = KIT[item];
-                        const n = mine(item);
-                        const canGive = !full && this.left(item) > 0;
-                        return (
-                            <KgRow key={item} glyph={spec.glyph}
-                                   label={`${spec.label}${n > 1 ? ` ×${n}` : ""}`}
-                                   on={n > 0} disabled={n === 0 && !canGive}
-                                   title={`${spec.blurb} — ${spec.when}`}
-                                   value={n > 0 ? "carrying — tap to stow"
-                                       : this.left(item) <= 0 ? "a teammate has it"
-                                       : full ? "belts full" : `${this.left(item)} in crate`}
-                                   onClick={() => n > 0 ? this.stow(a, item) : this.give(a, item)}/>);
-                    })}
+                    <KgRow label={a.weapon.name} on value={Gear.weaponLine(a.weapon)}/>
+                    {a.inventory.weapons.map((w: any, idx: number) => (
+                        <KgRow key={idx} label={w.name} value={Gear.weaponLine(w)}
+                               onClick={() => { Gear.equipWeapon(a, idx); this.forceUpdate(); }}/>))}
                 </div>
-            </React.Fragment>);
+                <h3 className={"kgH"}>Armour</h3>
+                <div className={"kgChoice"}>
+                    <KgRow label={upper ? upper.name : "No body armour"} on={!!upper}
+                           value={upper ? `SP ${upper.stoppingPower}` : undefined}/>
+                    {head && <KgRow label={head.name} on value={`head · SP ${head.stoppingPower}`}/>}
+                    {a.inventory.armor.map((piece: any, idx: number) => (
+                        <KgRow key={idx} label={piece.name}
+                               value={`${piece.bodyPart === "headgear" ? "head" : "body"} · SP ${piece.stoppingPower}`}
+                               onClick={() => { Gear.equipArmor(a, idx); this.forceUpdate(); }}/>))}
+                </div>
+                <h3 className={"kgH"}>Throwables
+                    <b>{picks.length}/{KIT_PICKS}</b><em>crew-wide, out per job</em></h3>
+                {going
+                    ? <div className={"kgChoice"}>
+                        {KIT_ORDER.filter((item) => this.props.kit[item] > 0 || mine(item) > 0).map((item) => {
+                            const spec = KIT[item];
+                            const n = mine(item);
+                            const canGive = !full && this.left(item) > 0;
+                            return (
+                                <KgRow key={item} glyph={spec.glyph}
+                                       label={`${spec.label}${n > 1 ? ` ×${n}` : ""}`}
+                                       on={n > 0} disabled={n === 0 && !canGive}
+                                       title={`${spec.blurb} — ${spec.when}`}
+                                       value={n > 0 ? "carrying — tap to stow"
+                                           : this.left(item) <= 0 ? "a teammate has it"
+                                           : full ? "belts full" : `${this.left(item)} in crate`}
+                                       onClick={() => n > 0 ? this.stow(a, item) : this.give(a, item)}/>);
+                        })}
+                    </div>
+                    : <p className={"kgP dim"}>Not walking in — throwables ride only on the squad.</p>}
+            </KgModal>);
     }
 
     // -------------------------------------------------------------- the kit --
-
-    private crateChip = (item: KitId) => {
-        const spec = KIT[item];
-        const taken = this.state.picks.filter((p) => p.item === item).length;
-        const full = this.state.picks.length >= KIT_PICKS;
-        const dead = this.props.kit[item] <= 0 || (taken === 0 && full);
-        return (
-            <button key={item}
-                    className={"kgCrateChip" + (taken > 0 ? " on" : dead ? " out" : "")}
-                    disabled={dead && taken === 0}
-                    title={`${spec.blurb} — ${spec.when}`}
-                    onClick={() => this.toggleKit(item)}>
-                <i>{spec.glyph}</i>
-                <b>{spec.label}{taken > 1 ? ` ×${taken}` : ""}</b>
-                <span>{this.left(item)} left</span>
-            </button>);
-    };
 
     public override render() {
         const {party, pending} = this.props;
@@ -498,7 +529,6 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         // The verdict reads the squad, not the payroll: benching somebody has
         // to be visible as a worse fight, or the choice is being made blind.
         const fc = forecastWave(squad, this.props.enemies);
-        const picks = this.state.picks;
         return (
             <div className={"kg"}>
                 <div className={"kgTop"}>
@@ -522,20 +552,16 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                             <thead><tr>
                                 <th/><th>Merc</th><th/><th className={"kgHideM"}>Class</th>
                                 <th className={"num"}>HP</th><th className={"kgHideM"}>Weapon</th>
-                                <th>Where</th><th>How</th><th>Carry</th>
+                                <th>Where</th><th>How</th><th/>
                             </tr></thead>
                             <tbody>{party.map(this.crewRow)}</tbody>
                         </table>
-                        <div className={"kgHr"}/>
-                        <h3 className={"kgH"}>Crate <b>{picks.length} of {KIT_PICKS} out</b>
-                            <em className={"keysOnly"}>a/s/d/f</em></h3>
-                        <div className={"kgCrate"}>{KIT_ORDER.map(this.crateChip)}</div>
                     </div>
                 </div>
                 <KgBar>
                     <span className={"keysOnly"}><b>1–{party.length}</b> merc · <b>space</b> bench</span>
                     <span className={"keysOnly"}><b>q/w/e</b> where · <b>z/x/c</b> how</span>
-                    <span className={"keysOnly"}><b>a/s/d/f</b> ordnance</span>
+                    <span className={"keysOnly"}><b>g</b> gear</span>
                     {this.props.onCancel && <KgBack label={"Map"} onClick={this.props.onCancel}/>}
                     <button className={"kgPrim" + (this.props.onCancel ? "" : " r")}
                             onClick={this.deploy} disabled={squad.length <= 0}>
@@ -543,6 +569,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                     </button>
                 </KgBar>
                 {this.state.sheet >= 0 && this.ordersSheet()}
+                {this.state.gear >= 0 && this.gearSheet()}
             </div>);
     }
 }
