@@ -5,6 +5,7 @@ import {KgBack, KgBar, KgModal, KgRow} from "../general/kgKit";
 import {PROFILE, profileTally} from "../../interact/profile";
 import {ODDS_LABEL, forecastWave, sideStrength} from "../../interact/forecast";
 import {Gear} from "../../interact/gear";
+import {GetItem} from "../../interact/getItem";
 import {GdArmorCard, GdArmorChips, GdCard, GdChips} from "../general/gearDelta";
 import {Deployment, KIT, KIT_ORDER, KIT_PICKS, Kit, KitId, KitPick, LINES, LINE_ORDER, Line,
     SQUAD_CAP, STANCES, STANCE_ORDER, Stance, lineOf, stanceOf} from "../../interact/loadout";
@@ -450,7 +451,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                                 ? carrying.map((p) => `${KIT[p.item].glyph} ${KIT[p.item].label}`).join(" · ")
                                 : "—"}</b>
                         </span>
-                        <button className={"kgBack"} style={{marginLeft: "auto"}}
+                        <button className={"kgBack"}
                                 onClick={() => this.setState({gear: i, moreWeapons: false, pick: ""})}>
                             ⚙ Edit gear
                         </button>
@@ -517,29 +518,45 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                      onClose={() => this.setState({gear: -1, pick: ""})}>
                 <h3 className={"kgH"}>Weapon <em className={"gdHint"}>tap one to compare</em></h3>
                 <div className={"kgChoice"}>
-                    <KgRow glyph={"✦"} label={a.weapon.name} on
+                    <KgRow glyph={"✦"} kicker={a.weapon.weaponType} label={a.weapon.name} on
                            value={`in hand · ${Gear.weaponLine(a.weapon)}`}
                            labelStyle={{color: Gear.rarityColor(a.weapon)}}/>
-                    {a.weapon.name !== "Fists" &&
-                        <KgRow label={"Fists"} value={"unarmed — always an option"}
-                               onClick={() => { Gear.equipFists(a); this.setState({pick: ""}); }}/>}
+                    {a.weapon.name !== "Fists" && (() => {
+                        const fists = GetItem.weapon("Fists");
+                        const picked = this.state.pick === "f";
+                        return (
+                            <div className={"gdWrap" + (picked ? " gdSel" : "")}>
+                                <KgRow kicker={"unarmed"} label={"Fists"} on={picked}
+                                       sub={<GdChips cur={a.weapon} w={fists}/>}
+                                       onClick={() => this.setState({pick: picked ? "" : "f"})}/>
+                                {picked &&
+                                    <GdCard cur={a.weapon} w={fists} act={"Go bare-knuckle"}
+                                            onAct={() => { Gear.equipFists(a); this.setState({pick: ""}); }}/>}
+                            </div>);
+                    })()}
                     {(() => {
-                        const pack = Gear.weaponChoices(a);
+                        const pack = Gear.stackedWeapons(a);
                         const shown = this.state.moreWeapons ? pack : pack.slice(0, 3);
                         const hidden = pack.length - 3;
                         return (
                             <React.Fragment>
-                                {shown.map((w, idx) => (
-                                    <React.Fragment key={idx}>
-                                        <KgRow glyph={Gear.isCyberweapon(a, w) ? "⌁" : Gear.VERDICT_GLYPH[Gear.verdict(a.weapon, w)]}
-                                               label={w.name} on={this.state.pick === "w" + idx}
-                                               labelStyle={{color: Gear.rarityColor(w)}}
-                                               right={<span className={"gdRight"}><GdChips cur={a.weapon} w={w}/></span>}
-                                               onClick={() => this.setState({pick: this.state.pick === "w" + idx ? "" : "w" + idx})}/>
-                                        {this.state.pick === "w" + idx &&
-                                            <GdCard cur={a.weapon} w={w} act={`Swap to the ${w.name}`}
-                                                    onAct={() => { Gear.equipWeapon(a, w); this.setState({pick: ""}); }}/>}
-                                    </React.Fragment>))}
+                                {shown.map((s, idx) => {
+                                    const w = s.item;
+                                    const chrome = Gear.isCyberweapon(a, w);
+                                    const picked = this.state.pick === "w" + idx;
+                                    return (
+                                        <div key={idx} className={"gdWrap" + (picked ? " gdSel" : "")}>
+                                            <KgRow glyph={chrome ? "⌁" : Gear.VERDICT_GLYPH[Gear.verdict(a.weapon, w)]}
+                                                   kicker={(chrome ? "chrome · " : "") + w.weaponType}
+                                                   label={s.n > 1 ? `${w.name} ×${s.n}` : w.name}
+                                                   on={picked} labelStyle={{color: Gear.rarityColor(w)}}
+                                                   sub={<GdChips cur={a.weapon} w={w}/>}
+                                                   onClick={() => this.setState({pick: picked ? "" : "w" + idx})}/>
+                                            {picked &&
+                                                <GdCard cur={a.weapon} w={w} act={`Swap to the ${w.name}`}
+                                                        onAct={() => { Gear.equipWeapon(a, w); this.setState({pick: ""}); }}/>}
+                                        </div>);
+                                })}
                                 {hidden > 0 &&
                                     <KgRow glyph={this.state.moreWeapons ? "▴" : "▾"}
                                            label={this.state.moreWeapons ? "Show less" : `Show ${hidden} more`}
@@ -549,27 +566,30 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                 </div>
                 <h3 className={"kgH"}>Armour</h3>
                 <div className={"kgChoice"}>
-                    <KgRow glyph={"▣"} label={upper ? upper.name : "No body armour"} on={!!upper}
+                    <KgRow glyph={"▣"} kicker={"body"} label={upper ? upper.name : "No body armour"} on={!!upper}
                            labelStyle={upper ? {color: Gear.rarityColor(upper)} : undefined}
                            value={upper ? `worn · SP ${upper.stoppingPower}` : "nothing worn"}/>
-                    {head && <KgRow glyph={"◠"} label={head.name} on value={`worn on head · SP ${head.stoppingPower}`}
+                    {head && <KgRow glyph={"◠"} kicker={"head"} label={head.name} on
+                                    value={`worn · SP ${head.stoppingPower}`}
                                     labelStyle={{color: Gear.rarityColor(head)}}/>}
-                    {Gear.armorChoices(a)
-                        .slice()
-                        .sort((x, y) => (y.rarity || 0) - (x.rarity || 0)
-                            || y.stoppingPower - x.stoppingPower)
-                        .map((piece, idx) => (
-                            <React.Fragment key={idx}>
-                                <KgRow label={piece.name} on={this.state.pick === "a" + idx}
-                                       labelStyle={{color: Gear.rarityColor(piece)}}
-                                       right={<span className={"gdRight"}>
-                                           {piece.bodyPart === "headgear" ? "head" : "body"}
-                                           <GdArmorChips a={a} piece={piece}/></span>}
-                                       onClick={() => this.setState({pick: this.state.pick === "a" + idx ? "" : "a" + idx})}/>
-                                {this.state.pick === "a" + idx &&
-                                    <GdArmorCard a={a} piece={piece} act={`Wear the ${piece.name}`}
-                                                 onAct={() => { Gear.equipArmor(a, piece); this.setState({pick: ""}); }}/>}
-                            </React.Fragment>))}
+                    {Gear.stackedArmor(a)
+                        .sort((x, y) => (y.item.rarity || 0) - (x.item.rarity || 0)
+                            || y.item.stoppingPower - x.item.stoppingPower)
+                        .map((s, idx) => {
+                            const piece = s.item;
+                            const picked = this.state.pick === "a" + idx;
+                            return (
+                                <div key={idx} className={"gdWrap" + (picked ? " gdSel" : "")}>
+                                    <KgRow kicker={piece.bodyPart === "headgear" ? "head" : "body"}
+                                           label={s.n > 1 ? `${piece.name} ×${s.n}` : piece.name}
+                                           on={picked} labelStyle={{color: Gear.rarityColor(piece)}}
+                                           sub={<GdArmorChips a={a} piece={piece}/>}
+                                           onClick={() => this.setState({pick: picked ? "" : "a" + idx})}/>
+                                    {picked &&
+                                        <GdArmorCard a={a} piece={piece} act={`Wear the ${piece.name}`}
+                                                     onAct={() => { Gear.equipArmor(a, piece); this.setState({pick: ""}); }}/>}
+                                </div>);
+                        })}
                 </div>
                 <h3 className={"kgH"}>Throwables
                     <b>{picks.length}/{KIT_PICKS}</b><em>crew-wide, out per job</em></h3>
