@@ -106,9 +106,9 @@ export class Economy {
         return msgs;
     }
 
-    /** Human-readable damage line for a weapon: "3d6+2 AP". */
+    /** Human-readable damage line for a weapon: "3d6+2 AP AUTO". */
     public static weaponDetail(w: Weapon): string {
-        return `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}${w.autofire ? " AUTO" : ""}`;
+        return `${Gear.dmg(w)}${w.autofire ? " AUTO" : ""}`;
     }
 
     /** Best scavenged weapon worth equipping: same-class edge, or a big cross-class jump. */

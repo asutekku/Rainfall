@@ -127,10 +127,14 @@ export class Gear {
         return w.averageDamage() + (w.ap ? 4 : 0);
     }
 
+    /** THE damage string — "3d6+2 AP" — printed the same on every screen. */
+    public static dmg(w: Weapon): string {
+        return `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}`;
+    }
+
     /** The one-line spec sheet a weapon prints wherever it's listed. */
     public static weaponLine(w: Weapon): string {
-        return `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}` +
-            ` · ROF ${w.rateOfFire} · ${w.range}m`;
+        return `${Gear.dmg(w)} · ROF ${w.rateOfFire} · ${w.range}m`;
     }
 
     /**

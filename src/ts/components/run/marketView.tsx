@@ -11,6 +11,7 @@ import armors from "../../items/armors";
 import {randomMed} from "../../items/consumables";
 import {Medical} from "../../items/Scrap";
 import {EventCheck, makeCtx, odds, rollCheck} from "../../interact/events";
+import {Gear} from "../../interact/gear";
 import {NodeShell} from "./metaOverlay";
 
 export interface MarketViewProps {
@@ -121,7 +122,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
         const w = rare[(Math.random() * rare.length) << 0]!;
         return {
             name: w.name, cost: Math.round(w.cost * 1.15),
-            detail: `back room · ${w.weaponType} · ${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}`,
+            detail: `back room · ${w.weaponType} · ${Gear.dmg(w)}`,
             info: weaponInfo(w),
             blurb: "It comes out of the case wrapped in cloth, like it's owed that.",
             buy: (a) => { Stash.of(a).weapons.push(GetItem.weapon(w.name)); return `The ${w.name}, wrapped and handed over like a ceremony.`; },
@@ -139,7 +140,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
             const w = guns[(Math.random() * guns.length) << 0]!;
             out.push({
                 name: w.name, cost: w.cost,
-                detail: `${w.weaponType} · ${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}`,
+                detail: `${w.weaponType} · ${Gear.dmg(w)}`,
                 info: weaponInfo(w),
                 blurb: w.manufacturer ? `${w.manufacturer} — serial filed off.` : undefined,
                 buy: (a) => { Stash.of(a).weapons.push(GetItem.weapon(w.name)); return `${w.name} into The Stash.`; },
@@ -364,7 +365,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
             if (w.name === "Fists") { return; }
             out.push({
                 owner: leader, kind: "weapon", idx, name: w.name,
-                detail: `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}`,
+                detail: Gear.dmg(w),
                 price: Math.max(5, Math.floor(w.cost * rate)),
             });
         });
