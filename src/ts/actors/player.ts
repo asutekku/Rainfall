@@ -21,7 +21,6 @@ export class Player extends Actor {
         this.name = s.name || `${Name.getFirstname(this.gender)} ${Name.getSurname()}`;
         this.role = s.role ? new Role(s.role) : new Role();
         this.lifepath = s.lifepath || CharacterCreation.randomLifepath();
-        this.item = GetItem.item();
 
         // A RED merc starts armed with a sidearm; Fists are a state, not an
         // item — the equip screens conjure them on demand (see Gear).

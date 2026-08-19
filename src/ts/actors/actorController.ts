@@ -1,17 +1,9 @@
 import {Actor} from "./Actor";
 import {Adversary} from "./Enemies/Adversary";
-import {Goon} from "./Enemies/Goon";
 import {factionsOfRank, pickArchetypeFrom, pickArchetypeOfRank, pickFaction,
     pickRankedFrom} from "./resources/archetypes";
 
 export class ActorController {
-    /** Legacy plain goons (kept for anything that still wants a rank-1 mook). */
-    public static getGoons(amount: number): Goon[] {
-        const goons = [];
-        for (let i = 0; i < amount; i++) { goons.push(new Goon()); }
-        return goons;
-    }
-
     /**
      * A wave of faction enemies scaled to the party's level — the main spawner.
      * Themed: the whole wave belongs to ONE faction, so a Maelstrom ambush

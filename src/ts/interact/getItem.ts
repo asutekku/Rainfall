@@ -1,7 +1,6 @@
 import {Armor} from "../items/Armor";
 import armors from "../items/armors";
 import Equipment from "../items/Equipment";
-import items from "../items/items";
 import {Weapon} from "../items/Weapon";
 import {Cyberware} from "../items/Cyberware";
 import {default as cyberwareData} from "../../objects/cyberware";
@@ -64,17 +63,6 @@ export class GetItem {
 
     public static program(name: string): Program {
         return new Program(programData[name]!);
-    }
-
-    public static item() {
-        const randomItem = Math.floor(Math.random() * 3);
-        if (randomItem === 0) {
-            return GetItem.armor();
-        } else if (randomItem === 1) {
-            return Utils.pickRandom(weapons).clone();
-        } else if (randomItem === 2) {
-            return Utils.pickRandom(items);
-        }
     }
 
 }

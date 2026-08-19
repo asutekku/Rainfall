@@ -46,7 +46,6 @@ export class Merc extends Actor {
         this.auto = true;                     // hired guns fight themselves
         this.hireable = true;                 // and can be lost for good
 
-        this.item = GetItem.item();
         this.weapon = GetItem.weaponOfClass(offer.weapons, 4, offer.minDice, offer.maxDice);
         this.temperament = TacticalAI.rollTemperament(this.weapon.weaponClass);
 

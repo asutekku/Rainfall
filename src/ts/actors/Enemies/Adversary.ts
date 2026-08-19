@@ -26,8 +26,6 @@ export class Adversary extends Actor {
         // artwork, and reading the class off the picture made it a sniper.
         this.role = new Role(a.cls);
 
-        this.item = GetItem.item();
-        this.items = [this.item];
         if (a.frags !== undefined) { this.frags = a.frags; }
         if (a.parts) { this.kitParts = a.parts; }
         if (a.ability) { this.ability = a.ability; }

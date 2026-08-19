@@ -11,12 +11,10 @@ import {factionPerk} from "./resources/factionStyles";
 import {traitMult, traitSum} from "./resources/traits";
 import {Role} from "./resources/Role";
 import {CharacterCreation, Lifepath} from "./resources/CharacterCreation";
-import {Statistics} from "./resources/Statistics";
 import {ObjectPosition} from "../utils/ObjectPosition";
 import {GameObject} from "../items/GameObject";
 
 export class Actor extends GameObject {
-    public item: any;
     public name: string;
     public role: Role;
     public level: number;
@@ -81,9 +79,7 @@ export class Actor extends GameObject {
         accessories: Armor | null;
         [key: string]: Item | null;
     };
-    public weapons: any[];
     public gender: string;
-    public items: Item[];
     public currency: number;
     public kills: number;
     /** Hired help — expendable. Your character is never this, so it never dies for good. */
@@ -272,8 +268,6 @@ export class Actor extends GameObject {
             feet: null,
             accessories: null,
         };
-        this.weapons = [];
-        this.items = [];
         this.inventory = {
             weapons: [],
             armor: [],
@@ -478,7 +472,6 @@ export class Actor extends GameObject {
 
     public gainLevel() {
         this.level += 1;
-        Statistics.level += 1;
         this.experience = 0;
         // `level ^ 1.5` was a bitwise XOR (1.5 truncates to 1), so growth was a
         // meaningless sawtooth. Use a real power for smooth, monotonic scaling.
