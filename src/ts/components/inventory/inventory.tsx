@@ -1,5 +1,6 @@
 import * as React from "react";
-import {Gear} from "../../interact/gear";
+import {Gear, Verdict} from "../../interact/gear";
+import {GdArmorChips, GdChips} from "../general/gearDelta";
 import {Actor} from "../../actors/Actor";
 import {Armor} from "../../items/Armor";
 import {Weapon} from "../../items/Weapon";
@@ -14,7 +15,15 @@ export interface InventoryProps {
     onNotice?: ((msg: any) => void) | undefined;
 }
 
-interface InventoryState { memberIdx: number; version: number; }
+interface InventoryState {
+    memberIdx: number;
+    version: number;
+    /** Item names lit up right after a swap — both sides of it, briefly. */
+    flash: {[name: string]: boolean};
+}
+
+/** The verdict glyph's color class on a slot box; "same" keeps the plain ink. */
+const VCLS: Record<Verdict, string> = {up: " v-up", down: " v-dn", trade: " v-tr", same: ""};
 
 /**
  * The crew's actual gear: what each member holds, and The Stash underneath —
@@ -33,13 +42,28 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
         return parts.length ? parts.join(" · ") : "empty";
     }
 
+    private flashTimer = 0;
+
     constructor(props: InventoryProps) {
         super(props);
-        this.state = {memberIdx: 0, version: 0};
+        this.state = {memberIdx: 0, version: 0, flash: {}};
+    }
+
+    public override componentWillUnmount() {
+        window.clearTimeout(this.flashTimer);
     }
 
     private canEquip(): boolean {
         return this.props.screen !== "combat";
+    }
+
+    /** Light up both ends of a swap so the shelved piece is seen landing. */
+    private flashSwap(names: Array<string | undefined>) {
+        const flash: {[name: string]: boolean} = {};
+        names.forEach((n) => { if (n) { flash[n] = true; } });
+        window.clearTimeout(this.flashTimer);
+        this.flashTimer = window.setTimeout(() => this.setState({flash: {}}), 1000);
+        this.setState({flash});
     }
 
     private notice(msg: string) {
@@ -54,8 +78,9 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
 
     private equipWeapon(a: Actor, w: Weapon) {
         if (!this.canEquip()) { return; }
+        const old = a.weapon;
         const msg = Gear.equipWeapon(a, w);
-        if (msg) { this.notice(msg); }
+        if (msg) { this.flashSwap([w.name, old ? old.name : undefined]); this.notice(msg); }
     }
 
     private useMed(a: Actor, idx: number) {
@@ -75,8 +100,9 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
 
     private equipArmor(a: Actor, piece: Armor) {
         if (!this.canEquip()) { return; }
+        const old = Gear.displaced(a, piece);
         const msg = Gear.equipArmor(a, piece);
-        if (msg) { this.notice(msg); }
+        if (msg) { this.flashSwap([piece.name, old ? old.name : undefined]); this.notice(msg); }
     }
 
     private wStats(w: Weapon): string {
@@ -89,14 +115,14 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
         return (
             <div className={"gearSect"}>
                 <h4 className={"mkHead"}>Equipped</h4>
-                <div className={"gearRow eq"}>
+                <div className={"gearRow eq" + (this.state.flash[a.weapon.name] ? " flash" : "")}>
                     <span className={"gearSlot"}>✦</span>
                     <span className={"mkNameWrap"}>
                         <span className={"mkName"} style={{color: Gear.rarityColor(a.weapon)}}>{a.weapon.name}</span>
                         <span className={"mkDetail"}>{a.weapon.weaponType} · {this.wStats(a.weapon)}</span>
                     </span>
                 </div>
-                <div className={"gearRow eq"}>
+                <div className={"gearRow eq" + (upper && this.state.flash[upper.name] ? " flash" : "")}>
                     <span className={"gearSlot"}>▣</span>
                     <span className={"mkNameWrap"}>
                         <span className={"mkName"} style={upper ? {color: Gear.rarityColor(upper)} : undefined}>{upper ? upper.name : "No body armor"}</span>
@@ -104,7 +130,7 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                     </span>
                 </div>
                 {head && (
-                    <div className={"gearRow eq"}>
+                    <div className={"gearRow eq" + (this.state.flash[head.name] ? " flash" : "")}>
                         <span className={"gearSlot"}>◠</span>
                         <span className={"mkNameWrap"}>
                             <span className={"mkName"} style={{color: Gear.rarityColor(head)}}>{head.name}</span>
@@ -124,12 +150,36 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
             </div>);
     }
 
+    /**
+     * One armour candidate, read against what the slot holds now: the glyph
+     * calls the SP swing, the chip gives its size, the header names the worn.
+     */
+    private armorRow(a: Actor, r: Armor, key: string, lock: boolean) {
+        const d = Gear.armorDelta(a, r);
+        return (
+            <div key={key} className={"gearRow" + (this.state.flash[r.name] ? " flash" : "")}>
+                <span className={"gearSlot" + (d > 0 ? " v-up" : d < 0 ? " v-dn" : "")}>
+                    {d > 0 ? "▲" : d < 0 ? "▼" : "="}</span>
+                <span className={"mkNameWrap"}>
+                    <span className={"mkName"} style={{color: Gear.rarityColor(r)}}>{r.name}</span>
+                    <span className={"mkDetail"}>{r.bodyPart === "headgear" ? "head" : "body"} · SP {r.stoppingPower}</span>
+                    <GdArmorChips a={a} piece={r}/>
+                </span>
+                <button className={"mkBuy gearEquip"} disabled={lock}
+                        onClick={() => this.equipArmor(a, r)}>WEAR</button>
+            </div>);
+    }
+
     private stash(a: Actor) {
         const lock = !this.canEquip();
         const bag = Stash.of(a);
         // the member's swap list: The Stash plus their own bolted-in chrome
         const weapons = Gear.weaponChoices(a);
         const armor = Gear.armorChoices(a);
+        const body = armor.filter((r) => r.bodyPart !== "headgear");
+        const headwear = armor.filter((r) => r.bodyPart === "headgear");
+        const wornBody = a.equipment.upper as Armor | null;
+        const wornHead = a.equipment.headgear as Armor | null;
         const meds = bag.medical as Medical[];
         const misc = bag.misc || [];
         return (
@@ -138,31 +188,36 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                     {lock && <em className={"gearLock"}> · locked mid-fight</em>}</h4>
                 {weapons.length === 0 && armor.length === 0 && meds.length === 0 && misc.length === 0 &&
                     <div className={"mkEmpty"}>The Stash is empty. Scavenge fights or hit a Black Market.</div>}
+                {weapons.length > 0 &&
+                    <div className={"gearSub"}>Weapons
+                        <em>in hand: {a.weapon.name} · {this.wStats(a.weapon)}</em></div>}
                 {weapons.map((w, i) => {
                     const chrome = Gear.isCyberweapon(a, w);
+                    const v = Gear.verdict(a.weapon, w);
                     return (
-                        <div key={"w" + i} className={"gearRow"}>
-                            <span className={"gearSlot"}>{chrome ? "⌁" : "✦"}</span>
+                        <div key={"w" + i} className={"gearRow" + (this.state.flash[w.name] ? " flash" : "")}>
+                            <span className={"gearSlot" + VCLS[v]}
+                                  title={Gear.verdictLine(a.weapon, w)}>{Gear.VERDICT_GLYPH[v]}</span>
                             <span className={"mkNameWrap"}>
                                 <span className={"mkName"} style={{color: Gear.rarityColor(w)}}>{w.name}</span>
                                 <span className={"mkDetail"}>{chrome ? "chrome · " : ""}{w.weaponType} · {this.wStats(w)}</span>
+                                <GdChips cur={a.weapon} w={w}/>
                             </span>
                             <button className={"mkBuy gearEquip"} disabled={lock}
                                     onClick={() => this.equipWeapon(a, w)}>SWAP</button>
                         </div>);
                 })}
-                {armor.map((r, i) => (
-                    <div key={"a" + i} className={"gearRow"}>
-                        <span className={"gearSlot"}>▣</span>
-                        <span className={"mkNameWrap"}>
-                            <span className={"mkName"} style={{color: Gear.rarityColor(r)}}>{r.name}</span>
-                            <span className={"mkDetail"}>{r.bodyPart} · SP {r.stoppingPower}</span>
-                        </span>
-                        <button className={"mkBuy gearEquip"} disabled={lock}
-                                onClick={() => this.equipArmor(a, r)}>WEAR</button>
-                    </div>))}
+                {body.length > 0 &&
+                    <div className={"gearSub"}>Body armour
+                        <em>worn: {wornBody ? `${wornBody.name} · SP ${wornBody.stoppingPower}` : "nothing"}</em></div>}
+                {body.map((r, i) => this.armorRow(a, r, "ab" + i, lock))}
+                {headwear.length > 0 &&
+                    <div className={"gearSub"}>Headgear
+                        <em>worn: {wornHead ? `${wornHead.name} · SP ${wornHead.stoppingPower}` : "nothing"}</em></div>}
+                {headwear.map((r, i) => this.armorRow(a, r, "ah" + i, lock))}
+                {meds.length > 0 && <div className={"gearSub"}>Meds</div>}
                 {meds.map((m, i) => (
-                    <div key={"h" + i} className={"gearRow"}>
+                    <div key={"md" + i} className={"gearRow"}>
                         <span className={"gearSlot med"}>✚</span>
                         <span className={"mkNameWrap"}>
                             <span className={"mkName"}>{m.name}</span>
@@ -173,6 +228,7 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                                 title={a.mortallyWounded ? "stop the dying" : a.health >= a.maxHealth ? "already at full health" : undefined}
                                 onClick={() => this.useMed(a, i)}>{a.mortallyWounded ? "STABILIZE" : "USE"}</button>
                     </div>))}
+                {misc.length > 0 && <div className={"gearSub"}>Junk</div>}
                 {misc.map((m: any, i: number) => (
                     <div key={"m" + i} className={"gearRow"}>
                         <span className={"gearSlot"}>◌</span>
