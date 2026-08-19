@@ -91,14 +91,14 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                 <div className={"gearRow eq"}>
                     <span className={"gearSlot"}>✦</span>
                     <span className={"mkNameWrap"}>
-                        <span className={"mkName"}>{a.weapon.name}</span>
+                        <span className={"mkName"} style={{color: Gear.rarityColor(a.weapon)}}>{a.weapon.name}</span>
                         <span className={"mkDetail"}>{a.weapon.weaponType} · {this.wStats(a.weapon)}</span>
                     </span>
                 </div>
                 <div className={"gearRow eq"}>
                     <span className={"gearSlot"}>▣</span>
                     <span className={"mkNameWrap"}>
-                        <span className={"mkName"}>{upper ? upper.name : "No body armor"}</span>
+                        <span className={"mkName"} style={upper ? {color: Gear.rarityColor(upper)} : undefined}>{upper ? upper.name : "No body armor"}</span>
                         <span className={"mkDetail"}>{upper ? `torso · SP ${upper.stoppingPower}/${upper.maxStoppingPower}` : "torso · SP 0"}</span>
                     </span>
                 </div>
@@ -106,7 +106,7 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                     <div className={"gearRow eq"}>
                         <span className={"gearSlot"}>◠</span>
                         <span className={"mkNameWrap"}>
-                            <span className={"mkName"}>{head.name}</span>
+                            <span className={"mkName"} style={{color: Gear.rarityColor(head)}}>{head.name}</span>
                             <span className={"mkDetail"}>head · SP {head.stoppingPower}/{head.maxStoppingPower}</span>
                         </span>
                     </div>
@@ -139,7 +139,7 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                         <div key={"w" + i} className={"gearRow"}>
                             <span className={"gearSlot"}>✦</span>
                             <span className={"mkNameWrap"}>
-                                <span className={"mkName"}>{w.name}</span>
+                                <span className={"mkName"} style={{color: Gear.rarityColor(w)}}>{w.name}</span>
                                 <span className={"mkDetail"}>{w.weaponType} · {this.wStats(w)}</span>
                             </span>
                             <button className={"mkBuy gearEquip"} disabled={lock}
@@ -150,7 +150,7 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                     <div key={"a" + i} className={"gearRow"}>
                         <span className={"gearSlot"}>▣</span>
                         <span className={"mkNameWrap"}>
-                            <span className={"mkName"}>{r.name}</span>
+                            <span className={"mkName"} style={{color: Gear.rarityColor(r)}}>{r.name}</span>
                             <span className={"mkDetail"}>{r.bodyPart} · SP {r.stoppingPower}</span>
                         </span>
                         <button className={"mkBuy gearEquip"} disabled={lock}

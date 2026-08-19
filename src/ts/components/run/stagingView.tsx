@@ -40,6 +40,8 @@ interface StagingState {
     open: number;
     /** which merc's gear editor is open (-1: none) */
     gear: number;
+    /** the gear editor's weapon list, unfolded past the top three */
+    moreWeapons: boolean;
 }
 
 /** The selection as the engine will read it: you first, then the chosen. */
@@ -118,6 +120,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
             sheet: -1,
             open: -1,
             gear: -1,
+            moreWeapons: false,
         };
     }
 
@@ -176,7 +179,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         else if (k === "z") { this.setStance(at, "push"); }
         else if (k === "x") { this.setStance(at, "steady"); }
         else if (k === "c") { this.setStance(at, "hold"); }
-        else if (k === "g") { this.setState({gear: at, sheet: -1}); }
+        else if (k === "g") { this.setState({gear: at, sheet: -1, moreWeapons: false}); }
         else if (k === "enter") {
             if (gearOpen) { this.setState({gear: -1}); }
             else if (sheetOpen) { this.setState({sheet: -1}); }
@@ -275,6 +278,19 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         this.setState({picks: this.state.picks.filter((_p, i) => i !== idx)});
     };
 
+    /** Belts full but this merc holds something: their last pick makes room for `item`. */
+    private swapOwn = (a: Actor, item: KitId) => {
+        const picks = this.state.picks.slice();
+        let at = -1;
+        picks.forEach((p, idx) => { if (p.carrier === a) { at = idx; } });
+        if (at < 0) { return; }
+        picks.splice(at, 1);
+        const stock = this.props.kit[item] - picks.filter((p) => p.item === item).length;
+        if (stock <= 0) { return; }
+        picks.push({item, carrier: a});
+        this.setState({picks});
+    };
+
     private deploy = () => {
         const squad = this.squad();
         if (!squad.length) { return; }
@@ -363,6 +379,8 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                         </span>
                         {Math.max(0, Math.ceil(a.health))}
                     </td>
+                    <td className={"sub clip kgHideM"} title={a.weapon.name}
+                        style={{color: Gear.rarityColor(a.weapon)}}>{a.weapon.name}</td>
                     {down
                         ? <td colSpan={2} className={"sub"}>down</td>
                         : !going
@@ -396,19 +414,24 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         const carrying = this.state.picks.filter((p) => p.carrier === a);
         return (
             <tr className={"kgRoll"}>
-                <td colSpan={8}>
+                <td colSpan={9}>
                     <div className={"kgRollBody"}>
                         <span className={"kgGearItem"}>
-                            <i>Weapon</i><b>{a.weapon.name}</b><em>{Gear.weaponLine(a.weapon)}</em>
+                            <i>Weapon</i>
+                            <b style={{color: Gear.rarityColor(a.weapon)}}>{a.weapon.name}</b>
+                            <em>{Gear.weaponLine(a.weapon)}</em>
                         </span>
                         <span className={"kgGearItem"}>
                             <i>Armour</i>
-                            {upper ? <b>{upper.name}</b> : <b className={"dim"}>none</b>}
+                            {upper ? <b style={{color: Gear.rarityColor(upper)}}>{upper.name}</b>
+                                : <b className={"dim"}>none</b>}
                             {upper ? <em>SP {upper.stoppingPower}</em> : null}
                         </span>
                         {head &&
                             <span className={"kgGearItem"}>
-                                <i>Head</i><b>{head.name}</b><em>SP {head.stoppingPower}</em>
+                                <i>Head</i>
+                                <b style={{color: Gear.rarityColor(head)}}>{head.name}</b>
+                                <em>SP {head.stoppingPower}</em>
                             </span>}
                         <span className={"kgGearItem"}>
                             <i>Throwables</i>
@@ -417,7 +440,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                                 : "—"}</b>
                         </span>
                         <button className={"kgBack"} style={{marginLeft: "auto"}}
-                                onClick={() => this.setState({gear: i})}>
+                                onClick={() => this.setState({gear: i, moreWeapons: false})}>
                             ⚙ Edit gear
                         </button>
                     </div>
@@ -483,20 +506,47 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                      onClose={() => this.setState({gear: -1})}>
                 <h3 className={"kgH"}>Weapon</h3>
                 <div className={"kgChoice"}>
-                    <KgRow label={a.weapon.name} on value={Gear.weaponLine(a.weapon)}/>
-                    {a.inventory.weapons.map((w: any, idx: number) => (
-                        <KgRow key={idx} label={w.name} value={Gear.weaponLine(w)}
-                               onClick={() => { Gear.equipWeapon(a, idx); this.forceUpdate(); }}/>))}
+                    <KgRow label={a.weapon.name} on value={Gear.weaponLine(a.weapon)}
+                           labelStyle={{color: Gear.rarityColor(a.weapon)}}/>
+                    {a.weapon.name !== "Fists" &&
+                        <KgRow label={"Fists"} value={"unarmed — always an option"}
+                               onClick={() => { Gear.equipFists(a); this.forceUpdate(); }}/>}
+                    {(() => {
+                        const pack = a.inventory.weapons
+                            .map((w: any, idx: number) => ({w, idx}))
+                            .filter(({w}: any) => w.name !== "Fists")
+                            .sort((x: any, y: any) => Gear.power(y.w) - Gear.power(x.w));
+                        const shown = this.state.moreWeapons ? pack : pack.slice(0, 3);
+                        const hidden = pack.length - 3;
+                        return (
+                            <React.Fragment>
+                                {shown.map(({w, idx}: any) => (
+                                    <KgRow key={idx} label={w.name} value={Gear.weaponLine(w)}
+                                           labelStyle={{color: Gear.rarityColor(w)}}
+                                           onClick={() => { Gear.equipWeapon(a, idx); this.forceUpdate(); }}/>))}
+                                {hidden > 0 &&
+                                    <KgRow glyph={this.state.moreWeapons ? "▴" : "▾"}
+                                           label={this.state.moreWeapons ? "Show less" : `Show ${hidden} more`}
+                                           onClick={() => this.setState({moreWeapons: !this.state.moreWeapons})}/>}
+                            </React.Fragment>);
+                    })()}
                 </div>
                 <h3 className={"kgH"}>Armour</h3>
                 <div className={"kgChoice"}>
                     <KgRow label={upper ? upper.name : "No body armour"} on={!!upper}
+                           labelStyle={upper ? {color: Gear.rarityColor(upper)} : undefined}
                            value={upper ? `SP ${upper.stoppingPower}` : undefined}/>
-                    {head && <KgRow label={head.name} on value={`head · SP ${head.stoppingPower}`}/>}
-                    {a.inventory.armor.map((piece: any, idx: number) => (
-                        <KgRow key={idx} label={piece.name}
-                               value={`${piece.bodyPart === "headgear" ? "head" : "body"} · SP ${piece.stoppingPower}`}
-                               onClick={() => { Gear.equipArmor(a, idx); this.forceUpdate(); }}/>))}
+                    {head && <KgRow label={head.name} on value={`head · SP ${head.stoppingPower}`}
+                                    labelStyle={{color: Gear.rarityColor(head)}}/>}
+                    {a.inventory.armor
+                        .map((piece: any, idx: number) => ({piece, idx}))
+                        .sort((x: any, y: any) => (y.piece.rarity || 0) - (x.piece.rarity || 0)
+                            || y.piece.stoppingPower - x.piece.stoppingPower)
+                        .map(({piece, idx}: any) => (
+                            <KgRow key={idx} label={piece.name}
+                                   labelStyle={{color: Gear.rarityColor(piece)}}
+                                   value={`${piece.bodyPart === "headgear" ? "head" : "body"} · SP ${piece.stoppingPower}`}
+                                   onClick={() => { Gear.equipArmor(a, idx); this.forceUpdate(); }}/>))}
                 </div>
                 <h3 className={"kgH"}>Throwables
                     <b>{picks.length}/{KIT_PICKS}</b><em>crew-wide, out per job</em></h3>
@@ -505,16 +555,20 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                         {KIT_ORDER.filter((item) => this.props.kit[item] > 0 || mine(item) > 0).map((item) => {
                             const spec = KIT[item];
                             const n = mine(item);
-                            const canGive = !full && this.left(item) > 0;
+                            const holds = picks.some((p) => p.carrier === a);
+                            // full belts aren't a wall: your own pick makes room
+                            const canTake = this.left(item) > 0 && (!full || holds);
                             return (
                                 <KgRow key={item} glyph={spec.glyph}
                                        label={`${spec.label}${n > 1 ? ` ×${n}` : ""}`}
-                                       on={n > 0} disabled={n === 0 && !canGive}
+                                       on={n > 0} disabled={n === 0 && !canTake}
                                        title={`${spec.blurb} — ${spec.when}`}
                                        value={n > 0 ? "carrying — tap to stow"
                                            : this.left(item) <= 0 ? "a teammate has it"
-                                           : full ? "belts full" : `${this.left(item)} in crate`}
-                                       onClick={() => n > 0 ? this.stow(a, item) : this.give(a, item)}/>);
+                                           : !full ? `${this.left(item)} in crate`
+                                           : holds ? "tap to swap" : "belts full"}
+                                       onClick={() => n > 0 ? this.stow(a, item)
+                                           : full ? this.swapOwn(a, item) : this.give(a, item)}/>);
                         })}
                     </div>
                     : <p className={"kgP dim"}>Not walking in — throwables ride only on the squad.</p>}
