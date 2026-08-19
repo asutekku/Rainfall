@@ -1,7 +1,6 @@
 import * as React from "react";
 import {CLASSES, classFromLegacyRole} from "../actors/resources/classes";
 import type {Career} from "../interact/career";
-import {Chrome} from "../interact/chrome";
 import type {SaveHeader} from "../interact/saveGame";
 import {KgBar, KgRow} from "./general/kgKit";
 import {OptionsView} from "./optionsView";
@@ -46,8 +45,6 @@ function ago(stamp: number): string {
     const days = Math.floor(hrs / 24);
     return `${days} day${days > 1 ? "s" : ""} ago`;
 }
-
-const ROMAN = ["I", "II", "III"];
 
 /**
  * The front door, as a keyed grid.
@@ -133,47 +130,6 @@ export class TitleView extends React.Component<TitleViewProps, TitleViewState> {
                     <dt>Crew</dt><dd>{save.squad}</dd>
                     {when ? <React.Fragment><dt>Saved</dt><dd>{when}</dd></React.Fragment> : null}
                 </dl>
-            </React.Fragment>);
-    }
-
-    private recordBlock(career: Career) {
-        const role = ROLE_MAP[classFromLegacyRole(career.spec.role)];
-        const last = career.lastRun;
-        return (
-            <React.Fragment>
-                <h3 className={"kgH"}>The record</h3>
-                <dl className={"kgDfn"}>
-                    <dt>Merc</dt><dd>{career.name} · {role ? role.name : ""} L{career.merc.level}</dd>
-                    <dt>Runs</dt><dd>{career.runs}</dd>
-                    <dt>Kills</dt><dd>{career.kills}</dd>
-                    <dt>Best</dt>
-                    <dd>Sector {career.bestSector}{career.bestDepth ? ` · ${career.bestDepth} waypoints` : ""}</dd>
-                    <dt>Last run</dt>
-                    <dd>{last ? `Died in Sector ${last.sector}` : "still on it"}</dd>
-                    {career.bank !== undefined
-                        ? <React.Fragment><dt>Bank</dt><dd>{career.bank}¥ frozen</dd></React.Fragment> : null}
-                </dl>
-            </React.Fragment>);
-    }
-
-    private chromeBlock(career: Career) {
-        const lines = career.merc.chrome || [];
-        return (
-            <React.Fragment>
-                <h3 className={"kgH"}>Chrome <b>{lines.length || "none"}</b></h3>
-                {lines.length === 0
-                    ? <p className={"kgP dim"}>Meat, so far. Chrome is bought on the street and kept forever.</p>
-                    : <dl className={"kgDfn"}>
-                        {lines.map((c, i) => {
-                            const line = Chrome.line(c.line);
-                            const mark = line ? line.marks[Math.max(0, Math.min(2, c.mk - 1))] : null;
-                            return (
-                                <React.Fragment key={i}>
-                                    <dt>{line ? line.slot : c.line}</dt>
-                                    <dd>{mark ? mark.name : c.line}{c.mk > 1 ? ` Mk.${ROMAN[c.mk - 1]}` : ""}</dd>
-                                </React.Fragment>);
-                        })}
-                    </dl>}
             </React.Fragment>);
     }
 
@@ -299,12 +255,6 @@ export class TitleView extends React.Component<TitleViewProps, TitleViewState> {
                                           "opens the same way for everyone."}
                                 </p>
                             </React.Fragment>}
-                        {career && <React.Fragment>
-                            {save ? <div className={"kgHr"}/> : null}
-                            {this.recordBlock(career)}
-                        </React.Fragment>}
-                        {career && <div className={"kgHr"}/>}
-                        {career && this.chromeBlock(career)}
                     </div>
                     <div className={"kgCol n"} style={{width: "min(360px, 34vw)"}}>
                         {this.state.confirming !== "none" ? this.confirmStrip() : this.actions()}

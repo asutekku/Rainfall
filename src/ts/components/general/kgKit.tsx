@@ -12,8 +12,10 @@ import * as React from "react";
  */
 
 export interface KgRowProps {
-    /** The key printed in the box. Omit for rows that are tap-only. */
+    /** A keyboard key printed in a box. Hidden on touch — it means nothing there. */
     hotkey?: string | undefined;
+    /** A state glyph printed in the same box. Always shown — it carries information. */
+    glyph?: string | undefined;
     label: React.ReactNode;
     /** Right-hand side: a value, a hint, or nothing. */
     value?: React.ReactNode;
@@ -31,7 +33,8 @@ export function KgRow(props: KgRowProps) {
     const cls = "kgRow" + (props.on ? " on" : "") + (props.danger ? " dgr" : "");
     return (
         <button className={cls} disabled={props.disabled} title={props.title} onClick={props.onClick}>
-            {props.hotkey !== undefined && <span className={"kgKey"}>{props.hotkey}</span>}
+            {props.hotkey !== undefined && <span className={"kgKey kb"}>{props.hotkey}</span>}
+            {props.glyph !== undefined && <span className={"kgKey"}>{props.glyph}</span>}
             <b style={props.labelStyle}>{props.label}</b>
             {props.right !== undefined ? props.right
                 : props.value !== undefined ? <i>{props.value}</i> : null}
