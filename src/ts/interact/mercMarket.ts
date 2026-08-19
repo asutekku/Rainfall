@@ -41,6 +41,10 @@ export interface MercOffer {
     armorSP: number;
     /** Subdermal plating, for the chrome factions. 0 for everyone else. */
     cyberSP: number;
+    /** A debt hire: the wrong people set the rate, and they keep their cut. */
+    debt?: boolean;
+    /** The crew already tried to talk this fee around. */
+    negotiated?: "won" | "lost";
 }
 
 interface Tier {
@@ -191,6 +195,17 @@ export class MercMarket {
     public static board(sector: number, count: number = 4, markup: number = 1): MercOffer[] {
         const offers: MercOffer[] = [];
         for (let i = 0; i < count; i++) { offers.push(this.offer(sector, markup)); }
+        // Sometimes a body comes cheap for a reason: a debt hire signs at the
+        // rate the wrong people set, and their payday skim rides along. The
+        // trait carries the mechanics; the DEBT flag is the board being honest.
+        if (Math.random() < 0.3) {
+            const mark = offers.find((o) => o.traits.indexOf("owesMoney") < 0);
+            if (mark) {
+                mark.traits = [...mark.traits, "owesMoney"];
+                mark.price = Math.max(50, Math.round(mark.price * 0.55 / 10) * 10);
+                mark.debt = true;
+            }
+        }
         return offers;
     }
 }

@@ -53,6 +53,8 @@ export interface PendingFight {
     headline: string;
     /** rounds to survive, if this one carries a clock */
     holdout?: number;
+    /** the faction came looking — the line the feed opens the grudge with */
+    grudge?: string;
 }
 
 /**
@@ -499,6 +501,24 @@ export class App extends React.Component<{}, InterfaceAppState> {
             () => { if (this.state.screen === "combat") { this.beginBattle(); } });
     };
 
+    /**
+     * Intel lands: uncover N random still-hidden waypoints on the holo-map.
+     * A Media in the crew works their sources — one extra waypoint. Shared by
+     * encounters and the safehouse roof watch.
+     */
+    private applyReveal(run: RunState, n: number, lines: any[]): RunState {
+        const scoutBonus = this.state.party.some((p) => p.isClass("marksman") && p.canFight()) ? 1 : 0;
+        const known = new Set([...run.clearedIds, ...run.reachableIds, ...run.revealedIds]);
+        const hidden = run.nodes.filter((node) => !known.has(node.id) && node.type !== "boss");
+        const picked: string[] = [];
+        for (let i = 0; i < n + scoutBonus && hidden.length > 0; i++) {
+            picked.push(hidden.splice((Math.random() * hidden.length) << 0, 1)[0]!.id);
+        }
+        if (!picked.length) { return run; }
+        lines.push({msg: `— intel: ${picked.length} waypoint${picked.length > 1 ? "s" : ""} lit up on the map —`});
+        return {...run, revealedIds: run.revealedIds.concat(picked)};
+    }
+
     /** A street encounter resolved: apply its fallout, then advance — or fight. */
     private finishEvent = (outcome: EventOutcome) => {
         const state = this.state;
@@ -507,21 +527,13 @@ export class App extends React.Component<{}, InterfaceAppState> {
         const lines: any[] = outcome.lines.map((l) => ({msg: l}));
         let nextRun = run;
         if (outcome.restoreRevive) { nextRun = {...nextRun, reviveUsed: false, revivesUsed: 0}; }
-        if (outcome.reveal) {
-            // intel: uncover N random still-hidden waypoints on the holo-map.
-            // A Media in the crew works their sources: one extra waypoint.
-            const scoutBonus = state.party.some((p) => p.isClass("marksman") && p.canFight()) ? 1 : 0;
-            const known = new Set([...nextRun.clearedIds, ...nextRun.reachableIds, ...nextRun.revealedIds]);
-            const hidden = nextRun.nodes.filter((n) => !known.has(n.id) && n.type !== "boss");
-            const picked: string[] = [];
-            for (let i = 0; i < outcome.reveal + scoutBonus && hidden.length > 0; i++) {
-                picked.push(hidden.splice((Math.random() * hidden.length) << 0, 1)[0]!.id);
-            }
-            if (picked.length) {
-                lines.push({msg: `— intel: ${picked.length} waypoint${picked.length > 1 ? "s" : ""} lit up on the map —`});
-                nextRun = {...nextRun, revealedIds: nextRun.revealedIds.concat(picked)};
-            }
+        if (outcome.heat) {
+            const held = (nextRun.heat && nextRun.heat[outcome.heat.faction]) || 0;
+            nextRun = {...nextRun, heat: {...(nextRun.heat || {}),
+                [outcome.heat.faction]: Math.min(3, held + outcome.heat.amount)}};
+            lines.push({msg: `— word travels: the ${outcome.heat.faction} will remember this —`});
         }
+        if (outcome.reveal) { nextRun = this.applyReveal(nextRun, outcome.reveal, lines); }
         if (outcome.combat) {
             // the encounter turned violent — run.node stays set, so clearing the
             // fight advances the map exactly like a normal combat node. The
@@ -543,11 +555,13 @@ export class App extends React.Component<{}, InterfaceAppState> {
     };
 
     /** Leave a safehouse / NET node, its outcome lines landing in the feed. */
-    private leaveSafehouse = (lines: string[]) => {
+    private leaveSafehouse = (lines: string[], reveal?: number) => {
         const run = this.state.run;
         if (!run || !run.node) { return; }
-        this.setState(RunController.advance(this.state, run.node,
-            lines.map((l) => ({msg: l})), this.logLength) as any);
+        const msgs: any[] = lines.map((l) => ({msg: l}));
+        const nextRun = reveal ? this.applyReveal(run, reveal, msgs) : run;
+        const midState = reveal ? {...this.state, run: nextRun} as InterfaceAppState : this.state;
+        this.setState(RunController.advance(midState, run.node, msgs, this.logLength) as any);
     };
 
     /** Leave a merchant / rest node and advance the map. */

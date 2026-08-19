@@ -28,6 +28,10 @@ export interface EventOutcome {
     combat?: EncounterSpec | undefined;  // some choices end in gunfire
     reveal?: number | undefined;         // intel: uncover N fog-of-war waypoints
     restoreRevive?: boolean | undefined; // re-arm the per-run Trauma Team pickup
+    /** Word travels: that faction's next fight this sector comes one body heavier per point. */
+    heat?: {faction: string; amount: number} | undefined;
+    /** The situation turns — a second stage plays before the run moves on. */
+    next?: GameEvent | undefined;
 }
 
 export interface EventCheck { stat: StatKey; dv: number; label: string; tag?: "toxin"; }
@@ -45,6 +49,8 @@ export interface GameEvent {
     id: string;
     title: string;
     flavor: string;
+    /** Extra gate on the whole event — for encounters about a specific kind of crew. */
+    when?: (ctx: EventCtx) => boolean;
     options: EventOption[];
 }
 
@@ -141,6 +147,14 @@ const grantWeapon = (a: Actor, rMin: number, rMax: number): string => {
 };
 
 const first = (party: Actor[]): Actor => party.find((p) => p.canFight()) || party[0]!;
+
+/** The hired merc whose debts follow the crew around (Owes the Wrong People). */
+const debtor = (ctx: EventCtx): Actor | undefined =>
+    ctx.party.find((p) => p.hireable && p.canFight() && p.traits.indexOf("owesMoney") >= 0);
+
+/** The hired merc with a grudge on their sheet (Bad Blood), grudge faction known. */
+const grudger = (ctx: EventCtx): Actor | undefined =>
+    ctx.party.find((p) => p.hireable && p.canFight() && p.traits.indexOf("badBlood") >= 0 && !!p.grudge);
 
 // ------------------------------------------------------------------- events --
 
@@ -473,14 +487,35 @@ export const EVENTS: GameEvent[] = [
         flavor: "A dead-network payphone. Ringing. For you, apparently.",
         options: [
             {
-                label: "Answer it", detail: "coin flip — free intel, or the whole squad eats feedback",
-                run: (ctx) => {
-                    if (Math.random() < 0.5) {
-                        return {lines: ["A synthetic voice reads you tomorrow's obituaries — including where they died. The map lights up."], reveal: 3};
-                    }
-                    ctx.party.forEach((p) => hurt(p, d6(1)));
-                    return {lines: ["A shriek of carrier tones. Everyone's optics whiteout — the crew staggers, ears bleeding."]};
-                },
+                label: "Answer it", detail: "somebody went to a lot of trouble to find this number",
+                run: (ctx) => ({
+                    lines: [`"${ctx.leader.name.split(" ")[0]}." Not a question. The voice knows the name.`],
+                    next: {
+                        id: "payphone-2", title: "The Voice",
+                        flavor: "\"I watch this district through six hundred cameras. I pay in directions. " +
+                            "You're going to want to hear this.\"",
+                        options: [
+                            {
+                                label: "Take the directions",
+                                run: () => ({lines: ["Three addresses, one warning, no goodbye. The map lights up."], reveal: 2}),
+                            },
+                            {
+                                label: "Trace the call", detail: "TECH check — skim whoever's paying for the cameras",
+                                check: {stat: "tech", dv: 13, label: "backtrace"},
+                                run: (c2, ok) => {
+                                    if (ok) {
+                                        Purse.earn(c2.leader, 80);
+                                        return {lines: ["The trace lands in a slush account with no owner. You help yourself to 80¥.",
+                                            "The voice laughs once, and gives you one address anyway."], reveal: 1};
+                                    }
+                                    c2.party.forEach((p) => hurt(p, d6(1)));
+                                    return {lines: ["The line bites back — a shriek of carrier tones. Everyone's optics whiteout."]};
+                                },
+                            },
+                            {label: "Hang up", run: () => ({lines: ["\"Suit yourself.\" The dial tone sounds disappointed."]})},
+                        ],
+                    },
+                }),
             },
             {
                 label: "Rip out the coin box", detail: "TECH check",
@@ -507,16 +542,38 @@ export const EVENTS: GameEvent[] = [
                     ctx.leader.gainReputation(1);
                     hum(ctx.leader, 3);
                     const name = grantWeapon(ctx.leader, 2, 3);
-                    return {lines: [`He presses his backup blade into your hands — a ${name}. "Debt paid when I say it's paid."`]};
+                    return {
+                        lines: [`He presses his backup blade into your hands — a ${name}. "Debt paid when I say it's paid."`],
+                        next: {
+                            id: "wounded-tyger-2", title: "Lacquer and Debts",
+                            flavor: "Two bikes round the corner before you're a block away. Tyger colours. " +
+                                "They stop beside the dumpster, look at the field dressing, then at you.",
+                            options: [
+                                {
+                                    label: "\"He'll live. We're leaving.\"",
+                                    run: () => ({lines: ["The taller one nods once. Then he tells you which streets not to take tonight — and why."], reveal: 2}),
+                                },
+                                {
+                                    label: "Name a price for the first aid",
+                                    run: (c2) => {
+                                        Purse.earn(c2.leader, 90);
+                                        return {lines: ["Notes, folded once, no eye contact. 90¥ — the Claws pay their debts and hate owing them."]};
+                                    },
+                                },
+                                {label: "Slip away before they decide", run: () => ({lines: ["You're gone before the kickstands drop. Cleaner that way."]})},
+                            ],
+                        },
+                    };
                 },
             },
             {
-                label: "Finish him and loot the armour", detail: "60¥ · −6 Humanity · −1 REP",
+                label: "Finish him and loot the armour", detail: "60¥ · −6 Humanity · −1 REP · the Claws will hear",
                 run: (ctx) => {
                     Purse.earn(ctx.leader, 60);
                     hum(ctx.leader, -6);
                     ctx.leader.reputation = Math.max(0, ctx.leader.reputation - 1);
-                    return {lines: ["Quick and quiet. 60¥ and lacquer scraps. The street saw. The street always sees."]};
+                    return {lines: ["Quick and quiet. 60¥ and lacquer scraps. The street saw. The street always sees."],
+                        heat: {faction: "Tyger Claws", amount: 2}};
                 },
             },
             {label: "Not your war", run: () => ({lines: ["His eyes track you all the way down the block."]})},
@@ -546,8 +603,10 @@ export const EVENTS: GameEvent[] = [
                 },
             },
             {
-                label: "Open fire",
-                run: () => ({lines: ["The oil drum goes over. So does the first ganger."], combat: {boss: false, amount: 3, level: 1, rank: 1}}),
+                label: "Open fire", detail: "their friends will hear about it",
+                run: () => ({lines: ["The oil drum goes over. So does the first ganger."],
+                    combat: {boss: false, amount: 3, level: 1, rank: 1},
+                    heat: {faction: "Street", amount: 1}}),
             },
         ],
     },
@@ -760,6 +819,214 @@ export const EVENTS: GameEvent[] = [
             {label: "Rigged anyway", run: () => ({lines: ["The cage spins on without you."]})},
         ],
     },
+
+    // ---- the crew's own baggage ----
+    {
+        id: "collections", title: "Collections",
+        flavor: "Three repo men, matching jackets, a tablet held up like a warrant. On it: one of your " +
+            "mercs' faces and a number with too many digits. \"Nothing personal. Compound interest.\"",
+        when: (ctx) => !!debtor(ctx),
+        options: [
+            {
+                label: "Clear the debt — 250¥", detail: "wipe the ledger — their whole payday is theirs again",
+                req: (ctx) => debtor(ctx) ? needEddies(250)(ctx) : "nobody owes",
+                run: (ctx) => {
+                    const m = debtor(ctx)!;
+                    pay(ctx, 250);
+                    m.traits = m.traits.filter((t) => t !== "owesMoney");
+                    return {lines: [`The number on the tablet goes to zero. ${m.name.split(" ")[0]} stares at it for a long second.`,
+                        `"Nobody's ever—" They don't finish. Debt cleared: no more skim on their paydays.`]};
+                },
+            },
+            {
+                label: "Stare them down", detail: "COOL check — collections agencies price in risk",
+                check: {stat: "cool", dv: 14, label: "facedown"},
+                run: (ctx, ok) => {
+                    const m = debtor(ctx)!;
+                    if (ok) { return {lines: ["The tablet lowers. \"We'll be in touch,\" the middle one says, to nobody in particular.",
+                        "The debt stands. But not tonight."]}; }
+                    const taken = Purse.garnish(ctx.leader, Math.round(Purse.balance(ctx.leader) * 0.1));
+                    const dmg = hurt(m, d6(2));
+                    return {lines: [`They don't blink. Two hold ${m.name.split(" ")[0]} while the third makes a withdrawal — ${taken}¥ and ${dmg} HP of interest.`]};
+                },
+            },
+            {
+                label: "Let them work it out", detail: "the merc pays in bruises — the debt stands",
+                run: (ctx) => {
+                    const m = debtor(ctx)!;
+                    const dmg = hurt(m, d6(2));
+                    return {lines: [`${m.name.split(" ")[0]} waves you back. "It's fine. It's a system."`,
+                        `It does not look fine — ${dmg} HP of system.`]};
+                },
+            },
+            {
+                label: "Guns out", detail: "repo men have a union, and the union has friends",
+                run: () => ({lines: ["The tablet hits the pavement first."],
+                    combat: {boss: false, amount: 3, level: 1, rank: 2},
+                    heat: {faction: "6th Street", amount: 1}}),
+            },
+        ],
+    },
+    {
+        id: "old-grudges", title: "Old Grudges",
+        flavor: "A spotter across the street goes very still, then very busy with a phone. Somebody on " +
+            "your payroll has history, and it just made them.",
+        when: (ctx) => !!grudger(ctx),
+        options: [
+            {
+                label: "Get scarce", detail: "REF check — gone before the call connects",
+                check: {stat: "ref", dv: 12, label: "vanish"},
+                run: (ctx, ok) => {
+                    const m = grudger(ctx)!;
+                    if (ok) { return {lines: ["Three alleys and a fire escape later, the phone is describing an empty street."]}; }
+                    return {lines: [`Too slow. The spotter got a route and a headcount — the ${m.grudge} know where you're headed.`],
+                        heat: {faction: m.grudge!, amount: 1}};
+                },
+            },
+            {
+                label: "Send them over to settle it", detail: "COOL check — bury the grudge for good",
+                check: {stat: "cool", dv: 13, label: "parley"},
+                run: (ctx, ok) => {
+                    const m = grudger(ctx)!;
+                    const fac = m.grudge!;
+                    if (ok) {
+                        m.traits = m.traits.filter((t) => t !== "badBlood");
+                        hum(m, 4);
+                        return {lines: [`${m.name.split(" ")[0]} walks over alone. Five minutes of low voices. A handshake like a hostage exchange.`,
+                            `Whatever it was, it's done — the bad blood is buried (+4 Humanity).`]};
+                    }
+                    const dmg = hurt(m, d6(1));
+                    return {lines: [`It goes wrong in the first sentence. ${m.name.split(" ")[0]} comes back bleeding (${dmg} HP), and the ${fac} come back angrier.`],
+                        heat: {faction: fac, amount: 2}};
+                },
+            },
+            {
+                label: "Let it happen here, on your terms",
+                run: (ctx) => {
+                    const m = grudger(ctx)!;
+                    return {lines: [`${m.name.split(" ")[0]} checks their weapon. "Been a long time coming."`],
+                        combat: {boss: false, amount: 3, level: 1, rank: 2},
+                        heat: {faction: m.grudge!, amount: 1}};
+                },
+            },
+        ],
+    },
+
+    // ---- the street's economy of knowing things ----
+    {
+        id: "informant", title: "The Weasel",
+        flavor: "He's leaning where the light isn't, already smiling. He knows you're looking for " +
+            "something. He knows what. He'd hate to have to charge for it.",
+        options: [
+            {
+                label: "Pay the man — 60¥",
+                req: needEddies(60),
+                run: (ctx) => { pay(ctx, 60); return {lines: ["He talks like a search engine with a rash. Every word checks out."], reveal: 2}; },
+            },
+            {
+                label: "Lean on him", detail: "COOL check — weasels respect weather, not people",
+                check: {stat: "cool", dv: 13, label: "lean"},
+                run: (_ctx, ok) => {
+                    if (ok) { return {lines: ["The smile dies. The information doesn't. Same intel, house discount."], reveal: 2}; }
+                    const facs = ["Street", "Scav", "Tyger Claws", "6th Street"];
+                    const fac = facs[(Math.random() * facs.length) << 0]!;
+                    return {lines: ["He ducks out with his smile intact — and sells your route to the first buyer he finds.",
+                        `The ${fac} know which way you're walking.`], heat: {faction: fac, amount: 1}};
+                },
+            },
+            {label: "Keep walking", run: () => ({lines: ["\"Door's always open,\" he says, to your backs."]})},
+        ],
+    },
+    {
+        id: "shrine", title: "Shrine for a Dead Solo",
+        flavor: "Candles in a doorway, cigarettes stood on end, a cracked visor on a milk crate. " +
+            "Somebody the street respected, gone the way the street's respected usually go.",
+        options: [
+            {
+                label: "Leave something — 20¥",
+                req: needEddies(20),
+                run: (ctx) => {
+                    pay(ctx, 20);
+                    ctx.party.forEach((p) => { hum(p, 3); p.luck = Math.min(p.maxLuck, p.luck + 1); });
+                    return {lines: ["Notes under the visor, weighted with a bullet. The candles bend and straighten.",
+                        "The crew walks quieter for a block or two (+3 Humanity, +1 Luck, everyone)."]};
+                },
+            },
+            {
+                label: "Take the offerings", detail: "the candles pay better than they pray",
+                run: (ctx) => {
+                    Purse.earn(ctx.leader, 45);
+                    ctx.party.forEach((p) => hum(p, -3));
+                    return {lines: ["45¥ in wax-soft notes and a carton of cigarettes. Nobody says anything.",
+                        "Somebody in a window saw. Somebody always sees."],
+                        heat: {faction: "Street", amount: 1}};
+                },
+            },
+            {
+                label: "Stand a minute",
+                run: (ctx) => {
+                    ctx.party.forEach((p) => { p.luck = Math.min(p.maxLuck, p.luck + 1); });
+                    return {lines: ["Nobody talks. The rain does. (+1 Luck, everyone.)"]};
+                },
+            },
+        ],
+    },
+    {
+        id: "extraction", title: "Extraction Gone Loud",
+        flavor: "An AV idles on a rooftop pad, running lights off. In the alley below, two corporate " +
+            "minders drag a man in a lab coat toward the service lift. He sees you. Mouths: help.",
+        options: [
+            {
+                label: "Jump the minders", detail: "REF check — before they reach the lift",
+                check: {stat: "ref", dv: 13, label: "close the gap"},
+                run: (_ctx, ok) => {
+                    if (!ok) {
+                        return {lines: ["The gap doesn't close. The lift doors do — and the minders' backup was already on the ground."],
+                            combat: {boss: false, amount: 3, level: 1, rank: 2},
+                            heat: {faction: "Arasaka", amount: 1}};
+                    }
+                    return {
+                        lines: ["Two steps, two elbows, one unconscious pile of corporate tailoring. The lab coat straightens up."],
+                        next: {
+                            id: "extraction-2", title: "The Grateful Asset",
+                            flavor: "\"They were relocating me. Permanently.\" He's already walking, already " +
+                                "talking, already owing you. \"I can pay. Pick how.\"",
+                            options: [
+                                {
+                                    label: "Eddies. Obviously.",
+                                    run: (c2) => { Purse.earn(c2.leader, 150); return {lines: ["A transfer from an account that won't exist by morning. 150¥."]}; },
+                                },
+                                {
+                                    label: "What's in the district files",
+                                    run: () => ({lines: ["He rattles off patrol schedules and safehouse addresses like a man reading his own obituary."], reveal: 3}),
+                                },
+                                {
+                                    label: "You're a medtech now",
+                                    run: (c2) => {
+                                        c2.party.forEach((p) => healPct(p, 0.35));
+                                        return {lines: ["Field medicine with corporate hands. The squad patches up 35% of its wounds."]};
+                                    },
+                                },
+                            ],
+                        },
+                    };
+                },
+            },
+            {
+                label: "Sell the sighting to Militech", detail: "INT check — know which desk buys this",
+                check: {stat: "int", dv: 12, label: "find the buyer"},
+                run: (ctx, ok) => {
+                    if (ok) {
+                        Purse.earn(ctx.leader, 70);
+                        return {lines: ["Two encrypted photos, one polite reply, 70¥. Corporate wars pay spectators."],
+                            heat: {faction: "Arasaka", amount: 1}};
+                    }
+                    return {lines: ["Your buyer's desk was reorganised last week. The photos age worthless in your buffer."]};
+                },
+            },
+            {label: "Not your extraction", run: () => ({lines: ["The lift doors close on the lab coat's last look. The AV lifts, lights still off."]})},
+        ],
+    },
 ];
 
 // ------------------------------------------------------------------ picking --
@@ -777,8 +1044,9 @@ export class Events {
         return pool[(Math.random() * pool.length) << 0]!;
     }
 
-    /** An event is viable if at least one non-trivial option is available. */
+    /** An event is viable if its gate passes and at least one option is available. */
     private static viable(e: GameEvent, ctx: EventCtx): boolean {
+        if (e.when && !e.when(ctx)) { return false; }
         return e.options.some((o) => !o.req || o.req(ctx) === null);
     }
 }

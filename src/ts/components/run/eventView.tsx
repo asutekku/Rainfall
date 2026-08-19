@@ -2,6 +2,7 @@ import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {Purse} from "../../interact/crew";
 import {EventCheck, EventCtx, EventOutcome, GameEvent, makeCtx, odds, rollCheck} from "../../interact/events";
+import {Beat, Beats} from "../general/beats";
 import {NodeShell} from "./metaOverlay";
 
 export interface EventViewProps {
@@ -21,8 +22,14 @@ interface Rolling {
 }
 
 interface EventViewState {
+    /** The stage on screen — two-stage encounters swap this out mid-scene. */
+    event: GameEvent;
     resolved: EventOutcome | null;
     rolling: Rolling | null;
+    /** The outcome beats have finished landing — the way out can show. */
+    played: boolean;
+    /** Feed lines carried over from earlier stages of this encounter. */
+    carried: string[];
 }
 
 /**
@@ -40,7 +47,7 @@ export class EventView extends React.Component<EventViewProps, EventViewState> {
 
     constructor(props: EventViewProps) {
         super(props);
-        this.state = {resolved: null, rolling: null};
+        this.state = {event: props.event, resolved: null, rolling: null, played: false, carried: []};
     }
 
     public override componentWillUnmount() {
@@ -53,7 +60,7 @@ export class EventView extends React.Component<EventViewProps, EventViewState> {
 
     private choose(idx: number) {
         if (this.state.resolved || this.state.rolling) { return; }
-        const opt = this.props.event.options[idx]!;
+        const opt = this.state.event.options[idx]!;
         const ctx = this.ctx();
         if (!opt.check || this.reduced) {
             this.resolve(idx, ctx);
@@ -81,7 +88,7 @@ export class EventView extends React.Component<EventViewProps, EventViewState> {
     }
 
     private resolve(idx: number, ctx: EventCtx, pre?: {success: boolean; luckSpent: number}) {
-        const opt = this.props.event.options[idx]!;
+        const opt = this.state.event.options[idx]!;
         let success = true, luckSpent = 0;
         const lines: string[] = [];
         if (opt.check) {
@@ -92,7 +99,7 @@ export class EventView extends React.Component<EventViewProps, EventViewState> {
                 (luckSpent > 0 ? ` (burned ${luckSpent} Luck)` : "") + ".");
         }
         const out = opt.run(ctx, success, luckSpent);
-        this.setState({resolved: {...out, lines: [...lines, ...out.lines]}, rolling: null});
+        this.setState({resolved: {...out, lines: [...lines, ...out.lines]}, rolling: null, played: false});
     }
 
     private option = (opt: GameEvent["options"][number], i: number) => {
@@ -110,6 +117,37 @@ export class EventView extends React.Component<EventViewProps, EventViewState> {
                     {!blocked && opt.detail ? <em>{opt.detail}</em> : null}
                 </span>
             </button>);
+    };
+
+    /** The outcome, told a line at a time — the register every node speaks in now. */
+    private static toBeats(lines: string[]): Beat[] {
+        return lines.map((text) => {
+            const hurt = /loses \d+ HP|takes \d+|bleed|flatline|HP and/i.test(text);
+            const tone = /fails the .* check/.test(text) ? "bad" as const
+                : /makes the .* check/.test(text) ? "ok" as const
+                : hurt ? "bad" as const
+                : /\+\d+¥|¥ richer|eddies|payday/i.test(text) ? "gold" as const
+                : /^—.*—$/.test(text) ? "dim" as const
+                : "sys" as const;
+            return {text, tone, ...(hurt ? {glitch: true} : {}), ...(tone === "bad" || tone === "gold" ? {hold: 1.4} : {})};
+        });
+    }
+
+    /** The situation turns: swap the next stage in, keeping the story so far. */
+    private nextStage = () => {
+        const done = this.state.resolved;
+        if (!done || !done.next) { return; }
+        this.setState({
+            event: done.next, resolved: null, rolling: null, played: false,
+            carried: [...this.state.carried, ...done.lines],
+        });
+    };
+
+    /** All stages' lines, in order, for the feed. */
+    private finish = () => {
+        const done = this.state.resolved;
+        if (!done) { return; }
+        this.props.onDone({...done, lines: [...this.state.carried, ...done.lines]});
     };
 
     /** The d10 spinner takeover while a check resolves. */
@@ -133,30 +171,37 @@ export class EventView extends React.Component<EventViewProps, EventViewState> {
     }
 
     public override render() {
-        const e = this.props.event;
+        const e = this.state.event;
         const done = this.state.resolved;
         const rolling = this.state.rolling;
+        const played = this.state.played;
         return (
             <NodeShell accent={"ev"} icon={"◈"} label={"Encounter"}
                        kicker={"Street encounter"} title={e.title}
                        sub={e.flavor}
                        eddies={Purse.balance(this.props.party[0]!)}
-                       guide={!done && !rolling
+                       guide={!done && !rolling && this.state.carried.length === 0
                            ? <React.Fragment>
                                Pick <b>one</b> — the run moves on after. Greyed options say what they need;
                                a <b>check</b> rolls a d10 + the named stat, and the odds shown are yours.
                            </React.Fragment>
                            : undefined}
-                       foot={done
-                           ? <button className={"metaLeave"} onClick={() => this.props.onDone(done)}>
-                               {done.combat ? "Weapons out ▸" : "Move on ▸"}
-                           </button>
+                       foot={done && played
+                           ? done.next
+                               ? <button className={"metaLeave"} onClick={this.nextStage}>
+                                   It's not over ▸
+                               </button>
+                               : <button className={"metaLeave"} onClick={this.finish}>
+                                   {done.combat ? "Weapons out ▸" : "Move on ▸"}
+                               </button>
                            : null}>
                 {rolling && this.roller(rolling)}
                 {!done && !rolling && <div className={"evOpts"}>{e.options.map(this.option)}</div>}
                 {done && (
                     <div className={"evResult"}>
-                        {done.lines.map((l, i) => <p key={i} style={{animationDelay: `${i * 0.12}s`}}>{l}</p>)}
+                        <Beats key={e.id + this.state.carried.length}
+                               beats={EventView.toBeats(done.lines)}
+                               onDone={() => this.setState({played: true})}/>
                     </div>
                 )}
             </NodeShell>);

@@ -126,9 +126,21 @@ export class RunController {
         const enemies = spawnEncounter(spec);
         // holdout fights carry their clock on the node so the sequencer sees it
         if (spec.holdout) { node.holdout = spec.holdout; } else { delete node.holdout; }
+        const pending = RunController.fightOf(node);
+        // Heat: the street remembers. If the crew crossed this wave's faction
+        // earlier in the sector, the fight comes one body heavier per grudge
+        // point — and the point burns off doing it. Rolled here, before
+        // staging, so the player reads the debt in the hostile table itself.
+        let heat = run.heat;
+        const fac = !spec.boss && enemies[0] ? enemies[0].faction : undefined;
+        if (fac && heat && (heat[fac] || 0) > 0) {
+            enemies.push(...ActorController.getReinforcements(fac, 1, spec.level, Math.max(1, spec.rank)));
+            heat = {...heat, [fac]: heat[fac]! - 1};
+            pending.grudge = `the ${fac} remember you — they brought a friend`;
+        }
         return {
-            run: {...run, node}, screen: "staging",
-            pending: RunController.fightOf(node),
+            run: {...run, node, ...(heat !== run.heat ? {heat} : {})}, screen: "staging",
+            pending,
             currentEnemies: enemies, activeEnemy: enemies[0], activeChar: state.party[0],
         };
     }
@@ -167,6 +179,7 @@ export class RunController {
             activeMainPanel: "Combat", mobileTab: "arena",
             messages: [
                 FeedLog.sys(`— ${fight.label} —`) as any,
+                ...(fight.grudge ? [FeedLog.sys(`— ${fight.grudge} —`) as any] : []),
                 ...(benched > 0 ? [FeedLog.sys(`— ${benched} left holding the van —`) as any] : []),
                 ...state.messages].slice(0, log),
         };
