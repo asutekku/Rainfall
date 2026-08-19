@@ -17,6 +17,10 @@ export interface KgRowProps {
     /** A state glyph printed in the same box. Always shown — it carries information. */
     glyph?: string | undefined;
     label: React.ReactNode;
+    /** Tiny grey caption above the label — a category ("pistol", "body"). */
+    kicker?: React.ReactNode;
+    /** A second line under the label — delta chips, a spec readout. */
+    sub?: React.ReactNode;
     /** Right-hand side: a value, a hint, or nothing. */
     value?: React.ReactNode;
     /** Custom right-hand content (a dial, chips) — wins over `value`. */
@@ -35,7 +39,13 @@ export function KgRow(props: KgRowProps) {
         <button className={cls} disabled={props.disabled} title={props.title} onClick={props.onClick}>
             {props.hotkey !== undefined && <span className={"kgKey kb"}>{props.hotkey}</span>}
             {props.glyph !== undefined && <span className={"kgKey"}>{props.glyph}</span>}
-            <b style={props.labelStyle}>{props.label}</b>
+            {props.kicker !== undefined || props.sub !== undefined
+                ? <span className={"kgRowMain"}>
+                    {props.kicker !== undefined && <span className={"kgKick"}>{props.kicker}</span>}
+                    <b style={props.labelStyle}>{props.label}</b>
+                    {props.sub}
+                </span>
+                : <b style={props.labelStyle}>{props.label}</b>}
             {props.right !== undefined ? props.right
                 : props.value !== undefined ? <i>{props.value}</i> : null}
         </button>);

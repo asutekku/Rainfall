@@ -1295,11 +1295,11 @@ progress::-moz-progress-bar { background:var(--rust); }
 }
 .gdCard { margin:2px 0 6px; padding:10px 12px; background:#0c0c13;
     border:1px solid var(--line2); border-left:2px solid var(--cyanDim); clip-path:var(--bevel); }
-.gdVs { font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
-    color:var(--mid); margin-bottom:8px; }
-.gdVs.v-up { color:var(--good); }
-.gdVs.v-down { color:var(--crit); }
-.gdVs.v-trade { color:var(--warn); }
+/* the picked row and its card read as one unit, walled off from the list */
+.gdWrap { display:flex; flex-direction:column; gap:6px; }
+.gdSel { border:1px solid var(--cyanDim); background:#0a1114; padding:6px; clip-path:var(--bevel); }
+.gdSel .gdCard { margin:0; border:0; border-top:1px solid var(--line2); clip-path:none;
+    background:transparent; padding:10px 6px 4px; }
 .gdTable { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:11px; }
 .gdTable th { text-align:right; padding:0 0 5px 12px; font-size:10px; font-weight:500;
     color:var(--ink); max-width:120px; }
@@ -1309,11 +1309,13 @@ progress::-moz-progress-bar { background:var(--rust); }
     font-variant-numeric:tabular-nums; border-top:1px solid #15151c; }
 .gdTable td:first-child, .gdTable th:first-child { text-align:left; padding-left:0; color:var(--dim); }
 .gdTable td.win { color:var(--good); font-weight:700; }
-.gdNote { margin:0; color:var(--dim); font-size:10.5px; line-height:1.5; }
-/* chips riding the right edge of a kgRow (staging's gear sheet) */
-.gdRight { margin-left:auto; display:flex; align-items:center; gap:6px; flex-wrap:wrap;
-    justify-content:flex-end; font-size:10px; color:var(--faint); }
-.gdRight .gdChips { margin-top:0; justify-content:flex-end; }
+/* the kgRow two-line anatomy: kicker caption, name, chips beneath */
+.kgRowMain { flex:1; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:3px; }
+.kgKick { font-size:8.5px; font-weight:600; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--faint); }
+.kgRowMain .gdChips { margin-top:1px; }
+.mkKick { display:block; font-size:8.5px; font-weight:600; letter-spacing:.18em; text-transform:uppercase;
+    color:var(--faint); margin-bottom:1px; }
 .gdGo { display:block; width:100%; margin-top:10px; min-height:34px; cursor:pointer;
     font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
     color:var(--cyan); background:#0c1417; border:1px solid var(--cyanDim); clip-path:var(--bevel); }
@@ -1930,14 +1932,18 @@ progress::-moz-progress-bar { background:var(--rust); }
 .kgTable tr.kgRoll td { background:var(--panel); border-bottom:1px solid var(--line2);
     padding:0 8px; white-space:normal; cursor:default; }
 .kgTable.tap tbody tr.kgRoll:hover td { background:var(--panel); }
-.kgRollBody { display:flex; flex-wrap:wrap; align-items:center; gap:10px 26px; padding:10px 4px; }
+/* one boxed cell per slot, so weapon / armour / head / throwables read apart */
+.kgRollBody { display:grid; grid-template-columns:repeat(auto-fit, minmax(150px, 1fr));
+    gap:8px; padding:10px 2px; }
 body:not(.no-fx) .kgRollBody { animation:heroInFlat .2s ease both; }
-.kgGearItem { display:flex; flex-direction:column; gap:2px; min-width:0; }
+.kgGearItem { display:flex; flex-direction:column; gap:3px; min-width:0; padding:8px 10px;
+    background:var(--panel); border:1px solid var(--line); border-left:2px solid var(--line2); }
 .kgGearItem i { font-style:normal; font-size:9px; letter-spacing:.16em; text-transform:uppercase;
     color:var(--faint); }
-.kgGearItem b { font-size:12px; color:var(--ink); font-weight:500; }
+.kgGearItem b { font-size:12.5px; color:var(--ink); font-weight:500; }
 .kgGearItem b.dim { color:var(--dim); font-weight:400; }
 .kgGearItem em { font-style:normal; font-size:10px; color:var(--dim); font-variant-numeric:tabular-nums; }
+.kgRollBody .kgBack { grid-column:1 / -1; }
 
 /* small hp bar in a table cell */
 .kgHp { display:inline-block; width:44px; height:6px; background:#0b0b10; border:1px solid var(--line);

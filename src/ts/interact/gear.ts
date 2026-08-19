@@ -69,6 +69,32 @@ export class Gear {
         return Stash.of(a).armor.slice();
     }
 
+    /**
+     * The swap list with duplicates folded: two Streetmasters are one row
+     * marked ×2, not two identical rows — same-name catalog weapons have the
+     * same stats, so the second row said nothing and cost a render. Order is
+     * weaponChoices' order; equipping takes the stack's live instance.
+     */
+    public static stackedWeapons(a: Actor): Array<{item: Weapon; n: number}> {
+        const out: Array<{item: Weapon; n: number}> = [];
+        for (const w of Gear.weaponChoices(a)) {
+            const hit = out.find((s) => s.item.name === w.name
+                && Gear.isCyberweapon(a, s.item) === Gear.isCyberweapon(a, w));
+            if (hit) { hit.n += 1; } else { out.push({item: w, n: 1}); }
+        }
+        return out;
+    }
+
+    /** Armour choices with duplicates folded the same way. */
+    public static stackedArmor(a: Actor): Array<{item: Armor; n: number}> {
+        const out: Array<{item: Armor; n: number}> = [];
+        for (const r of Gear.armorChoices(a)) {
+            const hit = out.find((s) => s.item.name === r.name && s.item.bodyPart === r.bodyPart);
+            if (hit) { hit.n += 1; } else { out.push({item: r, n: 1}); }
+        }
+        return out;
+    }
+
     /** Pull `w` out of The Stash — chrome needs no pulling, the body brings it. */
     private static takeWeapon(a: Actor, w: Weapon): boolean {
         if (Gear.isCyberweapon(a, w)) { return true; }

@@ -154,15 +154,18 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
      * One armour candidate, read against what the slot holds now: the glyph
      * calls the SP swing, the chip gives its size, the header names the worn.
      */
-    private armorRow(a: Actor, r: Armor, key: string, lock: boolean) {
+    private armorRow(a: Actor, s: {item: Armor; n: number}, key: string, lock: boolean) {
+        const r = s.item;
         const d = Gear.armorDelta(a, r);
         return (
             <div key={key} className={"gearRow" + (this.state.flash[r.name] ? " flash" : "")}>
                 <span className={"gearSlot" + (d > 0 ? " v-up" : d < 0 ? " v-dn" : "")}>
                     {d > 0 ? "▲" : d < 0 ? "▼" : "="}</span>
                 <span className={"mkNameWrap"}>
-                    <span className={"mkName"} style={{color: Gear.rarityColor(r)}}>{r.name}</span>
-                    <span className={"mkDetail"}>{r.bodyPart === "headgear" ? "head" : "body"} · SP {r.stoppingPower}</span>
+                    <span className={"mkKick"}>{r.bodyPart === "headgear" ? "head" : "body"}</span>
+                    <span className={"mkName"} style={{color: Gear.rarityColor(r)}}>
+                        {s.n > 1 ? `${r.name} ×${s.n}` : r.name}</span>
+                    <span className={"mkDetail"}>SP {r.stoppingPower}</span>
                     <GdArmorChips a={a} piece={r}/>
                 </span>
                 <button className={"mkBuy gearEquip"} disabled={lock}
@@ -173,11 +176,12 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
     private stash(a: Actor) {
         const lock = !this.canEquip();
         const bag = Stash.of(a);
-        // the member's swap list: The Stash plus their own bolted-in chrome
-        const weapons = Gear.weaponChoices(a);
-        const armor = Gear.armorChoices(a);
-        const body = armor.filter((r) => r.bodyPart !== "headgear");
-        const headwear = armor.filter((r) => r.bodyPart === "headgear");
+        // the member's swap list: The Stash plus their own bolted-in chrome,
+        // duplicates folded — two of the same gun are one row, ×2
+        const weapons = Gear.stackedWeapons(a);
+        const armor = Gear.stackedArmor(a);
+        const body = armor.filter((s) => s.item.bodyPart !== "headgear");
+        const headwear = armor.filter((s) => s.item.bodyPart === "headgear");
         const wornBody = a.equipment.upper as Armor | null;
         const wornHead = a.equipment.headgear as Armor | null;
         const meds = bag.medical as Medical[];
@@ -191,7 +195,8 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                 {weapons.length > 0 &&
                     <div className={"gearSub"}>Weapons
                         <em>in hand: {a.weapon.name} · {this.wStats(a.weapon)}</em></div>}
-                {weapons.map((w, i) => {
+                {weapons.map((s, i) => {
+                    const w = s.item;
                     const chrome = Gear.isCyberweapon(a, w);
                     const v = Gear.verdict(a.weapon, w);
                     return (
@@ -199,8 +204,10 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                             <span className={"gearSlot" + VCLS[v]}
                                   title={Gear.verdictLine(a.weapon, w)}>{Gear.VERDICT_GLYPH[v]}</span>
                             <span className={"mkNameWrap"}>
-                                <span className={"mkName"} style={{color: Gear.rarityColor(w)}}>{w.name}</span>
-                                <span className={"mkDetail"}>{chrome ? "chrome · " : ""}{w.weaponType} · {this.wStats(w)}</span>
+                                <span className={"mkKick"}>{chrome ? "chrome · " : ""}{w.weaponType}</span>
+                                <span className={"mkName"} style={{color: Gear.rarityColor(w)}}>
+                                    {s.n > 1 ? `${w.name} ×${s.n}` : w.name}</span>
+                                <span className={"mkDetail"}>{this.wStats(w)}</span>
                                 <GdChips cur={a.weapon} w={w}/>
                             </span>
                             <button className={"mkBuy gearEquip"} disabled={lock}

@@ -43,13 +43,13 @@ export function GdArmorChips(props: {a: Actor; piece: Armor}) {
 
 /**
  * The head-to-head: in-hand vs candidate, stat by stat, better cell lit.
- * The commit button lives here — reading comes before swapping.
+ * The commit button lives here — reading comes before swapping. Just the
+ * numbers: the row's verdict glyph already called the direction, and the
+ * player judges the trade by their own doctrine.
  */
 export function GdCard(props: {cur: Weapon; w: Weapon; act: string; onAct: () => void}) {
-    const v = Gear.verdict(props.cur, props.w);
     return (
         <div className={"gdCard"}>
-            <div className={"gdVs v-" + v}>{Gear.VERDICT_GLYPH[v]} {Gear.verdictLine(props.cur, props.w)}</div>
             <table className={"gdTable"}>
                 <thead>
                     <tr>
@@ -71,19 +71,28 @@ export function GdCard(props: {cur: Weapon; w: Weapon; act: string; onAct: () =>
         </div>);
 }
 
-/** Armour's smaller moment: the SP swing, and where the old piece goes. */
+/** Armour's smaller moment: worn vs candidate, one SP row. */
 export function GdArmorCard(props: {a: Actor; piece: Armor; act: string; onAct: () => void}) {
     const old = Gear.displaced(props.a, props.piece);
     const d = Gear.armorDelta(props.a, props.piece);
-    const slot = props.piece.bodyPart === "headgear" ? "head" : "body";
     return (
         <div className={"gdCard"}>
-            <div className={"gdVs " + (d > 0 ? "v-up" : d < 0 ? "v-down" : "v-same")}>
-                {d > 0 ? "▲" : d < 0 ? "▼" : "="} {slot} · SP {old ? old.stoppingPower : 0} → {props.piece.stoppingPower}
-            </div>
-            <p className={"gdNote"}>{old
-                ? `The ${old.name} goes back into The Stash.`
-                : "Nothing worn there now."}</p>
+            <table className={"gdTable"}>
+                <thead>
+                    <tr>
+                        <th/>
+                        <th><em>worn</em>{old ? old.name : "nothing"}</th>
+                        <th><em>this one</em>{props.piece.name}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>SP</td>
+                        <td className={d < 0 ? "win" : ""}>{old ? old.stoppingPower : 0}</td>
+                        <td className={d > 0 ? "win" : ""}>{props.piece.stoppingPower}</td>
+                    </tr>
+                </tbody>
+            </table>
             <button className={"gdGo"} onClick={props.onAct}>{props.act}</button>
         </div>);
 }
