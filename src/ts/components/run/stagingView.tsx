@@ -550,7 +550,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                             <em>tap a merc for orders</em></h3>
                         <table className={"kgTable tap"}>
                             <thead><tr>
-                                <th/><th>Merc</th><th/><th className={"kgHideM"}>Class</th>
+                                <th className={"kgHideM"}/><th>Merc</th><th/><th className={"kgHideM"}>Class</th>
                                 <th className={"num"}>HP</th><th className={"kgHideM"}>Weapon</th>
                                 <th>Where</th><th>How</th><th/>
                             </tr></thead>
