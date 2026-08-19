@@ -40,7 +40,6 @@ export class Player extends Actor {
         this.stats.ma.run = this.stats.ma.ma * 3;
         this.stats.ma.leap = this.stats.ma.ma / 4;
 
-        this.traumaTeam = true; // carries a Trauma Team subscription
         // RED: everyone runs armour. Start in a Light Armor Jacket (SP ~ RED Light Armorjack).
         this.equipment.upper = GetItem.armor("Light Armor Jacket");
         this.equipment.headgear = GetItem.armor("Kevlar Helmet");
@@ -52,8 +51,6 @@ export class Player extends Actor {
         this.cyberdeck.push(GetItem.program("Armor"));
         // A working merc: some street cred, a Nice Conapt, and a ride.
         this.reputation = 2;
-        this.housing = "NiceConapt";
-        this.vehicle = GetItem.vehicle("CityCar");
         this.currency = 0;    // player-side eddies live in the crew purse (see interact/crew.ts)
     }
 

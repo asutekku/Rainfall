@@ -7,8 +7,6 @@ import {Cyberware} from "../items/Cyberware";
 import {default as cyberwareData} from "../../objects/cyberware";
 import {Program} from "../items/Program";
 import {default as programData} from "../../objects/programs";
-import {Vehicle} from "../items/Vehicle";
-import {default as vehicleData} from "../items/vehicles";
 import {Utils} from "../utils/utils";
 
 const weapons = Equipment.weapons;
@@ -66,10 +64,6 @@ export class GetItem {
 
     public static program(name: string): Program {
         return new Program(programData[name]!);
-    }
-
-    public static vehicle(name: string): Vehicle {
-        return new Vehicle(vehicleData[name]!);
     }
 
     public static item() {

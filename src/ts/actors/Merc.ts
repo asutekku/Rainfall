@@ -76,7 +76,6 @@ export class Merc extends Actor {
         this.experience = 0;
         this.maxExperience = 100 + Math.floor(Math.pow(offer.level, 1.5) * 5);
         this.currency = 0;                    // eddies live in the crew purse
-        this.traumaTeam = false;              // no subscription — that's what the buyout is for
         this.recalculateHealth();
         this.health = this.maxHealth;
     }

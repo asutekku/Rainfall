@@ -4,7 +4,6 @@ import {GetItem} from "../interact/getItem";
 import {Armor} from "../items/Armor";
 import {Cyberware, CyberwareEffects} from "../items/Cyberware";
 import {Program} from "../items/Program";
-import {Vehicle} from "../items/Vehicle";
 import {Item} from "../items/Item";
 import {Weapon} from "../items/Weapon";
 import {Name} from "./resources/Name";
@@ -239,11 +238,8 @@ export class Actor extends GameObject {
     public humanity: number;
     public maxHumanity: number;
     public cyberpsychosis: boolean;
-    public traumaTeam: boolean;
     public reputation: number;
     public fearPenalty: number;
-    public housing: string;
-    public vehicle: Vehicle | null;
     public firstHitDone: boolean;
     // --- chrome runtime state (never saved; re-armed by Chrome.primeSquad/armRun) ---
     public squadInitRt: number;      // Tactical Co-Processor aura on this body
@@ -459,11 +455,8 @@ export class Actor extends GameObject {
         this.humanity = this.stats.emp * 10;
         this.maxHumanity = this.stats.emp * 10;
         this.cyberpsychosis = false;
-        this.traumaTeam = false;
         this.reputation = 0;
         this.fearPenalty = 0;
-        this.housing = "Streets";
-        this.vehicle = null;
         this.firstHitDone = false;
         this.squadInitRt = 0;
         this.squadHitRt = 0;
@@ -824,11 +817,6 @@ export class Actor extends GameObject {
         this.reputation = Math.min(10, this.reputation + amount + this.repGainBonus());
     }
 
-    /** RED Drive skill (Land Vehicle) for vehicle checks. */
-    public driveSkill(): number {
-        return this.skills.ref.driving;
-    }
-
     /** RED melee/ranged defence: DEX + Evasion (Dodge), minus the wound penalty. */
     public evasion(): number {
         return this.stats.dex + this.skills.ref.dodge + this.woundPenalty();
@@ -993,7 +981,6 @@ export class Actor extends GameObject {
     public corpDiscount(): number { return factionPerk(this.faction, "discount"); }
 
     /** Wraiths "Badlands": bonus behind the wheel. */
-    public motoBonus(): number { return factionPerk(this.faction, "moto"); }
 
     /** Scav "Harvester": better odds of stripping something off a body. */
     public scavengeBonus(): number {

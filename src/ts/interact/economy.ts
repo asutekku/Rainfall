@@ -313,10 +313,6 @@ export class Economy {
         actor.inventory.armor = [];
         actor.inventory.medical = [];
         actor.inventory.misc = [];
-        // Trauma Team put them back on the street with a roof and a subscription;
-        // without this an eviction earlier in a run followed the character forever.
-        actor.housing = "NiceConapt";
-        actor.traumaTeam = true;
     }
 
     /** Feed line for a loadout change. */
