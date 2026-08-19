@@ -5,47 +5,62 @@ import type {Weapon} from "../../items/Weapon";
 import {Gear, StatDelta} from "../../interact/gear";
 
 /**
- * The swap-decision UI, shared by every screen that changes hands: delta
- * chips for reading a list at a glance, and the head-to-head card for the
- * moment before committing. Both lean on Gear's honest verdict — a weapon
- * that hits harder but reaches shorter is a trade-off (◆), not an upgrade,
- * because which stat matters depends on who's holding it.
+ * The swap-decision UI, shared by every screen that changes hands.
+ *
+ * Every listed item prints the same one-line stat readout — absolute numbers,
+ * not deltas — and when there's something in hand to compare against, each
+ * number is inked by how it stacks up: green better, red worse, plain even.
+ * The verdict stays honest (see Gear.verdict): a gun that hits harder but
+ * reaches shorter is a trade-off, because which stat matters depends on who's
+ * holding it. The head-to-head card shows both columns with delta icons; its
+ * button is the only thing that commits.
  */
 
-/** "DMG +3.5", "RNG −150m", "+AP" — one moved stat, one chip. */
-const chipText = (d: StatDelta): string => {
-    if (d.stat === "AP" || d.stat === "AUTO") { return (d.delta > 0 ? "+" : "−") + d.stat; }
-    const n = Math.round(Math.abs(d.delta) * 10) / 10;
-    return `${d.stat} ${d.delta > 0 ? "+" : "−"}${n}${d.stat === "RNG" ? "m" : ""}`;
-};
-
-/** Every stat the candidate moves, colored by direction. Quiet when even. */
-export function GdChips(props: {cur: Weapon; w: Weapon}) {
-    const moved = Gear.compare(props.cur, props.w).filter((d) => d.delta !== 0);
-    if (!moved.length) { return <span className={"gdChips"}><i className={"gdChip"}>even swap</i></span>; }
-    return (
-        <span className={"gdChips"}>
-            {moved.map((d, i) => (
-                <i key={i} className={"gdChip " + (d.mode ? "tr" : d.delta > 0 ? "up" : "dn")}>
-                    {chipText(d)}</i>))}
-        </span>);
-}
-
-/** Armour is one number: the SP swing in this piece's slot. */
-export function GdArmorChips(props: {a: Actor; piece: Armor}) {
-    const d = Gear.armorDelta(props.a, props.piece);
-    return (
-        <span className={"gdChips"}>
-            <i className={"gdChip" + (d > 0 ? " up" : d < 0 ? " dn" : "")}>
-                {d === 0 ? "SP even" : `SP ${d > 0 ? "+" : "−"}${Math.abs(d)}`}</i>
-        </span>);
-}
+/** Ink for one stat: green better, red worse, plain even (or nothing to compare). */
+const tone = (compared: boolean, d: StatDelta): string =>
+    !compared || d.mode ? "" : d.delta > 0.05 ? " up" : d.delta < -0.05 ? " dn" : "";
 
 /**
- * The head-to-head: in-hand vs candidate, stat by stat, better cell lit.
- * The commit button lives here — reading comes before swapping. Just the
- * numbers: the row's verdict glyph already called the direction, and the
- * player judges the trade by their own doctrine.
+ * The one-line stat readout every weapon row carries: "DMG 9 · ROF 2 · RNG 50m",
+ * plus AP/AUTO flags when they apply. Pass `cur` to ink each number against
+ * what's in hand; leave it out for the equipped row's plain print.
+ */
+export function GdStats(props: {cur?: Weapon | undefined; w: Weapon}) {
+    const compared = !!props.cur;
+    const rows = Gear.compare(props.cur || props.w, props.w);
+    const seg = (stat: string) => rows.find((r) => r.stat === stat)!;
+    const line = [seg("DMG"), seg("ROF"), seg("RNG")];
+    const acc = seg("ACC");
+    if (acc.cur !== "0" || acc.next !== "0") { line.splice(1, 0, acc); }
+    return (
+        <span className={"gdStats"}>
+            {line.map((d, i) => <i key={i} className={"gdStat" + tone(compared, d)}>{d.stat} {d.next}</i>)}
+            {props.w.ap &&
+                <i className={"gdStat" + (compared && !props.cur!.ap ? " up" : "")}>AP</i>}
+            {compared && props.cur!.ap && !props.w.ap &&
+                <i className={"gdStat dn"}>−AP</i>}
+            {props.w.autofire && <i className={"gdStat"}>AUTO</i>}
+        </span>);
+}
+
+/** Armour's readout is one number: the piece's SP, inked against the slot. */
+export function GdArmorStats(props: {a?: Actor | undefined; piece: Armor}) {
+    const d = props.a ? Gear.armorDelta(props.a, props.piece) : 0;
+    return (
+        <span className={"gdStats"}>
+            <i className={"gdStat" + (props.a ? (d > 0 ? " up" : d < 0 ? " dn" : "") : "")}>
+                SP {props.piece.stoppingPower}</i>
+        </span>);
+}
+
+/** ▲/▼/= for one stat of the head-to-head. */
+const delta = (d: StatDelta): {glyph: string; cls: string} =>
+    d.mode || Math.abs(d.delta) <= 0.05 ? {glyph: "=", cls: ""}
+        : d.delta > 0 ? {glyph: "▲", cls: " up"} : {glyph: "▼", cls: " dn"};
+
+/**
+ * The head-to-head: equipped vs candidate, stat by stat, each row closing on
+ * a delta icon. Slides open under the tapped row at the row's own width.
  */
 export function GdCard(props: {cur: Weapon; w: Weapon; act: string; onAct: () => void}) {
     return (
@@ -54,42 +69,50 @@ export function GdCard(props: {cur: Weapon; w: Weapon; act: string; onAct: () =>
                 <thead>
                     <tr>
                         <th/>
-                        <th><em>in hand</em>{props.cur.name}</th>
-                        <th><em>this one</em>{props.w.name}</th>
+                        <th><em>equipped</em>{props.cur.name}</th>
+                        <th>{props.w.name}</th>
+                        <th/>
                     </tr>
                 </thead>
                 <tbody>
-                    {Gear.compare(props.cur, props.w).map((d, i) => (
-                        <tr key={i}>
-                            <td>{d.stat}</td>
-                            <td className={!d.mode && d.delta < 0 ? "win" : ""}>{d.cur}</td>
-                            <td className={!d.mode && d.delta > 0 ? "win" : ""}>{d.next}</td>
-                        </tr>))}
+                    {Gear.compare(props.cur, props.w).map((d, i) => {
+                        const ic = delta(d);
+                        return (
+                            <tr key={i}>
+                                <td>{d.stat}</td>
+                                <td>{d.cur}</td>
+                                <td className={"gdV" + ic.cls}>{d.next}</td>
+                                <td className={"gdIco" + ic.cls}>{ic.glyph}</td>
+                            </tr>);
+                    })}
                 </tbody>
             </table>
             <button className={"gdGo"} onClick={props.onAct}>{props.act}</button>
         </div>);
 }
 
-/** Armour's smaller moment: worn vs candidate, one SP row. */
+/** Armour's smaller moment: worn vs candidate, one SP row, one icon. */
 export function GdArmorCard(props: {a: Actor; piece: Armor; act: string; onAct: () => void}) {
     const old = Gear.displaced(props.a, props.piece);
-    const d = Gear.armorDelta(props.a, props.piece);
+    const d = props.a ? Gear.armorDelta(props.a, props.piece) : 0;
+    const ic = d === 0 ? {glyph: "=", cls: ""} : d > 0 ? {glyph: "▲", cls: " up"} : {glyph: "▼", cls: " dn"};
     return (
         <div className={"gdCard"}>
             <table className={"gdTable"}>
                 <thead>
                     <tr>
                         <th/>
-                        <th><em>worn</em>{old ? old.name : "nothing"}</th>
-                        <th><em>this one</em>{props.piece.name}</th>
+                        <th><em>equipped</em>{old ? old.name : "nothing"}</th>
+                        <th>{props.piece.name}</th>
+                        <th/>
                     </tr>
                 </thead>
                 <tbody>
                     <tr>
                         <td>SP</td>
-                        <td className={d < 0 ? "win" : ""}>{old ? old.stoppingPower : 0}</td>
-                        <td className={d > 0 ? "win" : ""}>{props.piece.stoppingPower}</td>
+                        <td>{old ? old.stoppingPower : 0}</td>
+                        <td className={"gdV" + ic.cls}>{props.piece.stoppingPower}</td>
+                        <td className={"gdIco" + ic.cls}>{ic.glyph}</td>
                     </tr>
                 </tbody>
             </table>
