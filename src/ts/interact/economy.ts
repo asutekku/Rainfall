@@ -3,7 +3,7 @@ import {Armor} from "../items/Armor";
 import Equipment from "../items/Equipment";
 import {Weapon} from "../items/Weapon";
 import {BattleRecorder, GearChange} from "./battleReport";
-import {Crew, Purse} from "./crew";
+import {Crew, Purse, Stash, crewSide} from "./crew";
 import {GetItem} from "./getItem";
 import {randomJunk, randomMed} from "../items/consumables";
 
@@ -41,12 +41,12 @@ export class Economy {
 
     /**
      * Strip the fallen foe's gear. Higher-rank foes carry better kit and drop it
-     * more often; loot lands in the killer's inventory (auto-equip grabs the good
-     * stuff between waves, or a manual player equips it from the Inventory panel).
-     * Only players scavenge — a dying enemy's take despawns with it.
+     * more often; loot lands in the crew stash (auto-equip grabs the good stuff
+     * between waves, or the player hands it out from the Inventory panel).
+     * Only the crew side scavenges — a dying enemy's take despawns with it.
      */
     public static scavenge(killer: Actor, victim: Actor): string[] {
-        if (killer.faction) { return []; }              // enemies don't keep loot
+        if (!crewSide(killer)) { return []; }           // enemies don't keep loot
         const msgs: string[] = [];
         const rank = victim.rank || 1;
         // Scavs strip a wreck to the frame — their finds come up more often.
@@ -55,7 +55,7 @@ export class Economy {
         if (victim.weapon && victim.weapon.name !== "Fists" && Math.random() < chance) {
             const w = victim.weapon.clone();
             w.equipped = false;
-            killer.inventory.weapons.push(w);
+            Stash.of(killer).weapons.push(w);
             // Boss-tier hardware: armour-piercing, high availability, or off an elite foe.
             const rare = w.ap || w.rarity >= 4 || rank >= 4;
             BattleRecorder.countSalvage(killer, w, "weapon", this.weaponDetail(w), this.weaponValue(w), rare);
@@ -66,7 +66,7 @@ export class Economy {
         const worn = victim.equipment.upper;
         if (worn && worn.stoppingPower > 0 && Math.random() < chance) {
             const a = new Armor("upper", worn.name, "", 1, worn.stoppingPower, worn.cost || 0, "");
-            killer.inventory.armor.push(a);
+            Stash.of(killer).armor.push(a);
             const rare = worn.stoppingPower >= 15 || rank >= 4;   // Flak / MetalGear tier
             BattleRecorder.countSalvage(killer, a, "armor", `SP ${a.stoppingPower}`, a.stoppingPower, rare);
             msgs.push(rare
@@ -86,11 +86,11 @@ export class Economy {
         // pocket loot: meds the crew can actually use, junk the fence will take
         if (Math.random() < 0.16) {
             const med = randomMed();
-            killer.inventory.medical.push(med);
+            Stash.of(killer).medical.push(med);
             msgs.push(`${killer.name} pockets a ${med.name}.`);
         } else if (Math.random() < 0.15) {
             const junk = randomJunk();
-            killer.inventory.misc.push(junk);
+            Stash.of(killer).misc.push(junk);
             msgs.push(`${killer.name} pockets a ${junk.name} — fence fodder.`);
         }
         this.prune(killer);
@@ -107,7 +107,7 @@ export class Economy {
         const curV = this.weaponValue(actor.weapon);
         const cls = actor.weapon.weaponClass;
         let best: Weapon | null = null; let bestV = 0; let idx = -1;
-        actor.inventory.weapons.forEach((w, i) => {
+        Stash.of(actor).weapons.forEach((w, i) => {
             if (w.damageType !== "kinetic") { return; }
             const v = this.weaponValue(w);
             const threshold = w.weaponClass === cls ? curV * 1.05 : curV * 1.25;  // cross-class must be worth losing skill
@@ -120,21 +120,24 @@ export class Economy {
     private static bestInventoryArmor(actor: Actor): { a: Armor; idx: number } | null {
         let bestSP = actor.equipment.upper ? actor.equipment.upper.stoppingPower : 0;
         let best: Armor | null = null; let idx = -1;
-        actor.inventory.armor.forEach((a, i) => {
+        Stash.of(actor).armor.forEach((a, i) => {
             if (a.stoppingPower > bestSP) { bestSP = a.stoppingPower; best = a; idx = i; }
         });
         return best ? {a: best, idx} : null;
     }
 
-    /** Keep the inventory from ballooning over a long career — hold the best few. */
+    /** Keep the stash from ballooning over a long career — hold the best few.
+     *  The caps are crew-wide now that the duffel is shared, so they sit higher
+     *  than the old per-pocket six. */
     private static prune(actor: Actor): void {
-        const w = actor.inventory.weapons;
-        if (w.length > 6) { w.sort((a, b) => this.weaponValue(b) - this.weaponValue(a)); w.length = 6; }
-        const a = actor.inventory.armor;
-        if (a.length > 6) { a.sort((x, y) => y.stoppingPower - x.stoppingPower); a.length = 6; }
-        const m = actor.inventory.medical;
+        const bag = Stash.of(actor);
+        const w = bag.weapons;
+        if (w.length > 10) { w.sort((a, b) => this.weaponValue(b) - this.weaponValue(a)); w.length = 10; }
+        const a = bag.armor;
+        if (a.length > 8) { a.sort((x, y) => y.stoppingPower - x.stoppingPower); a.length = 8; }
+        const m = bag.medical;
         if (m.length > 8) { m.sort((x: any, y: any) => (y.cost || 0) - (x.cost || 0)); m.length = 8; }
-        const j = actor.inventory.misc;
+        const j = bag.misc;
         if (j.length > 8) { j.sort((x: any, y: any) => (y.cost || 0) - (x.cost || 0)); j.length = 8; }
     }
 
@@ -194,7 +197,7 @@ export class Economy {
         const invW = this.bestInventoryWeapon(actor);
         const buyW = this.bestWeaponUpgrade(actor, budget);
         if (invW && (!buyW || this.weaponValue(invW.w) >= this.weaponValue(buyW))) {
-            actor.inventory.weapons.splice(invW.idx, 1);
+            Stash.of(actor).weapons.splice(invW.idx, 1);
             changes.push(this.equipWeapon(actor, invW.w, "salvage", 0));
         } else if (buyW) {
             Purse.spend(actor, buyW.cost);
@@ -205,7 +208,7 @@ export class Economy {
         const invA = this.bestInventoryArmor(actor);
         const buyA = this.bestArmorUpgrade(actor, budget);
         if (invA && (!buyA || invA.a.stoppingPower >= buyA.sp)) {
-            actor.inventory.armor.splice(invA.idx, 1);
+            Stash.of(actor).armor.splice(invA.idx, 1);
             changes.push(this.equipArmor(actor, invA.a, "salvage", 0));
         } else if (buyA) {
             Purse.spend(actor, buyA.cost);
@@ -218,6 +221,14 @@ export class Economy {
     /** Put a weapon in an actor's hands, reporting what it replaced. */
     public static equipWeapon(actor: Actor, weapon: Weapon, source: "salvage" | "bought", cost: number): GearChange {
         const old = actor.weapon;
+        // the replaced piece is crew property now — back in the duffel, not the
+        // gutter. Except chrome: a cyberweapon is part of the body it's bolted
+        // into, so it goes back in that actor's own pocket.
+        if (old && old.name !== "Fists") {
+            old.equipped = false;
+            const chrome = actor.cybernetics.some((c) => c.effects.grantsWeapon === old.name);
+            (chrome ? actor.inventory.weapons : Stash.of(actor).weapons).push(old);
+        }
         actor.weapon = weapon;
         actor.weapon.equipped = true;
         return {
@@ -232,6 +243,7 @@ export class Economy {
     /** Strap armour onto an actor's torso slot, reporting what it replaced. */
     public static equipArmor(actor: Actor, armor: Armor, source: "salvage" | "bought", cost: number): GearChange {
         const old = actor.equipment.upper;
+        if (old) { old.equipped = false; Stash.of(actor).armor.push(old); }
         actor.equipment.upper = armor;
         return {
             actorName: actor.name, slot: "armor", source,

@@ -1,5 +1,5 @@
 import {Actor} from "../actors/Actor";
-import {Purse} from "./crew";
+import {Purse, Stash} from "./crew";
 import {Check} from "./check";
 import {Chrome} from "./chrome";
 import Equipment from "../items/Equipment";
@@ -136,7 +136,7 @@ const grantWeapon = (a: Actor, rMin: number, rMax: number): string => {
         w.damageType === "kinetic" && w.cost > 0 && w.rarity >= rMin && w.rarity <= rMax);
     const w = pool[(Math.random() * pool.length) << 0]!.clone();
     w.equipped = false;
-    a.inventory.weapons.push(w);
+    Stash.of(a).weapons.push(w);
     return w.name;
 };
 
@@ -296,7 +296,8 @@ export const EVENTS: GameEvent[] = [
                 run: (ctx, ok) => {
                     if (ok) { return {lines: ["Long silence. The sergeant blinks first. You walk."]}; }
                     const a = ctx.best("cool");
-                    const w = a.inventory.weapons.length ? a.inventory.weapons.pop() : null;
+                    const bag = Stash.of(a).weapons;
+                    const w = bag.length ? bag.pop() : null;
                     return {lines: [w ? `Wrong night for nerve. They confiscate the ${w.name}.`
                         : "Wrong night for nerve. They pat you down and take their time about it."]};
                 },
@@ -380,7 +381,7 @@ export const EVENTS: GameEvent[] = [
                         a.stats.ref += 1; hum(a, -2);
                         const lines = [`Good batch after all. ${a.name} rides the edge (+1 REF).`];
                         if (Chrome.toxinShield(ctx.party) >= 3) {
-                            a.inventory.medical.push(new Medical("Bounceback (filtered)", 50, 15, "What the binder glands strained out, rebottled."));
+                            Stash.of(a).medical.push(new Medical("Bounceback (filtered)", 50, 15, "What the binder glands strained out, rebottled."));
                             lines.push("The toxin binders strain the garbage out — and hand it back as clean pharma.");
                         }
                         return {lines};
@@ -624,7 +625,7 @@ export const EVENTS: GameEvent[] = [
                     if (Chrome.toxinShield(ctx.party) >= 2) {
                         const lines = ["Contact toxin on the collar — the binder glands eat it without breaking stride."];
                         if (Chrome.toxinShield(ctx.party) >= 3) {
-                            ctx.leader.inventory.medical.push(new Medical("Refined Toxin Base", 40, 10, "One street's poison is another's anaesthetic."));
+                            Stash.of(ctx.leader).medical.push(new Medical("Refined Toxin Base", 40, 10, "One street's poison is another's anaesthetic."));
                             lines.push("They even keep the base compound. Free pharma.");
                         }
                         return {lines};

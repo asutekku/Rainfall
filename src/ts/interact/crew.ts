@@ -1,6 +1,19 @@
 import {traitSum} from "../actors/resources/traits";
 import {Actor} from "../actors/Actor";
+import type {Armor} from "../items/Armor";
+import type {Item} from "../items/Item";
+import type {Weapon} from "../items/Weapon";
 import {Kit, startingKit} from "./loadout";
+
+/** The crew duffel: same shape as an actor's pockets, owned by nobody in particular. */
+export interface StashBag {
+    weapons: Weapon[];
+    armor: Armor[];
+    medical: Item[];
+    misc: Item[];
+}
+
+export const emptyStash = (): StashBag => ({weapons: [], armor: [], medical: [], misc: []});
 
 /**
  * The crew's shared purse.
@@ -40,9 +53,21 @@ export class Crew {
      */
     public kit: Kit;
 
-    constructor(funds: number = Crew.STARTING_FUNDS, kit: Kit = startingKit()) {
+    /**
+     * The gear duffel. Same story as the purse and the crate: packs used to be
+     * personal, so every gun the run scavenged piled up on whoever pulled the
+     * trigger — in practice the player — and a hired merc could stand next to
+     * a spare rifle forever without being allowed to pick it up. One duffel
+     * instead: what's not on a body belongs to the crew, and anyone can kit
+     * up out of it. (Chrome-granted cyberweapons are the exception — those are
+     * bolted into a body and stay in that actor's own pocket.)
+     */
+    public stash: StashBag;
+
+    constructor(funds: number = Crew.STARTING_FUNDS, kit: Kit = startingKit(), stash: StashBag = emptyStash()) {
         this.funds = Math.max(0, Math.floor(funds));
         this.kit = kit;
+        this.stash = stash;
     }
 
     /** Make this the purse every static helper spends from. */
@@ -77,6 +102,13 @@ export class Crew {
 }
 
 /**
+ * Player side or street side? A bare `faction` check gets this wrong: hired
+ * mercs carry their origin gang's name for display and grudges, but they are
+ * crew all the same. Only a faction actor who was never hireable is a hostile.
+ */
+export const crewSide = (actor: Actor): boolean => actor.hireable || !actor.faction;
+
+/**
  * Where an actor's money lives: the crew pot for the player side, the actor's
  * own pocket for hostiles (and for the player side too if no crew is active,
  * which keeps the headless sim and any legacy path working).
@@ -84,7 +116,7 @@ export class Crew {
 export class Purse {
 
     private static crewOf(actor: Actor): Crew | null {
-        return actor.faction ? null : Crew.active;
+        return crewSide(actor) ? Crew.active : null;
     }
 
     public static balance(actor: Actor): number {
@@ -124,5 +156,20 @@ export class Purse {
         const paid = Math.min(actor.currency, Math.max(0, Math.floor(cost)));
         actor.currency -= paid;
         return paid;
+    }
+}
+
+/**
+ * Where an actor's spare gear lives: the crew duffel for the player side, the
+ * actor's own pockets for hostiles (and for the player side too if no crew is
+ * active, which keeps the headless sim and any legacy path working). The same
+ * seam as `Purse`, for the same reason — callers shouldn't have to know which
+ * side of the fight an actor is on.
+ */
+export class Stash {
+
+    public static of(actor: Actor): StashBag {
+        if (!crewSide(actor) || !Crew.active) { return actor.inventory as StashBag; }
+        return Crew.active.stash;
     }
 }

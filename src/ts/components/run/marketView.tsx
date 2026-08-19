@@ -1,7 +1,7 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {AugOffer, Chrome} from "../../interact/chrome";
-import {Crew, Purse} from "../../interact/crew";
+import {Crew, Purse, Stash} from "../../interact/crew";
 import {KIT, KIT_ORDER, KIT_PICKS} from "../../interact/loadout";
 import {Economy} from "../../interact/economy";
 import {GetItem} from "../../interact/getItem";
@@ -76,7 +76,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                 detail: `${w.weaponType} · ${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""}`,
                 info: weaponInfo(w),
                 blurb: w.manufacturer ? `${w.manufacturer} — serial filed off.` : undefined,
-                buy: (a) => { a.inventory.weapons.push(GetItem.weapon(w.name)); return `${w.name} into the duffel.`; },
+                buy: (a) => { Stash.of(a).weapons.push(GetItem.weapon(w.name)); return `${w.name} into the duffel.`; },
             });
         }
         const wearable = armors.filter((r) => r.cost > 0);
@@ -89,7 +89,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
                     ["Stopping power", `SP ${r.stoppingPower}`],
                     ["Build", `rarity ${r.rarity}`],
                 ],
-                buy: (a) => { a.inventory.armor.push(GetItem.armor(r.name)); return `${r.name} bagged.`; },
+                buy: (a) => { Stash.of(a).armor.push(GetItem.armor(r.name)); return `${r.name} bagged.`; },
             });
         }
         const med = randomMed();
@@ -101,7 +101,7 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
             ],
             blurb: med.description,
             buy: (a) => {
-                a.inventory.medical.push(new Medical(med.name, med.cost, med.restorePoints, med.description));
+                Stash.of(a).medical.push(new Medical(med.name, med.cost, med.restorePoints, med.description));
                 return `${med.name} into the med pouch.`;
             },
         });
@@ -269,37 +269,39 @@ export class MarketView extends React.Component<MarketViewProps, MarketViewState
     private fenceList(): Fence[] {
         const rate = this.fenceRate();
         const out: Fence[] = [];
-        this.props.party.forEach((owner) => {
-            owner.inventory.weapons.forEach((w, idx) => {
-                if (w.name === "Fists") { return; }
-                out.push({
-                    owner, kind: "weapon", idx, name: w.name,
-                    detail: `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""} · ${owner.name.split(" ")[0]}'s stash`,
-                    price: Math.max(5, Math.floor(w.cost * rate)),
-                });
+        const leader = this.props.party[0]!;
+        const bag = Stash.of(leader);
+        // one duffel, one list — chrome lives in pockets, so it can't be fenced here
+        bag.weapons.forEach((w, idx) => {
+            if (w.name === "Fists") { return; }
+            out.push({
+                owner: leader, kind: "weapon", idx, name: w.name,
+                detail: `${w.diceThrows}d6${w.damage ? "+" + w.damage : ""}${w.ap ? " AP" : ""} · crew stash`,
+                price: Math.max(5, Math.floor(w.cost * rate)),
             });
-            owner.inventory.armor.forEach((a, idx) => {
-                out.push({
-                    owner, kind: "armor", idx, name: a.name,
-                    detail: `SP ${a.stoppingPower} · ${owner.name.split(" ")[0]}'s stash`,
-                    price: Math.max(5, Math.floor(a.cost * rate)),
-                });
+        });
+        bag.armor.forEach((a, idx) => {
+            out.push({
+                owner: leader, kind: "armor", idx, name: a.name,
+                detail: `SP ${a.stoppingPower} · crew stash`,
+                price: Math.max(5, Math.floor(a.cost * rate)),
             });
-            owner.inventory.misc.forEach((m, idx) => {
-                out.push({
-                    owner, kind: "misc", idx, name: m.name,
-                    detail: `junk · ${owner.name.split(" ")[0]}'s stash`,
-                    price: Math.max(2, Math.floor((m.cost || 0) * rate)),
-                });
+        });
+        bag.misc.forEach((m, idx) => {
+            out.push({
+                owner: leader, kind: "misc", idx, name: m.name,
+                detail: `junk · crew stash`,
+                price: Math.max(2, Math.floor((m.cost || 0) * rate)),
             });
         });
         return out;
     }
 
     private sell(f: Fence) {
-        if (f.kind === "weapon") { f.owner.inventory.weapons.splice(f.idx, 1); }
-        else if (f.kind === "misc") { f.owner.inventory.misc.splice(f.idx, 1); }
-        else { f.owner.inventory.armor.splice(f.idx, 1); }
+        const bag = Stash.of(f.owner);
+        if (f.kind === "weapon") { bag.weapons.splice(f.idx, 1); }
+        else if (f.kind === "misc") { bag.misc.splice(f.idx, 1); }
+        else { bag.armor.splice(f.idx, 1); }
         Purse.earn(f.owner, f.price);
         this.setState({notice: `Fenced the ${f.name} for ${f.price}¥.`, version: this.state.version + 1});
     }

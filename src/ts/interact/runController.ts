@@ -7,7 +7,7 @@ import {Merc} from "../actors/Merc";
 import {BattleRecorder, BattleReport, GearChange, LootItem} from "./battleReport";
 import {Battlefield} from "./battlefield";
 import {FeedLog} from "./feedLog";
-import {Crew, Purse} from "./crew";
+import {Crew, Purse, Stash} from "./crew";
 import {MercMarket} from "./mercMarket";
 import {Economy} from "./economy";
 import {RunMap, RunNode, RunState, encounterSpec, fightsCleared, spawnEncounter} from "./runMap";
@@ -195,10 +195,34 @@ export class RunController {
     }
 
     /** Mark a node cleared and stand on it; clearing the boss wins the run. */
+    /**
+     * Trauma Team always comes for your character — in a firefight the pickup
+     * happens on the way out of the debrief, but the street has other ways to
+     * put them down (black ICE, for one). Whoever calls this on the way back
+     * to the map gets the same deal: revived, and billed for it. Returns the
+     * feed line, or null if they were fine.
+     */
+    public static traumaPickup(you: Actor, sector: number): string | null {
+        if (you.canFight()) { return null; }
+        // Trauma Platinum: priority biotelemetry shaves (or waives) the bill.
+        const rate = Math.max(0, 1 - you.chromeNum("traumaDiscount"));
+        const bill = Purse.garnish(you, Math.round((400 + sector * 200) * rate));
+        you.revive();
+        return bill > 0
+            ? `Trauma Team stabilises ${you.name} — billed ${bill}¥.`
+            : `Trauma Team stabilises ${you.name} — Platinum coverage, no bill.`;
+    }
+
     public static advance(state: InterfaceAppState, node: RunNode, extra: any[], log: number): Patch {
         const run = state.run;
         if (!run) { return {}; }
         const you = state.character;
+        // Nobody walks the map dying. A netrun (or anything else off the street)
+        // that leaves your character flatlined gets the same forced pickup a
+        // firefight does — otherwise the run drifts on around a downed leader,
+        // staging merc-only squads that make no sense.
+        const pickup = RunController.traumaPickup(you, run.sector);
+        if (pickup) { extra = [...extra, {msg: `— ${pickup} —`}]; }
         const fresh = run.clearedIds.indexOf(node.id) < 0;
         const clearedIds = fresh ? run.clearedIds.concat(node.id) : run.clearedIds;
         const depth = run.depth + 1;
@@ -353,7 +377,7 @@ export class RunController {
     /** Pull a salvaged piece out of its finder's pack (it may have been pruned). */
     private static takeFromPack(loot: LootItem): void {
         const bag: Array<Weapon | Armor> = loot.kind === "weapon"
-            ? loot.owner.inventory.weapons : loot.owner.inventory.armor;
+            ? Stash.of(loot.owner).weapons : Stash.of(loot.owner).armor;
         const idx = bag.indexOf(loot.item);
         if (idx >= 0) { bag.splice(idx, 1); }
     }
@@ -401,7 +425,7 @@ export class RunController {
         report.loot.forEach((l) => {
             if (l.fate !== "held") { return; }
             const bag: Array<Weapon | Armor> = l.kind === "weapon"
-                ? l.owner.inventory.weapons : l.owner.inventory.armor;
+                ? Stash.of(l.owner).weapons : Stash.of(l.owner).armor;
             if (bag.indexOf(l.item) < 0) { l.fate = "equipped"; }
         });
         return {...report, loot: report.loot.slice(), gear: [...report.gear, ...changes], kitted: true};
@@ -430,14 +454,9 @@ export class RunController {
         // the run, rolling a death save every round until they were gone for good.
         // The pickup isn't optional and it isn't free.
         const you = state.party.find((p) => !p.hireable);
-        if (you && !you.canFight() && report && report.outcome === "victory") {
-            // Trauma Platinum: priority biotelemetry shaves (or waives) the bill.
-            const rate = Math.max(0, 1 - you.chromeNum("traumaDiscount"));
-            const bill = Purse.garnish(you, Math.round((400 + (run ? run.sector : 1) * 200) * rate));
-            you.revive();
-            notes.push({msg: bill > 0
-                ? `Trauma Team stabilises ${you.name} — billed ${bill}¥.`
-                : `Trauma Team stabilises ${you.name} — Platinum coverage, no bill.`});
+        if (you && report && report.outcome === "victory") {
+            const pickup = RunController.traumaPickup(you, run ? run.sector : 1);
+            if (pickup) { notes.push({msg: pickup}); }
         }
         const lost = report ? report.casualties : [];
         lost.forEach((c) => notes.unshift({msg: `${c.name} didn't make it off the street.`}));

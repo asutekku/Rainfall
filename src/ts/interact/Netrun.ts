@@ -28,7 +28,26 @@ export interface NetrunResult {
     brainDamage: number;
     flatlined: boolean;
     log: string[];
+    /** The dive, beat by beat — what the montage plays back. */
+    events: NetEvent[];
 }
+
+/**
+ * One beat of a dive. The engine resolves the whole run up front (the model
+ * never waits on a screen), but it narrates as it goes so the view can play
+ * the story back one line at a time instead of dumping the verdict.
+ */
+export type NetEvent =
+    | {kind: "jack"; runner: string; iface: number; deck: string; difficulty: string; floors: number; hp: number; maxHp: number}
+    | {kind: "floor"; at: number; type: FloorType; dv: number}
+    | {kind: "try"; attempt: number; of: number; success: boolean}
+    | {kind: "reward"; eddies: number}
+    | {kind: "ice"; name: string; rez: number}
+    | {kind: "iceRound"; hit: boolean; rezLeft: number; bit: boolean; dmg: number; hp: number}
+    | {kind: "derez"; name: string}
+    | {kind: "lockout"}
+    | {kind: "flatline"}
+    | {kind: "exit"; success: boolean; eddies: number; cleared: number; total: number; brain: number};
 
 interface DiffSpec {
     dv: number; min: number; max: number; iceChance: number; ice: string[]; reward: number;
@@ -71,19 +90,30 @@ export class Netrun {
         const attacker: Program = Netrun.bestAttacker(runner);
         const soak: number = Netrun.bestDefenderSoak(runner);
         const log: string[] = [];
+        const events: NetEvent[] = [];
         let eddies = 0, cleared = 0, derez = 0, brain = 0, flat = false;
 
-        for (const floor of arch.floors) {
+        events.push({kind: "jack", runner: runner.name, iface, deck: attacker.name,
+            difficulty: arch.difficulty, floors: arch.floors.length,
+            hp: runner.health, maxHp: runner.maxHealth});
+
+        for (let i = 0; i < arch.floors.length; i++) {
+            const floor = arch.floors[i]!;
             if (runner.health <= 0) { flat = true; break; }
+            events.push({kind: "floor", at: i, type: floor.type, dv: floor.dv});
             if (floor.type === "blackice" && floor.ice) {
-                const res = Netrun.fightIce(runner, floor.ice, attacker, iface, soak);
+                events.push({kind: "ice", name: floor.ice.name, rez: floor.ice.rez});
+                const res = Netrun.fightIce(runner, floor.ice, attacker, iface, soak, events);
                 brain += res.brain;
                 if (res.derezzed) {
                     derez += 1; cleared += 1;
+                    floor.defeated = true;
+                    events.push({kind: "derez", name: floor.ice.name});
                     log.push(`Derezzed ${floor.ice.name} (took ${res.brain} brain damage)`);
                 } else {
                     log.push(`${floor.ice.name} flatlined the run`);
                     flat = runner.health <= 0;
+                    if (flat) { events.push({kind: "flatline"}); }
                     break;
                 }
             } else {
@@ -91,12 +121,15 @@ export class Netrun {
                 let passed = false;
                 const tries = Math.max(1, Netrun.actionsFor(iface));
                 for (let t = 0; t < tries && !passed; t++) {
-                    if (Check.resolve(runner, iface, floor.dv).success) { passed = true; }
+                    passed = Check.resolve(runner, iface, floor.dv).success;
+                    events.push({kind: "try", attempt: t + 1, of: tries, success: passed});
                 }
                 if (passed) {
                     cleared += 1; eddies += floor.reward; floor.defeated = true;
+                    events.push({kind: "reward", eddies: floor.reward});
                     log.push(`Cleared ${floor.type} (DV ${floor.dv}) +${floor.reward}¥`);
                 } else {
+                    events.push({kind: "lockout"});
                     log.push(`Locked out at ${floor.type} (DV ${floor.dv})`);
                     break;
                 }
@@ -104,10 +137,12 @@ export class Netrun {
         }
 
         Purse.earn(runner, eddies);
+        const success = cleared === arch.floors.length && !flat;
+        events.push({kind: "exit", success, eddies, cleared, total: arch.floors.length, brain});
         return {
-            success: cleared === arch.floors.length && !flat,
+            success,
             floorsCleared: cleared, totalFloors: arch.floors.length,
-            eddiesGained: eddies, iceDerezzed: derez, brainDamage: brain, flatlined: flat, log,
+            eddiesGained: eddies, iceDerezzed: derez, brainDamage: brain, flatlined: flat, log, events,
         };
     }
 
@@ -119,25 +154,31 @@ export class Netrun {
         return 1;
     }
 
-    private static fightIce(runner: Actor, ice: Program, attacker: Program, iface: number, soak: number)
+    private static fightIce(runner: Actor, ice: Program, attacker: Program, iface: number, soak: number,
+                            events: NetEvent[])
         : { derezzed: boolean; brain: number } {
         let brain = 0, rounds = 0;
         while (ice.rez > 0 && runner.health > 0 && rounds < 20) {
             rounds += 1;
             // Runner attacks the ICE: opposed Interface vs the ICE's DEF.
-            if (Check.redRoll() + iface >= Check.redRoll() + ice.def) {
-                ice.rez -= attacker.rollDamage();
+            const hit = Check.redRoll() + iface >= Check.redRoll() + ice.def;
+            if (hit) { ice.rez -= attacker.rollDamage(); }
+            if (ice.rez <= 0) {
+                events.push({kind: "iceRound", hit, rezLeft: 0, bit: false, dmg: 0, hp: runner.health});
+                break;
             }
-            if (ice.rez <= 0) { break; }
             // Anti-personnel ICE strikes back at the runner's brain.
-            if (ice.antiPersonnel && Check.redRoll() + ice.atk >= Check.redRoll() + iface) {
-                let dmg = 0;
+            let dmg = 0;
+            const bit = !!ice.antiPersonnel && Check.redRoll() + ice.atk >= Check.redRoll() + iface;
+            if (bit) {
                 for (let i = 0; i < ice.damage; i++) { dmg += Math.floor(Math.random() * 6) + 1; }
                 dmg = Math.max(0, dmg - soak);
                 brain += dmg;
                 runner.health -= dmg;
                 if (runner.health <= 0) { runner.health = 0; runner.mortallyWounded = true; }
             }
+            events.push({kind: "iceRound", hit, rezLeft: Math.max(0, ice.rez), bit: bit && dmg > 0,
+                dmg, hp: Math.max(0, runner.health)});
         }
         return {derezzed: ice.rez <= 0, brain};
     }
