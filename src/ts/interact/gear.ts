@@ -2,7 +2,6 @@ import type {Actor} from "../actors/Actor";
 import type {Armor} from "../items/Armor";
 import type {Weapon} from "../items/Weapon";
 import {Stash} from "./crew";
-import {Economy} from "./economy";
 import {GetItem} from "./getItem";
 
 /**
@@ -39,14 +38,14 @@ export class Gear {
 
     /**
      * Everything `a` could swap to: their own chrome plus The Stash, sorted by
-     * the same valuation auto-equip decides with (Economy.weaponValue) — so
+     * the same valuation auto-equip decides with (Gear.weaponValue) — so
      * the top of the list is what the fixer would actually pick, not merely
      * the rarest paint job. Rarity and price only break ties.
      */
     public static weaponChoices(a: Actor): Weapon[] {
         return [...Gear.chromeWeapons(a), ...Stash.of(a).weapons]
             .filter((w) => w.name !== "Fists")
-            .sort((x, y) => Economy.weaponValue(y) - Economy.weaponValue(x)
+            .sort((x, y) => Gear.weaponValue(y) - Gear.weaponValue(x)
                 || (y.rarity || 0) - (x.rarity || 0)
                 || (y.cost || 0) - (x.cost || 0));
     }
@@ -71,25 +70,42 @@ export class Gear {
         Stash.of(a).weapons.push(old);
     }
 
-    /** Swap to `w`; the old weapon goes back in The Stash. */
-    public static equipWeapon(a: Actor, w: Weapon): string | null {
-        if (!Gear.takeWeapon(a, w)) { return null; }
+    /**
+     * THE weapon swap: shelve what's held (into The Stash — chrome retracts,
+     * Fists evaporate), take up `w`. Returns what was replaced. Every path
+     * that changes hands — the Gear tab, staging, the debrief claim, the
+     * fixer's auto-kit — comes through here, so the shelve rule exists once.
+     */
+    public static swapWeapon(a: Actor, w: Weapon): Weapon | null {
         const old = a.weapon;
         if (old && old.name !== "Fists") { Gear.shelveWeapon(a, old); }
         a.weapon = w;
+        return old && old.name !== "Fists" ? old : null;
+    }
+
+    /** THE armour swap: the slot's old piece goes back in The Stash. */
+    public static swapArmor(a: Actor, piece: Armor): Armor | null {
+        const slot = piece.bodyPart === "headgear" ? "headgear" : "upper";
+        const old = a.equipment[slot] as Armor | null;
+        if (old) { Stash.of(a).armor.push(old); }
+        a.equipment[slot] = piece;
+        return old;
+    }
+
+    /** Swap to `w` out of The Stash (or the body, for chrome); feed line back. */
+    public static equipWeapon(a: Actor, w: Weapon): string | null {
+        if (!Gear.takeWeapon(a, w)) { return null; }
+        Gear.swapWeapon(a, w);
         return `${a.name.split(" ")[0]} swaps to the ${w.name}.`;
     }
 
-    /** Strap on `piece`; the old piece in that slot goes back in The Stash. */
+    /** Strap on `piece` out of The Stash; feed line back. */
     public static equipArmor(a: Actor, piece: Armor): string | null {
         const bag = Stash.of(a).armor;
         const at = bag.indexOf(piece);
         if (at < 0) { return null; }
         bag.splice(at, 1);
-        const slot = piece.bodyPart === "headgear" ? "headgear" : "upper";
-        const old = a.equipment[slot] as Armor | null;
-        if (old) { Stash.of(a).armor.push(old); }
-        a.equipment[slot] = piece;
+        Gear.swapArmor(a, piece);
         return `${a.name.split(" ")[0]} straps on the ${piece.name} (SP ${piece.stoppingPower}).`;
     }
 
@@ -100,12 +116,15 @@ export class Gear {
      */
     public static equipFists(a: Actor): string | null {
         if (a.weapon && a.weapon.name === "Fists") { return null; }
-        const old = a.weapon;
-        if (old && old.name !== "Fists") { Gear.shelveWeapon(a, old); }
+        Gear.swapWeapon(a, GetItem.weapon("Fists"));
         const stash = Stash.of(a);
         stash.weapons = stash.weapons.filter((w) => w.name !== "Fists");
-        a.weapon = GetItem.weapon("Fists");
         return `${a.name.split(" ")[0]} goes in bare-knuckle.`;
+    }
+
+    /** Shopping value of a weapon: mean damage, with a bonus for armour-piercing. */
+    public static weaponValue(w: Weapon): number {
+        return w.averageDamage() + (w.ap ? 4 : 0);
     }
 
     /** The one-line spec sheet a weapon prints wherever it's listed. */

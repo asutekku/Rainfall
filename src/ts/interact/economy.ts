@@ -4,6 +4,7 @@ import Equipment from "../items/Equipment";
 import {Weapon} from "../items/Weapon";
 import {BattleRecorder, GearChange} from "./battleReport";
 import {Crew, Purse, Stash, crewSide} from "./crew";
+import {Gear} from "./gear";
 import {GetItem} from "./getItem";
 import {randomJunk, randomMed} from "../items/consumables";
 
@@ -66,7 +67,7 @@ export class Economy {
             Stash.of(killer).weapons.push(w);
             // Boss-tier hardware: armour-piercing, high availability, or off an elite foe.
             const rare = w.ap || w.rarity >= 4 || rank >= 4;
-            BattleRecorder.countSalvage(killer, w, "weapon", this.weaponDetail(w), this.weaponValue(w), rare);
+            BattleRecorder.countSalvage(killer, w, "weapon", this.weaponDetail(w), Gear.weaponValue(w), rare);
             msgs.push(rare
                 ? `★ ${killer.name} scavenges a rare ${w.name}!`
                 : `${killer.name} scavenges a ${w.name}.`);
@@ -112,12 +113,12 @@ export class Economy {
 
     /** Best scavenged weapon worth equipping: same-class edge, or a big cross-class jump. */
     private static bestInventoryWeapon(actor: Actor): { w: Weapon; idx: number } | null {
-        const curV = this.weaponValue(actor.weapon);
+        const curV = Gear.weaponValue(actor.weapon);
         const cls = actor.weapon.weaponClass;
         let best: Weapon | null = null; let bestV = 0; let idx = -1;
         Stash.of(actor).weapons.forEach((w, i) => {
             if (w.damageType !== "kinetic") { return; }
-            const v = this.weaponValue(w);
+            const v = Gear.weaponValue(w);
             const threshold = w.weaponClass === cls ? curV * 1.05 : curV * 1.25;  // cross-class must be worth losing skill
             if (v > threshold && v > bestV) { bestV = v; best = w; idx = i; }
         });
@@ -140,18 +141,13 @@ export class Economy {
     private static prune(actor: Actor): void {
         const bag = Stash.of(actor);
         const w = bag.weapons;
-        if (w.length > 10) { w.sort((a, b) => this.weaponValue(b) - this.weaponValue(a)); w.length = 10; }
+        if (w.length > 10) { w.sort((a, b) => Gear.weaponValue(b) - Gear.weaponValue(a)); w.length = 10; }
         const a = bag.armor;
         if (a.length > 8) { a.sort((x, y) => y.stoppingPower - x.stoppingPower); a.length = 8; }
         const m = bag.medical;
         if (m.length > 8) { m.sort((x: any, y: any) => (y.cost || 0) - (x.cost || 0)); m.length = 8; }
         const j = bag.misc;
         if (j.length > 8) { j.sort((x: any, y: any) => (y.cost || 0) - (x.cost || 0)); j.length = 8; }
-    }
-
-    /** Shopping value of a weapon: mean damage, with a bonus for armour-piercing. */
-    public static weaponValue(w: Weapon): number {
-        return w.averageDamage() + (w.ap ? 4 : 0);
     }
 
     private static rarityCap(level: number): number { return Math.min(5, 2 + Math.floor(level / 2)); }
@@ -165,11 +161,11 @@ export class Economy {
         const cls = actor.weapon.weaponClass;
         const cap = this.rarityCap(actor.level);
         let best: Weapon | null = null;
-        let bestV = this.weaponValue(actor.weapon) * 1.15;   // require > 15% better
+        let bestV = Gear.weaponValue(actor.weapon) * 1.15;   // require > 15% better
         for (const w of WEAPONS) {
             if (w.weaponClass !== cls || w.damageType !== "kinetic") { continue; }
             if (w.rarity > cap || w.cost > budget || !Purse.canAfford(actor, w.cost)) { continue; }
-            const v = this.weaponValue(w);
+            const v = Gear.weaponValue(w);
             if (v > bestV) { bestV = v; best = w; }
         }
         return best;
@@ -204,7 +200,7 @@ export class Economy {
         // Weapon: scavenged (free) beats a store buy of equal-or-lower value.
         const invW = this.bestInventoryWeapon(actor);
         const buyW = this.bestWeaponUpgrade(actor, budget);
-        if (invW && (!buyW || this.weaponValue(invW.w) >= this.weaponValue(buyW))) {
+        if (invW && (!buyW || Gear.weaponValue(invW.w) >= Gear.weaponValue(buyW))) {
             Stash.of(actor).weapons.splice(invW.idx, 1);
             changes.push(this.equipWeapon(actor, invW.w, "salvage", 0));
         } else if (buyW) {
@@ -225,31 +221,22 @@ export class Economy {
         return changes;
     }
 
-    /** Put a weapon in an actor's hands, reporting what it replaced. */
+    /** Put a weapon in an actor's hands (via Gear's one swap rule), reporting the change. */
     public static equipWeapon(actor: Actor, weapon: Weapon, source: "salvage" | "bought", cost: number): GearChange {
-        const old = actor.weapon;
-        // the replaced piece is crew property — back in The Stash, not the
-        // gutter. Except chrome: a cyberweapon retracts into the body it's
-        // bolted into (it is derived from the chrome list, never stored).
-        if (old && old.name !== "Fists") {
-            const chrome = actor.cybernetics.some((c) => c.effects.grantsWeapon === old.name);
-            if (!chrome) { Stash.of(actor).weapons.push(old); }
-        }
-        actor.weapon = weapon;
+        const before = actor.weapon;
+        const old = Gear.swapWeapon(actor, weapon);
         return {
             actorName: actor.name, slot: "weapon", source,
             from: old ? old.name : "—", to: weapon.name,
             detail: this.weaponDetail(weapon),
-            delta: Math.round(this.weaponValue(weapon) - (old ? this.weaponValue(old) : 0)),
+            delta: Math.round(Gear.weaponValue(weapon) - (before ? Gear.weaponValue(before) : 0)),
             cost,
         };
     }
 
-    /** Strap armour onto an actor's torso slot, reporting what it replaced. */
+    /** Strap armour on (via Gear's one swap rule), reporting the change. */
     public static equipArmor(actor: Actor, armor: Armor, source: "salvage" | "bought", cost: number): GearChange {
-        const old = actor.equipment.upper;
-        if (old) { Stash.of(actor).armor.push(old); }
-        actor.equipment.upper = armor;
+        const old = Gear.swapArmor(actor, armor);
         return {
             actorName: actor.name, slot: "armor", source,
             from: old ? old.name : "—", to: armor.name,
