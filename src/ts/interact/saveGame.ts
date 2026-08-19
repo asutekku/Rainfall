@@ -6,7 +6,7 @@ import {CharacterSpec} from "../actors/resources/CharacterCreation";
 import {Armor} from "../items/Armor";
 import {Medical, Scrap} from "../items/Scrap";
 import {Chrome} from "./chrome";
-import {Crew} from "./crew";
+import {Crew, StashBag, emptyStash} from "./crew";
 import {Kit, reviveKit} from "./loadout";
 import {GetItem} from "./getItem";
 import type {MercOffer} from "./mercMarket";
@@ -48,12 +48,20 @@ export interface MemberSnap {
     chrome: ChromeSnap[];
 }
 
+interface StashSnap {
+    weapons: string[];
+    armor: ArmorSnap[];
+    meds: Array<{name: string; cost: number; restore: number; desc: string}>;
+    misc: Array<{name: string; cost: number; desc: string}>;
+}
+
 interface SaveData {
     v: 2;
     spec: CharacterSpec;
     members: MemberSnap[];
     funds: number;
     kit?: Kit;                            // absent in checkpoints written before the crate
+    stash?: StashSnap;                    // absent in checkpoints written before the crew duffel
     usedEvents: string[];
     run: RunState;                        // plain data throughout (node saved as null)
     savedAt?: number;                     // wall clock, for "12 min ago" on the boot screen
@@ -96,6 +104,42 @@ const rebuildArmor = (s: ArmorSnap): Armor => {
     a.stoppingPower = s.sp;
     a.maxStoppingPower = s.maxSp;
     return a;
+};
+
+const stashSnap = (bag: StashBag): StashSnap => ({
+    weapons: bag.weapons.map((w) => w.name),
+    armor: bag.armor.map((a) => armorSnap(a)!),
+    meds: bag.medical.map((x: any) => ({name: x.name, cost: x.cost || 0, restore: x.restorePoints || 0, desc: x.description || ""})),
+    misc: bag.misc.map((x: any) => ({name: x.name, cost: x.cost || 0, desc: x.description || ""})),
+});
+
+const rebuildStash = (snap: StashSnap): StashBag => ({
+    weapons: snap.weapons.map((n) => { const w = GetItem.weapon(n); w.equipped = false; return w; }),
+    armor: snap.armor.map(rebuildArmor),
+    medical: snap.meds.map((x) => new Medical(x.name, x.cost, x.restore, x.desc)),
+    misc: snap.misc.map((x) => new Scrap(x.name, x.cost, x.desc)),
+});
+
+/**
+ * Old checkpoints predate the crew duffel: every member carried a personal
+ * pack. Fold those packs into the stash — everything except Fists (a state,
+ * not an item) and chrome-granted cyberweapons, which stay in the body that
+ * they're bolted into.
+ */
+const migratePacksToStash = (party: Actor[], stash: StashBag): void => {
+    party.forEach((a) => {
+        const keep = a.inventory.weapons.filter((w) =>
+            w.name === "Fists" || a.cybernetics.some((c) => c.effects.grantsWeapon === w.name));
+        const move = a.inventory.weapons.filter((w) => keep.indexOf(w) < 0);
+        a.inventory.weapons = keep;
+        stash.weapons.push(...move);
+        stash.armor.push(...(a.inventory.armor as any));
+        stash.medical.push(...a.inventory.medical);
+        stash.misc.push(...a.inventory.misc);
+        a.inventory.armor = [];
+        a.inventory.medical = [];
+        a.inventory.misc = [];
+    });
 };
 
 export const memberSnap = (m: Actor): MemberSnap => ({
@@ -186,6 +230,7 @@ export class SaveGame {
                 members: party.map(memberSnap),
                 funds: crew.funds,
                 kit: crew.kit,
+                stash: stashSnap(crew.stash),
                 usedEvents: usedEvents.slice(),
                 run: {...run, node: null},
                 savedAt: Date.now(),
@@ -203,7 +248,9 @@ export class SaveGame {
             if (data.v !== 2 || !data.members.length || !data.run) { return null; }
             const party = data.members.map((s) =>
                 stamp(s.kind === "merc" && s.offer ? new Merc(s.offer) : new Player(data.spec), s));
-            const crew = new Crew(data.funds, reviveKit(data.kit)).activate();
+            const stash = data.stash ? rebuildStash(data.stash) : emptyStash();
+            const crew = new Crew(data.funds, reviveKit(data.kit), stash).activate();
+            if (!data.stash) { migratePacksToStash(party, stash); }
             const run: RunState = {...data.run, node: null, outcome: "active"};
             return {character: party[0]!, party, crew, run, usedEvents: data.usedEvents || [], spec: data.spec};
         } catch {

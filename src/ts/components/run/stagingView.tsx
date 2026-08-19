@@ -512,18 +512,17 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                         <KgRow label={"Fists"} value={"unarmed — always an option"}
                                onClick={() => { Gear.equipFists(a); this.forceUpdate(); }}/>}
                     {(() => {
-                        const pack = a.inventory.weapons
-                            .map((w: any, idx: number) => ({w, idx}))
-                            .filter(({w}: any) => w.name !== "Fists")
-                            .sort((x: any, y: any) => Gear.power(y.w) - Gear.power(x.w));
+                        const pack = Gear.weaponChoices(a)
+                            .slice()
+                            .sort((x, y) => Gear.power(y) - Gear.power(x));
                         const shown = this.state.moreWeapons ? pack : pack.slice(0, 3);
                         const hidden = pack.length - 3;
                         return (
                             <React.Fragment>
-                                {shown.map(({w, idx}: any) => (
+                                {shown.map((w, idx) => (
                                     <KgRow key={idx} label={w.name} value={Gear.weaponLine(w)}
                                            labelStyle={{color: Gear.rarityColor(w)}}
-                                           onClick={() => { Gear.equipWeapon(a, idx); this.forceUpdate(); }}/>))}
+                                           onClick={() => { Gear.equipWeapon(a, w); this.forceUpdate(); }}/>))}
                                 {hidden > 0 &&
                                     <KgRow glyph={this.state.moreWeapons ? "▴" : "▾"}
                                            label={this.state.moreWeapons ? "Show less" : `Show ${hidden} more`}
@@ -538,15 +537,15 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                            value={upper ? `SP ${upper.stoppingPower}` : undefined}/>
                     {head && <KgRow label={head.name} on value={`head · SP ${head.stoppingPower}`}
                                     labelStyle={{color: Gear.rarityColor(head)}}/>}
-                    {a.inventory.armor
-                        .map((piece: any, idx: number) => ({piece, idx}))
-                        .sort((x: any, y: any) => (y.piece.rarity || 0) - (x.piece.rarity || 0)
-                            || y.piece.stoppingPower - x.piece.stoppingPower)
-                        .map(({piece, idx}: any) => (
+                    {Gear.armorChoices(a)
+                        .slice()
+                        .sort((x, y) => (y.rarity || 0) - (x.rarity || 0)
+                            || y.stoppingPower - x.stoppingPower)
+                        .map((piece, idx) => (
                             <KgRow key={idx} label={piece.name}
                                    labelStyle={{color: Gear.rarityColor(piece)}}
                                    value={`${piece.bodyPart === "headgear" ? "head" : "body"} · SP ${piece.stoppingPower}`}
-                                   onClick={() => { Gear.equipArmor(a, idx); this.forceUpdate(); }}/>))}
+                                   onClick={() => { Gear.equipArmor(a, piece); this.forceUpdate(); }}/>))}
                 </div>
                 <h3 className={"kgH"}>Throwables
                     <b>{picks.length}/{KIT_PICKS}</b><em>crew-wide, out per job</em></h3>

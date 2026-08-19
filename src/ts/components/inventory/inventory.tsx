@@ -4,7 +4,7 @@ import {Actor} from "../../actors/Actor";
 import {Armor} from "../../items/Armor";
 import {Weapon} from "../../items/Weapon";
 import {Medical} from "../../items/Scrap";
-import {Crew} from "../../interact/crew";
+import {Crew, Stash} from "../../interact/crew";
 import {KIT, KIT_ORDER} from "../../interact/loadout";
 
 export interface InventoryProps {
@@ -18,9 +18,10 @@ interface InventoryState { memberIdx: number; version: number; }
 
 /**
  * The crew's actual gear, member by member: what's in their hands and on
- * their backs, and the stash underneath — everything scavenged in fights or
- * bought at a market lands here. Between fights, tap SWAP/WEAR to re-kit;
- * mid-fight the loadout is locked (holster discipline).
+ * their backs, and the crew stash underneath — everything scavenged in fights
+ * or bought at a market lands in the shared duffel, and any member can kit up
+ * out of it. Between fights, tap SWAP/WEAR to re-kit; mid-fight the loadout
+ * is locked (holster discipline).
  */
 export class Inventory extends React.Component<InventoryProps, InventoryState> {
 
@@ -51,15 +52,15 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
         return this.props.party[idx]!;
     }
 
-    private equipWeapon(a: Actor, idx: number) {
+    private equipWeapon(a: Actor, w: Weapon) {
         if (!this.canEquip()) { return; }
-        const msg = Gear.equipWeapon(a, idx);
+        const msg = Gear.equipWeapon(a, w);
         if (msg) { this.notice(msg); }
     }
 
     private useMed(a: Actor, idx: number) {
         if (!this.canEquip()) { return; }
-        const med = a.inventory.medical.splice(idx, 1)[0] as Medical;
+        const med = Stash.of(a).medical.splice(idx, 1)[0] as Medical;
         const wasDying = a.mortallyWounded;
         if (wasDying) { a.stabilize(); }               // meds stop the bleeding first
         // Blood Pump Mk.II/III: meds circulate harder in an assisted system.
@@ -72,9 +73,9 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                 : `${a.name.split(" ")[0]} burns the ${med.name} on nothing — already at full health.`);
     }
 
-    private equipArmor(a: Actor, idx: number) {
+    private equipArmor(a: Actor, piece: Armor) {
         if (!this.canEquip()) { return; }
-        const msg = Gear.equipArmor(a, idx);
+        const msg = Gear.equipArmor(a, piece);
         if (msg) { this.notice(msg); }
     }
 
@@ -125,28 +126,31 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
 
     private stash(a: Actor) {
         const lock = !this.canEquip();
-        const weapons = a.inventory.weapons.filter((w) => w.name !== "Fists");
-        const meds = a.inventory.medical as Medical[];
-        const misc = a.inventory.misc || [];
+        const bag = Stash.of(a);
+        // the member's swap list: crew duffel plus their own bolted-in chrome
+        const weapons = Gear.weaponChoices(a);
+        const armor = Gear.armorChoices(a);
+        const meds = bag.medical as Medical[];
+        const misc = bag.misc || [];
         return (
             <div className={"gearSect"}>
-                <h4 className={"mkHead"}>Stash{lock && <em className={"gearLock"}> · locked mid-fight</em>}</h4>
-                {weapons.length === 0 && a.inventory.armor.length === 0 && meds.length === 0 && misc.length === 0 &&
+                <h4 className={"mkHead"}>Crew stash{lock && <em className={"gearLock"}> · locked mid-fight</em>}</h4>
+                {weapons.length === 0 && armor.length === 0 && meds.length === 0 && misc.length === 0 &&
                     <div className={"mkEmpty"}>Empty duffel. Scavenge fights or hit a Black Market.</div>}
                 {weapons.map((w, i) => {
-                    const idx = a.inventory.weapons.indexOf(w);
+                    const chrome = Gear.isCyberweapon(a, w);
                     return (
                         <div key={"w" + i} className={"gearRow"}>
-                            <span className={"gearSlot"}>✦</span>
+                            <span className={"gearSlot"}>{chrome ? "⌁" : "✦"}</span>
                             <span className={"mkNameWrap"}>
                                 <span className={"mkName"} style={{color: Gear.rarityColor(w)}}>{w.name}</span>
-                                <span className={"mkDetail"}>{w.weaponType} · {this.wStats(w)}</span>
+                                <span className={"mkDetail"}>{chrome ? "chrome · " : ""}{w.weaponType} · {this.wStats(w)}</span>
                             </span>
                             <button className={"mkBuy gearEquip"} disabled={lock}
-                                    onClick={() => this.equipWeapon(a, idx)}>SWAP</button>
+                                    onClick={() => this.equipWeapon(a, w)}>SWAP</button>
                         </div>);
                 })}
-                {a.inventory.armor.map((r, i) => (
+                {armor.map((r, i) => (
                     <div key={"a" + i} className={"gearRow"}>
                         <span className={"gearSlot"}>▣</span>
                         <span className={"mkNameWrap"}>
@@ -154,7 +158,7 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                             <span className={"mkDetail"}>{r.bodyPart} · SP {r.stoppingPower}</span>
                         </span>
                         <button className={"mkBuy gearEquip"} disabled={lock}
-                                onClick={() => this.equipArmor(a, i)}>WEAR</button>
+                                onClick={() => this.equipArmor(a, r)}>WEAR</button>
                     </div>))}
                 {meds.map((m, i) => (
                     <div key={"h" + i} className={"gearRow"}>
