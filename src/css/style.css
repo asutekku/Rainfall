@@ -22,7 +22,6 @@
     /* interaction surfaces */
     --sel:#191622; --hover:#15151d;
     --mono:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace;
-    --bevel:polygon(0 6px,6px 0,100% 0,100% calc(100% - 6px),calc(100% - 6px) 100%,0 100%);
 }
 
 * { box-sizing:border-box; }
@@ -273,8 +272,7 @@ main.panel > .panelBody { flex:1; min-height:0; overflow-y:auto; padding:12px; }
    --------------------------------------------------------------------- */
 .act {
     border:1px solid var(--line); border-left:3px solid var(--rust); background:#0c0c13; color:var(--mid);
-    padding:11px 16px; text-transform:uppercase; letter-spacing:.06em; font-size:11.5px;
-    clip-path:var(--bevel); transition:background .12s, color .12s;
+    padding:11px 16px; text-transform:uppercase; letter-spacing:.06em; font-size:11.5px; transition:background .12s, color .12s;
 }
 .act:hover { background:var(--sel); color:var(--ink); }
 .act.prim { color:var(--cyan); border-left-color:var(--rustHot); background:#141019; font-weight:700; font-size:13px; }
@@ -367,7 +365,7 @@ main.panel > .panelBody { flex:1; min-height:0; overflow-y:auto; padding:12px; }
 
 .redStatGrid { display:grid; grid-template-columns:repeat(3,1fr); gap:6px; margin-top:12px; }
 .redStat { display:flex; justify-content:space-between; align-items:center;
-    background:#0f0f16; border:1px solid var(--line); padding:7px 11px; clip-path:var(--bevel); }
+    background:#0f0f16; border:1px solid var(--line); padding:7px 11px; }
 .redStat:hover { border-color:var(--line2); }
 .redStatLabel { color:var(--dim); font-size:10px; letter-spacing:.08em; }
 .redStatValue { color:var(--cyan); font-size:16px; font-weight:bold; text-shadow:0 0 8px rgba(55,225,231,.2); }
@@ -391,14 +389,12 @@ main.panel > .panelBody { flex:1; min-height:0; overflow-y:auto; padding:12px; }
 
 .redControls { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
 .redBtn { font-size:12px; color:var(--mid); background:#0c0c13;
-    border:1px solid var(--line); border-left:3px solid var(--rust); padding:6px 11px;
-    clip-path:var(--bevel); transition:background .12s, color .12s; }
+    border:1px solid var(--line); border-left:3px solid var(--rust); padding:6px 11px; transition:background .12s, color .12s; }
 .redBtn:hover { background:var(--sel); color:var(--ink); }
 .redBtnActive { color:var(--cyan); border-left-color:var(--rustHot); background:var(--sel); box-shadow:inset 0 0 8px rgba(184,92,73,.3); }
 .redBtnDisabled { opacity:.4; cursor:not-allowed; }
 .redBtnPrimary { font-size:13px; color:var(--cyan); background:var(--sel);
-    border:1px solid var(--rustHot); border-left:3px solid var(--rustHot); padding:8px 18px; margin-top:4px;
-    clip-path:var(--bevel); text-transform:uppercase; letter-spacing:.08em; transition:box-shadow .15s, background .15s; }
+    border:1px solid var(--rustHot); border-left:3px solid var(--rustHot); padding:8px 18px; margin-top:4px; text-transform:uppercase; letter-spacing:.08em; transition:box-shadow .15s, background .15s; }
 .redBtnPrimary:hover { background:#1c1818; box-shadow:0 0 10px rgba(184,92,73,.5); }
 
 .netLog { margin-top:8px; background:#070606; border:1px solid var(--line); padding:8px 10px;
@@ -418,7 +414,7 @@ main.panel > .panelBody { flex:1; min-height:0; overflow-y:auto; padding:12px; }
 .hbDealt.won { color:var(--good); }
 .hbTalk { display:flex; flex-direction:column; align-items:flex-start; gap:1px; margin-top:7px;
     padding:8px 12px; background:#0c0c13; color:var(--ink); border:1px solid var(--line);
-    border-left:3px solid var(--warn); clip-path:var(--bevel); font:inherit; font-size:11.5px;
+    border-left:3px solid var(--warn); font:inherit; font-size:11.5px;
     font-weight:700; letter-spacing:.04em; cursor:pointer; text-align:left; }
 .hbTalk:hover { box-shadow:inset 0 0 12px rgba(240,168,48,.15); }
 .hbTalk em { font-style:normal; font-weight:400; font-size:10px; color:var(--dim); }
@@ -466,7 +462,7 @@ body:not(.no-fx) .mkDeal .mkItem { animation:mkPop .32s ease both; }
 @keyframes mkPop { from { opacity:0; transform:translateY(7px); } to { opacity:1; transform:translateY(0); } }
 .mkHaggle { display:flex; flex-direction:column; align-items:flex-start; gap:2px; width:100%;
     margin-top:12px; padding:10px 14px; background:#0c0c13; color:var(--ink);
-    border:1px solid var(--line); border-left:3px solid var(--warn); clip-path:var(--bevel);
+    border:1px solid var(--line); border-left:3px solid var(--warn);
     font:inherit; font-weight:700; letter-spacing:.04em; cursor:pointer; text-align:left; }
 .mkHaggle:hover { box-shadow:inset 0 0 12px rgba(240,168,48,.15); }
 .mkHaggle em { font-style:normal; font-weight:400; font-size:11px; color:var(--dim); }
@@ -1282,24 +1278,22 @@ progress::-moz-progress-bar { background:var(--rust); }
 .gearSlot.v-up { color:var(--good); border-color:var(--good); }
 .gearSlot.v-dn { color:var(--crit); border-color:var(--crit); }
 .gearSlot.v-tr { color:var(--warn); border-color:var(--warn); }
-.gdChips { display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
-.gdChip { font-style:normal; font-size:9px; letter-spacing:.05em; padding:1px 5px; white-space:nowrap;
-    font-variant-numeric:tabular-nums; color:var(--dim); border:1px solid var(--line); }
-.gdChip.up { color:var(--good); border-color:rgba(127,214,127,.4); }
-.gdChip.dn { color:var(--crit); border-color:rgba(224,83,63,.4); }
-.gdChip.tr { color:var(--warn); border-color:rgba(240,168,48,.4); }
+/* the one-line stat readout: absolute numbers, inked by the comparison */
+.gdStats { display:flex; flex-wrap:wrap; gap:4px 12px; font-size:10px; letter-spacing:.04em;
+    font-variant-numeric:tabular-nums; }
+.gdStat { font-style:normal; color:var(--dim); white-space:nowrap; }
+.gdStat.up { color:var(--good); }
+.gdStat.dn { color:var(--crit); }
 .gearRow.flash { animation:gdFlash .95s ease-out; }
 @keyframes gdFlash {
     0% { background:var(--sel); box-shadow:inset 0 0 0 1px var(--cyan); }
     100% { background:var(--panel); box-shadow:none; }
 }
-.gdCard { margin:2px 0 6px; padding:10px 12px; background:#0c0c13;
-    border:1px solid var(--line2); border-left:2px solid var(--cyanDim); clip-path:var(--bevel); }
-/* the picked row and its card read as one unit, walled off from the list */
-.gdWrap { display:flex; flex-direction:column; gap:6px; }
-.gdSel { border:1px solid var(--cyanDim); background:#0a1114; padding:6px; clip-path:var(--bevel); }
-.gdSel .gdCard { margin:0; border:0; border-top:1px solid var(--line2); clip-path:none;
-    background:transparent; padding:10px 6px 4px; }
+.gdCard { margin:0; padding:10px 12px; background:#0c0c13; overflow:hidden;
+    border:1px solid var(--line2); border-left:2px solid var(--cyanDim); }
+/* the head-to-head slides open under the tapped row, at the row's own width */
+body:not(.no-fx) .gdCard { animation:gdOpen .18s ease-out both; transform-origin:top; }
+@keyframes gdOpen { 0% { opacity:0; transform:scaleY(.7); } 100% { opacity:1; transform:scaleY(1); } }
 .gdTable { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:11px; }
 .gdTable th { text-align:right; padding:0 0 5px 12px; font-size:10px; font-weight:500;
     color:var(--ink); max-width:120px; }
@@ -1308,18 +1302,46 @@ progress::-moz-progress-bar { background:var(--rust); }
 .gdTable td { text-align:right; padding:3px 0 3px 12px; color:var(--mid);
     font-variant-numeric:tabular-nums; border-top:1px solid #15151c; }
 .gdTable td:first-child, .gdTable th:first-child { text-align:left; padding-left:0; color:var(--dim); }
-.gdTable td.win { color:var(--good); font-weight:700; }
-/* the kgRow two-line anatomy: kicker caption, name, chips beneath */
+.gdTable td.gdV.up { color:var(--good); font-weight:700; }
+.gdTable td.gdV.dn { color:var(--crit); }
+.gdTable td.gdIco { width:20px; padding-left:8px; color:var(--faint); }
+.gdTable td.gdIco.up { color:var(--good); }
+.gdTable td.gdIco.dn { color:var(--crit); }
+/* the kgRow two-line anatomy: kicker caption, name, stat line beneath */
 .kgRowMain { flex:1; min-width:0; display:flex; flex-direction:column; align-items:flex-start; gap:3px; }
 .kgKick { font-size:8.5px; font-weight:600; letter-spacing:.18em; text-transform:uppercase;
     color:var(--faint); }
-.kgRowMain .gdChips { margin-top:1px; }
+.kgRowMain .gdStats { margin-top:1px; }
 .mkKick { display:block; font-size:8.5px; font-weight:600; letter-spacing:.18em; text-transform:uppercase;
     color:var(--faint); margin-bottom:1px; }
 .gdGo { display:block; width:100%; margin-top:10px; min-height:34px; cursor:pointer;
     font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
-    color:var(--cyan); background:#0c1417; border:1px solid var(--cyanDim); clip-path:var(--bevel); }
+    color:var(--cyan); background:#0c1417; border:1px solid var(--cyanDim); }
 .gdGo:hover { color:var(--ink); border-color:var(--cyan); background:var(--sel); }
+
+/* the gear editor's slot tabs */
+.kgTabs { display:flex; gap:6px; margin-bottom:12px; overflow-x:auto; scrollbar-width:none; }
+.kgTabs::-webkit-scrollbar { display:none; }
+.kgTab { flex:1 0 auto; font-family:var(--mono); font-size:10.5px; font-weight:600; letter-spacing:.12em;
+    text-transform:uppercase; padding:8px 12px; cursor:pointer; color:var(--dim);
+    background:var(--panel); border:1px solid var(--line2); border-bottom-width:2px; }
+.kgTab.on { color:var(--cyan); border-color:var(--cyanDim); border-bottom-color:var(--cyan); background:var(--sel); }
+
+/* the merc sheet: the body on the left, the numbers on the right */
+.mercCard { display:flex; gap:14px; margin-bottom:12px; }
+.mercFig { flex:none; width:150px; height:190px; border:1px solid var(--line2);
+    background:radial-gradient(ellipse 70% 45% at 50% 82%, rgba(55,225,231,.1), transparent 70%), #0a0c11; }
+.mercFig canvas { display:block; }
+.mercStats { flex:1; min-width:0; margin:0; display:grid; grid-template-columns:auto 1fr;
+    gap:8px 14px; align-content:start; font-size:12px; }
+.mercStats dt { color:var(--dim); font-size:9.5px; font-weight:600; letter-spacing:.16em;
+    text-transform:uppercase; align-self:center; }
+.mercStats dd { margin:0; color:var(--ink); display:flex; align-items:center; gap:8px;
+    font-variant-numeric:tabular-nums; }
+.mercStats .kgHp { flex:1; max-width:110px; }
+
+/* the benched get their own shelf, not greyed rows lost in the squad */
+.kgBench { margin-top:16px; color:var(--warn); }
 
 /* character sheet — skills tab */
 .skillList { display:flex; flex-direction:column; gap:5px; font-family:var(--mono); }
@@ -1776,7 +1798,7 @@ progress::-moz-progress-bar { background:var(--rust); }
 .augCard {
     display:flex; flex-direction:column; align-items:flex-start; gap:8px; text-align:left;
     padding:16px 16px 14px; cursor:pointer;
-    background:var(--panel); border:1px solid var(--line2); clip-path:var(--bevel);
+    background:var(--panel); border:1px solid var(--line2);
     color:var(--ink); font-family:var(--mono);
     transition:border-color .15s, background .15s, transform .15s;
 }
@@ -1867,8 +1889,7 @@ progress::-moz-progress-bar { background:var(--rust); }
 
 /* keyed action / list rows — the game's original button chrome, new format */
 .kgRow { display:flex; align-items:center; gap:10px; width:100%; text-align:left; cursor:pointer;
-    background:#0c0c13; border:1px solid var(--line); border-left:3px solid var(--rust);
-    clip-path:var(--bevel); color:var(--mid); font-family:var(--mono); font-size:12px;
+    background:#0c0c13; border:1px solid var(--line); border-left:3px solid var(--rust); color:var(--mid); font-family:var(--mono); font-size:12px;
     padding:8px 10px; letter-spacing:.04em; min-height:38px;
     transition:background .12s, color .12s; }
 .kgRow:hover { background:var(--sel); color:var(--ink); }
@@ -1989,11 +2010,9 @@ body:not(.no-fx) .kgRollBody { animation:heroInFlat .2s ease both; }
 /* primary CTA */
 .kgPrim { display:inline-flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;
     font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
-    min-height:44px; padding:10px 18px; color:var(--bg); background:var(--cyan); border:1px solid var(--cyan);
-    clip-path:var(--bevel); }
+    min-height:44px; padding:10px 18px; color:var(--bg); background:var(--cyan); border:1px solid var(--cyan); }
 .kgPrim:hover:enabled { background:#5cf0f5; }
-.kgPrim:disabled { cursor:default; color:var(--dim); background:var(--panel2); border-color:var(--line);
-    clip-path:none; }
+.kgPrim:disabled { cursor:default; color:var(--dim); background:var(--panel2); border-color:var(--line); }
 .kgPrim.wide { width:100%; }
 
 /* confirm strip — destructive questions answered in place */
@@ -2020,7 +2039,7 @@ body:not(.no-fx) .kgRollBody { animation:heroInFlat .2s ease both; }
 /* the way out, as a button — esc has no key on a phone */
 .kgBack { flex:none; cursor:pointer; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em;
     text-transform:uppercase; color:var(--mid); background:#0c0c13;
-    border:1px solid var(--line); border-left:3px solid var(--rust); clip-path:var(--bevel);
+    border:1px solid var(--line); border-left:3px solid var(--rust);
     padding:6px 14px; min-height:34px; transition:background .12s, color .12s; }
 .kgBack:hover { color:var(--ink); background:var(--sel); }
 

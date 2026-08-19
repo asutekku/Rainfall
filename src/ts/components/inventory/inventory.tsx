@@ -1,6 +1,6 @@
 import * as React from "react";
 import {Gear, Verdict} from "../../interact/gear";
-import {GdArmorChips, GdChips} from "../general/gearDelta";
+import {GdArmorStats, GdStats} from "../general/gearDelta";
 import {Actor} from "../../actors/Actor";
 import {Armor} from "../../items/Armor";
 import {Weapon} from "../../items/Weapon";
@@ -165,8 +165,7 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                     <span className={"mkKick"}>{r.bodyPart === "headgear" ? "head" : "body"}</span>
                     <span className={"mkName"} style={{color: Gear.rarityColor(r)}}>
                         {s.n > 1 ? `${r.name} ×${s.n}` : r.name}</span>
-                    <span className={"mkDetail"}>SP {r.stoppingPower}</span>
-                    <GdArmorChips a={a} piece={r}/>
+                    <GdArmorStats a={a} piece={r}/>
                 </span>
                 <button className={"mkBuy gearEquip"} disabled={lock}
                         onClick={() => this.equipArmor(a, r)}>WEAR</button>
@@ -207,8 +206,7 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                                 <span className={"mkKick"}>{chrome ? "chrome · " : ""}{w.weaponType}</span>
                                 <span className={"mkName"} style={{color: Gear.rarityColor(w)}}>
                                     {s.n > 1 ? `${w.name} ×${s.n}` : w.name}</span>
-                                <span className={"mkDetail"}>{this.wStats(w)}</span>
-                                <GdChips cur={a.weapon} w={w}/>
+                                <GdStats cur={a.weapon} w={w}/>
                             </span>
                             <button className={"mkBuy gearEquip"} disabled={lock}
                                     onClick={() => this.equipWeapon(a, w)}>SWAP</button>
