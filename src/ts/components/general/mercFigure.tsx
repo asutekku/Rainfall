@@ -10,10 +10,11 @@ export interface MercFigureProps {
 }
 
 /**
- * The merc, in the flesh — the same 3D figure the battle scene fields, on a
- * small turntable. Built from live actor state, so a helmet strapped on in
- * the loadout editor is on the head when the sheet reopens, and the gun in
- * the little hands is the class of the gun in the big list.
+ * The merc, in the flesh — the same 3D figure the battle scene fields, facing
+ * the player and swaying gently on the spot. Built from live actor state, so
+ * a helmet strapped on in the loadout editor is on the head when the sheet
+ * reopens, and the gun in the little hands is the class of the gun in the
+ * big list.
  */
 export class MercFigure extends React.Component<MercFigureProps, {}> {
 
@@ -43,7 +44,8 @@ export class MercFigure extends React.Component<MercFigureProps, {}> {
         host.appendChild(this.renderer.domElement);
         this.build();
         const tick = (t: number) => {
-            if (this.figure) { this.figure.rotation.y = t / 2400; }
+            // face front, sway a little — a body at ease, not a shop turntable
+            if (this.figure) { this.figure.rotation.y = Math.sin(t / 1600) * 0.38; }
             this.renderer!.render(this.scene!, this.camera!);
             this.raf = requestAnimationFrame(tick);
         };
@@ -68,7 +70,7 @@ export class MercFigure extends React.Component<MercFigureProps, {}> {
         if (!this.scene) { return; }
         if (this.figure) { this.scene.remove(this.figure); }
         const fig = buildFigure(this.props.actor, this.props.you ? "you" : "ally");
-        // the turntable disc, in the figure's own ink
+        // the ground disc, in the figure's own ink
         const ringMat = new THREE.MeshBasicMaterial({
             color: fig.color, transparent: true, opacity: 0.4, side: THREE.DoubleSide, depthWrite: false});
         const ring = new THREE.Mesh(new THREE.RingGeometry(0.7, 0.92, 26), ringMat);

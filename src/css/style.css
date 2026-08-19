@@ -1327,8 +1327,22 @@ body:not(.no-fx) .gdCard { animation:gdOpen .18s ease-out both; transform-origin
     background:var(--panel); border:1px solid var(--line2); border-bottom-width:2px; }
 .kgTab.on { color:var(--cyan); border-color:var(--cyanDim); border-bottom-color:var(--cyan); background:var(--sel); }
 
+/* orders: three exclusive settings on one row, the picked one explained beneath */
+.kgOrder { display:flex; flex-direction:column; gap:6px; }
+.kgSeg { display:flex; gap:6px; }
+.kgSeg button { flex:1 1 0; min-width:0; min-height:38px; cursor:pointer; display:flex; align-items:center;
+    justify-content:center; gap:7px; font-family:var(--mono); font-size:10.5px; font-weight:600;
+    letter-spacing:.1em; text-transform:uppercase; color:var(--mid);
+    background:#0c0c13; border:1px solid var(--line); transition:background .12s, color .12s; }
+.kgSeg button u { text-decoration:none; font-weight:400; color:var(--faint); }
+.kgSeg button:hover { color:var(--ink); background:var(--sel); }
+.kgSeg button.on { color:var(--cyan); border-color:var(--cyanDim); background:var(--sel); }
+.kgSeg button.on u { color:var(--cyan); }
+/* two lines are reserved so switching settings never jolts the sheet's height */
+.kgSegTip { margin:0; font-size:11px; color:var(--dim); line-height:1.5; min-height:3em; }
+
 /* the merc sheet: the body on the left, the numbers on the right */
-.mercCard { display:flex; gap:14px; margin-bottom:12px; }
+.mercCard { display:flex; gap:14px; }
 .mercFig { flex:none; width:150px; height:190px; border:1px solid var(--line2);
     background:radial-gradient(ellipse 70% 45% at 50% 82%, rgba(55,225,231,.1), transparent 70%), #0a0c11; }
 .mercFig canvas { display:block; }
@@ -2046,7 +2060,7 @@ body:not(.no-fx) .kgRollBody { animation:heroInFlat .2s ease both; }
 /* modal — bottom sheet on a phone, centred card above the breakpoint */
 .kgScrim { position:fixed; inset:0; z-index:60; display:grid; place-items:center;
     background:rgba(4,4,7,.72); }
-.kgSheet { width:min(440px, calc(100vw - 32px)); max-height:min(80vh, 640px); overflow-y:auto;
+.kgSheet { width:min(440px, calc(100vw - 32px)); max-height:min(92vh, 780px); overflow-y:auto;
     display:flex; flex-direction:column; gap:12px; padding:14px 16px 16px;
     background:var(--panel); border:1px solid var(--line2); border-top:2px solid var(--rust);
     animation:ucIn .18s ease both; }
@@ -2060,8 +2074,14 @@ body:not(.no-fx) .kgRollBody { animation:heroInFlat .2s ease both; }
 .kgSheet .kgRow i { white-space:normal; text-align:right; line-height:1.5; }
 @media (max-width: 860px) {
     .kgScrim { place-items:end center; }
-    .kgSheet { width:100vw; max-height:82vh; border-left:0; border-right:0; border-bottom:0;
-        padding-bottom:calc(16px + env(safe-area-inset-bottom)); }
+    /* the whole merc sheet stands on one phone screen: nearly full height,
+       tighter internal air, a smaller figure — no scrolling to find a button */
+    .kgSheet { width:100vw; max-height:94vh; max-height:calc(100dvh - 8px); gap:10px;
+        border-left:0; border-right:0; border-bottom:0;
+        padding-bottom:calc(12px + env(safe-area-inset-bottom)); }
+    .mercFig { width:120px; height:150px; }
+    .mercStats { gap:7px 12px; }
+    .kgGearItem { padding:6px 8px; }
 }
 
 /* menu fx — the console waking up. body.no-fx (options) turns it off, and the
@@ -2089,6 +2109,7 @@ body:not(.no-fx) .kg::before { content:""; position:absolute; inset:0; z-index:3
     .kgRow { min-height:48px; padding:10px 12px; }
     .kgKey { width:26px; height:26px; }
     .kgBack, .kgPrim, .kgSheetX { min-height:44px; }
+    .kgSeg button { min-height:44px; }
     .kgSheetX { width:44px; }
     .kgConfirm .kgRowPair button { min-height:44px; }
     .gdGo { min-height:44px; }
