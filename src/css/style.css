@@ -46,6 +46,9 @@ body::before { z-index:9998; background:repeating-linear-gradient(to bottom,
     rgba(255,255,255,.016) 0 1px, transparent 1px 3px); }
 body::after { z-index:9999; background:radial-gradient(ellipse at center,
     transparent 55%, rgba(0,0,0,.5) 100%); }
+/* the CRT switch on the options screen — dressing off, information untouched */
+body.no-crt { background-image:none; }
+body.no-crt::before, body.no-crt::after { display:none; }
 
 button { font-family:inherit; cursor:pointer; }
 button:focus { outline:0; }
