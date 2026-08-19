@@ -15,6 +15,8 @@ export interface Options {
     combatSpeed: CombatSpeed;
     /** The scanline / grid / vignette dressing over the whole app. */
     crt: boolean;
+    /** Menu animations — the console waking up between screens. */
+    fx: boolean;
 }
 
 export interface SpeedSpec {
@@ -36,7 +38,7 @@ export const SPEED_ORDER: CombatSpeed[] = ["normal", "fast", "blitz"];
 
 const KEY = "rainfall.options.v1";
 
-const DEFAULTS: Options = {v: 1, combatSpeed: "fast", crt: true};
+const DEFAULTS: Options = {v: 1, combatSpeed: "fast", crt: true, fx: true};
 
 export class OptionsStore {
 
@@ -52,6 +54,7 @@ export class OptionsStore {
                 ...DEFAULTS,
                 combatSpeed: SPEEDS[o.combatSpeed as CombatSpeed] ? o.combatSpeed : DEFAULTS.combatSpeed,
                 crt: typeof o.crt === "boolean" ? o.crt : DEFAULTS.crt,
+                fx: typeof o.fx === "boolean" ? o.fx : DEFAULTS.fx,
             };
         } catch { return {...DEFAULTS}; }
     }
@@ -77,6 +80,7 @@ export class OptionsStore {
      */
     public static apply(): void {
         document.body.classList.toggle("no-crt", !OptionsStore.current.crt);
+        document.body.classList.toggle("no-fx", !OptionsStore.current.fx);
     }
 
     /** Back to shipped defaults (part of "clear all data"). */

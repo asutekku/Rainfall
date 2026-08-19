@@ -327,9 +327,12 @@ export class App extends React.Component<{}, InterfaceAppState> {
             return <NetDiveView party={this.state.party} onLeave={this.leaveSafehouse}/>;
         }
         if (run && this.state.screen === "staging" && this.state.pending) {
+            // An ambush ("it turned ugly") is already happening — no walking out.
+            const canLeave = this.state.pending.kind !== "event";
             return <StagingView pending={this.state.pending}
                                 party={this.state.party} enemies={this.state.currentEnemies}
-                                kit={this.state.crew.kit} onDeploy={this.deploySquad}/>;
+                                kit={this.state.crew.kit} onDeploy={this.deploySquad}
+                                onCancel={canLeave ? this.leaveStaging : undefined}/>;
         }
         if (run && this.state.screen === "event" && this.state.eventId) {
             const ev = Events.byId(this.state.eventId);
@@ -460,6 +463,16 @@ export class App extends React.Component<{}, InterfaceAppState> {
             phase: "title", saveHeader: SaveGame.peek(), career: CareerStore.load(),
             report: null, playback: null, turnOrder: [], round: 0, holdLeft: 0, inspecting: null,
         });
+    };
+
+    /**
+     * Back out of staging onto the map. Nothing was committed — the wave was
+     * rolled but the squad never walked in, so the node just closes again.
+     */
+    private leaveStaging = () => {
+        const run = this.state.run;
+        if (!run) { return; }
+        this.setState({screen: "map", pending: null, run: {...run, node: null}} as any);
     };
 
     /** The boss's chrome drop resolved (or skipped) — on to the sector screen. */

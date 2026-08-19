@@ -1,6 +1,7 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {ProfileBadge, ProfileChip} from "../general/profileBadge";
+import {KgBack, KgBar, KgModal, KgRow} from "../general/kgKit";
 import {PROFILE, profileTally} from "../../interact/profile";
 import {ODDS_LABEL, forecastWave, sideStrength} from "../../interact/forecast";
 import {Deployment, KIT, KIT_ORDER, KIT_PICKS, Kit, KitId, KitPick, LINES, LINE_ORDER, Line,
@@ -15,6 +16,11 @@ export interface StagingViewProps {
     /** The crew's ordnance crate — what there is to draw from. */
     kit: Kit;
     onDeploy: (plan: Deployment) => void;
+    /**
+     * Back to the map without fighting. Absent for fights that can't be walked
+     * away from — an encounter that turned ugly is already happening.
+     */
+    onCancel?: (() => void) | undefined;
 }
 
 interface StagingState {
@@ -27,6 +33,8 @@ interface StagingState {
     picks: KitPick[];
     /** the crew row the keyboard is pointed at */
     sel: number;
+    /** which merc's orders sheet is open (-1: none) */
+    sheet: number;
 }
 
 /** The selection as the engine will read it: you first, then the chosen. */
@@ -77,11 +85,10 @@ const KIT_HOTKEYS = "asdf";
 /**
  * The minute before the shooting, as a keyed grid.
  *
- * The fight resolves itself, so this is where the game actually gets played.
- * Two columns: the crew as a table — one merc per row, with the going toggle,
- * both order dials and the carry in the row — and the wave as a table beside
- * it, summed into "what to bring". Every row answers to a key, the key bar is
- * the legend, and DEPLOY sits in the bar where a thumb already is.
+ * Reads top to bottom in the order you size a fight up: who is out there,
+ * who you send, what they carry. A merc's row shows their orders; tapping it
+ * opens the orders sheet, where where/how/bench live at full size. Deploy and
+ * the way back to the map sit in the bar, where a thumb already is.
  */
 export class StagingView extends React.Component<StagingViewProps, StagingState> {
 
@@ -106,6 +113,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
             going,
             picks: StagingView.defaultPicks(squadFrom(party, going), kit),
             sel: you >= 0 ? you : 0,
+            sheet: -1,
         };
     }
 
@@ -120,9 +128,6 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
      * frags that were sitting in the crate the whole time. Thirty-one points on
      * the first fight of a new game, decided by whether the player understood a
      * screen they had never seen.
-     *
-     * The choice this screen is actually asking about survives intact: *which*
-     * two, and *who* carries them. Every pick is one tap to put back.
      */
     private static defaultPicks(squad: Actor[], kit: Kit): KitPick[] {
         const able = squad.filter((p) => p.canFight());
@@ -146,21 +151,32 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         if (t && ["INPUT", "SELECT", "TEXTAREA"].indexOf(t.tagName) >= 0) { return; }
         if (e.metaKey || e.ctrlKey || e.altKey) { return; }
         const k = e.key.toLowerCase();
-        const sel = this.state.sel;
+        const sheetOpen = this.state.sheet >= 0;
+        // orders apply to the open sheet, or to the keyboard cursor
+        const at = sheetOpen ? this.state.sheet : this.state.sel;
         const digit = parseInt(k, 10);
-        if (digit >= 1 && digit <= this.props.party.length) { this.setState({sel: digit - 1}); }
-        else if (k === " ") { this.toggleGoing(sel); }
-        else if (k === "q") { this.setLine(sel, "point"); }
-        else if (k === "w") { this.setLine(sel, "mid"); }
-        else if (k === "e") { this.setLine(sel, "overwatch"); }
-        else if (k === "z") { this.setStance(sel, "push"); }
-        else if (k === "x") { this.setStance(sel, "steady"); }
-        else if (k === "c") { this.setStance(sel, "hold"); }
+        if (k === "escape") {
+            if (sheetOpen) { this.setState({sheet: -1}); }
+            else if (this.props.onCancel) { this.props.onCancel(); }
+            else { return; }
+        }
+        else if (digit >= 1 && digit <= this.props.party.length) {
+            this.setState({sel: digit - 1, sheet: sheetOpen ? digit - 1 : -1});
+        }
+        else if (k === " ") { this.toggleGoing(at); }
+        else if (k === "q") { this.setLine(at, "point"); }
+        else if (k === "w") { this.setLine(at, "mid"); }
+        else if (k === "e") { this.setLine(at, "overwatch"); }
+        else if (k === "z") { this.setStance(at, "push"); }
+        else if (k === "x") { this.setStance(at, "steady"); }
+        else if (k === "c") { this.setStance(at, "hold"); }
         else if (KIT_HOTKEYS.indexOf(k) >= 0 && KIT_HOTKEYS.indexOf(k) < KIT_ORDER.length) {
             this.toggleKit(KIT_ORDER[KIT_HOTKEYS.indexOf(k)]!);
         }
         else if (k === "t" && this.state.picks.length) { this.passTo(this.state.picks.length - 1); }
-        else if (k === "enter") { this.deploy(); }
+        else if (k === "enter") {
+            if (sheetOpen) { this.setState({sheet: -1}); } else { this.deploy(); }
+        }
         else { return; }
         e.preventDefault();
     };
@@ -186,10 +202,10 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         if (going[i]) { going[i] = false; }
         else if (this.squad().length < SQUAD_CAP) { going[i] = true; }
         else { return; }
-        // Ordnance follows the bodies: what a benched carrier was holding is
-        // passed to whoever is still walking in, rather than quietly staying in
-        // the van with them.
-        this.setState({going, picks: this.reseat(this.state.picks, this.squadOf(going))});
+        // Ordnance follows the bodies: a benched carrier's load passes to who
+        // still walks in, and a returning body takes their share back.
+        const squad = this.squadOf(going);
+        this.setState({going, picks: this.rebalance(this.reseat(this.state.picks, squad), squad)});
     };
 
     /** Move any pick whose carrier isn't deploying onto the lightest-loaded body. */
@@ -201,6 +217,24 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
             const load = (x: Actor) => out.filter((q) => q.carrier === x).length;
             out.push({...p, carrier: squad.slice().sort((x, y) => load(x) - load(y))[0]!});
         });
+        return out;
+    }
+
+    /**
+     * Spread the load back out: nobody carries two while somebody standing
+     * carries nothing. Keeps deliberate hand-offs alike-loaded crews intact.
+     */
+    private rebalance(picks: KitPick[], squad: Actor[]): KitPick[] {
+        if (squad.length < 2) { return picks; }
+        const out = picks.slice();
+        const load = (x: Actor) => out.filter((q) => q.carrier === x).length;
+        for (let guard = 0; guard < out.length; guard++) {
+            const max = squad.slice().sort((a, b) => load(b) - load(a))[0]!;
+            const min = squad.slice().sort((a, b) => load(a) - load(b))[0]!;
+            if (load(max) - load(min) < 2) { break; }
+            const idx = out.findIndex((q) => q.carrier === max);
+            out[idx] = {...out[idx]!, carrier: min};
+        }
         return out;
     }
 
@@ -225,9 +259,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
 
     /**
      * Tapping a piece of ordnance takes one; tapping it again puts it back.
-     * With nobody chosen to carry it, it goes to whoever is standing — the
-     * common case is a two-body crew and one frag, and making that a two-tap
-     * decision would be ceremony, not agency.
+     * With nobody chosen to carry it, it goes to whoever is standing.
      */
     private toggleKit = (item: KitId) => {
         const picks = this.state.picks;
@@ -280,118 +312,6 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         });
     };
 
-    // ------------------------------------------------------------- the crew --
-
-    private crewRow = (a: Actor, i: number) => {
-        const hpPct = Math.max(0, Math.min(100, (a.health / Math.max(1, a.maxHealth)) * 100));
-        const down = !a.canFight();
-        const you = !a.hireable;
-        const going = !down && this.state.going[i] === true;
-        const noSeats = this.squad().length >= SQUAD_CAP;
-        const carrying = going ? this.state.picks.filter((p) => p.carrier === a) : [];
-        const sel = this.state.sel === i;
-        return (
-            <tr key={i} className={(sel ? "sel " : "") + (down || !going ? "out" : "")}
-                onClick={() => this.setState({sel: i})}>
-                <td><span className={"kgKey" + (sel ? " on" : "")}>{i + 1}</span></td>
-                <td>
-                    {down
-                        ? <span className={"sub"}>—</span>
-                        : you
-                            ? <span className={"kgGo on"} title={"You run this crew — you walk in on every job"}>GO</span>
-                            : <button className={"kgGo" + (going ? " on" : "")}
-                                      disabled={!going && noSeats}
-                                      title={going ? "Leave them with the van"
-                                          : noSeats ? `Only ${SQUAD_CAP} walk onto a street` : "Bring them along"}
-                                      onClick={(e) => { e.stopPropagation(); this.toggleGoing(i); }}>
-                                {going ? "GO" : "BN"}
-                            </button>}
-                </td>
-                <td><b>{a.name}</b>{you ? <span className={"sub"}> you</span> : null}</td>
-                <td><ProfileBadge unit={a}/></td>
-                <td className={"sub kgHideM"}>{a.role.name} L{a.level}</td>
-                <td className={"num"}>
-                    <span className={"kgHp kgHideM"}>
-                        <i className={hpPct <= 25 ? "cr" : hpPct <= 60 ? "lo" : ""} style={{width: hpPct + "%"}}/>
-                    </span>
-                    {Math.max(0, Math.ceil(a.health))}
-                </td>
-                <td className={"sub clip kgHideM"} title={a.weapon.name}>{a.weapon.name}</td>
-                {down
-                    ? <td colSpan={3} className={"sub"}>down — sitting this one out</td>
-                    : <React.Fragment>
-                        <td>
-                            <span className={"kgDial"}>
-                                {LINE_ORDER.map((l) => (
-                                    <u key={l} className={this.state.lines[i] === l ? "on" : ""}
-                                       title={`${LINES[l].label} — ${LINES[l].blurb}`}
-                                       onClick={(e) => { e.stopPropagation(); this.setLine(i, l); }}>
-                                        {LINE_GLYPH[l]}
-                                    </u>))}
-                            </span>
-                        </td>
-                        <td>
-                            <span className={"kgDial w"}>
-                                {STANCE_ORDER.map((st) => (
-                                    <u key={st} className={this.state.stances[i] === st ? "on" : ""}
-                                       title={`${STANCES[st].label} — ${STANCES[st].blurb}`}
-                                       onClick={(e) => { e.stopPropagation(); this.setStance(i, st); }}>
-                                        {STANCE_GLYPH[st]}
-                                    </u>))}
-                            </span>
-                        </td>
-                        <td>{carrying.length ? carrying.map((p) => KIT[p.item].glyph).join(" ") : <span className={"sub"}>—</span>}</td>
-                    </React.Fragment>}
-            </tr>);
-    };
-
-    /** What the selected row's orders actually mean, in one line under the table. */
-    private selectedRead() {
-        const i = this.state.sel;
-        const a = this.props.party[i];
-        if (!a) { return null; }
-        if (!a.canFight()) {
-            return <p className={"kgP dim"}><b>{a.name}</b> is down — sitting this one out.</p>;
-        }
-        const line = this.state.lines[i]!;
-        const stance = this.state.stances[i]!;
-        return (
-            <p className={"kgP dim"}>
-                <b>{a.name}</b> — {LINES[line].label}: {LINES[line].blurb}.
-                {" "}{STANCES[stance].label}: {STANCES[stance].blurb}.
-            </p>);
-    }
-
-    // -------------------------------------------------------------- the kit --
-
-    private kitRow = (item: KitId, i: number) => {
-        const spec = KIT[item];
-        const picks = this.state.picks;
-        const mine = picks.map((p, at) => [p, at] as [KitPick, number]).filter(([p]) => p.item === item);
-        const taken = mine.length;
-        const full = picks.length >= KIT_PICKS;
-        const dead = this.props.kit[item] <= 0 || (taken === 0 && full);
-        const canPass = this.squad().length > 1;
-        return (
-            <tr key={item} className={taken > 0 ? "sel" : dead ? "out" : ""}
-                onClick={() => this.toggleKit(item)}>
-                <td><span className={"kgKey" + (taken > 0 ? " on" : "")}>{KIT_HOTKEYS[i]}</span></td>
-                <td><b>{spec.glyph} {spec.label}{taken > 1 ? ` ×${taken}` : ""}</b></td>
-                <td className={"sub kgHideM"}>{spec.when}</td>
-                <td className={"num"}>{this.left(item)}</td>
-                <td>
-                    {taken === 0
-                        ? <span className={"sub"}>—</span>
-                        : mine.map(([p, at]) => (
-                            <button key={at} className={"kgGo on"}
-                                    title={canPass ? "Pass it to the next body" : "The only body going"}
-                                    onClick={(e) => { e.stopPropagation(); this.passTo(at); }}>
-                                {p.carrier.name.split(" ")[0]}
-                            </button>))}
-                </td>
-            </tr>);
-    };
-
     // ------------------------------------------------------------- the wave --
 
     private hostileRow = (e: Actor, i: number) => {
@@ -414,16 +334,167 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
             </tr>);
     };
 
+    private streetBlock() {
+        const {enemies} = this.props;
+        const tally = profileTally(enemies);
+        const tallyLine = tally.map(([prof, n]) => `${n} ${PROFILE[prof].label.toLowerCase()}`).join(" · ");
+        return (
+            <React.Fragment>
+                <h3 className={"kgH"}>On the street <b>{enemies.length}</b><em>{tallyLine}</em></h3>
+                <table className={"kgTable"}>
+                    <thead><tr>
+                        <th>Rank</th><th/><th>Hostile</th><th className={"num"}>Lvl</th>
+                        <th className={"num"}>HP</th><th className={"num"}>SP</th>
+                        <th className={"kgHideM"}>Weapon</th><th>Fights</th>
+                    </tr></thead>
+                    <tbody>{enemies.map(this.hostileRow)}</tbody>
+                </table>
+                <ul className={"stTally"}>
+                    {tally.map(([prof, n]) => (
+                        <li key={prof}>
+                            <ProfileChip profile={prof} withLabel={true}/>
+                            <b>×{n}</b>
+                            <i>{PROFILE[prof].counter}</i>
+                        </li>))}
+                </ul>
+            </React.Fragment>);
+    }
+
+    // ------------------------------------------------------------- the crew --
+
+    private crewRow = (a: Actor, i: number) => {
+        const hpPct = Math.max(0, Math.min(100, (a.health / Math.max(1, a.maxHealth)) * 100));
+        const down = !a.canFight();
+        const you = !a.hireable;
+        const going = !down && this.state.going[i] === true;
+        const carrying = going ? this.state.picks.filter((p) => p.carrier === a) : [];
+        const sel = this.state.sel === i;
+        return (
+            <tr key={i} className={(sel ? "sel " : "") + (down || !going ? "out" : "")}
+                onClick={() => { if (!down) { this.setState({sel: i, sheet: i}); } }}>
+                <td><span className={"kgKey" + (sel ? " on" : "")}>{i + 1}</span></td>
+                <td><b>{a.name}</b>{you ? <span className={"sub"}> you</span> : null}</td>
+                <td><ProfileBadge unit={a}/></td>
+                <td className={"sub kgHideM"}>{a.role.name} L{a.level}</td>
+                <td className={"num"}>
+                    <span className={"kgHp kgHideM"}>
+                        <i className={hpPct <= 25 ? "cr" : hpPct <= 60 ? "lo" : ""} style={{width: hpPct + "%"}}/>
+                    </span>
+                    {Math.max(0, Math.ceil(a.health))}
+                </td>
+                <td className={"sub clip kgHideM"} title={a.weapon.name}>{a.weapon.name}</td>
+                {down
+                    ? <td colSpan={3} className={"sub"}>down</td>
+                    : !going
+                        ? <td colSpan={3} className={"sub"}>benched</td>
+                        : <React.Fragment>
+                            <td>
+                                <span className={"kgDial"}>
+                                    {LINE_ORDER.map((l) => (
+                                        <u key={l} className={this.state.lines[i] === l ? "on" : ""}
+                                           title={`${LINES[l].label} — ${LINES[l].blurb}`}
+                                           onClick={(e) => { e.stopPropagation(); this.setLine(i, l); }}>
+                                            {LINE_GLYPH[l]}
+                                        </u>))}
+                                </span>
+                            </td>
+                            <td>
+                                <span className={"kgDial w"}>
+                                    {STANCE_ORDER.map((st) => (
+                                        <u key={st} className={this.state.stances[i] === st ? "on" : ""}
+                                           title={`${STANCES[st].label} — ${STANCES[st].blurb}`}
+                                           onClick={(e) => { e.stopPropagation(); this.setStance(i, st); }}>
+                                            {STANCE_GLYPH[st]}
+                                        </u>))}
+                                </span>
+                            </td>
+                            <td>{carrying.length
+                                ? carrying.map((p) => KIT[p.item].glyph).join(" ")
+                                : <span className={"sub"}>—</span>}</td>
+                        </React.Fragment>}
+            </tr>);
+    };
+
+    /** The orders sheet — where, how, and the bench, at thumb size. */
+    private ordersSheet() {
+        const i = this.state.sheet;
+        const a = this.props.party[i];
+        if (!a) { return null; }
+        const you = !a.hireable;
+        const going = this.state.going[i] === true && a.canFight();
+        const noSeats = this.squad().length >= SQUAD_CAP;
+        return (
+            <KgModal title={<React.Fragment>{a.name} <b>{a.role.name} L{a.level}</b></React.Fragment>}
+                     onClose={() => this.setState({sheet: -1})}>
+                {!you &&
+                    <KgRow label={going ? "Going" : "Benched"} on={going}
+                           danger={!going && !a.canFight()}
+                           disabled={!a.canFight() || (!going && noSeats)}
+                           value={!a.canFight() ? "down" : going ? "tap to bench"
+                               : noSeats ? `only ${SQUAD_CAP} walk in` : "tap to bring"}
+                           onClick={() => this.toggleGoing(i)}/>}
+                {going && <React.Fragment>
+                    <h3 className={"kgH"}>Where <em>q/w/e</em></h3>
+                    <div className={"kgChoice"}>
+                        {LINE_ORDER.map((l) => (
+                            <KgRow key={l} hotkey={LINE_GLYPH[l]} label={LINES[l].label}
+                                   on={this.state.lines[i] === l} value={LINES[l].blurb}
+                                   onClick={() => this.setLine(i, l)}/>))}
+                    </div>
+                    <h3 className={"kgH"}>How <em>z/x/c</em></h3>
+                    <div className={"kgChoice"}>
+                        {STANCE_ORDER.map((st) => (
+                            <KgRow key={st} hotkey={STANCE_GLYPH[st]} label={STANCES[st].label}
+                                   on={this.state.stances[i] === st} value={STANCES[st].blurb}
+                                   onClick={() => this.setStance(i, st)}/>))}
+                    </div>
+                </React.Fragment>}
+            </KgModal>);
+    }
+
+    // -------------------------------------------------------------- the kit --
+
+    private kitRow = (item: KitId, i: number) => {
+        const spec = KIT[item];
+        const picks = this.state.picks;
+        const mine = picks.map((p, at) => [p, at] as [KitPick, number]).filter(([p]) => p.item === item);
+        const taken = mine.length;
+        const full = picks.length >= KIT_PICKS;
+        const dead = this.props.kit[item] <= 0 || (taken === 0 && full);
+        const canPass = this.squad().length > 1;
+        // one chip per carrier, ×n when they hold more than one of it
+        const byCarrier: Array<[Actor, number, number]> = [];
+        mine.forEach(([p, at]) => {
+            const row = byCarrier.find(([c]) => c === p.carrier);
+            if (row) { row[1] += 1; } else { byCarrier.push([p.carrier, 1, at]); }
+        });
+        return (
+            <tr key={item} className={taken > 0 ? "sel" : dead ? "out" : ""}
+                onClick={() => this.toggleKit(item)}>
+                <td><span className={"kgKey" + (taken > 0 ? " on" : "")}>{KIT_HOTKEYS[i]}</span></td>
+                <td><b>{spec.glyph} {spec.label}{taken > 1 ? ` ×${taken}` : ""}</b></td>
+                <td className={"sub kgHideM"}>{spec.when}</td>
+                <td className={"num"}>{this.left(item)}</td>
+                <td>
+                    {taken === 0
+                        ? <span className={"sub"}>—</span>
+                        : byCarrier.map(([c, n, at]) => (
+                            <button key={at} className={"kgGo on"}
+                                    title={canPass ? "Pass it to the next body" : "The only body going"}
+                                    onClick={(e) => { e.stopPropagation(); this.passTo(at); }}>
+                                {c.name.split(" ")[0]}{n > 1 ? ` ×${n}` : ""}
+                            </button>))}
+                </td>
+            </tr>);
+    };
+
     public override render() {
-        const {party, enemies, pending} = this.props;
+        const {party, pending} = this.props;
         const squad = this.squad();
         // The verdict reads the squad, not the payroll: benching somebody has
         // to be visible as a worse fight, or the choice is being made blind.
-        const fc = forecastWave(squad, enemies);
+        const fc = forecastWave(squad, this.props.enemies);
         const picks = this.state.picks;
-        const benched = party.filter((p) => p.canFight()).length - squad.length;
-        const tally = profileTally(enemies);
-        const tallyLine = tally.map(([prof, n]) => `${n} ${PROFILE[prof].label.toLowerCase()}`).join(" · ");
         return (
             <div className={"kg"}>
                 <div className={"kgTop"}>
@@ -437,81 +508,43 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                     <span className={"r odds o-" + fc.odds}>Odds: {ODDS_LABEL[fc.odds]}</span>
                 </div>
                 <div className={"kgBody"}>
+                    <div className={"kgCol"}>
+                        {this.streetBlock()}
+                    </div>
                     <div className={"kgCol"} style={{flex: 1.15}}>
                         <h3 className={"kgH"}>The crew <b>{squad.length} of {SQUAD_CAP} going</b>
-                            <em>cap {SQUAD_CAP}</em></h3>
-                        <table className={"kgTable"}>
+                            <em>tap a merc for orders</em></h3>
+                        <table className={"kgTable tap"}>
                             <thead><tr>
-                                <th/><th/><th>Merc</th><th/><th className={"kgHideM"}>Class</th><th className={"num"}>HP</th>
-                                <th className={"kgHideM"}>Weapon</th><th>Where</th><th>How</th><th>Carry</th>
+                                <th/><th>Merc</th><th/><th className={"kgHideM"}>Class</th>
+                                <th className={"num"}>HP</th><th className={"kgHideM"}>Weapon</th>
+                                <th>Where</th><th>How</th><th>Carry</th>
                             </tr></thead>
                             <tbody>{party.map(this.crewRow)}</tbody>
                         </table>
-                        {this.selectedRead()}
-                        {benched > 0 && (
-                            <p className={"kgP dim"}>
-                                {benched === 1 ? "One stays" : `${benched} stay`} with the van —
-                                they keep their wounds but they keep their life, and the odds
-                                above already count what walks in without them.
-                            </p>
-                        )}
                         <div className={"kgHr"}/>
                         <h3 className={"kgH"}>Crate <b>{picks.length} of {KIT_PICKS} out</b>
                             <em>tap the carrier to pass</em></h3>
-                        <table className={"kgTable"}>
+                        <table className={"kgTable tap"}>
                             <thead><tr>
                                 <th/><th>Piece</th><th className={"kgHideM"}>Thrown when</th>
                                 <th className={"num"}>In crate</th><th>Carrier</th>
                             </tr></thead>
                             <tbody>{KIT_ORDER.map(this.kitRow)}</tbody>
                         </table>
-                        <p className={"kgP dim"}>
-                            {KIT_PICKS} pieces go out on a job. The crew throws them when the moment
-                            comes — spent when thrown, back in the crate when it doesn't.
-                        </p>
-                    </div>
-                    <div className={"kgCol"}>
-                        <h3 className={"kgH"}>On the street <b>{enemies.length}</b><em>{tallyLine}</em></h3>
-                        <table className={"kgTable"}>
-                            <thead><tr>
-                                <th>Rank</th><th/><th>Hostile</th><th className={"num"}>Lvl</th>
-                                <th className={"num"}>HP</th><th className={"num"}>SP</th>
-                                <th className={"kgHideM"}>Weapon</th><th>Fights</th>
-                            </tr></thead>
-                            <tbody>{enemies.map(this.hostileRow)}</tbody>
-                        </table>
-                        <h3 className={"kgH"}>What to bring</h3>
-                        <ul className={"stTally"}>
-                            {tally.map(([prof, n]) => (
-                                <li key={prof}>
-                                    <ProfileChip profile={prof} withLabel={true}/>
-                                    <b>×{n}</b>
-                                    <i>{PROFILE[prof].counter}</i>
-                                </li>))}
-                        </ul>
-                        <div className={"kgHr"}/>
-                        <h3 className={"kgH"}>The read</h3>
-                        <p className={"kgP dim"}>
-                            {pending.holdout
-                                ? <React.Fragment>A clock rewards <b>Hold</b> — survive {pending.holdout} rounds
-                                    and they break off. </React.Fragment>
-                                : <React.Fragment>A sweep rewards <b>Push</b> — put them all down and the block
-                                    is yours. </React.Fragment>}
-                            The odds read <b>{ODDS_LABEL[fc.odds]}</b> for the {squad.length} walking in,
-                            and they move the moment you bench somebody. Once you deploy, the crew fights
-                            it out on their own — everything you get to decide, you decide here.
-                        </p>
                     </div>
                 </div>
-                <div className={"kgBar"}>
+                <KgBar>
                     <span className={"keysOnly"}><b>1–{party.length}</b> merc · <b>space</b> bench</span>
                     <span className={"keysOnly"}><b>q/w/e</b> where · <b>z/x/c</b> how</span>
                     <span className={"keysOnly"}><b>a/s/d/f</b> ordnance · <b>t</b> pass</span>
-                    <span className={"r"}/>
-                    <button className={"kgPrim"} onClick={this.deploy} disabled={squad.length <= 0}>
+                    {this.props.onCancel && <KgBack label={"Map"} onClick={this.props.onCancel}/>}
+                    <button className={"kgPrim" + (this.props.onCancel ? "" : " r")}
+                            onClick={this.deploy} disabled={squad.length <= 0}>
                         Deploy {squad.length} ▸
                     </button>
-                </div>
+                </KgBar>
+                {this.state.sheet >= 0 && this.ordersSheet()}
             </div>);
     }
 }
