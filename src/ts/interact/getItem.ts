@@ -13,7 +13,7 @@ const weapons = Equipment.weapons;
 export class GetItem {
     public static weapon(name?: string): Weapon {
         const found: Weapon = name ? weapons.find((e) => e.name === name)! : Utils.pickRandom(weapons);
-        return found.clone(); // per-owner instance (independent equipped/level state)
+        return found.clone(); // per-owner instance (armour ablates, shots count)
     }
 
     /**

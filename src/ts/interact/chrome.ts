@@ -89,7 +89,6 @@ export class Chrome {
         if (cur.effects.grantsWeapon && cur.effects.grantsWeapon !== next.effects.grantsWeapon
             && actor.weapon.name === cur.effects.grantsWeapon) {
             actor.weapon = GetItem.weapon(next.effects.grantsWeapon || "Fists");
-            actor.weapon.equipped = true;
         }
         return next;
     }
@@ -111,7 +110,6 @@ export class Chrome {
         if (cw.effects.grantsWeapon && actor.weapon.name === cw.effects.grantsWeapon) {
             // the blade left with the chrome — nothing to take out of a bag
             actor.weapon = GetItem.weapon("Fists");
-            actor.weapon.equipped = true;
         }
         actor.shiftHumanity(cw.humanityLoss + bonusHumanity);
         return cw;

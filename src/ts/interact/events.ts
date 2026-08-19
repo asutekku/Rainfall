@@ -141,7 +141,6 @@ const grantWeapon = (a: Actor, rMin: number, rMax: number): string => {
     const pool = Equipment.weapons.filter((w) =>
         w.damageType === "kinetic" && w.cost > 0 && w.rarity >= rMin && w.rarity <= rMax);
     const w = pool[(Math.random() * pool.length) << 0]!.clone();
-    w.equipped = false;
     Stash.of(a).weapons.push(w);
     return w.name;
 };

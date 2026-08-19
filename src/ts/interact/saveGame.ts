@@ -120,7 +120,7 @@ const stashSnap = (bag: StashBag): StashSnap => ({
 });
 
 const rebuildStash = (snap: StashSnap): StashBag => ({
-    weapons: snap.weapons.map((n) => { const w = GetItem.weapon(n); w.equipped = false; return w; }),
+    weapons: snap.weapons.map((n) => GetItem.weapon(n)),
     armor: snap.armor.map(rebuildArmor),
     medical: snap.meds.map((x) => new Medical(x.name, x.cost, x.restore, x.desc)),
     misc: snap.misc.map((x) => new Scrap(x.name, x.cost, x.desc)),
@@ -182,12 +182,11 @@ export const stamp = (a: Actor, s: MemberSnap): Actor => {
     // direct assignment avoids re-charging Humanity for an install already paid
     a.cybernetics = s.chrome.map((c) => Chrome.build(c.line, c.mk)).filter((c): c is NonNullable<typeof c> => !!c);
     a.weapon = GetItem.weapon(s.weapon);
-    a.weapon.equipped = true;
     a.equipment.upper = s.upper ? rebuildArmor(s.upper) : null;
     a.equipment.headgear = s.headgear ? rebuildArmor(s.headgear) : null;
     // legacy per-member packs land in the pockets here, and the load sweeps
     // them into The Stash right after — pockets never survive a load
-    a.inventory.weapons = (s.invWeapons || []).map((n) => { const w = GetItem.weapon(n); w.equipped = false; return w; });
+    a.inventory.weapons = (s.invWeapons || []).map((n) => GetItem.weapon(n));
     a.inventory.armor = (s.invArmor || []).map(rebuildArmor);
     a.inventory.medical = (s.invMeds || []).map((x) => new Medical(x.name, x.cost, x.restore, x.desc));
     a.inventory.misc = (s.invMisc || []).map((x) => new Scrap(x.name, x.cost, x.desc));

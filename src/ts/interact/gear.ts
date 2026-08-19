@@ -57,7 +57,6 @@ export class Gear {
 
     /** The old weapon goes back in The Stash; chrome retracts into the body. */
     private static shelveWeapon(a: Actor, old: Weapon): void {
-        old.equipped = false;
         if (Gear.isCyberweapon(a, old)) { return; }
         Stash.of(a).weapons.push(old);
     }
@@ -68,7 +67,6 @@ export class Gear {
         const old = a.weapon;
         if (old && old.name !== "Fists") { Gear.shelveWeapon(a, old); }
         a.weapon = w;
-        w.equipped = true;
         return `${a.name.split(" ")[0]} swaps to the ${w.name}.`;
     }
 
@@ -80,12 +78,8 @@ export class Gear {
         bag.splice(at, 1);
         const slot = piece.bodyPart === "headgear" ? "headgear" : "upper";
         const old = a.equipment[slot] as Armor | null;
-        if (old) {
-            old.equipped = false;
-            Stash.of(a).armor.push(old);
-        }
+        if (old) { Stash.of(a).armor.push(old); }
         a.equipment[slot] = piece;
-        piece.equipped = true;
         return `${a.name.split(" ")[0]} straps on the ${piece.name} (SP ${piece.stoppingPower}).`;
     }
 
@@ -101,7 +95,6 @@ export class Gear {
         const stash = Stash.of(a);
         stash.weapons = stash.weapons.filter((w) => w.name !== "Fists");
         a.weapon = GetItem.weapon("Fists");
-        a.weapon.equipped = true;
         return `${a.name.split(" ")[0]} goes in bare-knuckle.`;
     }
 

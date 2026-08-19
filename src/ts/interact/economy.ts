@@ -54,7 +54,6 @@ export class Economy {
         const chance = 0.2 + 0.06 * rank + killer.scavengeBonus() + killer.chromeNum("scavBonus");
         if (victim.weapon && victim.weapon.name !== "Fists" && Math.random() < chance) {
             const w = victim.weapon.clone();
-            w.equipped = false;
             Stash.of(killer).weapons.push(w);
             // Boss-tier hardware: armour-piercing, high availability, or off an elite foe.
             const rare = w.ap || w.rarity >= 4 || rank >= 4;
@@ -225,12 +224,10 @@ export class Economy {
         // gutter. Except chrome: a cyberweapon retracts into the body it's
         // bolted into (it is derived from the chrome list, never stored).
         if (old && old.name !== "Fists") {
-            old.equipped = false;
             const chrome = actor.cybernetics.some((c) => c.effects.grantsWeapon === old.name);
             if (!chrome) { Stash.of(actor).weapons.push(old); }
         }
         actor.weapon = weapon;
-        actor.weapon.equipped = true;
         return {
             actorName: actor.name, slot: "weapon", source,
             from: old ? old.name : "—", to: weapon.name,
@@ -243,7 +240,7 @@ export class Economy {
     /** Strap armour onto an actor's torso slot, reporting what it replaced. */
     public static equipArmor(actor: Actor, armor: Armor, source: "salvage" | "bought", cost: number): GearChange {
         const old = actor.equipment.upper;
-        if (old) { old.equipped = false; Stash.of(actor).armor.push(old); }
+        if (old) { Stash.of(actor).armor.push(old); }
         actor.equipment.upper = armor;
         return {
             actorName: actor.name, slot: "armor", source,
@@ -303,7 +300,6 @@ export class Economy {
      */
     public static stripToBasics(actor: Actor): void {
         actor.weapon = GetItem.weapon("WSA Autopistol");
-        actor.weapon.equipped = true;
         actor.equipment.upper = GetItem.armor("Light Armor Jacket");
         actor.equipment.headgear = GetItem.armor("Kevlar Helmet");
         // Pockets are not storage: Fists are a state and cyberweapons are
