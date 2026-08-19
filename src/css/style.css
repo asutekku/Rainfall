@@ -1678,6 +1678,8 @@ progress::-moz-progress-bar { background:var(--rust); }
 .kgTable td { padding:5px 8px 5px 0; border-bottom:1px solid #15151c; color:var(--mid);
     white-space:nowrap; vertical-align:middle; }
 .kgTable td b { color:var(--ink); font-weight:500; }
+.kgTable th:first-child, .kgTable td:first-child { padding-left:8px; }
+.kgTable th:last-child, .kgTable td:last-child { padding-right:8px; }
 .kgTable .num { text-align:right; }
 .kgTable th.num { text-align:right; }
 .kgTable .sub { color:var(--faint); font-size:10.5px; }
@@ -1696,19 +1698,33 @@ progress::-moz-progress-bar { background:var(--rust); }
 .kgDial u.on { color:var(--cyan); border-color:var(--cyanDim); background:#0c1417; }
 .kgDial.w u.on { color:var(--warn); border-color:#4a3a18; background:#171208; }
 
+/* one state glyph in a table cell — the row is the button, this is the readout */
+.kgState { display:inline-grid; place-items:center; width:26px; height:26px; flex:none;
+    border:1px solid var(--cyanDim); color:var(--cyan); background:#0c1417; font-size:12px; }
+.kgState.w { color:var(--warn); border-color:#4a3a18; background:#171208; }
+
+/* the crate as a strip of chips — the belt editing lives on the orders sheet */
+.kgCrate { display:flex; flex-wrap:wrap; gap:8px; }
+.kgCrateChip { display:flex; align-items:center; gap:8px; cursor:pointer; min-height:44px;
+    padding:8px 12px; font-family:var(--mono); color:var(--mid); background:#0c0c13;
+    border:1px solid var(--line); border-left:3px solid var(--rust); clip-path:var(--bevel);
+    transition:background .12s, color .12s; }
+.kgCrateChip i { font-style:normal; font-size:14px; color:var(--dim); }
+.kgCrateChip b { font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--ink); font-weight:500; }
+.kgCrateChip span { font-size:10px; color:var(--faint); }
+.kgCrateChip:hover:enabled { background:var(--sel); }
+.kgCrateChip.on { color:var(--cyan); border-left-color:var(--rustHot); background:var(--sel);
+    box-shadow:inset 0 0 8px rgba(184,92,73,.3); }
+.kgCrateChip.on b, .kgCrateChip.on i { color:var(--cyan); }
+.kgCrateChip.out { opacity:.4; cursor:default; }
+
 /* small hp bar in a table cell */
 .kgHp { display:inline-block; width:44px; height:6px; background:#0b0b10; border:1px solid var(--line);
     vertical-align:middle; margin-right:6px; }
 .kgHp i { display:block; height:100%; background:var(--good); }
 .kgHp i.lo { background:var(--warn); }
 .kgHp i.cr { background:var(--crit); }
-
-/* going / benched chip in a table cell */
-.kgGo { display:inline-grid; place-items:center; min-width:30px; padding:2px 5px; cursor:pointer;
-    font-family:var(--mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase;
-    color:var(--dim); background:transparent; border:1px solid var(--line2); }
-.kgGo.on { color:var(--cyan); border-color:var(--cyanDim); background:#0c1417; }
-.kgGo:disabled { cursor:default; opacity:.5; }
 
 /* threat stars */
 .kgRank { color:var(--warn); letter-spacing:1px; font-size:10px; }
@@ -1823,11 +1839,12 @@ body:not(.no-fx) .kg::before { content:""; position:absolute; inset:0; z-index:3
 /* Apple HIG: 44pt is the touch floor — everything tappable grows to it on
    coarse pointers and small panels alike. */
 @media (max-width: 860px), (pointer: coarse) {
+    .kgKey.kb { display:none !important; }
+    .keysOnly { display:none !important; }
     .kgRow { min-height:48px; padding:10px 12px; }
     .kgKey { width:26px; height:26px; }
     .kgBack, .kgPrim, .kgSheetX { min-height:44px; }
     .kgSheetX { width:44px; }
-    .kgGo { min-height:36px; min-width:44px; }
     .kgConfirm .kgRowPair button { min-height:44px; }
     .kgStat button { width:40px; height:44px; }
     .kgLife select { min-height:44px; }
@@ -1846,6 +1863,5 @@ body:not(.no-fx) .kg::before { content:""; position:absolute; inset:0; z-index:3
     .kgTable th { padding-right:5px; }
     .kgTable td { padding-right:5px; }
     .kgStat .k { width:34px; }
-    .kgBar span.keysOnly { display:none; }
     .kgTop { gap:10px; padding:0 10px; font-size:10px; }
 }

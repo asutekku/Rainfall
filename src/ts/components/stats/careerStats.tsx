@@ -1,6 +1,7 @@
 import * as React from "react";
 import {Actor} from "../../actors/Actor";
 import {Bar} from "../general/bar";
+import {CareerStore} from "../../interact/career";
 import {Purse} from "../../interact/crew";
 
 export interface CareerStatsProps {
@@ -42,6 +43,24 @@ export class CareerStats extends React.Component<CareerStatsProps, {}> {
             </div>);
     }
 
+    /** The all-time record — what survives every wipe. Was on the title; lives here now. */
+    private record() {
+        const c = CareerStore.load();
+        if (!c) { return null; }
+        return (
+            <div className={"redSection"}>
+                <div className={"redSectionTitle"}>The record</div>
+                <div className={"redStatGrid"}>
+                    {this.cell("RUNS", c.runs)}
+                    {this.cell("KILLS", c.kills)}
+                    {this.cell("BEST", "Sector " + c.bestSector)}
+                    {this.cell("DEEPEST", c.bestDepth + " wp")}
+                    {this.cell("LAST RUN", c.lastRun ? "died S" + c.lastRun.sector : "this one")}
+                    {this.cell("BANK", (c.bank || 0) + "¥")}
+                </div>
+            </div>);
+    }
+
     public override render() {
         const party = this.props.party || [];
         const kills = party.reduce((n, a) => n + (a.kills || 0), 0);
@@ -50,6 +69,7 @@ export class CareerStats extends React.Component<CareerStatsProps, {}> {
         const standing = party.filter((a) => a.canFight()).length;
         return (
             <div className={"redPanel"}>
+                {this.record()}
                 <div className={"redSection"}>
                     <div className={"redSectionTitle"}>Career</div>
                     <div className={"redStatGrid"}>

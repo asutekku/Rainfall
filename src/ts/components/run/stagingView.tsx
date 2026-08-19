@@ -173,7 +173,6 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         else if (KIT_HOTKEYS.indexOf(k) >= 0 && KIT_HOTKEYS.indexOf(k) < KIT_ORDER.length) {
             this.toggleKit(KIT_ORDER[KIT_HOTKEYS.indexOf(k)]!);
         }
-        else if (k === "t" && this.state.picks.length) { this.passTo(this.state.picks.length - 1); }
         else if (k === "enter") {
             if (sheetOpen) { this.setState({sheet: -1}); } else { this.deploy(); }
         }
@@ -283,16 +282,17 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         return able.slice().sort((a, b) => load(a) - load(b))[0]!;
     }
 
-    /** Hand a picked piece to somebody else — tap the carrier name to cycle. */
-    private passTo = (idx: number) => {
-        const able = this.squad();
-        if (able.length < 2) { return; }
-        const picks = this.state.picks.slice();
-        const pick = picks[idx];
-        if (!pick) { return; }
-        const at = able.indexOf(pick.carrier);
-        picks[idx] = {...pick, carrier: able[(at + 1) % able.length]!};
-        this.setState({picks});
+    /** Hand this merc one of `item` from the crate. */
+    private give = (a: Actor, item: KitId) => {
+        if (this.state.picks.length >= KIT_PICKS || this.left(item) <= 0) { return; }
+        this.setState({picks: [...this.state.picks, {item, carrier: a}]});
+    };
+
+    /** Take one of `item` off this merc's belt, back into the crate. */
+    private stow = (a: Actor, item: KitId) => {
+        const idx = this.state.picks.findIndex((p) => p.item === item && p.carrier === a);
+        if (idx < 0) { return; }
+        this.setState({picks: this.state.picks.filter((_p, i) => i !== idx)});
     };
 
     private deploy = () => {
@@ -372,7 +372,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         return (
             <tr key={i} className={(sel ? "sel " : "") + (down || !going ? "out" : "")}
                 onClick={() => { if (!down) { this.setState({sel: i, sheet: i}); } }}>
-                <td><span className={"kgKey" + (sel ? " on" : "")}>{i + 1}</span></td>
+                <td className={"kgHideM"}><span className={"kgKey kb" + (sel ? " on" : "")}>{i + 1}</span></td>
                 <td><b>{a.name}</b>{you ? <span className={"sub"}> you</span> : null}</td>
                 <td><ProfileBadge unit={a}/></td>
                 <td className={"sub kgHideM"}>{a.role.name} L{a.level}</td>
@@ -388,26 +388,14 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                     : !going
                         ? <td colSpan={3} className={"sub"}>benched</td>
                         : <React.Fragment>
-                            <td>
-                                <span className={"kgDial"}>
-                                    {LINE_ORDER.map((l) => (
-                                        <u key={l} className={this.state.lines[i] === l ? "on" : ""}
-                                           title={`${LINES[l].label} — ${LINES[l].blurb}`}
-                                           onClick={(e) => { e.stopPropagation(); this.setLine(i, l); }}>
-                                            {LINE_GLYPH[l]}
-                                        </u>))}
-                                </span>
-                            </td>
-                            <td>
-                                <span className={"kgDial w"}>
-                                    {STANCE_ORDER.map((st) => (
-                                        <u key={st} className={this.state.stances[i] === st ? "on" : ""}
-                                           title={`${STANCES[st].label} — ${STANCES[st].blurb}`}
-                                           onClick={(e) => { e.stopPropagation(); this.setStance(i, st); }}>
-                                            {STANCE_GLYPH[st]}
-                                        </u>))}
-                                </span>
-                            </td>
+                            <td><span className={"kgState"}
+                                      title={`${LINES[this.state.lines[i]!].label} — ${LINES[this.state.lines[i]!].blurb}`}>
+                                {LINE_GLYPH[this.state.lines[i]!]}
+                            </span></td>
+                            <td><span className={"kgState w"}
+                                      title={`${STANCES[this.state.stances[i]!].label} — ${STANCES[this.state.stances[i]!].blurb}`}>
+                                {STANCE_GLYPH[this.state.stances[i]!]}
+                            </span></td>
                             <td>{carrying.length
                                 ? carrying.map((p) => KIT[p.item].glyph).join(" ")
                                 : <span className={"sub"}>—</span>}</td>
@@ -434,58 +422,74 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                                : noSeats ? `only ${SQUAD_CAP} walk in` : "tap to bring"}
                            onClick={() => this.toggleGoing(i)}/>}
                 {going && <React.Fragment>
-                    <h3 className={"kgH"}>Where <em>q/w/e</em></h3>
+                    <h3 className={"kgH"}>Where <em className={"keysOnly"}>q/w/e</em></h3>
                     <div className={"kgChoice"}>
                         {LINE_ORDER.map((l) => (
-                            <KgRow key={l} hotkey={LINE_GLYPH[l]} label={LINES[l].label}
+                            <KgRow key={l} glyph={LINE_GLYPH[l]} label={LINES[l].label}
                                    on={this.state.lines[i] === l} value={LINES[l].blurb}
                                    onClick={() => this.setLine(i, l)}/>))}
                     </div>
-                    <h3 className={"kgH"}>How <em>z/x/c</em></h3>
+                    <h3 className={"kgH"}>How <em className={"keysOnly"}>z/x/c</em></h3>
                     <div className={"kgChoice"}>
                         {STANCE_ORDER.map((st) => (
-                            <KgRow key={st} hotkey={STANCE_GLYPH[st]} label={STANCES[st].label}
+                            <KgRow key={st} glyph={STANCE_GLYPH[st]} label={STANCES[st].label}
                                    on={this.state.stances[i] === st} value={STANCES[st].blurb}
                                    onClick={() => this.setStance(i, st)}/>))}
                     </div>
+                    {this.gearSection(a)}
                 </React.Fragment>}
             </KgModal>);
     }
 
+    /**
+     * The merc's belt, editable in place: each piece in the game is a row —
+     * tap to take one from the crate, tap again to stow it. Moving a piece
+     * between mercs is stow on one sheet, take on the other.
+     */
+    private gearSection(a: Actor) {
+        const picks = this.state.picks;
+        const mine = (item: KitId) => picks.filter((p) => p.item === item && p.carrier === a).length;
+        const held = picks.filter((p) => p.carrier === a).length;
+        const full = picks.length >= KIT_PICKS;
+        return (
+            <React.Fragment>
+                <h3 className={"kgH"}>Gear <b>{held}</b><em>{KIT_PICKS} out per job, crew-wide</em></h3>
+                <div className={"kgChoice"}>
+                    {KIT_ORDER.filter((item) => this.props.kit[item] > 0 || mine(item) > 0).map((item) => {
+                        const spec = KIT[item];
+                        const n = mine(item);
+                        const canGive = !full && this.left(item) > 0;
+                        return (
+                            <KgRow key={item} glyph={spec.glyph}
+                                   label={`${spec.label}${n > 1 ? ` ×${n}` : ""}`}
+                                   on={n > 0} disabled={n === 0 && !canGive}
+                                   title={`${spec.blurb} — ${spec.when}`}
+                                   value={n > 0 ? "carrying — tap to stow"
+                                       : this.left(item) <= 0 ? "a teammate has it"
+                                       : full ? "belts full" : `${this.left(item)} in crate`}
+                                   onClick={() => n > 0 ? this.stow(a, item) : this.give(a, item)}/>);
+                    })}
+                </div>
+            </React.Fragment>);
+    }
+
     // -------------------------------------------------------------- the kit --
 
-    private kitRow = (item: KitId, i: number) => {
+    private crateChip = (item: KitId) => {
         const spec = KIT[item];
-        const picks = this.state.picks;
-        const mine = picks.map((p, at) => [p, at] as [KitPick, number]).filter(([p]) => p.item === item);
-        const taken = mine.length;
-        const full = picks.length >= KIT_PICKS;
+        const taken = this.state.picks.filter((p) => p.item === item).length;
+        const full = this.state.picks.length >= KIT_PICKS;
         const dead = this.props.kit[item] <= 0 || (taken === 0 && full);
-        const canPass = this.squad().length > 1;
-        // one chip per carrier, ×n when they hold more than one of it
-        const byCarrier: Array<[Actor, number, number]> = [];
-        mine.forEach(([p, at]) => {
-            const row = byCarrier.find(([c]) => c === p.carrier);
-            if (row) { row[1] += 1; } else { byCarrier.push([p.carrier, 1, at]); }
-        });
         return (
-            <tr key={item} className={taken > 0 ? "sel" : dead ? "out" : ""}
-                onClick={() => this.toggleKit(item)}>
-                <td><span className={"kgKey" + (taken > 0 ? " on" : "")}>{KIT_HOTKEYS[i]}</span></td>
-                <td><b>{spec.glyph} {spec.label}{taken > 1 ? ` ×${taken}` : ""}</b></td>
-                <td className={"sub kgHideM"}>{spec.when}</td>
-                <td className={"num"}>{this.left(item)}</td>
-                <td>
-                    {taken === 0
-                        ? <span className={"sub"}>—</span>
-                        : byCarrier.map(([c, n, at]) => (
-                            <button key={at} className={"kgGo on"}
-                                    title={canPass ? "Pass it to the next body" : "The only body going"}
-                                    onClick={(e) => { e.stopPropagation(); this.passTo(at); }}>
-                                {c.name.split(" ")[0]}{n > 1 ? ` ×${n}` : ""}
-                            </button>))}
-                </td>
-            </tr>);
+            <button key={item}
+                    className={"kgCrateChip" + (taken > 0 ? " on" : dead ? " out" : "")}
+                    disabled={dead && taken === 0}
+                    title={`${spec.blurb} — ${spec.when}`}
+                    onClick={() => this.toggleKit(item)}>
+                <i>{spec.glyph}</i>
+                <b>{spec.label}{taken > 1 ? ` ×${taken}` : ""}</b>
+                <span>{this.left(item)} left</span>
+            </button>);
     };
 
     public override render() {
@@ -524,20 +528,14 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                         </table>
                         <div className={"kgHr"}/>
                         <h3 className={"kgH"}>Crate <b>{picks.length} of {KIT_PICKS} out</b>
-                            <em>tap the carrier to pass</em></h3>
-                        <table className={"kgTable tap"}>
-                            <thead><tr>
-                                <th/><th>Piece</th><th className={"kgHideM"}>Thrown when</th>
-                                <th className={"num"}>In crate</th><th>Carrier</th>
-                            </tr></thead>
-                            <tbody>{KIT_ORDER.map(this.kitRow)}</tbody>
-                        </table>
+                            <em className={"keysOnly"}>a/s/d/f</em></h3>
+                        <div className={"kgCrate"}>{KIT_ORDER.map(this.crateChip)}</div>
                     </div>
                 </div>
                 <KgBar>
                     <span className={"keysOnly"}><b>1–{party.length}</b> merc · <b>space</b> bench</span>
                     <span className={"keysOnly"}><b>q/w/e</b> where · <b>z/x/c</b> how</span>
-                    <span className={"keysOnly"}><b>a/s/d/f</b> ordnance · <b>t</b> pass</span>
+                    <span className={"keysOnly"}><b>a/s/d/f</b> ordnance</span>
                     {this.props.onCancel && <KgBack label={"Map"} onClick={this.props.onCancel}/>}
                     <button className={"kgPrim" + (this.props.onCancel ? "" : " r")}
                             onClick={this.deploy} disabled={squad.length <= 0}>
