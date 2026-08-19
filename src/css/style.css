@@ -1771,6 +1771,11 @@ progress::-moz-progress-bar { background:var(--rust); }
 .kgBar b { color:var(--cyanDim); font-weight:500; }
 .kgBar .r { margin-left:auto; }
 .kgBar .kgPrim { min-height:34px; padding:6px 16px; font-size:11px; }
+/* the way out, as a button — esc has no key on a phone */
+.kgBack { flex:none; cursor:pointer; font-family:var(--mono); font-size:10.5px; letter-spacing:.12em;
+    text-transform:uppercase; color:var(--mid); background:transparent; border:1px solid var(--line2);
+    padding:6px 14px; min-height:34px; }
+.kgBack:hover { color:var(--ink); border-color:var(--cyanDim); }
 
 @media (max-width: 860px) {
     .kgBody { flex-direction:column; overflow-y:auto; overflow-x:hidden; }

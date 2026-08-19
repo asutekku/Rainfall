@@ -135,7 +135,8 @@ export class OptionsView extends React.Component<OptionsViewProps, OptionsViewSt
                 <div className={"kgBar"}>
                     <span className={"keysOnly"}><b>S</b> speed · <b>V</b> crt</span>
                     <span className={"keysOnly"}><b>X</b> clear data</span>
-                    <span className={"r"}><b>esc</b> back</span>
+                    <span className={"r keysOnly"}><b>esc</b> back</span>
+                    <button className={"kgBack r"} onClick={this.props.onClose}>← Back</button>
                 </div>
             </div>);
     }

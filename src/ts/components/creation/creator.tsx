@@ -371,13 +371,14 @@ export class Creator extends React.Component<CreatorProps, CreatorState> {
                     {career
                         ? <React.Fragment>
                             <span className={"keysOnly"}><b>B</b> retire</span>
-                            <span className={"r"}><b>enter</b> send {career.name.split(" ")[0]} back out · <b>esc</b> back</span>
+                            <span className={"r keysOnly"}><b>enter</b> send {career.name.split(" ")[0]} back out · <b>esc</b> back</span>
                         </React.Fragment>
                         : <React.Fragment>
                             <span className={"keysOnly"}><b>a–i</b> class</span>
                             <span className={"keysOnly"}><b>n</b> name · <b>l</b> lifepath · <b>r</b> randomize</span>
-                            <span className={"r"}><b>enter</b> hit the street · <b>esc</b> back</span>
+                            <span className={"r keysOnly"}><b>enter</b> hit the street · <b>esc</b> back</span>
                         </React.Fragment>}
+                    <button className={"kgBack r"} onClick={this.props.onCancel}>← Back</button>
                 </div>
             </div>);
     }
