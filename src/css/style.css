@@ -475,102 +475,6 @@ progress::-moz-progress-bar { background:var(--rust); }
 .bhud { display:none; }
 
 /* =====================================================================
-   Character creation — full-screen RED "Complete Package" squad builder
-   ===================================================================== */
-.creator { position:fixed; inset:0; z-index:50; display:flex; flex-direction:column;
-    background:radial-gradient(1200px 620px at 72% -12%, #12121c, var(--bg)); color:var(--ink); font-family:var(--mono); }
-.crHead { display:flex; align-items:flex-end; justify-content:space-between; gap:16px;
-    padding:20px 26px; border-bottom:1px solid var(--line); }
-.crHead h1 { margin:0; font-size:22px; letter-spacing:.04em; }
-.crHead h1::before { content:"◤ "; color:var(--rust); }
-.crHead p { margin:3px 0 0; color:var(--dim); font-size:11px; letter-spacing:.14em; text-transform:uppercase; }
-/* Reroll / Reset edit what's on screen, so they stay beside it. Cancel and
-   Deploy moved to the bottom action bar — see .metaFoot. */
-.crTools { display:flex; gap:8px; }
-.crTools button { font-family:var(--mono); font-size:12px; padding:8px 12px; cursor:pointer;
-    color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
-.crTools button:hover { color:var(--ink); border-color:var(--cyanDim); }
-
-.crBody { flex:1; min-height:0; display:flex; }
-.creator > .metaFoot { flex:none; }
-.crRoster { width:210px; flex:none; padding:12px; border-right:1px solid var(--line);
-    overflow-y:auto; display:flex; flex-direction:column; gap:8px; }
-.crMerc { display:flex; align-items:center; gap:9px; padding:8px; cursor:pointer; text-align:left;
-    color:var(--mid); background:var(--panel); border:1px solid var(--line); border-left:2px solid transparent; }
-.crMerc:hover { background:var(--hover); }
-.crMerc.on { border-left-color:var(--cyan); background:var(--sel); }
-.crMerc img { width:34px; height:34px; flex:none; object-fit:cover; border:1px solid var(--line2); background:#000; }
-.crMercX { display:flex; flex-direction:column; min-width:0; }
-.crMercX b { color:var(--ink); font-size:12px; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.crMercX i { font-size:10px; font-style:normal; letter-spacing:.05em; }
-.crAdd { padding:9px; cursor:pointer; color:var(--dim); background:transparent;
-    border:1px dashed var(--line2); font-family:var(--mono); font-size:11px; }
-.crAdd:hover { color:var(--cyan); border-color:var(--cyanDim); }
-
-.crEdit { flex:1; min-width:0; overflow-y:auto; padding:18px 26px; }
-.crEditHead { display:flex; justify-content:space-between; align-items:center; gap:12px; }
-.crId { display:flex; align-items:center; gap:8px; flex:1; }
-.crId input { flex:1; max-width:320px; font-family:var(--mono); font-size:16px; color:var(--ink);
-    background:var(--panel); border:1px solid var(--line2); padding:8px 10px; }
-.crId input:focus { outline:none; border-color:var(--cyan); }
-.crId button, .crRand { font-family:var(--mono); cursor:pointer; color:var(--mid);
-    background:var(--panel); border:1px solid var(--line2); padding:8px 10px; font-size:12px; }
-.crId button:hover, .crRand:hover { color:var(--cyan); border-color:var(--cyanDim); }
-.crDel:hover { color:var(--crit); border-color:var(--crit); }
-
-.crSect { margin:16px 0; }
-.crSect h4 { margin:0 0 9px; font-size:11px; letter-spacing:.14em; text-transform:uppercase;
-    color:var(--dim); display:flex; align-items:center; gap:10px; }
-
-.crRoles { display:grid; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); gap:7px; }
-.crRole { display:flex; flex-direction:column; align-items:center; gap:5px; padding:8px 4px; cursor:pointer;
-    color:var(--mid); background:var(--panel); border:1px solid var(--line); font-family:var(--mono); font-size:11px; }
-.crRole:hover { background:var(--hover); }
-.crRole img { width:40px; height:40px; object-fit:cover; border:1px solid var(--line2); filter:grayscale(.55); }
-.crRole.on { background:var(--sel); }
-.crRole.on img { filter:none; }
-.crRoleInfo { margin-top:10px; padding:10px 12px; background:var(--panel);
-    border:1px solid var(--line); border-left:2px solid var(--rust); }
-.crRoleAbil { display:flex; justify-content:space-between; align-items:center; }
-.crRoleAbil b { font-size:13px; }
-.crRoleInfo p { margin:6px 0 0; color:var(--mid); font-size:12px; line-height:1.5; }
-.crRank { display:flex; align-items:center; gap:6px; color:var(--dim);
-    font-size:11px; letter-spacing:.08em; text-transform:uppercase; }
-.crRank em { font-style:normal; color:var(--ink); font-weight:700; min-width:14px; text-align:center; }
-
-.crBudget { color:var(--warn); font-size:12px; letter-spacing:0; text-transform:none; }
-.crBudget i { color:var(--dim); font-style:normal; }
-.crBudget.done { color:var(--good); }
-
-.crStats { display:grid; grid-template-columns:repeat(2,1fr); gap:6px 22px; }
-.crStat { display:flex; align-items:center; gap:8px; }
-.crStatK { width:42px; color:var(--mid); font-size:12px; letter-spacing:.06em; }
-.crStatV { width:16px; text-align:center; color:var(--ink); font-weight:700; font-variant-numeric:tabular-nums; }
-.crStatBar { flex:1; height:5px; background:#0b0b10; border:1px solid var(--line); }
-.crStatBar i { display:block; height:100%; background:linear-gradient(90deg,var(--cyanDim),var(--cyan)); }
-/* shared square steppers (rank + stats) */
-.crRank button, .crStat button { width:22px; height:22px; cursor:pointer; color:var(--mid);
-    background:var(--panel2); border:1px solid var(--line2); font-family:var(--mono); }
-.crRank button:hover, .crStat button:hover:not(:disabled) { color:var(--cyan); border-color:var(--cyanDim); }
-.crStat button:disabled { opacity:.3; cursor:default; }
-
-.crDerived { display:flex; flex-wrap:wrap; gap:8px; margin:14px 0; }
-.crDerived span { display:flex; flex-direction:column; gap:2px; padding:7px 14px;
-    background:var(--panel); border:1px solid var(--line); }
-.crDerived i { font-style:normal; color:var(--dim); font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
-.crDerived b { color:var(--cyan); font-size:16px; font-variant-numeric:tabular-nums; }
-
-.crReroll { margin-left:auto; width:26px; height:22px; cursor:pointer; color:var(--mid);
-    background:var(--panel2); border:1px solid var(--line2); font-family:var(--mono); }
-.crReroll:hover { color:var(--cyan); border-color:var(--cyanDim); }
-.crLife { display:grid; grid-template-columns:repeat(auto-fill,minmax(230px,1fr)); gap:9px; }
-.crLife label { display:flex; flex-direction:column; gap:3px; }
-.crLife span { color:var(--dim); font-size:10px; letter-spacing:.08em; text-transform:uppercase; }
-.crLife select { font-family:var(--mono); font-size:12px; color:var(--ink);
-    background:var(--panel); border:1px solid var(--line2); padding:6px 8px; }
-.crLife select:focus { outline:none; border-color:var(--cyan); }
-
-/* =====================================================================
    ARENA TAB CONSOLE — phones and small tablets.
    The desktop DOM is untouched: #feedcol and #stage go display:contents so
    their children become direct flex items of #app, and `order` rebuilds the
@@ -800,33 +704,6 @@ progress::-moz-progress-bar { background:var(--rust); }
     .storeStock { max-height:none; }
     .tooltip .tooltiptext { width:min(240px,72vw); }
 
-    /* --- character creation: stack the roster over the editor --- */
-    .crHead { flex-direction:column; align-items:stretch; gap:11px; padding:13px 14px; }
-    .crHead h1 { font-size:18px; }
-    .crTools { flex-wrap:wrap; }
-    .crTools button { flex:1 1 auto; min-height:44px; }
-    .crBody { flex-direction:column; min-height:0; }
-    .crRoster {
-        width:auto; flex:none; flex-direction:row; gap:6px; padding:9px 12px;
-        border-right:0; border-bottom:1px solid var(--line);
-        overflow-x:auto; overflow-y:hidden;
-    }
-    .crMerc, .crAdd { flex:0 0 auto; min-width:150px; min-height:48px; }
-    .crEdit { padding:13px 14px; }
-    /* name row on one line, Randomize on the next — neither gets clipped */
-    .crEditHead { flex-wrap:wrap; }
-    .crId { flex:1 1 100%; }
-    .crId input { max-width:none; }
-    .crRand { flex:1 0 100%; }
-    .crRoles { grid-template-columns:repeat(auto-fill,minmax(84px,1fr)); }
-    .crRole { min-height:74px; }
-    .crStats { grid-template-columns:1fr; gap:3px; }
-    .crStat button, .crRank button { width:40px; height:44px; }
-    .crReroll { width:44px; height:44px; }
-    .crDerived span { flex:1 1 auto; }
-    .crLife { grid-template-columns:1fr; }
-    .crLife select, .crId input { min-height:44px; }
-    .crId button, .crRand { min-height:44px; min-width:44px; }
 }
 
 /* Narrow phones: the action bar drops to two columns so labels stay readable. */
@@ -1301,112 +1178,6 @@ progress::-moz-progress-bar { background:var(--rust); }
 .dbCasualty button:hover:enabled { background:#f0664f; }
 .dbCasualty button:disabled { color:var(--faint); background:var(--panel2); border-color:var(--line); cursor:not-allowed; }
 
-/* =====================================================================
-   staging — the minute before the shooting
-
-   Combat plays itself, so this is where the game is actually played: the
-   wave you are about to meet, a stance for each of the crew, and two pieces
-   of ordnance out of the crate. One column of cards, which is the same shape
-   on a phone as on a desktop; above the breakpoint the three blocks sit side
-   by side instead of stacking. Every control is a chip a thumb can hit, and
-   DEPLOY is pinned to the bottom where the thumb already is.
-   ===================================================================== */
-.staging { position:fixed; inset:0; z-index:47; overflow-y:auto; display:grid; place-items:start center;
-    font-family:var(--mono); background:radial-gradient(900px 600px at 50% 8%, #1f1210, var(--bg)); }
-.stCard { width:100%; max-width:1080px; padding:18px 16px 0; }
-.stHead { text-align:center; margin-bottom:14px; }
-.stHead h1 { margin:0 0 4px; font-size:26px; letter-spacing:.09em; color:var(--rust);
-    text-shadow:0 0 18px rgba(224,83,63,.4); }
-.stHead p { margin:8px auto 0; max-width:58ch; color:var(--dim); font-size:11px; line-height:1.6; }
-
-/* The verdict, same words and colours the map used — so the read you walked
-   in on and the read you deploy on are visibly the same read. */
-.stOdds { display:inline-block; padding:3px 12px; border:1px solid currentColor;
-    font-size:11px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; }
-.stOdds.o-favoured { color:#7fd67f; }
-.stOdds.o-even { color:#8be0ff; }
-.stOdds.o-risky { color:var(--warn); }
-.stOdds.o-grim { color:#ff6b5e; }
-
-.stCols { display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; align-items:start; }
-.stBlock h2 { display:flex; align-items:baseline; gap:8px; margin:0 0 8px; padding-bottom:5px;
-    color:var(--rust); font-size:11px; letter-spacing:.16em; text-transform:uppercase;
-    border-bottom:1px solid var(--line); }
-.stBlock h2 b { color:var(--cyan); font-size:13px; letter-spacing:0; font-variant-numeric:tabular-nums; }
-.stNote { margin:0 0 8px; color:var(--faint); font-size:10px; line-height:1.6; }
-
-/* --- the wave: one line each, tap for the rest ------------------------ */
-.stFoes, .stMembers, .stKits, .stAssign { list-style:none; margin:0; padding:0; }
-.stFoe { margin-bottom:5px; background:var(--panel); border:1px solid var(--line); }
-.stFoeHead { display:flex; align-items:center; gap:8px; width:100%; min-height:44px; padding:6px 9px;
-    font-family:var(--mono); font-size:11px; text-align:left; color:var(--ink);
-    background:transparent; border:0; cursor:pointer; }
-.stRank { width:20px; height:20px; flex:none; display:grid; place-items:center; font-size:11px;
-    border:1px solid var(--crit); color:var(--crit); }
-.stRank.rank-1 { color:var(--dim); border-color:var(--faint); }
-.stRank.rank-2 { color:var(--mid); border-color:var(--line2); }
-.stRank.rank-3 { color:var(--cyan); border-color:var(--cyanDim); }
-.stRank.rank-4 { color:var(--warn); border-color:var(--warn); }
-.stRank.rank-5 { color:var(--crit); border-color:var(--crit); box-shadow:0 0 8px rgba(224,83,63,.5); }
-.stFoeWho { display:flex; flex-direction:column; gap:1px; min-width:0; }
-.stFoeWho b { color:var(--ink); }
-.stFoeWho i { font-style:normal; color:var(--dim); font-size:10px; }
-.stFoeNums { margin-left:auto; flex:none; color:var(--dim); font-size:10px; font-variant-numeric:tabular-nums; }
-.stFoeNums b { color:var(--ink); font-size:12px; }
-.stFoeNums .sep { margin:0 5px; color:var(--faint); }
-.stFoeMore { display:none; margin:0; padding:0 9px 8px; }
-.stFoe.open .stFoeMore { display:block; }
-.stFoeMore div { display:flex; gap:8px; padding:3px 0; border-top:1px solid var(--line); }
-.stFoeMore dt { flex:none; width:66px; color:var(--faint); font-size:10px; letter-spacing:.1em; text-transform:uppercase; }
-.stFoeMore dd { margin:0; color:var(--mid); font-size:10.5px; }
-.stFoeMore dd i { font-style:normal; color:var(--faint); }
-
-/* --- the crew: portrait, health, and three stance chips --------------- */
-.stMember { padding:7px 9px; margin-bottom:5px; background:var(--panel); border:1px solid var(--line); }
-.stMember.down { opacity:.5; }
-.stWho { display:flex; align-items:center; gap:9px; font-size:11px; }
-.stWho img { width:26px; height:26px; flex:none; object-fit:cover; border:1px solid var(--line2); filter:grayscale(.35); }
-.stName { display:flex; flex-direction:column; gap:1px; min-width:0; }
-.stWho b { color:var(--ink); }
-.stWho i { font-style:normal; color:var(--dim); font-size:10px; }
-.stHp { margin-left:auto; flex:none; display:flex; align-items:center; gap:6px; }
-.stBar { width:56px; height:6px; background:var(--bg2); border:1px solid var(--line); }
-.stBar i { display:block; height:100%; background:var(--good); }
-.stHp b { color:var(--ink); font-size:11px; font-variant-numeric:tabular-nums; }
-.stDown { margin:6px 0 0; color:var(--faint); font-size:10px; }
-/* Going / benched. The payroll now holds more bodies than the street has room
-   for, so the first order given on this screen is who gets in the van — and a
-   benched body has to read as a deliberate choice, not as a broken one. */
-.stGo { margin-top:7px; }
-.stGo .stChip { width:100%; min-height:34px; flex-direction:row; gap:8px; justify-content:center; }
-.stGo .stChip i { font-size:9px; }
-.stChip:disabled { opacity:.4; cursor:not-allowed; }
-.stChip.locked { cursor:default; }
-.stMember.benched { opacity:.62; border-style:dashed; }
-.stMember.benched .stWho img { filter:grayscale(1); }
-.stStances { display:grid; grid-template-columns:repeat(3,1fr); gap:5px; margin-top:7px; }
-/* Two dials, one above the other: where they stand, then how they fight. The
-   rows are otherwise identical three-chip grids, so the gutter label is what
-   says they are separate questions rather than six options for one. */
-.stStances[data-dial] { position:relative; }
-.stStances[data-dial]::before { content:attr(data-dial); position:absolute; left:0; top:-9px;
-    font-family:var(--mono); font-size:8px; letter-spacing:.16em; text-transform:uppercase;
-    color:var(--faint); }
-.stLines { margin-top:12px; }
-
-.stChip { display:flex; flex-direction:column; align-items:center; gap:2px;
-    min-height:44px; padding:6px 4px; cursor:pointer; font-family:var(--mono); font-size:10.5px;
-    letter-spacing:.08em; text-transform:uppercase; color:var(--dim);
-    background:var(--panel2); border:1px solid var(--line); }
-/* The trade printed on the button: a stance you cannot price is a stance you
-   cannot choose between. */
-.stChip i { display:block; font-style:normal; font-size:8.5px; line-height:1.35; white-space:nowrap;
-    letter-spacing:.02em; text-transform:none; color:var(--faint); }
-.stChip:hover { color:var(--ink); border-color:var(--line2); }
-.stChip.on { color:var(--bg); background:var(--cyan); border-color:var(--cyan); font-weight:700; }
-.stChip.on i { color:#06373a; }
-.stCarry { margin:6px 0 0; color:var(--warn); font-size:10px; letter-spacing:.06em; }
-
 /* the hire board's who-column now carries three lines: name, class, faction */
 .hbWho em { display:block; font-style:normal; font-size:9.5px; letter-spacing:.08em;
     text-transform:uppercase; font-family:var(--mono); }
@@ -1475,40 +1246,6 @@ progress::-moz-progress-bar { background:var(--rust); }
 /* the battle HUD row is 34px and already crowded — icon only, no word */
 .bhTop .prof i { width:15px; height:15px; font-size:11px; }
 .bhTop .prof b { display:none; }
-
-/* --- the crate: what goes out, and when it gets thrown ---------------- */
-.stKit { margin-bottom:5px; }
-.stKit button { display:flex; align-items:center; gap:9px; width:100%; min-height:52px; padding:7px 9px;
-    text-align:left; cursor:pointer; font-family:var(--mono); font-size:11px; color:var(--ink);
-    background:var(--panel); border:1px solid var(--line); }
-.stKit button:hover { border-color:var(--line2); }
-.stKit.on button { border-color:var(--cyan); background:#0d1a1c; box-shadow:inset 0 0 12px rgba(55,225,231,.14); }
-.stKit.out button { opacity:.4; cursor:not-allowed; }
-.stGlyph { width:24px; flex:none; text-align:center; font-size:15px; color:var(--cyan); }
-.stKit.out .stGlyph { color:var(--faint); }
-.stKitWho { display:flex; flex-direction:column; gap:2px; min-width:0; }
-.stKitWho b { color:var(--ink); }
-.stKitWho i { font-style:normal; color:var(--dim); font-size:10px; }
-.stKitWho em { font-style:normal; color:var(--faint); font-size:9.5px; letter-spacing:.04em; }
-.stStock { margin-left:auto; flex:none; display:flex; flex-direction:column; align-items:center; gap:1px;
-    color:var(--ink); font-size:13px; font-variant-numeric:tabular-nums; }
-.stStock i { font-style:normal; color:var(--faint); font-size:8.5px; letter-spacing:.1em; text-transform:uppercase; }
-
-/* Who is carrying what — tap to pass it down the line. */
-.stAssign { margin-top:8px; }
-.stAssign button { display:flex; align-items:center; gap:6px; width:100%; min-height:40px; padding:6px 9px;
-    margin-bottom:4px; text-align:left; cursor:pointer; font-family:var(--mono); font-size:10.5px;
-    color:var(--mid); background:var(--panel2); border:1px dashed var(--line2); }
-.stAssign button b { color:var(--cyan); }
-.stAssign button i { margin-left:auto; font-style:normal; color:var(--faint); font-size:9px;
-    letter-spacing:.1em; text-transform:uppercase; }
-
-.stActions { display:flex; justify-content:center; margin-top:16px;
-    position:sticky; bottom:0; z-index:2; background:var(--bg);
-    padding:10px 0 calc(4px + env(safe-area-inset-bottom)); }
-.stActions .prim { font-family:var(--mono); font-size:13px; font-weight:700; padding:12px 34px; min-height:46px;
-    letter-spacing:.1em; color:var(--bg); background:var(--cyan); border:1px solid var(--cyan); cursor:pointer; }
-.stActions .prim:hover { background:#5cf0f5; }
 
 /* =====================================================================
    sector clear — payday spent on people, then the next city over
@@ -1587,103 +1324,13 @@ progress::-moz-progress-bar { background:var(--rust); }
     color:var(--faint); text-transform:uppercase; }
 .runEndActions .prim em { color:rgba(8,8,11,.62); }
 
-/* =====================================================================
-   Title — the front door. The game used to open on the stat editor, which
-   asked for nine decisions before offering a single fact about itself.
-   ===================================================================== */
-.title { position:fixed; inset:0; z-index:52; display:grid; place-items:center; overflow-y:auto;
-    padding:32px 20px; font-family:var(--mono);
-    background:radial-gradient(1100px 620px at 50% -10%, #12121c, var(--bg)); }
-.titleCard { width:100%; max-width:520px; }
-.titleCard h1 { margin:0; font-size:clamp(38px,9vw,58px); letter-spacing:.16em; font-weight:700;
-    color:var(--ink); text-shadow:0 0 26px rgba(55,225,231,.22); }
-.tTag { margin:2px 0 0; color:var(--rust); font-size:10px; letter-spacing:.28em; text-transform:uppercase; }
-.tFlavor { margin:18px 0 22px; color:var(--mid); font-size:13px; line-height:1.65; }
-
-/* The merc on file, above the doors — the title screen is about them. */
-.tCareer { display:flex; align-items:center; gap:12px; padding:12px 14px; margin-bottom:16px;
-    background:var(--panel); border:1px solid var(--line); border-left:2px solid var(--rust); }
-.tCareer img { width:44px; height:44px; flex:none; object-fit:cover; border:1px solid var(--line2);
-    background:#000; filter:grayscale(.3); }
-.tCareerBody { display:flex; flex-direction:column; gap:3px; min-width:0; }
-.tCareerBody b { color:var(--ink); font-size:14px; font-weight:700; letter-spacing:.03em; }
-.tCareerBody span { color:var(--mid); font-size:11px; }
-.tCareerRec { color:var(--faint) !important; font-size:10px !important; letter-spacing:.05em; }
-
-.tActions { display:flex; flex-direction:column; gap:9px; }
-.tBtn { min-height:52px; }
-.tBtn { display:flex; flex-direction:column; gap:4px; align-items:flex-start; text-align:left;
-    width:100%; padding:13px 16px; cursor:pointer; font-family:var(--mono);
-    color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
-.tBtn:hover { color:var(--ink); border-color:var(--cyanDim); background:var(--hover); }
-.tBtnMain { font-size:13.5px; font-weight:700; letter-spacing:.04em; }
-.tBtnSub { font-size:10px; letter-spacing:.05em; color:var(--faint); line-height:1.5; }
-.tBtn.prim { color:var(--bg); background:var(--cyan); border-color:var(--cyan); }
-.tBtn.prim:hover { background:#5cf0f5; color:var(--bg); }
-.tBtn.prim .tBtnSub { color:rgba(8,8,11,.66); }
-.tBtn.tDanger { color:var(--crit); border-color:#3a1f1c; }
-.tBtn.tDanger:hover { color:#ff7a63; border-color:var(--crit); background:#170f0e; }
-
-/* Starting over would end a live run: ask once, and name what would be lost. */
-.tConfirm { padding:14px 16px; background:var(--panel); border:1px solid var(--line2); border-left:2px solid var(--crit); }
-.tConfirm p { margin:0 0 13px; color:var(--mid); font-size:12px; line-height:1.6; }
-.tConfirmRow { display:flex; gap:9px; }
-.tConfirmRow .tBtn { flex:1; align-items:center; text-align:center; padding:10px 12px; font-size:12px; }
-
-.tHelpToggle { width:100%; margin-top:14px; font-family:var(--mono); font-size:11px; letter-spacing:.08em;
-    text-align:left; padding:9px 12px; cursor:pointer;
-    color:var(--dim); background:transparent; border:1px dashed var(--line2); }
-.tHelpToggle:hover, .tHelpToggle.on { color:var(--cyan); border-color:var(--cyanDim); }
-.tHelp { margin-top:10px; padding:14px 16px; background:var(--panel); border:1px solid var(--line); }
-.tHelp dl { margin:0; display:flex; flex-direction:column; gap:12px; }
-.tHelp dt { color:var(--cyan); font-size:10px; letter-spacing:.16em; text-transform:uppercase; }
-.tHelp dd { margin:5px 0 0; color:var(--mid); font-size:11.5px; line-height:1.6; }
-
-/* boot screen: one character instead of a roster */
-.creator.solo .crBody { justify-content:center; }
-.creator.solo .crEdit { max-width:720px; }
-
-/* The veteran's card: read-only, because a veteran's numbers are earned.
-   Editing them here would quietly mean "start over at level 1" — retiring is
-   the honest route to that, and it's the button underneath. */
-.crVet { padding:18px 20px 20px; background:var(--panel); border:1px solid var(--line); }
-.crVetHead { display:flex; align-items:center; gap:13px; }
-.crVetHead img { width:60px; height:60px; flex:none; object-fit:cover; border:1px solid var(--line2);
-    background:#000; filter:grayscale(.25); }
-.crVetHead > div { display:flex; flex-direction:column; gap:4px; }
-.crVetHead b { color:var(--ink); font-size:19px; font-weight:700; letter-spacing:.03em; }
-.crVetHead span { font-size:11px; letter-spacing:.05em; }
-.crVetStats { display:grid; grid-template-columns:repeat(auto-fit,minmax(88px,1fr)); gap:1px;
-    margin:16px 0 0; background:var(--line); border:1px solid var(--line); }
-.crVetStats span { display:flex; flex-direction:column; gap:3px; padding:9px 11px; background:var(--panel2); }
-.crVetStats i { font-style:normal; color:var(--dim); font-size:9.5px; letter-spacing:.12em; text-transform:uppercase; }
-.crVetStats b { color:var(--cyan); font-size:16px; font-variant-numeric:tabular-nums; }
-.crVetNote { margin:14px 0 0; color:var(--mid); font-size:11.5px; line-height:1.6; }
-.crRetire { width:100%; margin-top:16px; padding:10px 12px; cursor:pointer; font-family:var(--mono);
-    font-size:11px; letter-spacing:.06em; color:var(--dim); background:transparent; border:1px dashed var(--line2); }
-.crRetire:hover { color:var(--crit); border-color:#3a1f1c; background:#150f0f; }
-.crPortrait { width:46px; height:46px; object-fit:cover; border:1px solid var(--line2); filter:grayscale(.3); }
-.crAdvToggle { width:100%; margin:10px 0 0; font-family:var(--mono); font-size:11px; letter-spacing:.08em;
-    text-align:left; padding:9px 12px; color:var(--dim); background:var(--panel); border:1px dashed var(--line2); }
-.crAdvToggle:hover, .crAdvToggle.on { color:var(--cyan); border-color:var(--cyanDim); }
-
 @media (max-width: 860px) {
     .scCols { grid-template-columns:1fr; gap:14px; }
-    /* One column, in the order you decide things: who is out there, what your
-       crew does about it, what they carry. Nothing shrinks below thumb size. */
-    .stCols { grid-template-columns:1fr; gap:14px; }
-    .stCard { padding:14px 12px 0; }
-    .stHead h1 { font-size:20px; }
-    .stHead p { font-size:10.5px; }
     .scCard { padding:14px 12px; }
     .scHead h1 { font-size:22px; }
     .hbTrait, .hbKit { display:none; }
     .hbOffers { max-height:44vh; }
     .reLedger { grid-template-columns:1fr; }
-    .title { place-items:start center; padding:24px 14px 40px; }
-    .tConfirmRow { flex-direction:column; }
-    .crVetHead img { width:48px; height:48px; }
-    .crVetHead b { font-size:16px; }
 }
 
 @media (prefers-reduced-motion: reduce) { * { animation:none !important; transition:none !important; } }
@@ -1949,4 +1596,189 @@ progress::-moz-progress-bar { background:var(--rust); }
 @media (prefers-reduced-motion: no-preference) {
     .augCard { animation:panelIn .34s cubic-bezier(.22,.9,.3,1) both; }
     .augCards .augCard:nth-child(2) { animation-delay:.08s; }
+}
+
+/* =====================================================================
+   Keyed-grid menus — title, creator, staging.
+
+   One system for the three out-of-combat screens: dense columns, every
+   actionable row addressable by a key or a tap, a key bar along the foot
+   that doubles as the legend. Nothing expands because nothing is hidden.
+   Below the breakpoint the columns stack and the key hints step aside —
+   the keys still work on a keyboard, the rows are already thumb-sized.
+   ===================================================================== */
+.kg { position:fixed; inset:0; z-index:52; display:flex; flex-direction:column;
+    font-family:var(--mono); background:var(--bg); }
+.kgTop { flex:none; display:flex; align-items:center; gap:14px; padding:0 14px; min-height:40px;
+    background:var(--panel); border-bottom:1px solid var(--line); border-top:2px solid var(--rust);
+    font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--dim);
+    white-space:nowrap; overflow-x:auto; scrollbar-width:none; }
+.kgTop::-webkit-scrollbar { display:none; }
+.kgTop .brand { color:var(--rustHot); font-weight:800; letter-spacing:.26em; }
+.kgTop b { color:var(--ink); font-weight:600; }
+.kgTop .r { margin-left:auto; }
+.kgTop .ed { color:var(--good); font-weight:700; }
+.kgTop .odds { letter-spacing:.15em; color:var(--warn); }
+.kgTop .odds.o-favoured { color:var(--good); }
+.kgTop .odds.o-grim { color:var(--crit); }
+
+.kgBody { flex:1; min-height:0; display:flex; overflow:hidden; }
+.kgCol { flex:1; min-width:0; display:flex; flex-direction:column; gap:12px; padding:16px;
+    overflow-y:auto; overflow-x:hidden; }
+.kgCol + .kgCol { border-left:1px solid var(--line); }
+.kgCol.n { flex:none; }
+
+.kgH { margin:0; font-size:10.5px; font-weight:600; letter-spacing:.2em; text-transform:uppercase;
+    color:var(--rust); display:flex; align-items:baseline; gap:9px; flex:none; white-space:nowrap; }
+.kgH b { color:var(--ink); }
+.kgH em { font-style:normal; margin-left:auto; color:var(--dim); font-weight:400; letter-spacing:.1em; }
+.kgP { margin:0; font-size:11.5px; color:var(--mid); line-height:1.7; }
+.kgP.dim { color:var(--dim); }
+.kgP b { color:var(--ink); }
+.kgHr { height:1px; background:var(--line); flex:none; }
+
+/* definition block — label left, value right */
+.kgDfn { margin:0; display:grid; grid-template-columns:auto 1fr; gap:4px 16px;
+    font-size:11.5px; font-variant-numeric:tabular-nums; }
+.kgDfn dt { color:var(--faint); letter-spacing:.1em; text-transform:uppercase; font-size:10px; padding-top:1px; }
+.kgDfn dd { margin:0; color:var(--ink); text-align:right; min-width:0; }
+.kgDfn dd.l { text-align:left; color:var(--mid); }
+
+/* keyed action / list rows */
+.kgRow { display:flex; align-items:baseline; gap:10px; width:100%; text-align:left; cursor:pointer;
+    background:transparent; border:0; color:var(--mid); font-family:var(--mono); font-size:12px;
+    padding:6px 8px; letter-spacing:.04em; min-height:32px; }
+.kgRow:hover { background:var(--hover); }
+.kgRow b { color:var(--ink); font-weight:500; text-transform:uppercase; letter-spacing:.1em; }
+.kgRow i { font-style:normal; color:var(--faint); margin-left:auto; white-space:nowrap;
+    overflow:hidden; text-overflow:ellipsis; font-size:11px; }
+.kgRow.on { background:var(--sel); }
+.kgRow.on .kgKey { border-color:var(--cyan); color:var(--cyan); background:#0c1417; }
+.kgRow.dgr b { color:var(--crit); }
+.kgRow.dgr .kgKey { color:var(--crit); border-color:#3a1f1c; }
+.kgRow:disabled { cursor:default; color:var(--faint); }
+.kgRow:disabled b { color:var(--faint); }
+.kgRow:disabled:hover { background:transparent; }
+
+.kgKey { display:inline-grid; place-items:center; width:20px; height:20px; flex:none;
+    align-self:center; border:1px solid var(--line2); color:var(--cyanDim); font-size:11px; }
+.kgKey.on { border-color:var(--cyan); color:var(--cyan); background:#0c1417; }
+
+/* tables — the workhorse */
+.kgTable { width:100%; border-collapse:collapse; font-size:11.5px; font-variant-numeric:tabular-nums; }
+.kgTable th { text-align:left; font-weight:500; font-size:9.5px; letter-spacing:.15em; text-transform:uppercase;
+    color:var(--faint); border-bottom:1px solid var(--line); padding:0 8px 4px 0; white-space:nowrap; }
+.kgTable td { padding:5px 8px 5px 0; border-bottom:1px solid #15151c; color:var(--mid);
+    white-space:nowrap; vertical-align:middle; }
+.kgTable td b { color:var(--ink); font-weight:500; }
+.kgTable .num { text-align:right; }
+.kgTable th.num { text-align:right; }
+.kgTable .sub { color:var(--faint); font-size:10.5px; }
+.kgTable td.clip { max-width:11em; overflow:hidden; text-overflow:ellipsis; }
+.kgTable tr.sel td { background:var(--sel); border-bottom-color:var(--line2); }
+.kgTable tr.sel td:first-child { box-shadow:inset 2px 0 0 var(--cyan); }
+.kgTable tr.out td, .kgTable tr.out td b { color:var(--faint); }
+.kgTable tbody tr { cursor:pointer; }
+.kgTable tbody tr:hover td { background:var(--hover); }
+
+/* letter dials — Point/Mid/Overwatch and Push/Steady/Hold in one cell */
+.kgDial { display:inline-flex; gap:2px; }
+.kgDial u { text-decoration:none; width:19px; height:19px; display:inline-grid; place-items:center;
+    cursor:pointer; color:var(--faint); border:1px solid transparent; font-size:11px; }
+.kgDial u:hover { border-color:var(--line2); color:var(--mid); }
+.kgDial u.on { color:var(--cyan); border-color:var(--cyanDim); background:#0c1417; }
+.kgDial.w u.on { color:var(--warn); border-color:#4a3a18; background:#171208; }
+
+/* small hp bar in a table cell */
+.kgHp { display:inline-block; width:44px; height:6px; background:#0b0b10; border:1px solid var(--line);
+    vertical-align:middle; margin-right:6px; }
+.kgHp i { display:block; height:100%; background:var(--good); }
+.kgHp i.lo { background:var(--warn); }
+.kgHp i.cr { background:var(--crit); }
+
+/* going / benched chip in a table cell */
+.kgGo { display:inline-grid; place-items:center; min-width:30px; padding:2px 5px; cursor:pointer;
+    font-family:var(--mono); font-size:9px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--dim); background:transparent; border:1px solid var(--line2); }
+.kgGo.on { color:var(--cyan); border-color:var(--cyanDim); background:#0c1417; }
+.kgGo:disabled { cursor:default; opacity:.5; }
+
+/* threat stars */
+.kgRank { color:var(--warn); letter-spacing:1px; font-size:10px; }
+.kgRank.lo { color:var(--faint); }
+.kgRank.hi { color:var(--crit); }
+
+/* stat row (creator) */
+.kgStat { display:flex; align-items:center; gap:8px; font-size:11px; color:var(--dim);
+    font-variant-numeric:tabular-nums; }
+.kgStat .k { width:38px; flex:none; letter-spacing:.1em; }
+.kgStat b { color:var(--ink); width:18px; text-align:right; font-size:12px; }
+.kgStat u { flex:1; height:6px; background:#0b0b10; border:1px solid var(--line); text-decoration:none; }
+.kgStat u i { display:block; height:100%; background:linear-gradient(90deg,var(--cyanDim),var(--cyan)); }
+.kgStat button { width:22px; height:22px; flex:none; cursor:pointer; font-family:var(--mono);
+    color:var(--mid); background:var(--panel); border:1px solid var(--line2); }
+.kgStat button:hover:enabled { color:var(--cyan); border-color:var(--cyanDim); }
+.kgStat button:disabled { color:var(--faint); cursor:default; }
+
+/* lifepath selects */
+.kgLife { display:flex; flex-direction:column; gap:5px; }
+.kgLife label { display:grid; grid-template-columns:minmax(96px,auto) 1fr; align-items:center; gap:10px;
+    font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint); }
+.kgLife select { font-family:var(--mono); font-size:11.5px; color:var(--ink); min-height:26px;
+    background:var(--panel); border:1px solid var(--line2); padding:3px 6px; min-width:0; }
+.kgLife select:focus { outline:none; border-color:var(--cyan); }
+
+/* name input */
+.kgName { display:flex; gap:6px; }
+.kgName input { flex:1; min-width:0; font-family:var(--mono); font-size:13px; color:var(--ink);
+    background:var(--panel); border:1px solid var(--line2); padding:6px 9px; }
+.kgName input:focus { outline:none; border-color:var(--cyan); }
+.kgName button { width:32px; flex:none; cursor:pointer; font-family:var(--mono); color:var(--mid);
+    background:var(--panel); border:1px solid var(--line2); }
+.kgName button:hover { color:var(--cyan); border-color:var(--cyanDim); }
+
+/* primary CTA */
+.kgPrim { display:inline-flex; align-items:center; justify-content:center; gap:8px; cursor:pointer;
+    font-family:var(--mono); font-size:12px; font-weight:700; letter-spacing:.14em; text-transform:uppercase;
+    min-height:44px; padding:10px 18px; color:var(--bg); background:var(--cyan); border:1px solid var(--cyan);
+    clip-path:var(--bevel); }
+.kgPrim:hover:enabled { background:#5cf0f5; }
+.kgPrim:disabled { cursor:default; color:var(--dim); background:var(--panel2); border-color:var(--line);
+    clip-path:none; }
+.kgPrim.wide { width:100%; }
+
+/* confirm strip — destructive questions answered in place */
+.kgConfirm { padding:12px 14px; background:var(--panel); border:1px solid var(--line2);
+    border-left:2px solid var(--crit); display:flex; flex-direction:column; gap:10px; }
+.kgConfirm .kgRowPair { display:flex; gap:8px; }
+.kgConfirm .kgRowPair button { flex:1; min-height:36px; cursor:pointer; font-family:var(--mono);
+    font-size:11px; letter-spacing:.08em; color:var(--mid); background:transparent;
+    border:1px solid var(--line2); }
+.kgConfirm .kgRowPair button:hover { color:var(--ink); border-color:var(--cyanDim); }
+.kgConfirm .kgRowPair button.dgr { color:var(--crit); border-color:#3a1f1c; }
+.kgConfirm .kgRowPair button.dgr:hover { color:#ff7a63; border-color:var(--crit); background:#170f0e; }
+
+/* key bar along the foot — the legend */
+.kgBar { flex:none; display:flex; align-items:center; gap:16px; padding:7px 14px;
+    padding-bottom:calc(7px + env(safe-area-inset-bottom));
+    background:var(--panel2); border-top:1px solid var(--line);
+    font-size:10px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint);
+    white-space:nowrap; overflow-x:auto; scrollbar-width:none; }
+.kgBar::-webkit-scrollbar { display:none; }
+.kgBar b { color:var(--cyanDim); font-weight:500; }
+.kgBar .r { margin-left:auto; }
+.kgBar .kgPrim { min-height:34px; padding:6px 16px; font-size:11px; }
+
+@media (max-width: 860px) {
+    .kgBody { flex-direction:column; overflow-y:auto; overflow-x:hidden; }
+    .kgCol { flex:none; overflow:visible; padding:12px; }
+    .kgCol + .kgCol { border-left:0; border-top:1px solid var(--line); }
+    .kgCol.n { width:auto !important; }
+    .kgHideM { display:none !important; }
+    .kgTable th { padding-right:5px; }
+    .kgTable td { padding-right:5px; }
+    .kgDial u { width:17px; height:18px; }
+    .kgStat .k { width:34px; }
+    .kgBar span.keysOnly { display:none; }
+    .kgTop { gap:10px; padding:0 10px; font-size:10px; }
 }

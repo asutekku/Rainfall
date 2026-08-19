@@ -87,6 +87,8 @@ export interface InterfaceAppState {
     saveHeader: SaveHeader | null;
     /** The spec your character was built from, so "new character" opens where you left it. */
     characterSpec: CharacterSpec;
+    /** The creator was opened via "New character" — it starts on a fresh merc, not the veteran. */
+    creatorFresh: boolean;
     /** Candidates on the board while a hire screen is up. */
     offers: MercOffer[];
     /** Which mobile destination is on screen. Ignored above the breakpoint. */
@@ -181,6 +183,7 @@ export class App extends React.Component<{}, InterfaceAppState> {
             career,
             saveHeader: SaveGame.peek(),
             characterSpec,
+            creatorFresh: false,
             offers: [],
             mobileTab: "arena",
             mobileMore: false,
@@ -260,11 +263,13 @@ export class App extends React.Component<{}, InterfaceAppState> {
         // new" gets decided, so it stays one door instead of two look-alikes.
         if (this.state.phase === "title") {
             return <TitleView save={this.state.saveHeader} career={this.state.career}
-                              onContinue={this.continueRun} onNewRun={this.openCreator}/>;
+                              onContinue={this.continueRun} onNewRun={this.openCreator}
+                              onNewCharacter={this.openCreatorFresh} onAbandon={this.abandonRun}/>;
         }
         // Character creation is a full-screen takeover reached from the title.
         if (this.state.phase === "creator") {
             return <Creator initial={this.state.characterSpec} career={this.state.career}
+                            startFresh={this.state.creatorFresh}
                             onDeploy={this.deployCharacter} onCancel={this.gotoTitle}/>;
         }
         // Run-loop takeovers that sit ABOVE the shell. The city map and combat
@@ -594,8 +599,21 @@ export class App extends React.Component<{}, InterfaceAppState> {
      */
     private openCreator = () => {
         this.resetSequencer();
-        this.setState({phase: "creator", report: null, playback: null, turnOrder: [],
+        this.setState({phase: "creator", creatorFresh: false, report: null, playback: null, turnOrder: [],
             round: 0, holdLeft: 0, inspecting: null});
+    };
+
+    /** "New character" from the title: same creator, opened on someone new. */
+    private openCreatorFresh = () => {
+        this.resetSequencer();
+        this.setState({phase: "creator", creatorFresh: true, report: null, playback: null, turnOrder: [],
+            round: 0, holdLeft: 0, inspecting: null});
+    };
+
+    /** Delete the checkpoint from the title. The career stays; the run is gone. */
+    private abandonRun = () => {
+        SaveGame.clear();
+        this.setState({saveHeader: SaveGame.peek()});
     };
 
     /** Cycle a squad member's AI playstyle — the one tactical lever left. */
