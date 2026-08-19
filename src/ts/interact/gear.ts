@@ -4,6 +4,20 @@ import type {Weapon} from "../items/Weapon";
 import {Stash} from "./crew";
 import {GetItem} from "./getItem";
 
+/** How a candidate weapon reads against the one in hand. */
+export type Verdict = "up" | "down" | "trade" | "same";
+
+/** One stat of the head-to-head: printable values plus the signed movement. */
+export interface StatDelta {
+    stat: string;
+    cur: string;
+    next: string;
+    /** >0 the candidate is better here, <0 worse, 0 even. */
+    delta: number;
+    /** A mode change (full auto), not a rung on a ladder — out of the verdict. */
+    mode?: boolean;
+}
+
 /**
  * Equipping, in one place.
  *
@@ -85,10 +99,9 @@ export class Gear {
 
     /** THE armour swap: the slot's old piece goes back in The Stash. */
     public static swapArmor(a: Actor, piece: Armor): Armor | null {
-        const slot = piece.bodyPart === "headgear" ? "headgear" : "upper";
-        const old = a.equipment[slot] as Armor | null;
+        const old = Gear.displaced(a, piece);
         if (old) { Stash.of(a).armor.push(old); }
-        a.equipment[slot] = piece;
+        a.equipment[piece.bodyPart === "headgear" ? "headgear" : "upper"] = piece;
         return old;
     }
 
@@ -125,6 +138,70 @@ export class Gear {
     /** Shopping value of a weapon: mean damage, with a bonus for armour-piercing. */
     public static weaponValue(w: Weapon): number {
         return w.averageDamage() + (w.ap ? 4 : 0);
+    }
+
+    /**
+     * The stats a swap decision actually turns on, candidate against what's in
+     * hand. AUTO is a mode, not a rung on a ladder — full auto trades aimed
+     * shots for volume — so it's flagged `mode` and stays out of the verdict.
+     */
+    public static compare(cur: Weapon, w: Weapon): StatDelta[] {
+        const n1 = (x: number) => String(Math.round(x * 10) / 10);
+        const acc = (x: number) => x > 0 ? `+${x}` : String(x);
+        return [
+            {stat: "DMG", cur: n1(cur.averageDamage()), next: n1(w.averageDamage()),
+                delta: w.averageDamage() - cur.averageDamage()},
+            {stat: "ACC", cur: acc(cur.accuracyBonus), next: acc(w.accuracyBonus),
+                delta: w.accuracyBonus - cur.accuracyBonus},
+            {stat: "ROF", cur: String(cur.rateOfFire), next: String(w.rateOfFire),
+                delta: w.rateOfFire - cur.rateOfFire},
+            {stat: "RNG", cur: `${cur.range}m`, next: `${w.range}m`, delta: w.range - cur.range},
+            {stat: "AP", cur: cur.ap ? "yes" : "—", next: w.ap ? "yes" : "—",
+                delta: (w.ap ? 1 : 0) - (cur.ap ? 1 : 0)},
+            {stat: "AUTO", cur: cur.autofire ? "yes" : "—", next: w.autofire ? "yes" : "—",
+                delta: (w.autofire ? 1 : 0) - (cur.autofire ? 1 : 0), mode: true},
+        ];
+    }
+
+    /**
+     * Whether the candidate beats what's in hand — honestly. More damage is
+     * not "better", full stop: a rear-line merc wants reach, a brawler wants
+     * hits per turn. So this is a Pareto call: ▲ only when the candidate gives
+     * nothing up, ▼ only when it gains nothing, and everything that trades one
+     * stat for another is ◆ — the player's doctrine breaks the tie, not ours.
+     */
+    public static verdict(cur: Weapon, w: Weapon): Verdict {
+        const ds = Gear.compare(cur, w).filter((d) => !d.mode).map((d) => d.delta);
+        const up = ds.some((d) => d > 0.05);
+        const down = ds.some((d) => d < -0.05);
+        return up && down ? "trade" : up ? "up" : down ? "down" : "same";
+    }
+
+    public static VERDICT_GLYPH: Record<Verdict, string> = {up: "▲", down: "▼", trade: "◆", same: "="};
+
+    /** The verdict as a sentence — names which stats move which way. */
+    public static verdictLine(cur: Weapon, w: Weapon): string {
+        const ds = Gear.compare(cur, w).filter((d) => !d.mode);
+        const ups = ds.filter((d) => d.delta > 0.05).map((d) => d.stat).join(", ");
+        const downs = ds.filter((d) => d.delta < -0.05).map((d) => d.stat).join(", ");
+        switch (Gear.verdict(cur, w)) {
+            case "up": return `upgrade — better ${ups}`;
+            case "down": return `downgrade — worse ${downs}`;
+            case "trade": return `trade-off — gains ${ups} · gives up ${downs}`;
+            default: return "even swap";
+        }
+    }
+
+    /** The piece this one would displace: whatever's worn in its slot. */
+    public static displaced(a: Actor, piece: Armor): Armor | null {
+        const slot = piece.bodyPart === "headgear" ? "headgear" : "upper";
+        return (a.equipment[slot] as Armor | undefined) || null;
+    }
+
+    /** Stopping power gained (or lost) by strapping this on, slot vs slot. */
+    public static armorDelta(a: Actor, piece: Armor): number {
+        const old = Gear.displaced(a, piece);
+        return piece.stoppingPower - (old ? old.stoppingPower : 0);
     }
 
     /** THE damage string — "3d6+2 AP" — printed the same on every screen. */

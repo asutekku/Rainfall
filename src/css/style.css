@@ -1273,6 +1273,52 @@ progress::-moz-progress-bar { background:var(--rust); }
 .roleEdge { margin:4px 0 8px; padding:7px 10px; color:var(--cyan); font-size:11.5px; line-height:1.5;
     background:var(--panel); border-left:2px solid var(--cyanDim); }
 
+/* swap-decision UI: verdict glyphs, delta chips, the head-to-head card */
+.gearSub { display:flex; align-items:baseline; gap:8px; margin:10px 0 5px; font-size:9.5px; font-weight:600;
+    letter-spacing:.18em; text-transform:uppercase; color:var(--dim);
+    border-bottom:1px solid var(--line); padding-bottom:3px; }
+.gearSub em { font-style:normal; margin-left:auto; letter-spacing:.05em; text-transform:none;
+    font-weight:400; color:var(--mid); text-align:right; }
+.gearSlot.v-up { color:var(--good); border-color:var(--good); }
+.gearSlot.v-dn { color:var(--crit); border-color:var(--crit); }
+.gearSlot.v-tr { color:var(--warn); border-color:var(--warn); }
+.gdChips { display:flex; flex-wrap:wrap; gap:4px; margin-top:3px; }
+.gdChip { font-style:normal; font-size:9px; letter-spacing:.05em; padding:1px 5px; white-space:nowrap;
+    font-variant-numeric:tabular-nums; color:var(--dim); border:1px solid var(--line); }
+.gdChip.up { color:var(--good); border-color:rgba(127,214,127,.4); }
+.gdChip.dn { color:var(--crit); border-color:rgba(224,83,63,.4); }
+.gdChip.tr { color:var(--warn); border-color:rgba(240,168,48,.4); }
+.gearRow.flash { animation:gdFlash .95s ease-out; }
+@keyframes gdFlash {
+    0% { background:var(--sel); box-shadow:inset 0 0 0 1px var(--cyan); }
+    100% { background:var(--panel); box-shadow:none; }
+}
+.gdCard { margin:2px 0 6px; padding:10px 12px; background:#0c0c13;
+    border:1px solid var(--line2); border-left:2px solid var(--cyanDim); clip-path:var(--bevel); }
+.gdVs { font-size:10px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--mid); margin-bottom:8px; }
+.gdVs.v-up { color:var(--good); }
+.gdVs.v-down { color:var(--crit); }
+.gdVs.v-trade { color:var(--warn); }
+.gdTable { width:100%; border-collapse:collapse; font-family:var(--mono); font-size:11px; }
+.gdTable th { text-align:right; padding:0 0 5px 12px; font-size:10px; font-weight:500;
+    color:var(--ink); max-width:120px; }
+.gdTable th em { display:block; font-style:normal; font-size:8.5px; font-weight:600;
+    letter-spacing:.16em; text-transform:uppercase; color:var(--dim); }
+.gdTable td { text-align:right; padding:3px 0 3px 12px; color:var(--mid);
+    font-variant-numeric:tabular-nums; border-top:1px solid #15151c; }
+.gdTable td:first-child, .gdTable th:first-child { text-align:left; padding-left:0; color:var(--dim); }
+.gdTable td.win { color:var(--good); font-weight:700; }
+.gdNote { margin:0; color:var(--dim); font-size:10.5px; line-height:1.5; }
+/* chips riding the right edge of a kgRow (staging's gear sheet) */
+.gdRight { margin-left:auto; display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+    justify-content:flex-end; font-size:10px; color:var(--faint); }
+.gdRight .gdChips { margin-top:0; justify-content:flex-end; }
+.gdGo { display:block; width:100%; margin-top:10px; min-height:34px; cursor:pointer;
+    font-family:var(--mono); font-size:11px; font-weight:600; letter-spacing:.1em; text-transform:uppercase;
+    color:var(--cyan); background:#0c1417; border:1px solid var(--cyanDim); clip-path:var(--bevel); }
+.gdGo:hover { color:var(--ink); border-color:var(--cyan); background:var(--sel); }
+
 /* character sheet — skills tab */
 .skillList { display:flex; flex-direction:column; gap:5px; font-family:var(--mono); }
 .skillHint { color:var(--dim); font-size:11px; line-height:1.5; margin-bottom:8px; }
@@ -2020,6 +2066,7 @@ body:not(.no-fx) .kg::before { content:""; position:absolute; inset:0; z-index:3
     .kgBack, .kgPrim, .kgSheetX { min-height:44px; }
     .kgSheetX { width:44px; }
     .kgConfirm .kgRowPair button { min-height:44px; }
+    .gdGo { min-height:44px; }
     .kgStat button { width:40px; height:44px; }
     .kgLife select { min-height:44px; }
     .kgName input, .kgName button { min-height:44px; }
