@@ -9,8 +9,17 @@ import {randomJunk, randomMed} from "../items/consumables";
 
 const WEAPONS: Weapon[] = Equipment.weapons;
 
-// Clean RED armour ladder for shopping (the catalog has gaps; this is the SP tree).
-const ARMOR_TIERS: Array<{ name: string; sp: number; cost: number }> = [
+/** One tier on the game's single armour ladder. */
+export interface ArmorTier { name: string; sp: number; cost: number; }
+
+/**
+ * THE armour ladder. Auto-shopping climbs it, hire tiers reference it, and
+ * upgrade offers quote it — one list, so a tier can't have two SPs or two
+ * prices depending on which screen is asking. (The Black Market's shelf still
+ * draws from the wearables catalog for variety; anything *synthesized* comes
+ * from here.)
+ */
+export const ARMOR_LADDER: ArmorTier[] = [
     {name: "Leather", sp: 4, cost: 20},
     {name: "Kevlar", sp: 7, cost: 50},
     {name: "Light Armorjack", sp: 11, cost: 100},
@@ -172,12 +181,12 @@ export class Economy {
      * hits, and comparing against the ablated number made the crew re-buy the
      * same tier after every fight — a treadmill that swallowed each payday whole.
      */
-    public static bestArmorUpgrade(actor: Actor, budget: number = Infinity): { name: string; sp: number; cost: number } | null {
+    public static bestArmorUpgrade(actor: Actor, budget: number = Infinity): ArmorTier | null {
         const cap = this.spCap(actor.level);
         const worn = actor.equipment.upper;
         const curSP = worn ? Math.max(worn.stoppingPower, worn.maxStoppingPower) : 0;
-        let best: { name: string; sp: number; cost: number } | null = null;
-        for (const t of ARMOR_TIERS) {
+        let best: ArmorTier | null = null;
+        for (const t of ARMOR_LADDER) {
             if (t.sp <= curSP || t.sp > cap || t.cost > budget || !Purse.canAfford(actor, t.cost)) { continue; }
             if (!best || t.sp > best.sp) { best = t; }
         }
@@ -211,8 +220,7 @@ export class Economy {
             changes.push(this.equipArmor(actor, invA.a, "salvage", 0));
         } else if (buyA) {
             Purse.spend(actor, buyA.cost);
-            changes.push(this.equipArmor(actor, new Armor("upper", buyA.name, "", 1, buyA.sp, buyA.cost, ""),
-                "bought", buyA.cost));
+            changes.push(this.equipArmor(actor, Economy.mintArmor(buyA), "bought", buyA.cost));
         }
         return changes;
     }
@@ -252,13 +260,34 @@ export class Economy {
     }
 
     /** The next rung up the armour ladder from a given SP (null at the top). */
-    public static nextArmorTier(sp: number): { name: string; sp: number; cost: number } | null {
-        return ARMOR_TIERS.find((t) => t.sp > sp) || null;
+    public static nextArmorTier(sp: number): ArmorTier | null {
+        return ARMOR_LADDER.find((t) => t.sp > sp) || null;
     }
 
-    /** What the fence pays for a piece the squad doesn't want: half sticker price. */
+    /** A wearable instance of a ladder tier — the one way synthesized armour is minted. */
+    public static mintArmor(tier: ArmorTier): Armor {
+        return new Armor("upper", tier.name, "", 1, tier.sp, tier.cost, "");
+    }
+
+    /** A ladder tier by name, for tables that reference the ladder (hire tiers). */
+    public static armorTier(name: string): ArmorTier {
+        return ARMOR_LADDER.find((t) => t.name === name)!;
+    }
+
+    /**
+     * The street rate: what a fence pays, as a fraction of sticker price.
+     * One number for the whole game — the market fence starts here too and
+     * only vendor archetypes / Operator contacts push it up.
+     */
+    public static readonly STREET_RATE = 0.4;
+
+    /**
+     * Field-fencing on the debrief: flat street rate, no questions. A market
+     * fence can beat it (Scav Fence, Operator's cut) — selling at a fence is
+     * meant to pay at least as well as selling on a curb, never worse.
+     */
     public static sellValue(cost: number): number {
-        return Math.max(5, Math.floor((cost || 0) / 2));
+        return Math.max(5, Math.floor((cost || 0) * Economy.STREET_RATE));
     }
 
     /**
@@ -277,7 +306,7 @@ export class Economy {
      */
     public static fenceRate(party: Actor[]): number {
         const cut = party.reduce((m, p) => Math.max(m, p.canFight() ? p.fixerCut() : 0), 0);
-        return 0.4 * (1 + cut);
+        return Economy.STREET_RATE * (1 + cut);
     }
 
     /** Patch worn armour back up to its rating — what a safehouse stop is for. */

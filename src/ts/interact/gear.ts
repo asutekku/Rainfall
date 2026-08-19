@@ -2,6 +2,7 @@ import type {Actor} from "../actors/Actor";
 import type {Armor} from "../items/Armor";
 import type {Weapon} from "../items/Weapon";
 import {Stash} from "./crew";
+import {Economy} from "./economy";
 import {GetItem} from "./getItem";
 
 /**
@@ -36,9 +37,18 @@ export class Gear {
             .map((n) => GetItem.weapon(n));
     }
 
-    /** Everything `a` could swap to: their own chrome plus The Stash. */
+    /**
+     * Everything `a` could swap to: their own chrome plus The Stash, sorted by
+     * the same valuation auto-equip decides with (Economy.weaponValue) — so
+     * the top of the list is what the fixer would actually pick, not merely
+     * the rarest paint job. Rarity and price only break ties.
+     */
     public static weaponChoices(a: Actor): Weapon[] {
-        return [...Gear.chromeWeapons(a), ...Stash.of(a).weapons].filter((w) => w.name !== "Fists");
+        return [...Gear.chromeWeapons(a), ...Stash.of(a).weapons]
+            .filter((w) => w.name !== "Fists")
+            .sort((x, y) => Economy.weaponValue(y) - Economy.weaponValue(x)
+                || (y.rarity || 0) - (x.rarity || 0)
+                || (y.cost || 0) - (x.cost || 0));
     }
 
     /** Every piece of armour `a` could strap on. */
@@ -118,8 +128,4 @@ export class Gear {
         return undefined;
     }
 
-    /** Sort key for a weapon list: rarest first, hardest-hitting inside a tier. */
-    public static power(w: Weapon): number {
-        return (w.rarity || 0) * 100000 + w.diceThrows * 600 + (w.damage || 0) * 100 + (w.cost || 0) / 100;
-    }
 }

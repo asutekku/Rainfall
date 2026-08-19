@@ -512,9 +512,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                         <KgRow label={"Fists"} value={"unarmed — always an option"}
                                onClick={() => { Gear.equipFists(a); this.forceUpdate(); }}/>}
                     {(() => {
-                        const pack = Gear.weaponChoices(a)
-                            .slice()
-                            .sort((x, y) => Gear.power(y) - Gear.power(x));
+                        const pack = Gear.weaponChoices(a);
                         const shown = this.state.moreWeapons ? pack : pack.slice(0, 3);
                         const hidden = pack.length - 3;
                         return (
