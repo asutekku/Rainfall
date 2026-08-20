@@ -475,8 +475,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                         <dt>Class</dt>
                         <dd>{a.role.name} L{a.level}</dd>
                         <dt>Skill</dt>
-                        <dd className={a.classTraining(a.weapon) ? "clsInk" : ""}
-                            title={"+5% damage per level with the " + a.weapon.name.toLowerCase()}>
+                        <dd title={"+5% damage per level with the " + a.weapon.name.toLowerCase()}>
                             {a.weapon.skill === "Melee Weapon" ? "Melee" : a.weapon.skill} {a.skillFor(a.weapon)}
                             {a.classTraining(a.weapon) ? <i className={"clsTag"}>class</i> : null}
                         </dd>

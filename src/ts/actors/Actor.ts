@@ -629,15 +629,18 @@ export class Actor extends GameObject {
 
     /**
      * The skills that matter in this game's loop, for the character sheet:
-     * [name, level, class-trained]. A class-trained row already includes the
-     * +2 — the sheet prints what the fight will actually roll.
+     * [name, level, class-bonus pips]. The level is what the fight will
+     * actually roll (class +2 in, capped at the meter's 10); the last element
+     * is how many of those pips the class put there, so the meter can ink the
+     * trained-on-the-house cells apart from the earned ones.
      */
-    public skillSheet(): Array<[string, number, boolean]> {
+    public skillSheet(): Array<[string, number, number]> {
         const r = this.skills.ref;
         const cls = (this.role && this.role.skill) || "";
-        const row = (name: string, lvl: number, skill?: string): [string, number, boolean] => {
-            const trained = !!skill && skill === cls;
-            return [name, Math.min(10, lvl + (trained ? CLASS_TRAINING : 0)), trained];
+        const row = (name: string, lvl: number, skill?: string): [string, number, number] => {
+            const bonus = !!skill && skill === cls ? CLASS_TRAINING : 0;
+            const total = Math.min(10, lvl + bonus);
+            return [name, total, total - Math.min(10, lvl)];
         };
         return [
             row("Handgun", r.handgun, "Handgun"),
