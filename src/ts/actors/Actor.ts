@@ -10,6 +10,7 @@ import {Name} from "./resources/Name";
 import {factionPerk} from "./resources/factionStyles";
 import {traitMult, traitSum} from "./resources/traits";
 import {Role} from "./resources/Role";
+import {CLASS_TRAINING} from "./resources/classes";
 import {CharacterCreation, Lifepath} from "./resources/CharacterCreation";
 import {ObjectPosition} from "../utils/ObjectPosition";
 import {GameObject} from "../items/GameObject";
@@ -626,19 +627,31 @@ export class Actor extends GameObject {
         return this.skills.tech.firstAid;
     }
 
-    /** The skills that matter in this game's loop, for the character sheet. */
-    public skillSheet(): Array<[string, number]> {
+    /**
+     * The skills that matter in this game's loop, for the character sheet:
+     * [name, level, class-bonus pips]. The level is what the fight will
+     * actually roll (class +2 in, capped at the meter's 10); the last element
+     * is how many of those pips the class put there, so the meter can ink the
+     * trained-on-the-house cells apart from the earned ones.
+     */
+    public skillSheet(): Array<[string, number, number]> {
         const r = this.skills.ref;
+        const cls = (this.role && this.role.skill) || "";
+        const row = (name: string, lvl: number, skill?: string): [string, number, number] => {
+            const bonus = !!skill && skill === cls ? CLASS_TRAINING : 0;
+            const total = Math.min(10, lvl + bonus);
+            return [name, total, total - Math.min(10, lvl)];
+        };
         return [
-            ["Handgun", r.handgun],
-            ["Shoulder Arms", r.rifle],
-            ["Heavy Weapons", r.heavyWeapons],
-            ["Melee", r.melee],
-            ["Brawling", r.brawling],
-            ["Dodge", r.dodge],
-            ["First Aid", this.skills.tech.firstAid],
-            ["Interface", this.interfaceRank()],
-            ["Drive", r.driving],
+            row("Handgun", r.handgun, "Handgun"),
+            row("Shoulder Arms", r.rifle, "Shoulder Arms"),
+            row("Heavy Weapons", r.heavyWeapons, "Heavy Weapons"),
+            row("Melee", r.melee, "Melee Weapon"),
+            row("Brawling", r.brawling, "Brawling"),
+            row("Dodge", r.dodge),
+            row("First Aid", this.skills.tech.firstAid),
+            row("Interface", this.interfaceRank()),
+            row("Drive", r.driving),
         ];
     }
 
@@ -758,8 +771,8 @@ export class Actor extends GameObject {
         return best;
     }
 
-    /** RED weapon-skill level for the given weapon (all combat skills share a base). */
-    public skillFor(weapon: Weapon): number {
+    /** Trained level in the given weapon's governing skill, before class training. */
+    private trainedSkill(weapon: Weapon): number {
         const r = this.skills.ref;
         switch (weapon.skill) {
             case "Handgun": return r.handgun;
@@ -771,6 +784,26 @@ export class Actor extends GameObject {
             case "Thrown": return r.athletics;
             default: return r.handgun;
         }
+    }
+
+    /** Class training: this class's signature weapon skill runs +2 deep. */
+    public classTraining(weapon: Weapon): number {
+        return this.role && this.role.skill === weapon.skill ? CLASS_TRAINING : 0;
+    }
+
+    /** Weapon-skill level: training plus the class's edge, capped at the meter's 10. */
+    public skillFor(weapon: Weapon): number {
+        return Math.min(10, this.trainedSkill(weapon) + this.classTraining(weapon));
+    }
+
+    /**
+     * Skill is damage now, not just aim: +5% per level with the weapon's
+     * governing skill, so a maxed specialist hits half again as hard. This is
+     * Rainfall's own rule — the tabletop never scaled dice by training, and
+     * that's exactly why a Handgun 9 body picking up a rifle felt like nothing.
+     */
+    public damageFactor(weapon: Weapon): number {
+        return 1 + 0.05 * this.skillFor(weapon);
     }
 
     /** House rule: everyone on these streets can actually shoot. A flat to-hit

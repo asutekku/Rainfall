@@ -814,7 +814,8 @@ export class App extends React.Component<{}, InterfaceAppState> {
                 if (n.alive && (n.canFight() || n.mortallyWounded)) { unit = n; break; }
             }
             if (!unit) {
-                this.queue = Combat.beginRound(this.state.squad, this.state.currentEnemies);
+                this.queue = Combat.beginRound(this.state.squad, this.state.currentEnemies,
+                    this.roundNo === 0);
                 if (!this.queue.length) { return; }
                 this.roundNo += 1;
                 const hold = this.holdoutRounds();

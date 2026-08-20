@@ -474,6 +474,11 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                     <dl className={"mercStats"}>
                         <dt>Class</dt>
                         <dd>{a.role.name} L{a.level}</dd>
+                        <dt>Skill</dt>
+                        <dd title={"+5% damage per level with the " + a.weapon.name.toLowerCase()}>
+                            {a.weapon.skill === "Melee Weapon" ? "Melee" : a.weapon.skill} {a.skillFor(a.weapon)}
+                            {a.classTraining(a.weapon) ? <i className={"clsTag"}>class</i> : null}
+                        </dd>
                         <dt>HP</dt>
                         <dd><span className={"kgHp"}>
                             <i className={hpPct <= 25 ? "cr" : hpPct <= 60 ? "lo" : ""} style={{width: hpPct + "%"}}/>
@@ -577,13 +582,13 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
         const picked = this.state.pick === key;
         return (
             <React.Fragment key={key}>
-                <KgRow glyph={chrome ? "⌁" : Gear.VERDICT_GLYPH[Gear.verdict(a.weapon, w)]}
+                <KgRow glyph={chrome ? "⌁" : Gear.VERDICT_GLYPH[Gear.verdict(a.weapon, w, a)]}
                        kicker={w.name === "Fists" ? "unarmed" : (chrome ? "chrome · " : "") + w.weaponType}
                        label={label} on={picked} labelStyle={{color: Gear.rarityColor(w)}}
-                       sub={<GdStats cur={a.weapon} w={w}/>}
+                       sub={<GdStats a={a} cur={a.weapon} w={w}/>}
                        onClick={() => this.setState({pick: picked ? "" : key})}/>
                 {picked &&
-                    <GdCard cur={a.weapon} w={w}
+                    <GdCard a={a} cur={a.weapon} w={w}
                             act={w.name === "Fists" ? "Go bare-knuckle" : `Swap to the ${w.name}`}
                             onAct={() => {
                                 if (w.name === "Fists") { Gear.equipFists(a); } else { Gear.equipWeapon(a, w); }
@@ -603,7 +608,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                 <div className={"kgChoice"}>
                     <KgRow glyph={"✦"} kicker={a.weapon.weaponType} label={a.weapon.name} on
                            labelStyle={{color: Gear.rarityColor(a.weapon)}}
-                           sub={<GdStats w={a.weapon}/>}/>
+                           sub={<GdStats a={a} w={a.weapon}/>}/>
                 </div>
                 <h3 className={"kgH"}>Inventory <em>tap to compare</em></h3>
                 <div className={"kgChoice"}>
@@ -615,7 +620,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                                label={this.state.moreWeapons ? "Show less" : `Show ${hidden} more`}
                                onClick={() => this.setState({moreWeapons: !this.state.moreWeapons, pick: ""})}/>}
                     {!pack.length && !fists &&
-                        <p className={"kgP dim"}>Nothing in The Stash. Scavenge fights or hit a Black Market.</p>}
+                        <p className={"kgP dim"}>Nothing in The Stash — hit a Black Market.</p>}
                 </div>
             </React.Fragment>);
     }
@@ -692,7 +697,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                                            : full ? this.swapOwn(a, item) : this.give(a, item)}/>);
                         })}
                     </div>
-                    : <p className={"kgP dim"}>Not walking in — throwables ride only on the squad.</p>}
+                    : <p className={"kgP dim"}>Benched — throwables ride on the squad.</p>}
             </React.Fragment>);
     }
 

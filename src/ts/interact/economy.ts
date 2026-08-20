@@ -113,12 +113,12 @@ export class Economy {
 
     /** Best scavenged weapon worth equipping: same-class edge, or a big cross-class jump. */
     private static bestInventoryWeapon(actor: Actor): { w: Weapon; idx: number } | null {
-        const curV = Gear.weaponValue(actor.weapon);
+        const curV = Gear.weaponValue(actor.weapon, actor);
         const cls = actor.weapon.weaponClass;
         let best: Weapon | null = null; let bestV = 0; let idx = -1;
         Stash.of(actor).weapons.forEach((w, i) => {
             if (w.damageType !== "kinetic") { return; }
-            const v = Gear.weaponValue(w);
+            const v = Gear.weaponValue(w, actor);
             const threshold = w.weaponClass === cls ? curV * 1.05 : curV * 1.25;  // cross-class must be worth losing skill
             if (v > threshold && v > bestV) { bestV = v; best = w; idx = i; }
         });
@@ -161,11 +161,11 @@ export class Economy {
         const cls = actor.weapon.weaponClass;
         const cap = this.rarityCap(actor.level);
         let best: Weapon | null = null;
-        let bestV = Gear.weaponValue(actor.weapon) * 1.15;   // require > 15% better
+        let bestV = Gear.weaponValue(actor.weapon, actor) * 1.15;   // require > 15% better
         for (const w of WEAPONS) {
             if (w.weaponClass !== cls || w.damageType !== "kinetic") { continue; }
             if (w.rarity > cap || w.cost > budget || !Purse.canAfford(actor, w.cost)) { continue; }
-            const v = Gear.weaponValue(w);
+            const v = Gear.weaponValue(w, actor);
             if (v > bestV) { bestV = v; best = w; }
         }
         return best;

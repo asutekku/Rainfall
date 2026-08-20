@@ -59,7 +59,7 @@ export class Gear {
     public static weaponChoices(a: Actor): Weapon[] {
         return [...Gear.chromeWeapons(a), ...Stash.of(a).weapons]
             .filter((w) => w.name !== "Fists")
-            .sort((x, y) => Gear.weaponValue(y) - Gear.weaponValue(x)
+            .sort((x, y) => Gear.weaponValue(y, a) - Gear.weaponValue(x, a)
                 || (y.rarity || 0) - (x.rarity || 0)
                 || (y.cost || 0) - (x.cost || 0));
     }
@@ -161,22 +161,35 @@ export class Gear {
         return `${a.name.split(" ")[0]} goes in bare-knuckle.`;
     }
 
-    /** Shopping value of a weapon: mean damage, with a bonus for armour-piercing. */
-    public static weaponValue(w: Weapon): number {
-        return w.averageDamage() + (w.ap ? 4 : 0);
+    /**
+     * Shopping value of a weapon: mean damage — in `a`'s hands when a body is
+     * given, so auto-equip hands the Handgun expert the pistol their training
+     * actually pays out on — with a bonus for armour-piercing.
+     */
+    public static weaponValue(w: Weapon, a?: Actor): number {
+        return (a ? a.damageFactor(w) : 1) * w.averageDamage() + (w.ap ? 4 : 0);
     }
 
     /**
      * The stats a swap decision actually turns on, candidate against what's in
-     * hand. AUTO is a mode, not a rung on a ladder — full auto trades aimed
-     * shots for volume — so it's flagged `mode` and stays out of the verdict.
+     * hand. With an actor, the numbers are personal: DMG folds in their skill
+     * (+5%/level with the governing skill), and a SKL row prints the training
+     * behind each weapon. AUTO is a mode, not a rung on a ladder — full auto
+     * trades aimed shots for volume — so it's flagged `mode` and stays out of
+     * the verdict.
      */
-    public static compare(cur: Weapon, w: Weapon): StatDelta[] {
+    public static compare(cur: Weapon, w: Weapon, a?: Actor): StatDelta[] {
         const n1 = (x: number) => String(Math.round(x * 10) / 10);
         const acc = (x: number) => x > 0 ? `+${x}` : String(x);
-        return [
-            {stat: "DMG", cur: n1(cur.averageDamage()), next: n1(w.averageDamage()),
-                delta: w.averageDamage() - cur.averageDamage()},
+        const dmg = (x: Weapon) => (a ? a.damageFactor(x) : 1) * x.averageDamage();
+        const rows: StatDelta[] = [
+            {stat: "DMG", cur: n1(dmg(cur)), next: n1(dmg(w)), delta: dmg(w) - dmg(cur)},
+        ];
+        if (a) {
+            rows.push({stat: "SKL", cur: String(a.skillFor(cur)), next: String(a.skillFor(w)),
+                delta: a.skillFor(w) - a.skillFor(cur)});
+        }
+        rows.push(
             {stat: "ACC", cur: acc(cur.accuracyBonus), next: acc(w.accuracyBonus),
                 delta: w.accuracyBonus - cur.accuracyBonus},
             {stat: "ROF", cur: String(cur.rateOfFire), next: String(w.rateOfFire),
@@ -186,7 +199,8 @@ export class Gear {
                 delta: (w.ap ? 1 : 0) - (cur.ap ? 1 : 0)},
             {stat: "AUTO", cur: cur.autofire ? "yes" : "—", next: w.autofire ? "yes" : "—",
                 delta: (w.autofire ? 1 : 0) - (cur.autofire ? 1 : 0), mode: true},
-        ];
+        );
+        return rows;
     }
 
     /**
@@ -196,8 +210,8 @@ export class Gear {
      * nothing up, ▼ only when it gains nothing, and everything that trades one
      * stat for another is ◆ — the player's doctrine breaks the tie, not ours.
      */
-    public static verdict(cur: Weapon, w: Weapon): Verdict {
-        const ds = Gear.compare(cur, w).filter((d) => !d.mode).map((d) => d.delta);
+    public static verdict(cur: Weapon, w: Weapon, a?: Actor): Verdict {
+        const ds = Gear.compare(cur, w, a).filter((d) => !d.mode).map((d) => d.delta);
         const up = ds.some((d) => d > 0.05);
         const down = ds.some((d) => d < -0.05);
         return up && down ? "trade" : up ? "up" : down ? "down" : "same";
@@ -206,11 +220,11 @@ export class Gear {
     public static VERDICT_GLYPH: Record<Verdict, string> = {up: "▲", down: "▼", trade: "◆", same: "="};
 
     /** The verdict as a sentence — names which stats move which way. */
-    public static verdictLine(cur: Weapon, w: Weapon): string {
-        const ds = Gear.compare(cur, w).filter((d) => !d.mode);
+    public static verdictLine(cur: Weapon, w: Weapon, a?: Actor): string {
+        const ds = Gear.compare(cur, w, a).filter((d) => !d.mode);
         const ups = ds.filter((d) => d.delta > 0.05).map((d) => d.stat).join(", ");
         const downs = ds.filter((d) => d.delta < -0.05).map((d) => d.stat).join(", ");
-        switch (Gear.verdict(cur, w)) {
+        switch (Gear.verdict(cur, w, a)) {
             case "up": return `upgrade — better ${ups}`;
             case "down": return `downgrade — worse ${downs}`;
             case "trade": return `trade-off — gains ${ups} · gives up ${downs}`;

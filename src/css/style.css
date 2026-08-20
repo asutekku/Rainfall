@@ -1338,8 +1338,9 @@ body:not(.no-fx) .gdCard { animation:gdOpen .18s ease-out both; transform-origin
 .kgSeg button:hover { color:var(--ink); background:var(--sel); }
 .kgSeg button.on { color:var(--cyan); border-color:var(--cyanDim); background:var(--sel); }
 .kgSeg button.on u { color:var(--cyan); }
-/* two lines are reserved so switching settings never jolts the sheet's height */
-.kgSegTip { margin:0; font-size:11px; color:var(--dim); line-height:1.5; min-height:3em; }
+/* every blurb is one row; the reserved line keeps switches from jolting the sheet */
+.kgSegTip { margin:0; font-size:11px; color:var(--dim); line-height:1.5; min-height:1.5em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 /* the merc sheet: the body on the left, the numbers on the right */
 .mercCard { display:flex; gap:14px; }
@@ -1369,6 +1370,13 @@ body:not(.no-fx) .gdCard { animation:gdOpen .18s ease-out both; transform-origin
 .skillMeter i.sOn { background:var(--cyanDim); border-color:var(--cyan); }
 .skillRow.on .skillMeter i.sOn { background:var(--cyan); }
 .skillLvl { flex:none; width:20px; text-align:right; color:var(--ink); font-variant-numeric:tabular-nums; font-weight:700; }
+/* class training on the meter: earned cells blue, the +2 the class put there red */
+.clsInk { color:var(--rustHot); }
+.skillMeter i.sOn.cls,
+.skillRow.on .skillMeter i.sOn.cls { background:var(--rustHot); border-color:var(--rustHot); }
+.clsTag { font-style:normal; font-size:8.5px; font-weight:600; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--rustHot); border:1px solid var(--rust);
+    padding:1px 5px; margin-left:2px; }
 
 /* med items on the gear tab */
 .gearSlot.med { color:var(--good); border-color:var(--good); }

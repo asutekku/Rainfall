@@ -99,7 +99,7 @@ function sampleKineticDamage(w: Weapon): number {
 function landedDamage(w: Weapon, target: Actor, aimed: boolean, mult: number,
                       attacker: Actor): number {
     const dmg = Math.round(sampleKineticDamage(w) * mult
-        * outgoingMult(attacker) * incomingMult(target));
+        * outgoingMult(attacker) * incomingMult(target) * attacker.damageFactor(w));
     return aimed
         ? Math.round(applySoak(dmg, headSP(target), w.ap) * AIMED_MULT)
         : applySoak(dmg, effectiveSP(target), w.ap);
@@ -128,7 +128,8 @@ function sampleNet(attacker: Actor, target: Actor, distance: number, coverDV: nu
         const maxMult = w.weaponClass === "rifle" ? 4 : 3;
         const mult = Math.min(quality === "graze" ? 1 : quality === "hit" ? 2 : maxMult, maxMult);
         return applySoak(Math.round((d6() + d6()) * mult
-            * outgoingMult(attacker) * incomingMult(target)), effectiveSP(target), w.ap);
+            * outgoingMult(attacker) * incomingMult(target) * attacker.damageFactor(w)),
+            effectiveSP(target), w.ap);
     }
     return landedDamage(w, target, aimed, QUALITY_MULT[quality], attacker);
 }
@@ -154,7 +155,7 @@ function bestNet(attacker: Actor, target: Actor, distance: number, coverDV: numb
     // threshold to recalibrate every time the curve moves.
     const w = attacker.weapon;
     if (!TacticalAI.allowAimed || w.autofire) { return {value: normal, aimed: false}; }
-    const raw = w.averageDamage();
+    const raw = w.averageDamage() * attacker.damageFactor(w);
     const bodyValue = applySoak(raw, effectiveSP(target), w.ap)
         * expectedMult(edgeAt(attacker, target, distance, coverDV, false));
     const headValue = applySoak(raw, headSP(target), w.ap) * AIMED_MULT
