@@ -92,6 +92,8 @@ export class Combat {
         d *= QUALITY_MULT[quality];
         d *= outgoingMult(actor);
         d *= incomingMult(target);
+        // weapon skill is damage now, not just aim: +5% per level with the held gun
+        d *= actor.damageFactor(actor.weapon);
         // Traits ride the same stack the statuses and stances already use.
         d *= actor.traitOut() * actor.grudgeAgainst(target.faction);
         d *= target.traitIn();

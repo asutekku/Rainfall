@@ -23,11 +23,12 @@ const tone = (compared: boolean, d: StatDelta): string =>
 /**
  * The one-line stat readout every weapon row carries: "DMG 9 · ROF 2 · RNG 50m",
  * plus AP/AUTO flags when they apply. Pass `cur` to ink each number against
- * what's in hand; leave it out for the equipped row's plain print.
+ * what's in hand; leave it out for the equipped row's plain print. With an
+ * actor the numbers are theirs — DMG folds in their weapon skill.
  */
-export function GdStats(props: {cur?: Weapon | undefined; w: Weapon}) {
+export function GdStats(props: {a?: Actor | undefined; cur?: Weapon | undefined; w: Weapon}) {
     const compared = !!props.cur;
-    const rows = Gear.compare(props.cur || props.w, props.w);
+    const rows = Gear.compare(props.cur || props.w, props.w, props.a);
     const seg = (stat: string) => rows.find((r) => r.stat === stat)!;
     const line = [seg("DMG"), seg("ROF"), seg("RNG")];
     const acc = seg("ACC");
@@ -62,7 +63,7 @@ const delta = (d: StatDelta): {glyph: string; cls: string} =>
  * The head-to-head: equipped vs candidate, stat by stat, each row closing on
  * a delta icon. Slides open under the tapped row at the row's own width.
  */
-export function GdCard(props: {cur: Weapon; w: Weapon; act: string; onAct: () => void}) {
+export function GdCard(props: {a?: Actor | undefined; cur: Weapon; w: Weapon; act: string; onAct: () => void}) {
     return (
         <div className={"gdCard"}>
             <table className={"gdTable"}>
@@ -75,7 +76,7 @@ export function GdCard(props: {cur: Weapon; w: Weapon; act: string; onAct: () =>
                     </tr>
                 </thead>
                 <tbody>
-                    {Gear.compare(props.cur, props.w).map((d, i) => {
+                    {Gear.compare(props.cur, props.w, props.a).map((d, i) => {
                         const ic = delta(d);
                         return (
                             <tr key={i}>

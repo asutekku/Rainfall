@@ -1370,6 +1370,12 @@ body:not(.no-fx) .gdCard { animation:gdOpen .18s ease-out both; transform-origin
 .skillMeter i.sOn { background:var(--cyanDim); border-color:var(--cyan); }
 .skillRow.on .skillMeter i.sOn { background:var(--cyan); }
 .skillLvl { flex:none; width:20px; text-align:right; color:var(--ink); font-variant-numeric:tabular-nums; font-weight:700; }
+/* the class's drilled skill runs red — the +2 is already in the number */
+.clsInk, .skillRow.cls .skillName, .skillRow.cls .skillLvl { color:var(--rustHot); }
+.skillRow.cls .skillMeter i.sOn { background:var(--rust); border-color:var(--rustHot); }
+.clsTag { font-style:normal; font-size:8.5px; font-weight:600; letter-spacing:.16em;
+    text-transform:uppercase; color:var(--rustHot); border:1px solid var(--rust);
+    padding:1px 5px; margin-left:2px; }
 
 /* med items on the gear tab */
 .gearSlot.med { color:var(--good); border-color:var(--good); }

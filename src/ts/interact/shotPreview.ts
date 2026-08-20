@@ -59,7 +59,7 @@ export function shotPreview(actor: Actor, target: Actor, from?: Point, aimed: bo
         : base + rangeEdge(w.weaponClass, dist) + coverEdge(cover);
 
     const sp = bodySP(target);
-    const raw = w.averageDamage();
+    const raw = w.averageDamage() * actor.damageFactor(w);
     const onHit = applySoak(Math.round(raw * QUALITY_MULT.hit), sp, w.ap);
     const onCrit = applySoak(Math.round(raw * QUALITY_MULT.crit), sp, w.ap);
     const shape = {

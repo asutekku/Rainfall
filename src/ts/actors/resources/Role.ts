@@ -18,6 +18,8 @@ export class Role {
     public role: string;
     public line: Line;
     public weapons: string[];
+    /** The weapon skill this class drills (+CLASS_TRAINING — see Actor.skillFor). */
+    public skill: string;
     public color: string;
     public portrait: string;
     public rider: { key: StatusKey; stacks: number; chance: number } | undefined;
@@ -34,6 +36,7 @@ export class Role {
         this.role = spec.role;
         this.line = spec.line;
         this.weapons = spec.weapons;
+        this.skill = spec.skill;
         this.color = spec.color;
         this.portrait = `src/media/portraits/${spec.portrait}.png`;
         this.rider = spec.rider;

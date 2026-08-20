@@ -46,7 +46,7 @@ function power(a: Actor): number {
     const worn = a.equipment.upper ? a.equipment.upper.stoppingPower : 0;
     const sp = Math.max(worn, a.cyberSP());
     const effHealth = a.health / Math.max(0.15, 1 - soak(sp));
-    const punch = Math.max(1, a.weapon.averageDamage());
+    const punch = Math.max(1, a.weapon.averageDamage() * a.damageFactor(a.weapon));
     return punch * effHealth;
 }
 

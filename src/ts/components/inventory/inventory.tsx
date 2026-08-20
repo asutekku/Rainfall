@@ -197,16 +197,16 @@ export class Inventory extends React.Component<InventoryProps, InventoryState> {
                 {weapons.map((s, i) => {
                     const w = s.item;
                     const chrome = Gear.isCyberweapon(a, w);
-                    const v = Gear.verdict(a.weapon, w);
+                    const v = Gear.verdict(a.weapon, w, a);
                     return (
                         <div key={"w" + i} className={"gearRow" + (this.state.flash[w.name] ? " flash" : "")}>
                             <span className={"gearSlot" + VCLS[v]}
-                                  title={Gear.verdictLine(a.weapon, w)}>{Gear.VERDICT_GLYPH[v]}</span>
+                                  title={Gear.verdictLine(a.weapon, w, a)}>{Gear.VERDICT_GLYPH[v]}</span>
                             <span className={"mkNameWrap"}>
                                 <span className={"mkKick"}>{chrome ? "chrome · " : ""}{w.weaponType}</span>
                                 <span className={"mkName"} style={{color: Gear.rarityColor(w)}}>
                                     {s.n > 1 ? `${w.name} ×${s.n}` : w.name}</span>
-                                <GdStats cur={a.weapon} w={w}/>
+                                <GdStats a={a} cur={a.weapon} w={w}/>
                             </span>
                             <button className={"mkBuy gearEquip"} disabled={lock}
                                     onClick={() => this.equipWeapon(a, w)}>SWAP</button>

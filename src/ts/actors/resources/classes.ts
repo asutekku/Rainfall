@@ -31,6 +31,9 @@ import type {StatusKey} from "../../interact/statuses";
 
 export type Line = "point" | "mid" | "overwatch";
 
+/** How much deeper a class runs its signature weapon skill. */
+export const CLASS_TRAINING = 2;
+
 export interface ClassSpec {
     /** Display name. */
     name: string;
@@ -40,6 +43,12 @@ export interface ClassSpec {
     line: Line;
     /** Weapon classes the market draws their loadout from. */
     weapons: string[];
+    /**
+     * The weapon skill this class drills — +CLASS_TRAINING on top of whatever
+     * the body has trained (see Actor.skillFor). Matches the guns the market
+     * actually hands them, so the bonus is on the weapon they're holding.
+     */
+    skill: string;
     /** Team colour on the roster and the character sheet. */
     color: string;
     portrait: string;
@@ -62,51 +71,51 @@ export interface ClassSpec {
 export const CLASSES: { [id: string]: ClassSpec } = {
     bulwark: {
         name: "Bulwark", role: "Tank — soaks the street so the others can work",
-        line: "point", weapons: ["shotgun", "smg"], color: "#5a86c4", portrait: "cop",
+        line: "point", weapons: ["shotgun", "smg"], skill: "Shoulder Arms", color: "#5a86c4", portrait: "cop",
         edge: "Dug In: opens every fight with four points of extra plate, shed one hit at a time.",
     },
     enforcer: {
         name: "Enforcer", role: "Bruiser — closes the distance and breaks the line",
-        line: "point", weapons: ["melee", "shotgun"], color: "#c4553f", portrait: "nomad",
+        line: "point", weapons: ["melee", "shotgun"], skill: "Melee Weapon", color: "#c4553f", portrait: "nomad",
         rider: {key: "staggered", stacks: 1, chance: 1},
         edge: "Bad Reputation: hits leave them reeling, and some crews stand down on sight.",
     },
     breacher: {
         name: "Breacher", role: "Damage — takes armour off people",
-        line: "point", weapons: ["shotgun", "smg"], color: "#d08a3a", portrait: "fixer",
+        line: "point", weapons: ["shotgun", "smg"], skill: "Shoulder Arms", color: "#d08a3a", portrait: "fixer",
         rider: {key: "shred", stacks: 1, chance: 0.45},
         edge: "Can Opener: tears plate off for good, and walks in carrying an extra frag.",
     },
     gunner: {
         name: "Gunner", role: "Damage — area denial, keeps heads down",
-        line: "mid", weapons: ["smg", "rifle"], color: "#b8a03a", portrait: "corporate",
+        line: "mid", weapons: ["smg", "rifle"], skill: "Handgun", color: "#b8a03a", portrait: "corporate",
         rider: {key: "suppressed", stacks: 1, chance: 0.4},
         edge: "Covering Fire: everything they hit shoots back softer, and they add weight to the crew's fire.",
     },
     marksman: {
         name: "Marksman", role: "Damage — one shot, picked and paid for",
-        line: "overwatch", weapons: ["sniper", "rifle"], color: "#4fae7a", portrait: "solo",
+        line: "overwatch", weapons: ["sniper", "rifle"], skill: "Shoulder Arms", color: "#4fae7a", portrait: "solo",
         edge: "Glassing: strikes first, the round's opening hit lands harder, and their optics read one street further.",
     },
     netrunner: {
         name: "Netrunner", role: "Control — the only answer to chrome",
-        line: "mid", weapons: ["pistol", "smg"], color: "#2E86C1", portrait: "netrunner",
+        line: "mid", weapons: ["pistol", "smg"], skill: "Handgun", color: "#2E86C1", portrait: "netrunner",
         edge: "Interface: quickhacks fry chrome outright — subdermal armour, reflexes and aim, all offline.",
     },
     cooker: {
         name: "Cooker", role: "Control — attrition that armour cannot stop",
-        line: "mid", weapons: ["smg", "pistol"], color: "#8f5adf", portrait: "rockerboy",
+        line: "mid", weapons: ["smg", "pistol"], skill: "Handgun", color: "#8f5adf", portrait: "rockerboy",
         rider: {key: "burn", stacks: 2, chance: 0.35},
         edge: "Hot Loads: incendiary rounds burn through plate rather than at it.",
     },
     medtech: {
         name: "Medtech", role: "Support — keeps the crew on its feet",
-        line: "mid", weapons: ["pistol", "smg"], color: "#c9d3da", portrait: "media",
+        line: "mid", weapons: ["pistol", "smg"], skill: "Handgun", color: "#c9d3da", portrait: "media",
         edge: "Field Surgery: drags the dying back up mid-fight, and patches harder than anyone.",
     },
     rigger: {
         name: "Rigger", role: "Support — armour, upkeep, and the long fight",
-        line: "overwatch", weapons: ["smg", "rifle"], color: "#A2D9CE", portrait: "techie",
+        line: "overwatch", weapons: ["smg", "rifle"], skill: "Handgun", color: "#A2D9CE", portrait: "techie",
         edge: "Maker: services the squad's armour between stops, putting half the lost plate back on.",
     },
 };
