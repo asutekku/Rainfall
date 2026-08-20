@@ -1338,8 +1338,9 @@ body:not(.no-fx) .gdCard { animation:gdOpen .18s ease-out both; transform-origin
 .kgSeg button:hover { color:var(--ink); background:var(--sel); }
 .kgSeg button.on { color:var(--cyan); border-color:var(--cyanDim); background:var(--sel); }
 .kgSeg button.on u { color:var(--cyan); }
-/* two lines are reserved so switching settings never jolts the sheet's height */
-.kgSegTip { margin:0; font-size:11px; color:var(--dim); line-height:1.5; min-height:3em; }
+/* every blurb is one row; the reserved line keeps switches from jolting the sheet */
+.kgSegTip { margin:0; font-size:11px; color:var(--dim); line-height:1.5; min-height:1.5em;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 
 /* the merc sheet: the body on the left, the numbers on the right */
 .mercCard { display:flex; gap:14px; }

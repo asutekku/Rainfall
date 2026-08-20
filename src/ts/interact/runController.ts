@@ -606,7 +606,12 @@ export class RunController {
         const run = state.run;
         const allowance = RunController.reviveAllowance(state);
         if (!run || run.revivesUsed >= allowance) { return null; }
-        const squad = RunController.fieldable(state.squad, state.party);
+        // The deployed squad, dead or alive — NOT fieldable(), which only
+        // passes bodies that can still fight and so, after the wipe that put
+        // this screen up, would revive nobody and resume a fight of corpses.
+        const squad = (state.squad && state.squad.length ? state.squad : state.party)
+            .filter((p) => state.party.indexOf(p) >= 0);
+        if (!squad.length) { return null; }
         squad.forEach((p) => p.revive());
         // Trauma Platinum Mk.II: the extraction crew patches armour on the way up.
         if (state.character.chromeHas("reviveRepairs")) {

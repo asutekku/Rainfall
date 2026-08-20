@@ -445,8 +445,13 @@ export class Combat {
     /**
      * Start a fresh round: reset per-round trackers and roll initiative.
      * Returns the acting order; feed each unit to takeTurn() in sequence.
+     *
+     * `opening` marks the fight's first round: the crew acts before the wave,
+     * whatever the dice say. The player made the plan — they get to see it
+     * land before the street answers. Reflex chrome keeps its worth ordering
+     * the crew among themselves and every round after.
      */
-    public static beginRound(party: Actor[], enemies: Actor[]): Actor[] {
+    public static beginRound(party: Actor[], enemies: Actor[], opening: boolean = false): Actor[] {
         BattleRecorder.countRound();
         Battlefield.tickSmoke();   // clouds thin between rounds
         const all: Actor[] = [...party, ...enemies].filter((a) => a.canFight() || a.mortallyWounded);
@@ -461,7 +466,8 @@ export class Combat {
         // Sandevistan Overclock: the fight's opening round is always theirs.
         // The flag is armed at deploy and burned here, so only round 1 is skewed.
         const order = all
-            .map((a) => ({a, init: a.rollInitiative() + (a.actFirstPending ? 1000 : 0)}))
+            .map((a) => ({a, init: a.rollInitiative() + (a.actFirstPending ? 1000 : 0)
+                + (opening && party.indexOf(a) >= 0 ? 2000 : 0)}))
             .sort((x, y) => y.init - x.init)
             .map((o) => o.a);
         all.forEach((a) => { a.actFirstPending = false; });

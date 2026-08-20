@@ -615,7 +615,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                                label={this.state.moreWeapons ? "Show less" : `Show ${hidden} more`}
                                onClick={() => this.setState({moreWeapons: !this.state.moreWeapons, pick: ""})}/>}
                     {!pack.length && !fists &&
-                        <p className={"kgP dim"}>Nothing in The Stash. Scavenge fights or hit a Black Market.</p>}
+                        <p className={"kgP dim"}>Nothing in The Stash — hit a Black Market.</p>}
                 </div>
             </React.Fragment>);
     }
@@ -692,7 +692,7 @@ export class StagingView extends React.Component<StagingViewProps, StagingState>
                                            : full ? this.swapOwn(a, item) : this.give(a, item)}/>);
                         })}
                     </div>
-                    : <p className={"kgP dim"}>Not walking in — throwables ride only on the squad.</p>}
+                    : <p className={"kgP dim"}>Benched — throwables ride on the squad.</p>}
             </React.Fragment>);
     }
 

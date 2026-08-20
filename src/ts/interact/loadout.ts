@@ -101,13 +101,13 @@ export interface StanceSpec {
  */
 export const STANCES: { [k in Stance]: StanceSpec } = {
     push: {label: "Push", temperament: "aggressive", out: 1.3, incoming: 1.3,
-           blurb: "close the gap and end it fast — best when you have the bodies",
+           blurb: "close the gap — more damage out, more in",
            trade: ["+30% out", "+30% in"]},
     steady: {label: "Steady", temperament: "balanced", out: 1, incoming: 1,
-             blurb: "work the range, use cover when it's on the way",
+             blurb: "work the range, use cover",
              trade: ["even out", "even in"]},
     hold: {label: "Hold", temperament: "camper", out: 0.75, incoming: 0.75,
-           blurb: "dig in and let them come — best against a clock",
+           blurb: "dig in — less damage out, less in",
            trade: ["−25% out", "−25% in"]},
 };
 
@@ -199,13 +199,13 @@ export interface LineSpec {
 
 export const LINES: { [k in Line]: LineSpec } = {
     point: {label: "Point", gap: 0.55, threat: 1.6,
-            blurb: "walk it in and draw the fire — they will shoot you first",
+            blurb: "up front, drawing their fire",
             trade: ["close", "shot at"]},
     mid: {label: "Mid", gap: 1, threat: 1,
           blurb: "the range the weapon was built for",
           trade: ["sweet spot", "even"]},
     overwatch: {label: "Overwatch", gap: 1.7, threat: 0.6,
-                blurb: "hang back — harder to reach, and further out than the gun likes",
+                blurb: "hang back — hard to reach, long shots",
                 trade: ["far", "ignored"]},
 };
 
